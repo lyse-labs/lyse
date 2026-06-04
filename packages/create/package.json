@@ -1,6 +1,6 @@
 {
   "name": "create-lyse",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.3",
   "publishConfig": {
     "access": "public"
   },
@@ -23,9 +23,5 @@
     "url": "https://github.com/lyse-labs/lyse.git",
     "directory": "packages/create"
   },
-  "keywords": [
-    "lyse",
-    "design-system",
-    "cli"
-  ]
+  "keywords": ["lyse", "design-system", "cli"]
 }
