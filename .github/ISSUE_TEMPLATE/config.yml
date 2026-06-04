@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/lyse-labs/lyse/discussions
+    about: Ask questions, share patterns, propose ideas before they become formal issues.
+  - name: Documentation
+    url: https://github.com/lyse-labs/lyse/tree/main/docs
+    about: Read the docs first — many answers are already there.
+  - name: Security vulnerabilities
+    url: https://github.com/lyse-labs/lyse/security/advisories/new
+    about: Report security issues privately via GitHub Security Advisories. Do not open a public issue.

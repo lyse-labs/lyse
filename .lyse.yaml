@@ -1,0 +1,6 @@
+designSystem:
+  componentsModule: ""
+  excludePaths:
+    - "packages/core/fixtures/**"
+    - "docs/**"
+    - "**/dist/**"

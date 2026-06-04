@@ -1,0 +1,77 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard", ":semanticCommits"],
+  "timezone": "Europe/Paris",
+  "schedule": ["before 9am on the first day of the month"],
+  "labels": ["dependencies"],
+  "rangeStrategy": "bump",
+  "ignoreDeps": [],
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 10,
+  "commitMessagePrefix": "chore(deps): ",
+  "commitMessageAction": "bump",
+  "packageRules": [
+    {
+      "description": "Ignore major bumps everywhere — promote them by hand in a focused upgrade session",
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Group root devDeps for typescript ecosystem",
+      "matchManagers": ["npm"],
+      "matchFileNames": ["package.json"],
+      "matchPackageNames": ["typescript", "typescript-eslint", "/^@typescript-eslint//"],
+      "groupName": "typescript",
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "description": "Group root devDeps for vitest ecosystem",
+      "matchManagers": ["npm"],
+      "matchFileNames": ["package.json"],
+      "matchPackageNames": ["vitest", "/^@vitest//"],
+      "groupName": "vitest",
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "description": "Catch-all group for everything else under packages/core",
+      "matchManagers": ["npm"],
+      "matchFileNames": ["packages/core/package.json"],
+      "groupName": "core-minor-patch",
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "description": "Catch-all group for everything else under packages/create",
+      "matchManagers": ["npm"],
+      "matchFileNames": ["packages/create/package.json"],
+      "groupName": "create-minor-patch",
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "description": "Catch-all group for everything else at the root",
+      "matchManagers": ["npm"],
+      "matchFileNames": ["package.json"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm-minor-patch"
+    },
+    {
+      "description": "Group GitHub Actions minor + patch bumps",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions-minor-patch",
+      "matchUpdateTypes": ["minor", "patch"],
+      "commitMessagePrefix": "chore(ci): "
+    },
+    {
+      "description": "Auto-merge: disabled. Every PR must be reviewed and merged manually.",
+      "matchPackagePatterns": ["*"],
+      "automerge": false
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 9am on the first day of the month"]
+  }
+}

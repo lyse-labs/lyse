@@ -1,0 +1,9 @@
+--- a/button.css
++++ b/button.css
+@@ -1,5 +1,5 @@
+ .button {
+-  background-color: #2563eb;
++  background-color: var(--color-primary);
+   border: 1px solid #1d4ed8;
+   color: #ffffff;
+ }

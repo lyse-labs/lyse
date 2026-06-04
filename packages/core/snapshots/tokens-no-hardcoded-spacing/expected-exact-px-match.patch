@@ -1,0 +1,10 @@
+--- a/Card.tsx
++++ b/Card.tsx
+@@ -1,6 +1,6 @@
+ export function Card() {
+   return (
+-    <div style={{ padding: "16px", margin: "8px" }}>
++    <div style={{ padding: "var(--spacing-4)", margin: "8px" }}>
+       content
+     </div>
+   );

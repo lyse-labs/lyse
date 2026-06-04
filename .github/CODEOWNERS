@@ -1,0 +1,26 @@
+# Lyse — CODEOWNERS
+#
+# These owners are auto-assigned to PRs that touch the matching paths.
+# The maintainer keeps ownership of everything until the second engineer joins.
+
+* @noechague
+
+# Engine
+/packages/core/                @noechague
+
+# Documentation
+/docs/                         @noechague
+README.md                      @noechague
+ROADMAP.md                     @noechague
+CHANGELOG.md                   @noechague
+
+# Security and license-sensitive
+/SECURITY.md                   @noechague
+/PRIVACY.md                    @noechague
+/LICENSE                       @noechague
+/LICENSE-AGPL-3.0.txt          @noechague
+/COMMERCIAL.md                 @noechague
+/CODE_OF_CONDUCT.md            @noechague
+
+# CI / build / release
+/.github/                      @noechague

@@ -1,0 +1,94 @@
+/**
+ * Hand-rolled unified-diff generator for bounded codemods.
+ * NOT a spec-perfect unified-diff (no EOF-no-newline handling, etc.).
+ * Sufficient for the 3 bounded codemods in V0.1.0.
+ * If we later need robustness, swap in the `diff` npm library.
+ */
+
+/**
+ * Generate a single-hunk unified diff for a single-line substitution.
+ * Format: standard `diff -u` output with 3 lines of context.
+ */
+export function singleLineDiff(
+  filePath: string,
+  source: string,
+  lineNumber: number, // 1-based
+  oldLineContent: string,
+  newLineContent: string,
+): string {
+  // Split into lines. If source ends with \n, split produces a trailing empty string.
+  // We strip it so line counts match what git expects (git counts logical lines, not
+  // the phantom empty element after a trailing newline).
+  const allParts = source.split("\n");
+  const lines =
+    allParts.length > 0 && allParts[allParts.length - 1] === ""
+      ? allParts.slice(0, -1)
+      : allParts;
+
+  const idx = lineNumber - 1;
+  if (idx < 0 || idx >= lines.length) {
+    throw new Error(`Line ${lineNumber} out of range (file has ${lines.length} lines)`);
+  }
+
+  const before = Math.max(0, idx - 3);
+  const after = Math.min(lines.length, idx + 4); // 3 lines after the changed line, exclusive
+
+  // Build hunk lines
+  const hunkLines: string[] = [];
+  for (let i = before; i < after; i++) {
+    const line = lines[i] ?? "";
+    if (i === idx) {
+      hunkLines.push(`-${line}`);
+      hunkLines.push(`+${line.replace(oldLineContent, newLineContent)}`);
+    } else {
+      hunkLines.push(` ${line}`);
+    }
+  }
+
+  const oldCount = after - before;
+  const newCount = after - before; // single-line replacement = same line count
+  const header = `@@ -${before + 1},${oldCount} +${before + 1},${newCount} @@`;
+
+  return [
+    `--- a/${filePath}`,
+    `+++ b/${filePath}`,
+    header,
+    ...hunkLines,
+  ].join("\n") + "\n";
+}
+
+/**
+ * Generate a unified diff that inserts a new line after `afterLine`.
+ * afterLine=0 means insert before the first line; afterLine=N means insert after line N (1-based).
+ */
+export function prependLineDiff(
+  filePath: string,
+  source: string,
+  newLine: string,
+  afterLine: number = 0, // 0 = before first line, 1 = after line 1, etc.
+): string {
+  const allParts = source.split("\n");
+  const lines =
+    allParts.length > 0 && allParts[allParts.length - 1] === ""
+      ? allParts.slice(0, -1)
+      : allParts;
+  const ctxBefore = Math.max(0, afterLine - 3);
+  const ctxAfter = Math.min(lines.length, afterLine + 3);
+  const hunkLines: string[] = [];
+  for (let i = ctxBefore; i < afterLine; i++) {
+    hunkLines.push(` ${lines[i] ?? ""}`);
+  }
+  hunkLines.push(`+${newLine}`);
+  for (let i = afterLine; i < ctxAfter; i++) {
+    hunkLines.push(` ${lines[i] ?? ""}`);
+  }
+  const oldCount = ctxAfter - ctxBefore;
+  const newCount = oldCount + 1;
+  const header = `@@ -${ctxBefore + 1},${oldCount} +${ctxBefore + 1},${newCount} @@`;
+  return [
+    `--- a/${filePath}`,
+    `+++ b/${filePath}`,
+    header,
+    ...hunkLines,
+  ].join("\n") + "\n";
+}

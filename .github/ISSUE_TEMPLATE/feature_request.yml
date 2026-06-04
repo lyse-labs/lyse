@@ -1,0 +1,70 @@
+name: Feature request
+description: Suggest a new feature or improvement
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature.
+
+        Lyse aims to stay focused: a small, sharp engine + a few high-signal surfaces (CLI, GHA, MCP).
+        Not every feature will be accepted. Smaller, focused additions are more likely to land.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the pain or the limitation. Focus on the WHY before the WHAT.
+      placeholder: |
+        Today I cannot do X because Lyse doesn't support Y. This means I have to manually Z.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like Lyse to do? Be specific about the user-facing surface.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you thought about, and why you'd pick this one.
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which surface would this affect?
+      multiple: true
+      options:
+        - CLI
+        - MCP server
+        - Rules engine
+        - Scoring
+        - Configuration
+        - Documentation
+    validations:
+      required: true
+
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Would you be willing to implement it?
+      options:
+        - Yes, I will send a PR
+        - Maybe, with guidance from a maintainer
+        - No, this is a suggestion only
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      options:
+        - label: I agree to follow this project's [Code of Conduct](https://github.com/lyse-labs/lyse/blob/main/CODE_OF_CONDUCT.md)
+          required: true

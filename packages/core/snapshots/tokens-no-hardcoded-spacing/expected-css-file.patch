@@ -1,0 +1,8 @@
+--- a/card.css
++++ b/card.css
+@@ -1,4 +1,4 @@
+ .card {
+-  padding: 24px;
++  padding: var(--spacing-6);
+   border-radius: 4px;
+ }

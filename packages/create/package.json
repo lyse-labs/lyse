@@ -1,0 +1,31 @@
+{
+  "name": "create-lyse",
+  "version": "0.1.0-alpha.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "Bootstrap Lyse setup in one command (npm create lyse@latest)",
+  "type": "module",
+  "bin": {
+    "create-lyse": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "echo 'no tests for create-lyse' && exit 0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lyse-labs/lyse.git",
+    "directory": "packages/create"
+  },
+  "keywords": [
+    "lyse",
+    "design-system",
+    "cli"
+  ]
+}

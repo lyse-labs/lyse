@@ -1,0 +1,35 @@
+name: Perf smoke
+on:
+  pull_request:
+    paths:
+      - 'packages/core/**'
+      - '.github/workflows/perf-smoke.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/core/**'
+
+jobs:
+  perf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with: { version: 9.12.0 }
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F lyse build
+      - name: Run perf smoke tests
+        run: |
+          set -o pipefail
+          pnpm -F lyse test tests/perf/ 2>&1 | tee perf-output.txt
+      - name: Upload perf output
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf-output
+          path: perf-output.txt
+          retention-days: 7

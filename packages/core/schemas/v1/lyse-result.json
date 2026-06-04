@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-result.json",
+  "title": "Lyse audit result",
+  "type": "object",
+  "required": ["schemaVersion", "rulesVersion", "toolVersion", "scoringVersion", "repoRoot", "stack", "finalScore", "axes", "findings"],
+  "additionalProperties": true,
+  "properties": {
+    "$schema": { "type": "string", "format": "uri" },
+    "schemaVersion": { "const": 2 },
+    "rulesVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "toolVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+" },
+    "scoringVersion": { "type": "string", "const": "scoring-v1" },
+    "repoRoot": { "type": "string" },
+    "timestamp": { "type": "string" },
+    "stack": { "type": "array", "items": { "type": "string" } },
+    "finalScore": {
+      "oneOf": [
+        { "type": "integer", "minimum": 0, "maximum": 100 },
+        { "type": "string", "const": "N/A" }
+      ]
+    },
+    "axes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["axis", "score", "findings", "opportunities"],
+        "additionalProperties": false,
+        "properties": {
+          "axis": { "type": "string", "enum": ["tokens", "a11y", "components", "stories", "ai-surface"] },
+          "score": {
+            "oneOf": [
+              { "type": "integer", "minimum": 0, "maximum": 100 },
+              { "type": "string", "const": "N/A" }
+            ]
+          },
+          "findings": { "type": "integer", "minimum": 0 },
+          "opportunities": { "type": "integer", "minimum": 0 },
+          "rateScore": {
+            "description": "100·(1 − weightedFindings/opportunities), pre-cap. Phase 4.1 scorer v2.",
+            "oneOf": [
+              { "type": "integer" },
+              { "type": "string", "const": "N/A" }
+            ]
+          },
+          "absoluteCap": {
+            "description": "100 − K·log₁₀(1 + sevPenalty). Phase 4.1 scorer v2.",
+            "oneOf": [
+              { "type": "integer" },
+              { "type": "string", "const": "N/A" }
+            ]
+          },
+          "sevPenalty": {
+            "description": "4·errorCount + 2·warningCount + 1·infoCount. Phase 4.1 scorer v2.",
+            "type": "integer",
+            "minimum": 0
+          },
+          "weightedFindings": {
+            "description": "Alias of sevPenalty exposed for clarity. Phase 4.1 scorer v2.",
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ruleId", "axis", "severity", "location", "message"],
+        "additionalProperties": false,
+        "properties": {
+          "ruleId": { "type": "string" },
+          "axis": { "type": "string", "enum": ["tokens", "a11y", "components", "stories", "ai-surface"] },
+          "severity": { "type": "string", "enum": ["error", "warning", "info"] },
+          "location": {
+            "type": "object",
+            "required": ["file", "line", "column"],
+            "additionalProperties": false,
+            "properties": {
+              "file": { "type": "string" },
+              "line": { "type": "integer", "minimum": 0 },
+              "column": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "message": { "type": "string" },
+          "suggestion": { "type": "string" },
+          "context": { "type": "string" },
+          "confidence": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+            "description": "Confidence that the rule's auto-fix is safe. Optional."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-rules.json",
+  "title": "Lyse rules manifest",
+  "type": "object",
+  "required": ["schemaVersion", "rulesVersion", "rules"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "rulesVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "axis", "defaultSeverity", "shortDescription", "fullDescription", "helpUri", "rationale", "examples", "allowlist"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "axis": { "type": "string", "enum": ["tokens", "a11y", "components", "stories", "ai-surface"] },
+          "defaultSeverity": { "type": "string", "enum": ["error", "warning", "info"] },
+          "shortDescription": { "type": "string" },
+          "fullDescription": { "type": "string" },
+          "helpUri": { "type": "string", "format": "uri" },
+          "rationale": { "type": "string" },
+          "examples": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["good", "bad"],
+              "additionalProperties": false,
+              "properties": {
+                "good": { "type": "string" },
+                "bad": { "type": "string" }
+              }
+            }
+          },
+          "allowlist": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

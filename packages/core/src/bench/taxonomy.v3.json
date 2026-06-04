@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "taxonomy/3.0",
+  "validUntil": "2026-09-01T00:00:00Z",
+  "lastReview": "2026-05-26",
+  "rotationKeyHash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "axes": [
+    { "id": "tokens",       "title": "Token Discipline",             "weight": 18, "subDimensions": [] },
+    { "id": "components",   "title": "Component Architecture",       "weight": 18, "subDimensions": [] },
+    { "id": "a11y",         "title": "Accessibility",                "weight": 18, "subDimensions": [] },
+    { "id": "governance",   "title": "Governance & Contribution",    "weight": 12, "subDimensions": [] },
+    { "id": "docs",         "title": "Documentation & Stories",      "weight": 8,  "subDimensions": [] },
+    { "id": "ai_surface",   "title": "AI Readiness (2026)",          "weight": 8,  "subDimensions": [] },
+    { "id": "visual",       "title": "Visual Design Quality",        "weight": 7,  "subDimensions": [] },
+    { "id": "adoption",     "title": "Adoption & Drift Self-Measure","weight": 4,  "subDimensions": [] },
+    { "id": "theming",      "title": "Theming Architecture",         "weight": 3,  "subDimensions": [] },
+    { "id": "testing",      "title": "Testing Discipline",           "weight": 2,  "subDimensions": [] },
+    { "id": "performance",  "title": "Performance Architecture",     "weight": 1,  "subDimensions": [] },
+    { "id": "naming",       "title": "Naming & Conventions",         "weight": 1,  "subDimensions": [] }
+  ]
+}

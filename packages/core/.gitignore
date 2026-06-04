@@ -1,0 +1,13 @@
+# Copied from repo root by build script (copy-root-docs.mjs)
+# Do not commit these — they are regenerated on each build.
+PRIVACY.md
+SECURITY.md
+
+# Integration test output dirs — rewritten on each test run, do not commit.
+fixtures/**/report/
+fixtures/**/report-det-1/
+fixtures/**/report-det-2/
+fixtures/**/report-no-agents-md/
+
+# Per-test scratch directory (created by vitest fixtures, e.g. bench-pack/cli.test.ts).
+.tmp/

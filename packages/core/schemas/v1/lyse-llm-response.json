@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-llm-response.json",
+  "title": "Lyse LLM Augmentation Response",
+  "type": "object",
+  "required": ["findings", "tokensConsumed", "usdSpent", "modelUsed", "llmQuality"],
+  "properties": {
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ruleId", "axis", "severity", "location", "message", "codeSnippet", "llmConfidence"],
+        "additionalProperties": true,
+        "properties": {
+          "ruleId": { "type": "string" },
+          "axis": {
+            "type": "string",
+            "description": "Either a legacy 4-axis value or one of the 9 v0.1 DS dimensions, or a custom value the LLM coined for an unforeseen pattern."
+          },
+          "severity": { "type": "string", "enum": ["error", "warning", "info"] },
+          "location": {
+            "type": "object",
+            "required": ["file", "line"],
+            "properties": {
+              "file": { "type": "string" },
+              "line": { "type": "integer", "minimum": 0 },
+              "column": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "message": { "type": "string" },
+          "codeSnippet": { "type": "string" },
+          "llmConfidence": { "enum": ["high", "medium", "low"] }
+        }
+      }
+    },
+    "tokensConsumed": {
+      "type": "object",
+      "required": ["input", "output"],
+      "properties": { "input": { "type": "integer" }, "output": { "type": "integer" } }
+    },
+    "usdSpent": { "type": "number", "minimum": 0 },
+    "modelUsed": { "type": "string" },
+    "llmQuality": { "enum": ["higher", "lower"] }
+  }
+}

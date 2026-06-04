@@ -1,0 +1,8 @@
+--- a/styles.ts
++++ b/styles.ts
+@@ -1,4 +1,4 @@
+ export const styles = {
+-  gap: "1.5rem",
++  gap: "var(--spacing-6)",
+   fontSize: "0.875rem",
+ };

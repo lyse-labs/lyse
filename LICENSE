@@ -1,0 +1,39 @@
+# Lyse — Dual License
+
+Copyright (c) Lyse Labs.
+
+Lyse is dual-licensed. You may use, modify, and distribute it under
+either:
+
+1. **GNU Affero General Public License version 3** (AGPLv3) — see
+   [`LICENSE-AGPL-3.0.txt`](./LICENSE-AGPL-3.0.txt). Use this when you
+   accept the AGPLv3's network-copyleft requirements (notably: if you run
+   a modified version as a network service, you must offer your users the
+   modified source code).
+
+2. **Commercial License** — see [`COMMERCIAL.md`](./COMMERCIAL.md). Use
+   this when you want to embed Lyse in a closed-source product,
+   re-host it as a SaaS without sharing source, or otherwise need terms
+   incompatible with AGPLv3.
+
+SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Lyse-Commercial
+
+The official, complete AGPLv3 text is at <https://www.gnu.org/licenses/agpl-3.0.txt>.
+The copy committed alongside this file is verbatim from that URL.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. Lyse outputs (scores, reports, AGENTS.md files) are
+static-analysis artifacts and MUST NOT be used as the sole basis for
+procurement, compliance, or accessibility-certification decisions.
+
+---
+
+## Why dual?
+
+Lyse is open-source under AGPLv3. AGPLv3's network clause prevents
+larger vendors from rebundling Lyse as a closed-source SaaS without
+contributing back. The Commercial License exists for users whose own
+licensing or distribution model is incompatible with AGPLv3 (e.g. embedding
+Lyse's engine in a proprietary product).
+
+For commercial licensing inquiries: contact@getlyse.com.

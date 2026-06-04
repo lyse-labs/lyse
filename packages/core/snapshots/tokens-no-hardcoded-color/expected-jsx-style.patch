@@ -1,0 +1,11 @@
+--- a/Button.tsx
++++ b/Button.tsx
+@@ -3,7 +3,7 @@
+ export function Button() {
+   return (
+     <button
+-      style={{ backgroundColor: "#2563eb", color: "#ffffff" }}
++      style={{ backgroundColor: "var(--color-primary)", color: "#ffffff" }}
+       className="btn"
+     >
+       Click me

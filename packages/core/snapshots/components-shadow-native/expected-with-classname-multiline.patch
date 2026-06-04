@@ -1,0 +1,11 @@
+--- a/Nav.tsx
++++ b/Nav.tsx
+@@ -4,7 +4,7 @@
+ export function Nav() {
+   return (
+     <nav>
+-      <button
++      <Button
+         className="nav-item"
+         onClick={handleClick}
+       >

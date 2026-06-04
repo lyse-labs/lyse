@@ -1,0 +1,42 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`renderTerminal (plain-text mode for snapshot stability) > matches snapshot for the standard case 1`] = `
+"
+  lyse  0.1.0-alpha.1  ·  247 files  ·  1.4s
+
+
+  *  43 / 100   Health Score · scoring-v1
+
+  ℹ No design token registry found (no .lyse.yaml or componentsModule).
+     Your score reflects a/y + Storybook coverage only.
+     Run \`lyse init\` to detect your token system and unlock a calibrated score.
+
+
+  tokens        ######--------------     31     247 findings
+  a11y          ############--------     62      41 findings
+  components    ########------------     38      89 findings
+  stories       #########-----------     47      56 findings
+
+  Top findings
+
+   1  tokens/no-hardcoded-color           src/Header.tsx:42
+      Hardcoded color value: #2563eb  ->  consider replacing with token color.action.primary
+
+   2  components/no-native-shadows        src/Send.tsx:118
+      Native <button> used where <Button> from @acme/ui is available
+
+   3  a11y/essentials                     src/Logo.tsx:9
+      [jsx-a11y/alt-text] img elements must have an alt prop
+
+
+  Next steps
+
+   ->  Run \`lyse agents-md > AGENTS.md\` and commit it  ·  give your AI agents your token namespaces
+   ->  Audit native <button>/<input>/<a> usage in your highest-traffic files
+   ->  Run \`eslint --fix\` with eslint-plugin-jsx-a11y to auto-fix trivial a11y warnings
+   ->  Add stories for orphan DS components listed in report/lyse.json
+
+
+  report/lyse.json
+  github.com/lyse-labs/lyse/blob/main/docs/rules  ·  scanned 2026-05-15T14:23Z"
+`;

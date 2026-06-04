@@ -1,0 +1,101 @@
+name: Bug report
+description: Report a bug in Lyse
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report.
+
+        Before submitting, please:
+        - Search [existing issues](https://github.com/lyse-labs/lyse/issues) to avoid duplicates.
+        - Confirm you're on the latest version: `npx lyse@latest --version`.
+
+  - type: input
+    id: version
+    attributes:
+      label: Lyse version
+      description: Output of `lyse --version`
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node version
+      description: Output of `node --version`
+      placeholder: "v22.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which surface is affected?
+      multiple: true
+      options:
+        - CLI
+        - MCP server
+        - JSON output
+        - SARIF output
+        - Codemod / suggest_fix
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: |
+        Steps to reproduce. Ideally with a public repo we can clone, or a minimal code snippet.
+        Include the exact command you ran.
+      placeholder: |
+        1. git clone https://github.com/example/repo
+        2. cd repo
+        3. npx lyse audit .
+        4. Observe error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / stack trace
+      description: Set `LYSE_DEBUG=1` for verbose output, paste the full output here.
+      render: shell
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      options:
+        - label: I agree to follow this project's [Code of Conduct](https://github.com/lyse-labs/lyse/blob/main/CODE_OF_CONDUCT.md)
+          required: true

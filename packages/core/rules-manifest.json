@@ -1,0 +1,289 @@
+{
+  "schemaVersion": "1.0.0",
+  "rulesVersion": "0.1.0",
+  "rules": [
+    {
+      "id": "tokens/no-hardcoded-color",
+      "axis": "tokens",
+      "defaultSeverity": "warning",
+      "shortDescription": "Disallow hardcoded color values",
+      "fullDescription": "Hardcoded color values (#hex, rgb(), hsl(), oklch(), Tailwind arbitrary `bg-[#fff]`) bypass the design system. They survive token changes silently (a brand refresh becomes a manual hunt) and break dark-mode propagation through CSS variables.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-no-hardcoded-color.md",
+      "rationale": "Why it matters\n\nHardcoded colors are the #1 signal that an AI agent ignored the design contract. They silently fork the design system: each #2563eb that should be color.action.primary is a token-rename bomb waiting to detonate.\n\nWhen the rule fires, the suggestion includes the matching token from the project's TokenMap when the reverse-lookup yields exactly one candidate. When multiple tokens map to the same color value (common with primitive vs semantic token layers), all candidates are listed — the agent or human picks.",
+      "examples": [
+        {
+          "good": "<div className=\"bg-action-primary text-on-action\">",
+          "bad": "<div style={{ background: \"#2563eb\", color: \"#fff\" }}>"
+        },
+        {
+          "good": "<div className=\"bg-action-primary\">",
+          "bad": "<div className=\"bg-[#2563eb]\">"
+        },
+        {
+          "good": "color: var(--color-action-primary);",
+          "bad": "color: hsl(214, 86%, 53%);"
+        }
+      ],
+      "allowlist": [
+        "currentColor",
+        "transparent",
+        "inherit",
+        "initial",
+        "unset",
+        "none",
+        "auto"
+      ]
+    },
+    {
+      "id": "tokens/no-hardcoded-spacing",
+      "axis": "tokens",
+      "defaultSeverity": "warning",
+      "shortDescription": "Disallow off-scale spacing values",
+      "fullDescription": "Padding, margin, gap, and similar properties using raw px/rem/em values outside the documented spacing scale (Tailwind config, DTCG dimension tokens, or CSS variables) produce inconsistent rhythm and break theming.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-no-hardcoded-spacing.md",
+      "rationale": "Why it matters\n\nThe spacing scale encodes the rhythm of the product. A one-off `padding: 7px` survives every design-pass and slowly desynchronizes layouts. When the rule fires, the suggestion includes the matching scale step when the value maps to exactly one token.\n\nThe allowlist accommodates 1px borders (`border: 1px solid`), zero, and full-viewport keywords — these are not design-system tokens but pragmatic primitives.",
+      "examples": [
+        {
+          "good": "<div className=\"p-2\">",
+          "bad": "<div style={{ padding: \"7px\" }}>"
+        },
+        {
+          "good": "gap: var(--spacing-4);",
+          "bad": "gap: 13px;"
+        }
+      ],
+      "allowlist": [
+        "0",
+        "auto",
+        "100%",
+        "100vh",
+        "100vw"
+      ]
+    },
+    {
+      "id": "tokens/dtcg-conformance",
+      "axis": "tokens",
+      "defaultSeverity": "warning",
+      "shortDescription": "DTCG v2025.10 conformance for token JSON files",
+      "fullDescription": "Validates token JSON files (`*.tokens.json`, files under `tokens/**`) against the W3C Design Tokens Community Group spec (DTCG v2025.10). Flags tokens missing `$type` when it can be inferred from the value, broken aliases (`{group.token}` references that don't resolve), and composite tokens (shadow, typography, border) with the wrong shape.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-dtcg-conformance.md",
+      "rationale": "Why it matters\n\nDTCG conformance is the contract between design and code. Non-conformant token files don't survive round-trips through Style Dictionary, Tokens Studio, or Figma Tokens plugins — they silently corrupt theming and break dark-mode propagation.\n\nThe most common drift modes are: tokens with `$value` but no `$type` (Style Dictionary can't infer the right transform), aliases that point to renamed paths after a refactor, and composite shadow tokens with legacy string shapes that no longer parse.",
+      "examples": [
+        {
+          "good": "{ \"color\": { \"brand\": { \"$value\": \"#2563eb\", \"$type\": \"color\" } } }",
+          "bad": "{ \"color\": { \"brand\": { \"$value\": \"#2563eb\" } } }"
+        },
+        {
+          "good": "{ \"shadow\": { \"sm\": { \"$type\": \"shadow\", \"$value\": { \"offsetX\": \"0\", \"offsetY\": \"1px\", \"blur\": \"2px\", \"color\": \"rgba(0,0,0,0.1)\" } } } }",
+          "bad": "{ \"shadow\": { \"sm\": { \"$type\": \"shadow\", \"$value\": \"0 1px 2px rgba(0,0,0,0.1)\" } } }"
+        },
+        {
+          "good": "{ \"semantic\": { \"primary\": { \"$value\": \"{color.brand}\", \"$type\": \"color\" } } } (when color.brand exists)",
+          "bad": "{ \"semantic\": { \"primary\": { \"$value\": \"{color.brandd}\", \"$type\": \"color\" } } } (typo, no such path)"
+        }
+      ],
+      "allowlist": [
+        "files matching `*.tokens.json` heuristic but containing only $-prefixed metadata (no $value anywhere) — skipped, not flagged",
+        "files larger than 1 MB — skipped to avoid pathological cases",
+        "files matching `ctx.excludePaths` config"
+      ]
+    },
+    {
+      "id": "tokens/description-coverage",
+      "axis": "tokens",
+      "defaultSeverity": "info",
+      "shortDescription": "Semantic tokens should declare a $description",
+      "fullDescription": "Measures the fraction of semantic-layer tokens (`action.*`, `surface.*`, `text.*`, `background.*`, `border.*`, `feedback.*`, `state.*`, `interactive.*`, `link.*`, or any token under a `semantic` group) that declare a non-empty `$description`. Emits a single summary finding when coverage falls below 80%.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-description-coverage.md",
+      "rationale": "Why it matters\n\nSemantic tokens are the contract surface between design and code. Their primitive counterparts (`color.blue.500`, `spacing.16`) are self-explanatory — a number or a hex. But `action.primary` only makes sense if the token explains *what* it's for: \"the default action color for primary buttons, brand surfaces, and emphasized text\".\n\nUndocumented semantic tokens cause AI agents and humans alike to pick the wrong token. `$description` is the cheapest documentation surface in a DS — and the one most often skipped.\n\nThe rule is intentionally informational (severity: info) and computes coverage on the semantic layer only. Primitive tokens are excluded from the denominator.",
+      "examples": [
+        {
+          "good": "{ \"action\": { \"primary\": { \"$value\": \"{color.brand.500}\", \"$type\": \"color\", \"$description\": \"Default action color for primary CTAs and emphasized text\" } } }",
+          "bad": "{ \"action\": { \"primary\": { \"$value\": \"{color.brand.500}\", \"$type\": \"color\" } } }"
+        }
+      ],
+      "allowlist": [
+        "primitive tokens — `color.blue.500`, `spacing.16`, `radius.md` — excluded from the denominator",
+        "repos with no DTCG file — rule is N/A (opportunities = 0)"
+      ]
+    },
+    {
+      "id": "components/no-native-shadows",
+      "axis": "components",
+      "defaultSeverity": "warning",
+      "shortDescription": "Disallow native HTML elements when a DS component exists",
+      "fullDescription": "Native `<button>`, `<input>`, `<select>`, `<textarea>`, `<a>` used in a file that ALREADY imports from the configured DS module signals an intentional bypass of the design system's component primitives. Polymorphic `as=` props and `excludePaths` are honored.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/components-shadow-native.md",
+      "rationale": "Why it matters\n\nDS components encapsulate accessibility, theming, focus-management, and brand-consistent variants. Replacing them with native HTML on a per-component basis fragments these guarantees and creates inconsistent UX.\n\nThe rule only flags when the file already imports from the DS module — this is high-signal (the team uses the DS in this file but bypassed it for this element). Files that don't use the DS at all are skipped.",
+      "examples": [
+        {
+          "good": "<Button variant=\"primary\" onClick={save}>Save</Button>",
+          "bad": "<button onClick={save}>Save</button>"
+        },
+        {
+          "good": "<Link href=\"/about\">About</Link>",
+          "bad": "<a href=\"/about\">About</a>"
+        }
+      ],
+      "allowlist": [
+        "polymorphic `as=\"button\"` in `<Box as=\"button\">`",
+        "files matching `designSystem.excludePaths` config"
+      ]
+    },
+    {
+      "id": "naming/component-pascalcase",
+      "axis": "components",
+      "defaultSeverity": "warning",
+      "shortDescription": "Exported React/Vue/Solid components must be PascalCase",
+      "fullDescription": "Exported component functions or const arrow-function components (those returning JSX) that are not named in PascalCase violate React/Vue/Solid component naming conventions. Non-PascalCase names are silently treated as plain elements in JSX, causing components to render as unknown DOM elements and breaking the React component model.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/naming-component-pascalcase.md",
+      "rationale": "Why it matters\n\nReact, Vue, and Solid distinguish between HTML element types and component types by case: `<myButton>` creates an unknown HTML element whereas `<MyButton>` invokes the component. A component named `myButton` instead of `MyButton` is silently broken when used as JSX — it renders nothing useful.\n\nAuto-fix renames the declaration and internal same-file references. Cross-file imports must be updated separately (the suggestion includes a warning when the name is exported).",
+      "examples": [
+        {
+          "good": "export function MyButton() { return <button>Click</button>; }",
+          "bad": "export function myButton() { return <button>Click</button>; }"
+        },
+        {
+          "good": "export const MyCard = () => <div className=\"card\" />;",
+          "bad": "export const my_card = () => <div className=\"card\" />;"
+        }
+      ],
+      "allowlist": [
+        "HOC patterns (withRouter, withTheme — start with `with` lowercase)",
+        "test utilities in .test.tsx / .spec.tsx files",
+        "hooks starting with `use` (handled by naming/hook-prefix)"
+      ]
+    },
+    {
+      "id": "naming/hook-prefix",
+      "axis": "components",
+      "defaultSeverity": "warning",
+      "shortDescription": "Custom hooks must start with `use` + uppercase letter",
+      "fullDescription": "Exported functions that call other React hooks internally (useState, useEffect, useMemo, useCallback, useRef, useContext, useReducer, useLayoutEffect, and custom use* hooks) are custom hooks by definition. React's rules-of-hooks linter and runtime depend on the `use` prefix to detect hooks — a function named `getMyData` that calls `useState` internally breaks lint, ESLint plugin react-hooks, and can cause subtle hook order violations.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/naming-hook-prefix.md",
+      "rationale": "Why it matters\n\nReact's rules of hooks use the `use` prefix to determine if a function is a hook. A misnamed hook (`getMyData` calling `useState`) bypasses this detection, so:\n1. `eslint-plugin-react-hooks` won't apply its rules (silently broken)\n2. Calling the function conditionally becomes valid from ESLint's perspective — but will still crash at runtime\n3. Other developers don't know the function has hook semantics and may call it in non-hook contexts\n\nAuto-fix renames the declaration to `use<CapitalizedName>`. Cross-file callers must be updated separately.",
+      "examples": [
+        {
+          "good": "export function useMyData() { const [d, setD] = useState(null); return d; }",
+          "bad": "export function getMyData() { const [d, setD] = useState(null); return d; }"
+        },
+        {
+          "good": "export const useAuth = () => { const ctx = useContext(AuthCtx); return ctx; };",
+          "bad": "export const fetchAuth = () => { const ctx = useContext(AuthCtx); return ctx; };"
+        }
+      ],
+      "allowlist": [
+        "PascalCase components that happen to call hooks (those are components, not hooks)",
+        "test utilities in .test.ts / .spec.ts files",
+        "non-exported functions (internal helpers)"
+      ]
+    },
+    {
+      "id": "a11y/essentials",
+      "axis": "a11y",
+      "defaultSeverity": "warning",
+      "shortDescription": "Essential accessibility checks (jsx-a11y subset)",
+      "fullDescription": "Wraps the canonical `eslint-plugin-jsx-a11y` rules: `alt-text`, `anchor-has-content`, `label-has-associated-control`, `role-has-required-aria-props`, `aria-role`. Surface-level accessibility failures that AI agents most frequently introduce.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/a11y-essentials.md",
+      "rationale": "Why it matters\n\nMissing alt text, empty anchors, unlabeled inputs, and invalid ARIA are the most common a11y regressions in AI-generated UI. They block screen-reader users and violate WCAG 2.1 SC 1.1.1, 2.4.4, 1.3.1, 4.1.2.\n\nLyse depends on the canonical `eslint-plugin-jsx-a11y` rather than re-porting these rules — the upstream impl is battle-tested across millions of repos.",
+      "examples": [
+        {
+          "good": "<img src=\"/logo.png\" alt=\"Lyse logo\" />",
+          "bad": "<img src=\"/logo.png\" />"
+        },
+        {
+          "good": "<label htmlFor=\"email\">Email</label><input id=\"email\" />",
+          "bad": "<label>Email</label><input />"
+        }
+      ],
+      "allowlist": [
+        "jsx-a11y allowlists per-rule (e.g., decorative `alt=\"\"` for purely-presentational images)"
+      ]
+    },
+    {
+      "id": "stories/coverage",
+      "axis": "stories",
+      "defaultSeverity": "warning",
+      "shortDescription": "DS components without Storybook stories",
+      "fullDescription": "DS components in the inventory (imported elsewhere in the codebase) that have no matching Storybook story are flagged. A DS component without a story is undocumented and untested for the team.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/storybook-coverage.md",
+      "rationale": "Why it matters\n\nStorybook is the canonical documentation surface for a DS. Components without stories are invisible to designers, untestable visually, and an onboarding hazard for new engineers.\n\nThe rule scans `storybook-static/index.json` first (build output), falling back to filesystem scan of `**/*.stories.{ts,tsx,js,jsx}`. Coverage is computed per `componentInventory` entry — a DS component used N times in the codebase but with no story counts as one finding.",
+      "examples": [
+        {
+          "good": "Button.tsx + Button.stories.tsx",
+          "bad": "Button.tsx (no Button.stories.tsx)"
+        }
+      ],
+      "allowlist": [
+        "components not in `componentInventory` (i.e., never imported)"
+      ]
+    },
+    {
+      "id": "ai-surface/agents-md-quality",
+      "axis": "ai-surface",
+      "defaultSeverity": "warning",
+      "shortDescription": "AGENTS.md should be command-first and machine-actionable",
+      "fullDescription": "Reads `AGENTS.md` at the repo root (with `.github/AGENTS.md` and `docs/AGENTS.md` fallbacks) and verifies three quality signals: (1) at least one fenced code block whose first line is a runnable shell command (pnpm/npm/yarn/bun/python/cargo/make/bash/sh/node/tsx/deno/...), (2) at least one mention of exit codes / status codes / return codes, (3) at least one reference to a toolchain config file the repo actually has (package.json, tsconfig.json, pyproject.toml, Makefile, .lyse.yaml, etc.). Each failing signal emits one warning; absence of AGENTS.md emits one info finding.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-surface-agents-md-quality.md",
+      "rationale": "Why it matters\n\nCoding agents (Claude Code, Cursor, Copilot Workspace, etc.) consume AGENTS.md as their bootstrap context. Research from the kodustech/agent-readiness study (Stream 2) shows that command-first AGENTS.md sections — containing runnable commands and explicit exit-code semantics — shift agent task success by 35–55%.\n\nMere presence is not enough. A prose-only AGENTS.md that explains the project in English without listing a single `pnpm test` block leaves the agent guessing at the toolchain. Worse, per Gloaguen et al. (2026), long unstructured context files *reduce* task success and *increase* token cost by 20%.\n\nThe rule enforces the cheapest, highest-leverage discipline: at least one runnable command, at least one explicit exit-code expectation, and at least one reference to the toolchain config the agent will encounter.",
+      "examples": [
+        {
+          "good": "## Build\\n\\n\\`\\`\\`bash\\npnpm install && pnpm test\\n\\`\\`\\`\\n\\nExit code 0 means clean. Uses package.json.",
+          "bad": "# Welcome\\n\\nThis repo is a TypeScript project. Please read the README before contributing."
+        }
+      ],
+      "allowlist": [
+        "files larger than 500 KB — skipped to avoid pathological cases",
+        "repos with no AGENTS.md anywhere — emit a single info finding, not a warning"
+      ]
+    },
+    {
+      "id": "ai-surface/component-manifest-json",
+      "axis": "ai-surface",
+      "defaultSeverity": "info",
+      "shortDescription": "Component manifest JSON for MCP cost reduction",
+      "fullDescription": "Looks for a component manifest at the repo root (`components.json`, `lyse.components.json`) or in a monorepo (`apps/*/components.json`, `packages/*/components.json`). When found, validates the file is parseable JSON, has a top-level `components` array or object, and each entry has `{ name, sourceFile }` or `{ name, import }`. Absence emits an info finding; malformed manifests emit warnings. shadcn/ui-style `components.json` (the CLI config file, not a manifest) is detected and not counted as a lyse manifest.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-surface-component-manifest-json.md",
+      "rationale": "Why it matters\n\nThe Indeed MCP cost study (Stream 1) and the broader manifest-pattern literature (Stream 2) show that a static component manifest reduces MCP tool cost by ~5× compared to reading the underlying source files at lookup time. Agents calling `lyse_components` or equivalent get a deterministic, low-token list of components instead of paging through tsx files.\n\nThe manifest is also the source of truth for component discovery in code-connect and MCP-driven design-to-code workflows — without it, tools must heuristically scan exports or rely on conventions that break across monorepos.\n\nSeverity is intentionally informational for absence (the absence is a missed optimisation, not a bug). Malformed manifests are warnings because they will silently break consumers.",
+      "examples": [
+        {
+          "good": "{ \"components\": [ { \"name\": \"Button\", \"sourceFile\": \"packages/ui/src/button.tsx\" } ] }",
+          "bad": "{ \"stuff\": [] }"
+        },
+        {
+          "good": "{ \"components\": { \"Button\": { \"import\": \"@acme/ui\" } } }",
+          "bad": "{ \"components\": [ { \"sourceFile\": \"x.tsx\" } ] }"
+        }
+      ],
+      "allowlist": [
+        "shadcn/ui `components.json` (the CLI config file) — detected via `$schema` or `aliases` and skipped",
+        "files larger than 2 MB — skipped to avoid pathological cases",
+        "files matching `ctx.excludePaths` config"
+      ]
+    },
+    {
+      "id": "ai-surface/ds-index-exported",
+      "axis": "ai-surface",
+      "defaultSeverity": "warning",
+      "shortDescription": "DS package must export a discoverable index entry",
+      "fullDescription": "When `ctx.componentsModule` is configured (or auto-detected) and resolves to a workspace package, verifies that the package has an `src/index.ts` (or `src/index.tsx` / `index.ts` / `index.tsx`) file containing `export` statements (named, type, or `export * from`), with a meaningful surface (≥3 distinct named exports unless `export * from` is used). Rule is N/A when no DS module is configured or when the module is an external library (not a workspace package).",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-surface-ds-index-exported.md",
+      "rationale": "Why it matters\n\nA single, discoverable index entry point is the contract surface for MCP servers, code-connect tools, and humans alike. Without it, agents and IDEs must page through arbitrary file structures, guessing at where `Button` lives.\n\nThe rule is intentionally conservative: it accepts `export * from './components'` as an opaque-but-valid surface (we don't recursively follow it) and requires ≥3 distinct named exports only when no star re-exports are present. This avoids false positives on packages that legitimately re-export a single barrel module.\n\nWhen the configured DS module is external (e.g., `@mui/material`), the rule is N/A — there's nothing in the user's repo to fix.",
+      "examples": [
+        {
+          "good": "// packages/ui/src/index.ts\\nexport { Button } from './button';\\nexport { Card } from './card';\\nexport { Modal } from './modal';",
+          "bad": "// packages/ui/src/index.ts is missing entirely"
+        },
+        {
+          "good": "// packages/ui/src/index.ts\\nexport * from './components';",
+          "bad": "// packages/ui/src/index.ts\\nconst internal = 1;"
+        }
+      ],
+      "allowlist": [
+        "external libraries (componentsModule not resolvable to a workspace package) — rule is N/A",
+        "repos with no `componentsModule` configured or auto-detected — rule is N/A",
+        "indexes using `export * from ...` — accepted without counting named exports"
+      ]
+    }
+  ]
+}

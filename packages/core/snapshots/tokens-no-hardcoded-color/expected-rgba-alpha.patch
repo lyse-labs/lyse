@@ -1,0 +1,8 @@
+--- a/styles.ts
++++ b/styles.ts
+@@ -1,4 +1,4 @@
+ export const styles = {
+-  overlay: "rgba(0, 0, 0, 0.5)",
++  overlay: "var(--color-overlay)",
+   text: "#1f2937",
+ };

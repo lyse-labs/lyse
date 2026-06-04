@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-event.json",
+  "title": "Lyse telemetry event",
+  "type": "object",
+  "required": ["schema_version", "event_id", "event_type", "ts", "session_id", "repo_bucket", "sdk_version"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "source": { "type": "string", "enum": ["user", "bench"], "default": "user" },
+    "event_id": { "type": "string", "minLength": 16, "maxLength": 32 },
+    "event_type": { "type": "string", "enum": ["audit.started", "audit.completed", "finding.discovered"] },
+    "ts": { "type": "string", "format": "date-time" },
+    "session_id": { "type": "string", "minLength": 16, "maxLength": 32 },
+    "repo_bucket": { "type": "string", "pattern": "^[a-f0-9]{16}$" },
+    "sdk_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+" },
+    "rules_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "stack": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "framework": { "type": "string" },
+        "ds_detected": { "type": "string" }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "score": {
+          "oneOf": [
+            { "type": "integer", "minimum": 0, "maximum": 100 },
+            { "type": "null" }
+          ]
+        },
+        "axes": {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "integer", "minimum": 0, "maximum": 100 },
+              { "type": "string", "const": "N/A" }
+            ]
+          }
+        },
+        "violations": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "error": { "type": "integer", "minimum": 0 },
+            "warning": { "type": "integer", "minimum": 0 },
+            "info": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule_id", "severity", "file_hash"],
+      "properties": {
+        "rule_id": { "type": "string" },
+        "severity": { "type": "string", "enum": ["error", "warning", "info"] },
+        "file_hash": { "type": "string", "pattern": "^[a-f0-9]{8}$" }
+      }
+    }
+  }
+}

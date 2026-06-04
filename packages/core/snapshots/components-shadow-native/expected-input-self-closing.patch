@@ -1,0 +1,18 @@
+--- a/SearchBar.tsx
++++ b/SearchBar.tsx
+@@ -1,4 +1,5 @@
+ import React from "react";
++import { Input } from "@acme/ui";
+ 
+ export function SearchBar() {
+   return (
+--- a/SearchBar.tsx
++++ b/SearchBar.tsx
+@@ -2,6 +2,6 @@
+ 
+ export function SearchBar() {
+   return (
+-    <input type="search" placeholder="Search..." className="search-input" />
++    <Input type="search" placeholder="Search..." className="search-input" />
+   );
+ }

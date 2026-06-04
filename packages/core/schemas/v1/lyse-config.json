@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-config.json",
+  "title": "Lyse .lyse.yaml config",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "designSystem": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "componentsModule": { "type": "string" },
+        "elements": { "type": "object", "additionalProperties": { "type": "string" } },
+        "excludePaths": { "type": "array", "items": { "type": "string" } },
+        "intentMap": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "severity": { "type": "string", "enum": ["error", "warning", "info", "off"] },
+          "ignore": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "deterministic": { "type": "boolean" },
+        "format": { "type": "string", "enum": ["json", "sarif", "text"] }
+      }
+    },
+    "license": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": ["string", "null"] }
+      }
+    },
+    "telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "endpoint": { "type": "string", "format": "uri" }
+      }
+    },
+    "mcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "meterPath": { "type": "string" }
+      }
+    },
+    "llm": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["anthropic", "openai", "openai-compatible", "mcp", "auto"],
+          "description": "LLM provider. Note: 'none' was removed in v0.1 — use staticOnly: true instead."
+        },
+        "model": { "type": "string" },
+        "endpoint": { "type": "string" },
+        "connector": {
+          "type": "string",
+          "enum": ["auto", "mcp-host", "openrouter", "direct-api-key", "ollama"]
+        },
+        "costCapUsd": { "type": "number", "exclusiveMinimum": 0 },
+        "cacheMaxAgeDays": { "type": "number", "exclusiveMinimum": 0 },
+        "staticOnly": { "type": "boolean" }
+      }
+    }
+  }
+}

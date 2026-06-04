@@ -1,0 +1,10 @@
+--- a/Card.tsx
++++ b/Card.tsx
+@@ -1,6 +1,6 @@
+ import styled from "styled-components";
+ 
+ export const Card = styled.div`
+-  background-color: #2563eb;
++  background-color: var(--color-primary);
+   padding: 24px;
+ `;
