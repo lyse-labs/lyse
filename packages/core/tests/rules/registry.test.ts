@@ -17,11 +17,12 @@ const EXPECTED_IDS = [
   "ai-surface/ds-index-exported",
   "ai-surface/mcp-config-present",
   "ai-surface/llms-txt-structure",
+  "ai-surface/shadcn-registry-valid",
 ];
 
 describe("rules/registry", () => {
-  it("ruleObjects contains exactly 15 rules", () => {
-    expect(ruleObjects).toHaveLength(15);
+  it("ruleObjects contains exactly 16 rules", () => {
+    expect(ruleObjects).toHaveLength(16);
   });
 
   it("ruleObjects has all expected rule IDs", () => {
@@ -31,8 +32,8 @@ describe("rules/registry", () => {
     }
   });
 
-  it("ruleMap has exactly 15 entries", () => {
-    expect(ruleMap.size).toBe(15);
+  it("ruleMap has exactly 16 entries", () => {
+    expect(ruleMap.size).toBe(16);
   });
 
   it("ruleMap has all expected rule IDs as keys", () => {
