@@ -18,6 +18,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Allowlist via `// lyse-disable ai-surface/mcp-config-present` in the repo
   root README.
 
+### Changed
+
+- `tokens/dtcg-conformance` is now a strict W3C DTCG validator. The rule
+  walks every leaf token and emits one finding per check:
+  - **warning** — leaf has `$value` but no `$type` (with an inferred-type
+    suggestion when the value shape is unambiguous).
+  - **error** — alias `{group.name}` does not resolve in the document.
+  - **error** — `$type: "color"` but `$value` is not a valid CSS color
+    (hex / `rgb()` / `hsl()` / `oklch()` / named).
+  - **error** — `$type: "dimension"` but `$value` lacks a CSS unit.
+  - **error** — `$type: "fontFamily"` but `$value` is not a non-empty
+    string or array of strings.
+  - **error** — `$type: "fontWeight"` but `$value` is outside `[1, 1000]`
+    and not a named weight.
+  - **error** — `$type: "duration"` but `$value` is not `<number>(ms|s)`.
+  - **error** — `$type: "cubicBezier"` but `$value` is not a 4-number
+    array, named easing, or `cubic-bezier()` expression.
+  - **error** — `$type: "number"` but `$value` is not a finite number.
+  - **warning** — composite tokens (`shadow`, `typography`, `border`,
+    `transition`, `gradient`) with malformed `$value` shape.
+
+  Per-token opt-out via the standard DTCG extension mechanism:
+  `$extensions.lyse.disable: ["tokens/dtcg-conformance"]` (or `"all"`).
+  Implements lyse-labs/lyse-internal#24.
+
+### Documentation
+
+- New per-rule page `docs/rules/tokens-dtcg-conformance.md` (Why · How ·
+  Examples · Auto-fix · Allowlist · See also).
+
 ## [0.1.0-alpha.2] — 2026-06-04
 
 First public release on npm under the scoped name **`@lyse-labs/lyse`**.
