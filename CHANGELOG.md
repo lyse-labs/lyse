@@ -25,6 +25,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   structural issue. Companion `llms-full.txt` is recognised as a bonus
   signal. Allowlist via `lyse-disable ai-surface/llms-txt-structure` in
   the root README.
+- `components/contracts-strictness` rule — detects lax component-prop
+  contracts that hinder AI-agent code generation:
+  - **error** — prop typed `any` / `unknown`.
+  - **warning** — variant-like prop (`variant`, `size`, `intent`, `color`,
+    `tone`, `appearance`, `kind`) typed plain `string` instead of a
+    string-literal union.
+  - **warning** — publishable `package.json` missing `types` / `typings`
+    or pointing to a non-existent file.
+
+  Framework-allowed props (`children`, `ref`, `key`, `as`, `asChild`) and
+  private (`"private": true`) packages are skipped. The variant heuristic
+  excludes `type` (overwhelmingly an HTML passthrough, not a DS variant).
 
 ### Changed
 

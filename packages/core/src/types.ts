@@ -17,6 +17,7 @@ export type BuiltInRuleId =
   | "tokens/dtcg-conformance"
   | "tokens/description-coverage"
   | "components/no-native-shadows"
+  | "components/contracts-strictness"
   | "naming/component-pascalcase"
   | "naming/hook-prefix"
   | "naming/prop-camelcase"

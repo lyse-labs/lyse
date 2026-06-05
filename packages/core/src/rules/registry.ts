@@ -3,6 +3,7 @@ import { rule as rSpacing } from "./tokens-no-hardcoded-spacing.js";
 import { rule as rDtcgConformance } from "./tokens-dtcg-conformance.js";
 import { rule as rDescriptionCoverage } from "./tokens-description-coverage.js";
 import { rule as rShadowNative } from "./components-shadow-native.js";
+import { rule as rContractsStrictness } from "./components-contracts-strictness.js";
 import { rule as rNamingPascalCase } from "./naming-component-pascalcase.js";
 import { rule as rNamingHookPrefix } from "./naming-hook-prefix.js";
 import { rule as rA11y } from "./a11y-essentials.js";
@@ -20,6 +21,7 @@ export const ruleObjects: Rule[] = [
   rDtcgConformance,
   rDescriptionCoverage,
   rShadowNative,
+  rContractsStrictness,
   rNamingPascalCase,
   rNamingHookPrefix,
   rA11y,
