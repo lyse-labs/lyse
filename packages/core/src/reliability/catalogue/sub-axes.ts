@@ -1,4 +1,4 @@
-// 13 sub-axes, 1:1 mapped to the 13 shipped rules.
+// 14 sub-axes, 1:1 mapped to the 14 shipped rules.
 // Each sub-axis declares the scoring axis it reports under (5 total per
 // AxisName in packages/core/src/types.ts: tokens, a11y, components, stories,
 // ai-surface). Naming rules report under the components axis.
@@ -18,6 +18,7 @@ export const SUB_AXES: SubAxisRecord[] = [
   { id: "ai-surface.component-manifest-json", axis: "ai-surface", name: "Component manifest JSON", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-surface/component-manifest-json"], llmDriven: false },
   { id: "ai-surface.ds-index-exported", axis: "ai-surface", name: "DS index export", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-surface/ds-index-exported"], llmDriven: false },
   { id: "ai-surface.mcp-config-present", axis: "ai-surface", name: "MCP config present", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-surface/mcp-config-present"], llmDriven: false },
+  { id: "ai-surface.llms-txt-structure", axis: "ai-surface", name: "llms.txt structure", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-surface/llms-txt-structure"], llmDriven: false },
 ];
 
 export function getSubAxis(id: string): SubAxisRecord | undefined {

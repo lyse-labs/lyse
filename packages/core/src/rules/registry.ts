@@ -11,6 +11,7 @@ import { rule as rAgentsMdQuality } from "./ai-surface-agents-md-quality.js";
 import { rule as rComponentManifestJson } from "./ai-surface-component-manifest-json.js";
 import { rule as rDsIndexExported } from "./ai-surface-ds-index-exported.js";
 import { rule as rMcpConfigPresent } from "./ai-surface-mcp-config-present.js";
+import { rule as rLlmsTxtStructure } from "./ai-surface-llms-txt-structure.js";
 import type { Rule } from "../types.js";
 
 export const ruleObjects: Rule[] = [
@@ -27,6 +28,7 @@ export const ruleObjects: Rule[] = [
   rComponentManifestJson,
   rDsIndexExported,
   rMcpConfigPresent,
+  rLlmsTxtStructure,
 ];
 
 export const ruleMap = new Map<string, Rule>(ruleObjects.map((r) => [r.id, r]));

@@ -10,8 +10,8 @@ import { ruleObjects } from "../../src/rules/registry.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 describe("RULE_MANIFEST_OBJECT", () => {
-  it("has exactly 13 rules", () => {
-    expect(RULE_METADATA).toHaveLength(13);
+  it("has exactly 14 rules", () => {
+    expect(RULE_METADATA).toHaveLength(14);
   });
 
   it("each rule has all required fields", () => {

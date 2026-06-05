@@ -26,7 +26,8 @@ export type BuiltInRuleId =
   | "ai-surface/agents-md-quality"
   | "ai-surface/component-manifest-json"
   | "ai-surface/ds-index-exported"
-  | "ai-surface/mcp-config-present";
+  | "ai-surface/mcp-config-present"
+  | "ai-surface/llms-txt-structure";
 
 export type RuleId = BuiltInRuleId | string;
 

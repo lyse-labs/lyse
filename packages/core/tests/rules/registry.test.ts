@@ -15,11 +15,12 @@ const EXPECTED_IDS = [
   "ai-surface/component-manifest-json",
   "ai-surface/ds-index-exported",
   "ai-surface/mcp-config-present",
+  "ai-surface/llms-txt-structure",
 ];
 
 describe("rules/registry", () => {
-  it("ruleObjects contains exactly 13 rules", () => {
-    expect(ruleObjects).toHaveLength(13);
+  it("ruleObjects contains exactly 14 rules", () => {
+    expect(ruleObjects).toHaveLength(14);
   });
 
   it("ruleObjects has all expected rule IDs", () => {
@@ -29,8 +30,8 @@ describe("rules/registry", () => {
     }
   });
 
-  it("ruleMap has exactly 13 entries", () => {
-    expect(ruleMap.size).toBe(13);
+  it("ruleMap has exactly 14 entries", () => {
+    expect(ruleMap.size).toBe(14);
   });
 
   it("ruleMap has all expected rule IDs as keys", () => {
