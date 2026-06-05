@@ -64,18 +64,18 @@
       "id": "tokens/dtcg-conformance",
       "axis": "tokens",
       "defaultSeverity": "warning",
-      "shortDescription": "DTCG v2025.10 conformance for token JSON files",
-      "fullDescription": "Validates token JSON files (`*.tokens.json`, files under `tokens/**`) against the W3C Design Tokens Community Group spec (DTCG v2025.10). Flags tokens missing `$type` when it can be inferred from the value, broken aliases (`{group.token}` references that don't resolve), and composite tokens (shadow, typography, border) with the wrong shape.",
+      "shortDescription": "Strict W3C DTCG validation for token JSON files",
+      "fullDescription": "Validates token JSON files (`*.tokens.json`, files under `tokens/**`) against the W3C Design Tokens Community Group draft. Per-leaf checks: every token must declare `$value` and SHOULD declare `$type`; alias references `{group.name}` must resolve; type-specific values are validated (color = CSS color, dimension = number+unit, fontWeight integer 1-1000 or named, duration = number+unit, cubicBezier = 4-number array or named easing, number = finite number, fontFamily = non-empty string|array). Composite tokens (shadow, typography, border, transition, gradient) are shape-checked.",
       "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-dtcg-conformance.md",
-      "rationale": "Why it matters\n\nDTCG conformance is the contract between design and code. Non-conformant token files don't survive round-trips through Style Dictionary, Tokens Studio, or Figma Tokens plugins — they silently corrupt theming and break dark-mode propagation.\n\nThe most common drift modes are: tokens with `$value` but no `$type` (Style Dictionary can't infer the right transform), aliases that point to renamed paths after a refactor, and composite shadow tokens with legacy string shapes that no longer parse.",
+      "rationale": "Why it matters\n\nDTCG conformance is the contract between design and code. Non-conformant token files don't survive round-trips through Style Dictionary, Tokens Studio, or Figma Tokens plugins — they silently corrupt theming and break dark-mode propagation.\n\nThe most common drift modes are: tokens with `$value` but no `$type` (Style Dictionary can't infer the right transform), aliases that point to renamed paths after a refactor, type-claimed but malformed values (`$type: \"color\"` with `$value: \"blu\"`, `$type: \"dimension\"` with `$value: \"16\"` — no unit), and composite shadow tokens with legacy string shapes that no longer parse.",
       "examples": [
         {
           "good": "{ \"color\": { \"brand\": { \"$value\": \"#2563eb\", \"$type\": \"color\" } } }",
           "bad": "{ \"color\": { \"brand\": { \"$value\": \"#2563eb\" } } }"
         },
         {
-          "good": "{ \"shadow\": { \"sm\": { \"$type\": \"shadow\", \"$value\": { \"offsetX\": \"0\", \"offsetY\": \"1px\", \"blur\": \"2px\", \"color\": \"rgba(0,0,0,0.1)\" } } } }",
-          "bad": "{ \"shadow\": { \"sm\": { \"$type\": \"shadow\", \"$value\": \"0 1px 2px rgba(0,0,0,0.1)\" } } }"
+          "good": "{ \"spacing\": { \"sm\": { \"$value\": \"8px\", \"$type\": \"dimension\" } } }",
+          "bad": "{ \"spacing\": { \"sm\": { \"$value\": \"8\", \"$type\": \"dimension\" } } } (no unit)"
         },
         {
           "good": "{ \"semantic\": { \"primary\": { \"$value\": \"{color.brand}\", \"$type\": \"color\" } } } (when color.brand exists)",
@@ -85,7 +85,8 @@
       "allowlist": [
         "files matching `*.tokens.json` heuristic but containing only $-prefixed metadata (no $value anywhere) — skipped, not flagged",
         "files larger than 1 MB — skipped to avoid pathological cases",
-        "files matching `ctx.excludePaths` config"
+        "files matching `ctx.excludePaths` config",
+        "tokens declaring `$extensions.lyse.disable: [\"tokens/dtcg-conformance\"]` — skipped per the standard DTCG extension mechanism"
       ]
     },
     {

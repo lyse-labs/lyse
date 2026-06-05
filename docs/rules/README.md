@@ -13,7 +13,7 @@ Rule output appears in:
 |---|---|---|---|---|
 | `tokens/no-hardcoded-color` | Tokens | warning | Yes | [→](./tokens-no-hardcoded-color.md) |
 | `tokens/no-hardcoded-spacing` | Tokens | warning | Yes | [→](./tokens-no-hardcoded-spacing.md) |
-| `tokens/dtcg-conformance` | Tokens | warning | No | — |
+| `tokens/dtcg-conformance` | Tokens | warning | No | [→](./tokens-dtcg-conformance.md) |
 | `tokens/description-coverage` | Tokens | info | No | — |
 | `a11y/essentials` | A11y | error | No | [→](./a11y-essentials.md) |
 | `components/no-native-shadows` | Components | warning | Yes | [→](./components-shadow-native.md) |
