@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Warning when no config is found; error when present-but-malformed.
   Allowlist via `// lyse-disable ai-surface/mcp-config-present` in the repo
   root README.
+- `ai-surface/llms-txt-structure` rule — detects whether the repo ships a
+  valid `llms.txt` at its root per the [llmstxt.org](https://llmstxt.org/)
+  spec: H1 title, blockquote summary, and at least one `## <section>`
+  heading whose list items follow `- [<title>](<url>): <description>`.
+  Absence emits a single warning; malformed files emit errors per
+  structural issue. Companion `llms-full.txt` is recognised as a bonus
+  signal. Allowlist via `lyse-disable ai-surface/llms-txt-structure` in
+  the root README.
 
 ### Changed
 

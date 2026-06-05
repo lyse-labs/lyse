@@ -308,6 +308,25 @@
         "files larger than 1 MB — skipped to avoid pathological cases",
         "repos containing `// lyse-disable ai-surface/mcp-config-present` in an adjacent README — rule is N/A"
       ]
+    },
+    {
+      "id": "ai-surface/llms-txt-structure",
+      "axis": "ai-surface",
+      "defaultSeverity": "warning",
+      "shortDescription": "llms.txt at repo root must follow the llmstxt.org structure",
+      "fullDescription": "Detects whether a design-system repository ships an `llms.txt` file at the repo root and validates the file's structure against the llmstxt.org specification: a single `# <title>` H1, a `> <summary>` blockquote, and at least one `## <section>` heading whose list items follow `- [<title>](<url>): <description>`. Absence emits a warning. A present-but-malformed `llms.txt` emits one error per structural issue. The optional companion file `llms-full.txt` is detected as a bonus signal but is not required.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-surface-llms-txt-structure.md",
+      "rationale": "Why it matters\n\n`llms.txt` (llmstxt.org, Tantum 2024) is the emerging convention for handing AI agents a token-cheap, curated map of a project. For a design system this is the AI-Consumable surface: a single discoverable entry that lists the canonical Quickstart, API reference, component index, and policy docs without forcing the agent to crawl the whole repo.\n\nAbsence is a missed opportunity, not a bug — agents fall back to scanning the README and source tree, which is slower and more expensive. Structural errors (missing H1, missing summary, malformed link rows) are scored as errors because consumers (cursor, claude code, custom agents) parse the file on the assumption it follows the spec, and silent malformations break the contract.\n\nThe companion `llms-full.txt` — a single-file inlining of every linked document — is a strong bonus signal but is not enforced as a hard requirement.",
+      "examples": [
+        {
+          "good": "# Acme DS\\n\\n> A token-first React design system.\\n\\n## Docs\\n\\n- [Quickstart](https://acme.dev/quickstart): Get started in 3 minutes.\\n- [API reference](https://acme.dev/api): Full method index.",
+          "bad": "Welcome to Acme DS. We ship Buttons and Cards.\\n\\n- random link list"
+        }
+      ],
+      "allowlist": [
+        "files larger than 1 MB at `llms.txt` — skipped to avoid pathological cases",
+        "repos whose README at the root contains the directive `lyse-disable ai-surface/llms-txt-structure` — rule is N/A"
+      ]
     }
   ]
 }
