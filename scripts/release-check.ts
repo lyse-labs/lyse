@@ -173,10 +173,10 @@ function checkNoEnvFiles(): CheckResult {
   return fail(11, "no committed .env files", `committed: ${offenders.slice(0, 5).join(", ")}`);
 }
 
-// 12 — sub-axes.ts has exactly EXPECTED_SUB_AXES entries (16 after shadcn-registry-valid, 1 per rule);
+// 12 — sub-axes.ts has exactly EXPECTED_SUB_AXES entries (17 after agent-instruction-files, 1 per rule);
 //      rules-manifest.json is non-empty. Per v2 spec §9, the 87 dormant sub-axes
 //      that don't bind to a v0.1 rule are preserved as experimental.
-const EXPECTED_SUB_AXES = 16;
+const EXPECTED_SUB_AXES = 17;
 
 function checkSubAxesAndRulesCount(): CheckResult {
   const subAxesSrc = readMaybe(join(ROOT, "packages/core/src/reliability/catalogue/sub-axes.ts"));

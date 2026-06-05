@@ -29,7 +29,8 @@ export type BuiltInRuleId =
   | "ai-surface/ds-index-exported"
   | "ai-surface/mcp-config-present"
   | "ai-surface/llms-txt-structure"
-  | "ai-surface/shadcn-registry-valid";
+  | "ai-surface/shadcn-registry-valid"
+  | "ai-surface/agent-instruction-files";
 
 export type RuleId = BuiltInRuleId | string;
 

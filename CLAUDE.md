@@ -77,7 +77,7 @@ Before every commit, verify that ALL relevant documentation is in sync:
 
 ## Key modules
 
-- **`packages/core/src/rules/registry.ts`** — exports `ruleObjects` (all 16 rule instances) and `ruleMap` (O(1) lookup). Import from here in `fix.ts`, `share.ts`, `audit-pipeline.ts`, `codemods/safety.ts`. Do NOT build local rule arrays.
+- **`packages/core/src/rules/registry.ts`** — exports `ruleObjects` (all 17 rule instances) and `ruleMap` (O(1) lookup). Import from here in `fix.ts`, `share.ts`, `audit-pipeline.ts`, `codemods/safety.ts`. Do NOT build local rule arrays.
 - **`packages/core/src/rules/_rule-module.ts`** — `createLyseRule({ meta, ... })` is the single source of truth for rule metadata. The full `meta` shape (axis, lyseRuleId, defaultSeverity, shortDescription, fullDescription, helpUri, rationale, examples, allowlist) is passed inline in each rule file and registered into a module-level `META_REGISTRY`. `manifest.ts` derives `RULE_METADATA` from this registry — never edit `manifest.ts` to add a rule's metadata, edit the rule file.
 - **`packages/core/src/config/schema.ts`** — exports `loadConfig(repoRoot, opts?: { onError: "throw" | "degrade" })`. Use `onError: "degrade"` in MCP paths; default (throw) in CLI audit paths.
 - **`lyse fix` 6 safety guards** (`commands/fix.ts` + `codemods/safety.ts`): (1) clean git working tree, (2) git repo required, (3) token map discoverable, (4) high-confidence codemods only by default, (5) per-run file count cap (default 200), (6) non-TTY contexts default to `--dry-run`.

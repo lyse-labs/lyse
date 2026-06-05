@@ -1,4 +1,4 @@
-// 16 sub-axes, 1:1 mapped to the 16 shipped rules.
+// 17 sub-axes, 1:1 mapped to the 17 shipped rules.
 // Each sub-axis declares the scoring axis it reports under (5 total per
 // AxisName in packages/core/src/types.ts: tokens, a11y, components, stories,
 // ai-surface). Naming rules report under the components axis.
@@ -21,6 +21,7 @@ export const SUB_AXES: SubAxisRecord[] = [
   { id: "ai-surface.mcp-config-present", axis: "ai-surface", name: "MCP config present", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-surface/mcp-config-present"], llmDriven: false },
   { id: "ai-surface.llms-txt-structure", axis: "ai-surface", name: "llms.txt structure", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-surface/llms-txt-structure"], llmDriven: false },
   { id: "ai-surface.shadcn-registry-valid", axis: "ai-surface", name: "shadcn registry validity", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-surface/shadcn-registry-valid"], llmDriven: false },
+  { id: "ai-surface.agent-instruction-files", axis: "ai-surface", name: "Agent instruction files (Cursor / Claude)", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-surface/agent-instruction-files"], llmDriven: false },
 ];
 
 export function getSubAxis(id: string): SubAxisRecord | undefined {
