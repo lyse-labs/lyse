@@ -1,6 +1,6 @@
 # Rules
 
-Lyse ships with 12 rules. Each rule has a stable ID, a version, a severity, an axis, and (optionally) a codemod for auto-fix.
+Lyse ships with 13 rules. Each rule has a stable ID, a version, a severity, an axis, and (optionally) a codemod for auto-fix.
 
 Rule output appears in:
 - Terminal text (default reporter).
@@ -23,6 +23,7 @@ Rule output appears in:
 | `ai-surface/agents-md-quality` | AI surface | warning | No | — |
 | `ai-surface/component-manifest-json` | AI surface | warning | No | — |
 | `ai-surface/ds-index-exported` | AI surface | warning | No | — |
+| `ai-surface/mcp-config-present` | AI surface | warning | No | [→](./ai-surface-mcp-config-present.md) |
 
 ## How rules score
 

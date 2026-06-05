@@ -25,7 +25,8 @@ export type BuiltInRuleId =
   | "stories/variant-coverage"
   | "ai-surface/agents-md-quality"
   | "ai-surface/component-manifest-json"
-  | "ai-surface/ds-index-exported";
+  | "ai-surface/ds-index-exported"
+  | "ai-surface/mcp-config-present";
 
 export type RuleId = BuiltInRuleId | string;
 

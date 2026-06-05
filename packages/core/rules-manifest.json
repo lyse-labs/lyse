@@ -284,6 +284,29 @@
         "repos with no `componentsModule` configured or auto-detected — rule is N/A",
         "indexes using `export * from ...` — accepted without counting named exports"
       ]
+    },
+    {
+      "id": "ai-surface/mcp-config-present",
+      "axis": "ai-surface",
+      "defaultSeverity": "warning",
+      "shortDescription": "Design system should declare at least one MCP server",
+      "fullDescription": "Looks for an MCP (Model Context Protocol) configuration file at the repo root: `.mcp.json` (Claude Code convention), `.cursor/mcp.json` (Cursor convention), or `claude_desktop_config.json`. When found, validates the file is parseable JSON, has a top-level `mcpServers` object with at least one entry, and each server entry has a non-empty string key and a `command` (string); `args` (array) is optional. Absence emits one warning (DS not yet AI-agent-accessible). Malformed JSON, missing/empty `mcpServers`, or invalid server entries emit errors.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-surface-mcp-config-present.md",
+      "rationale": "Why it matters\n\nThe Model Context Protocol (MCP) is the de-facto standard for letting coding agents (Claude Code, Cursor, Claude Desktop) call tools that surface a design system's components, tokens, and docs at lookup time. A design system without an MCP server declaration leaves agents to scrape README and source files heuristically — the cost-vs-accuracy regression documented in Stream 1 of the AI-Consumable track.\n\nThe signal is binary and cheap to enforce: either the repo declares at least one valid `mcpServers` entry or it doesn't. A warning (not info) reflects the strategic importance of AI-Consumable readiness for Track 2 design systems: shipping a stable MCP surface is now table-stakes.\n\nSeverity escalates to error when a config file is present but malformed — a broken `.mcp.json` silently breaks every agent that tries to connect, which is worse than no config at all.",
+      "examples": [
+        {
+          "good": "{ \"mcpServers\": { \"lyse\": { \"command\": \"npx\", \"args\": [\"@lyse-labs/lyse\", \"mcp\"] } } }",
+          "bad": "{ \"mcpServers\": {} }"
+        },
+        {
+          "good": "{ \"mcpServers\": { \"design-system\": { \"command\": \"node\", \"args\": [\"./mcp-server.js\"] } } }",
+          "bad": "{ \"servers\": [] }"
+        }
+      ],
+      "allowlist": [
+        "files larger than 1 MB — skipped to avoid pathological cases",
+        "repos containing `// lyse-disable ai-surface/mcp-config-present` in an adjacent README — rule is N/A"
+      ]
     }
   ]
 }
