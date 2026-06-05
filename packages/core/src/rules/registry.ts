@@ -13,6 +13,7 @@ import { rule as rComponentManifestJson } from "./ai-surface-component-manifest-
 import { rule as rDsIndexExported } from "./ai-surface-ds-index-exported.js";
 import { rule as rMcpConfigPresent } from "./ai-surface-mcp-config-present.js";
 import { rule as rLlmsTxtStructure } from "./ai-surface-llms-txt-structure.js";
+import { rule as rShadcnRegistryValid } from "./ai-surface-shadcn-registry-valid.js";
 import type { Rule } from "../types.js";
 
 export const ruleObjects: Rule[] = [
@@ -31,6 +32,7 @@ export const ruleObjects: Rule[] = [
   rDsIndexExported,
   rMcpConfigPresent,
   rLlmsTxtStructure,
+  rShadcnRegistryValid,
 ];
 
 export const ruleMap = new Map<string, Rule>(ruleObjects.map((r) => [r.id, r]));

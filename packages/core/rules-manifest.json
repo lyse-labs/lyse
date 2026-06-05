@@ -352,6 +352,31 @@
         "files larger than 1 MB at `llms.txt` — skipped to avoid pathological cases",
         "repos whose README at the root contains the directive `lyse-disable ai-surface/llms-txt-structure` — rule is N/A"
       ]
+    },
+    {
+      "id": "ai-surface/shadcn-registry-valid",
+      "axis": "ai-surface",
+      "defaultSeverity": "warning",
+      "shortDescription": "shadcn-style registry.json must be present and valid",
+      "fullDescription": "Detects whether the design system ships a shadcn-style component registry — `registry.json` at the repo root, `public/registry.json` (Next.js-hosted), or per-component `registry/*.json` files. Validates the minimal shadcn shape: each item must have `name` (string), `type` (e.g. \"registry:ui\") and a non-empty `files` array of `{ path, content?, type? }`. Optional fields (`dependencies`, `registryDependencies`, `tailwind`, `cssVars`) are not validated. When `components.json` exists but no registry is shipped, emits a warning for the missed AI-Consumable surface; malformed JSON or missing required fields are errors.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-surface-shadcn-registry-valid.md",
+      "rationale": "Why it matters\n\nA valid shadcn-style `registry.json` is the single most reliable signal that a design system is AI-Consumable today. The shadcn CLI uses it to install components into downstream apps; coding agents (Cursor, Claude, GPT) increasingly look for it to discover and pull components instead of scraping source files.\n\nDetection is conservative — we look for the canonical locations only (`registry.json`, `public/registry.json`, `registry/*.json`) and validate only the three required fields per the public shadcn schema. Optional fields like `tailwind` and `cssVars` vary across versions and are not part of the validity contract.\n\nA repo declaring `components.json` (the shadcn CLI marker) but no registry is a strong indicator the team is on the shadcn path but hasn't published the consumable surface — that's a warning, not an error. Malformed JSON or items missing `name`/`type`/`files` will silently break the shadcn CLI and any agent consumer, so they are errors.",
+      "examples": [
+        {
+          "good": "{ \"name\": \"button\", \"type\": \"registry:ui\", \"files\": [{ \"path\": \"ui/button.tsx\" }] }",
+          "bad": "{ \"name\": \"button\", \"type\": \"registry:ui\" }"
+        },
+        {
+          "good": "{ \"items\": [{ \"name\": \"button\", \"type\": \"registry:ui\", \"files\": [{ \"path\": \"ui/button.tsx\" }] }] }",
+          "bad": "{ \"items\": [{ \"name\": \"button\" }] }"
+        }
+      ],
+      "allowlist": [
+        "repos with no `components.json` AND no `registry.json` — rule is N/A",
+        "files larger than 4 MB — skipped to avoid pathological cases",
+        "files matching `ctx.excludePaths` config",
+        "disable in `.lyse.yaml`: `rules: { ai-surface/shadcn-registry-valid: off }`"
+      ]
     }
   ]
 }

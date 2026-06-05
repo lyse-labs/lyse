@@ -37,6 +37,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Framework-allowed props (`children`, `ref`, `key`, `as`, `asChild`) and
   private (`"private": true`) packages are skipped. The variant heuristic
   excludes `type` (overwhelmingly an HTML passthrough, not a DS variant).
+- `ai-surface/shadcn-registry-valid` rule — detects whether the design
+  system ships a valid shadcn-style component registry (the canonical
+  AI-Consumable surface understood by the shadcn CLI and most coding
+  agents today). Validates the minimal shadcn schema (`name`, `type`,
+  `files`) at canonical locations (`registry.json`,
+  `public/registry.json`, `registry/*.json`) with support for single-item
+  and collection (`items[]` / `registry[]`) shapes. Warning when
+  `components.json` exists but no registry is shipped; errors on
+  malformed JSON or missing required fields.
 
 ### Changed
 

@@ -28,7 +28,8 @@ export type BuiltInRuleId =
   | "ai-surface/component-manifest-json"
   | "ai-surface/ds-index-exported"
   | "ai-surface/mcp-config-present"
-  | "ai-surface/llms-txt-structure";
+  | "ai-surface/llms-txt-structure"
+  | "ai-surface/shadcn-registry-valid";
 
 export type RuleId = BuiltInRuleId | string;
 
