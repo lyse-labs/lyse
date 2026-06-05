@@ -46,6 +46,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and collection (`items[]` / `registry[]`) shapes. Warning when
   `components.json` exists but no registry is shipped; errors on
   malformed JSON or missing required fields.
+- `ai-surface/agent-instruction-files` rule — detects whether the repo
+  ships agent instruction files (`.cursor/rules/*.mdc`, `.cursorrules`,
+  `CLAUDE.md`, `.windsurfrules`, `.github/copilot-instructions.md`, etc.)
+  that tell coding agents *how* to use the design system. Warning when
+  no instruction file is present; warning per file on quality issues
+  (too short, missing front-matter for `.mdc`, missing component
+  guidance). Allowlist via `lyse-disable
+  ai-surface/agent-instruction-files` in the root README.
 
 ### Changed
 

@@ -377,6 +377,30 @@
         "files matching `ctx.excludePaths` config",
         "disable in `.lyse.yaml`: `rules: { ai-surface/shadcn-registry-valid: off }`"
       ]
+    },
+    {
+      "id": "ai-surface/agent-instruction-files",
+      "axis": "ai-surface",
+      "defaultSeverity": "warning",
+      "shortDescription": "Repo should ship Cursor rules or Claude skills with valid frontmatter",
+      "fullDescription": "Scans for agent instruction bundles at the repo root: `.cursor/rules/*.mdc` (Cursor rules) and `.claude/skills/*/SKILL.md` (Anthropic Claude skills). When neither is present, emits a single warning — the repo gives coding agents no project-specific guidance signal. When found, each file is parsed for YAML frontmatter and validated: Cursor rules must declare `description` and `globs`; Claude skills must declare `name` (kebab-case) and `description` (≤200 chars). Files larger than 5 KB raise a token-budget warning (they cost agents context on every load). Malformed frontmatter and missing required keys raise errors; oversize, non-kebab `name`, and overlong descriptions raise warnings.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-surface-agent-instruction-files.md",
+      "rationale": "Why it matters\n\nCursor rules and Claude skills are the contract surface for two of the most-used coding agents in 2026. Without at least one of these bundles, the agent has no project-specific guidance beyond `AGENTS.md` or `CLAUDE.md` — and even those don't carry the same auto-attach semantics as Cursor's `globs` field or the same auto-load semantics as Claude's skill manifest.\n\nBeyond presence, the *frontmatter* matters. Cursor uses `globs` to decide which rule fires for which file edit; missing `globs` silently disables the rule. Claude skills are loaded by their `name` + `description` pair (the description is the agent's \"tool selection\" prompt); a missing description means the skill is invisible to the agent's decision loop.\n\nToken budget is the third signal. The Anthropic agent skills documentation (Oct 2026) and the Cursor rules documentation both recommend keeping individual files small — long instruction files crowd out the actual context the agent needs to read, and inflate per-call cost. The 5 KB heuristic is the same threshold the Claude skill examples use.",
+      "examples": [
+        {
+          "good": "---\\ndescription: TypeScript style guide for this monorepo\\nglobs: [\"src/**/*.ts\", \"src/**/*.tsx\"]\\nalwaysApply: false\\n---\\n\\n# TypeScript style\\n\\nUse strict mode. Prefer type aliases over interfaces.",
+          "bad": "---\\n# missing required `description` and `globs`\\n---\\n\\n# TypeScript style\\n\\nUse strict mode."
+        },
+        {
+          "good": "---\\nname: pr-checklist\\ndescription: Generates a PR checklist from the diff (≤200 chars)\\nversion: 1.0.0\\n---\\n\\n# PR checklist skill\\n\\nProcedural instructions for the agent.",
+          "bad": "---\\nname: PR_Checklist\\n# missing `description`; `name` is not kebab-case\\n---\\n\\n# PR checklist"
+        }
+      ],
+      "allowlist": [
+        "files larger than 500 KB — skipped to avoid pathological cases (and counted as an oversize warning)",
+        "files matching `ctx.excludePaths` config",
+        "repos that ship only AGENTS.md/CLAUDE.md but neither Cursor rules nor Claude skills — emit one warning (not error) to nudge adoption"
+      ]
     }
   ]
 }
