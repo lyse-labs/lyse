@@ -5,6 +5,19 @@ All notable changes to Lyse will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `ai-surface/mcp-config-present` rule — detects whether a design system
+  repository declares an MCP server (Model Context Protocol), signaling
+  AI-Consumable readiness. Looks for `.mcp.json` (Claude Code),
+  `.cursor/mcp.json` (Cursor), or `claude_desktop_config.json` at the repo
+  root and validates each entry has a non-empty key and a `command` string.
+  Warning when no config is found; error when present-but-malformed.
+  Allowlist via `// lyse-disable ai-surface/mcp-config-present` in the repo
+  root README.
+
 ## [0.1.0-alpha.2] — 2026-06-04
 
 First public release on npm under the scoped name **`@lyse-labs/lyse`**.

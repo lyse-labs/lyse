@@ -116,7 +116,7 @@ packages/core/src/
 │   └── figma.ts             # stub, not yet wired
 ├── rules/
 │   ├── manifest.ts          # RULE_METADATA — derived from META_REGISTRY
-│   ├── registry.ts          # exports ruleObjects (12 rule instances) + ruleMap (O(1) lookup)
+│   ├── registry.ts          # exports ruleObjects (13 rule instances) + ruleMap (O(1) lookup)
 │   ├── pack-loader.ts       # load .lyse/generated-rules.yaml
 │   ├── pack-validator.ts    # validate rule pack schema
 │   ├── _skip-context.ts     # shared helpers (isInsideCodeDisplay, isInsideSkippedJsxAttr)
