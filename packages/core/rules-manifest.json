@@ -132,6 +132,31 @@
       ]
     },
     {
+      "id": "components/contracts-strictness",
+      "axis": "components",
+      "defaultSeverity": "warning",
+      "shortDescription": "Component prop contracts must be strictly typed and .d.ts shipped",
+      "fullDescription": "Scans exported PascalCase components in .tsx/.jsx files for lax TypeScript prop contracts that hinder AI-agent code generation: props typed `any` or `unknown` (error), and variant-like props (name matching variant/size/intent/color/tone/appearance/kind/type) typed plain `string` instead of a string-literal union (warning). Also checks each publishable package.json for a `types` or `typings` field and that the referenced file exists post-build (warning when missing).",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/components-contracts-strictness.md",
+      "rationale": "Why it matters\n\nAI coding agents and IDE tooling rely on TypeScript prop signatures to suggest valid usages. A prop typed `any` or `unknown` is a black hole — the agent has nothing to constrain its output and falls back to guesses. A variant prop typed plain `string` (`variant: string`) is just as bad: the agent has no way to know the component accepts only `\"primary\" | \"secondary\" | \"ghost\"` and will happily suggest `variant=\"huge\"`.\n\nShipping a `.d.ts` (declared via `package.json` `types` / `typings`) is the same problem at the package boundary: without a declaration file, downstream consumers and agents fall back to untyped any-mode and lose every guarantee the source code put in.\n\nThe rule errors on `any` / `unknown` because those are silent footguns. It warns on variant-string and missing `.d.ts` because there are legitimate (if narrow) reasons to leave them, and because the auto-fix path differs from the unsafe types.",
+      "examples": [
+        {
+          "good": "type ButtonVariant = \"primary\" | \"secondary\" | \"ghost\";\ninterface ButtonProps { variant: ButtonVariant; size: \"sm\" | \"md\" | \"lg\"; }\nexport function Button(props: ButtonProps) { return <button />; }",
+          "bad": "interface ButtonProps { variant: string; size: any; data: unknown; }\nexport function Button(props: ButtonProps) { return <button />; }"
+        },
+        {
+          "good": "{ \"name\": \"@acme/ui\", \"main\": \"./dist/index.js\", \"types\": \"./dist/index.d.ts\" }",
+          "bad": "{ \"name\": \"@acme/ui\", \"main\": \"./dist/index.js\" }"
+        }
+      ],
+      "allowlist": [
+        "framework-allowed props: `children`, `ref`, `key`, `as`, `asChild` (rest-spread `...rest` and ref-forwarded types are skipped)",
+        "private packages (`\"private\": true`) and non-publishable package.json files (no `name`/`main`/`module`/`exports`/`types`/`typings`)",
+        "test files (.test.tsx, .spec.tsx)",
+        "inline `// lyse-disable-next-line components/contracts-strictness` directive (handled by the global suppression engine)"
+      ]
+    },
+    {
       "id": "naming/component-pascalcase",
       "axis": "components",
       "defaultSeverity": "warning",

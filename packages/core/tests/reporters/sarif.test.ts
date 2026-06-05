@@ -37,7 +37,7 @@ describe("renderSarif", () => {
 
   it("includes ALL rules in tool.driver.rules (not just those with findings)", () => {
     const sarif = JSON.parse(renderSarif(sample));
-    expect(sarif.runs[0].tool.driver.rules).toHaveLength(14);
+    expect(sarif.runs[0].tool.driver.rules).toHaveLength(15);
     const ids = sarif.runs[0].tool.driver.rules.map((r: { id: string }) => r.id);
     expect(ids).toContain("tokens/no-hardcoded-color");
     expect(ids).toContain("tokens/dtcg-conformance");
@@ -45,6 +45,7 @@ describe("renderSarif", () => {
     expect(ids).toContain("a11y/essentials");
     expect(ids).toContain("stories/coverage");
     expect(ids).toContain("components/no-native-shadows");
+    expect(ids).toContain("components/contracts-strictness");
     expect(ids).toContain("naming/component-pascalcase");
     expect(ids).toContain("naming/hook-prefix");
     expect(ids).toContain("ai-surface/agents-md-quality");

@@ -1,4 +1,4 @@
-// 14 sub-axes, 1:1 mapped to the 14 shipped rules.
+// 15 sub-axes, 1:1 mapped to the 15 shipped rules.
 // Each sub-axis declares the scoring axis it reports under (5 total per
 // AxisName in packages/core/src/types.ts: tokens, a11y, components, stories,
 // ai-surface). Naming rules report under the components axis.
@@ -11,6 +11,7 @@ export const SUB_AXES: SubAxisRecord[] = [
   { id: "tokens.description-coverage", axis: "tokens", name: "Token description coverage", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["tokens/description-coverage"], llmDriven: false },
   { id: "a11y.essentials", axis: "a11y", name: "jsx-a11y essentials", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["a11y/essentials"], llmDriven: false },
   { id: "components.native-shadows", axis: "components", name: "Native shadow elements", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["components/no-native-shadows"], llmDriven: false },
+  { id: "components.contracts-strictness", axis: "components", name: "Component prop contract strictness", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["components/contracts-strictness"], llmDriven: false },
   { id: "components.naming-component-pascalcase", axis: "components", name: "Component PascalCase", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["naming/component-pascalcase"], llmDriven: false },
   { id: "components.naming-hook-prefix", axis: "components", name: "Hook `use` prefix", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["naming/hook-prefix"], llmDriven: false },
   { id: "stories.coverage", axis: "stories", name: "Storybook coverage", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["stories/coverage"], llmDriven: false },

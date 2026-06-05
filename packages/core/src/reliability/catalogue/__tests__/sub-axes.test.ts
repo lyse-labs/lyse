@@ -4,8 +4,8 @@ import { SUB_AXES, getSubAxis } from "../sub-axes.js";
 const VALID_AXES = new Set(["tokens", "a11y", "components", "stories", "ai-surface"]);
 
 describe("SUB_AXES catalogue", () => {
-  it("contains exactly 14 sub-axes (1 per shipped rule)", () => {
-    expect(SUB_AXES.length).toBe(14);
+  it("contains exactly 15 sub-axes (1 per shipped rule)", () => {
+    expect(SUB_AXES.length).toBe(15);
   });
   it("each id is unique", () => {
     const ids = SUB_AXES.map((s) => s.id);

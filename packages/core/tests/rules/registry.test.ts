@@ -7,6 +7,7 @@ const EXPECTED_IDS = [
   "tokens/dtcg-conformance",
   "tokens/description-coverage",
   "components/no-native-shadows",
+  "components/contracts-strictness",
   "naming/component-pascalcase",
   "naming/hook-prefix",
   "a11y/essentials",
@@ -19,8 +20,8 @@ const EXPECTED_IDS = [
 ];
 
 describe("rules/registry", () => {
-  it("ruleObjects contains exactly 14 rules", () => {
-    expect(ruleObjects).toHaveLength(14);
+  it("ruleObjects contains exactly 15 rules", () => {
+    expect(ruleObjects).toHaveLength(15);
   });
 
   it("ruleObjects has all expected rule IDs", () => {
@@ -30,8 +31,8 @@ describe("rules/registry", () => {
     }
   });
 
-  it("ruleMap has exactly 14 entries", () => {
-    expect(ruleMap.size).toBe(14);
+  it("ruleMap has exactly 15 entries", () => {
+    expect(ruleMap.size).toBe(15);
   });
 
   it("ruleMap has all expected rule IDs as keys", () => {
