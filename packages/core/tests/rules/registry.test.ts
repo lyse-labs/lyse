@@ -22,6 +22,7 @@ const EXPECTED_IDS = [
   "ai-governance/ai-tokens-reserved",
   "ai-governance/ai-marker-component-present",
   "ai-governance/explainability-affordance",
+  "ai-governance/ai-token-requires-marker",
 ];
 
 describe("rules/registry", () => {

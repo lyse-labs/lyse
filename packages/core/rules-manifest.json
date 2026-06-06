@@ -487,6 +487,35 @@
         "files larger than 1 MB — skipped to avoid pathological cases",
         "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
       ]
+    },
+    {
+      "id": "ai-governance/ai-token-requires-marker",
+      "axis": "ai-governance",
+      "defaultSeverity": "error",
+      "shortDescription": "AI token usage requires a co-located AI-marker (Carbon mandatory composite)",
+      "fullDescription": "For each component file (`**/*.{tsx,jsx,vue}`): if the file references a reserved AI design token (`var(--ai-*)`, `--p-color-*-magic*`, `color.ai.*`, `dragon-fruit`, etc.) it MUST also render an AI-marker — a JSX element whose name is in the shared `AI_MARKER_NAMES` vocabulary (imported from `ai-governance/ai-marker-component-present`), a `magic-*`-prefixed tag, or an explicit `data-ai` attribute. Token usage without a co-located marker is an `error`. Confidence is HIGH only when token detection is via unambiguous `var(--…)` or bare `--token` references; dot-path heuristic hits are LOW-confidence and suppressed by default. The rule is a no-op when no reserved tokens are declared anywhere in the repo (fast-exit via `detectReservedAiTokens`).",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-ai-token-requires-marker.md",
+      "rationale": "Why it matters\n\nIBM Carbon's AI design system mandates the composite: every AI-generated surface must both (a) consume an AI-marker token for visual styling and (b) render a labelling component (AILabel, AIBadge, etc.) so the provenance is legible to users. Without this pairing, the marker token is applied silently — the UI looks \"AI-styled\" without any transparency cue, which violates IBM's own guidance and emerging regulatory expectations around AI disclosure.\n\nLyse enforces this as an `error` (not `warning`) because the composite is binary: either both halves are present (correct) or one is missing (incorrect — always a bug or oversight, not a style preference). The fast-exit on `detectReservedAiTokens` means the rule is a zero-cost no-op for DS repos with no AI surface.\n\nThe marker vocabulary (`AI_MARKER_NAMES`) is shared with sibling rule `ai-governance/ai-marker-component-present` to keep a single source of truth for what counts as a valid AI marker.",
+      "examples": [
+        {
+          "good": "// AICard.tsx — uses var(--ai-gradient) AND renders <AILabel>\nconst AICard = () => (\n  <div style={{ background: 'var(--ai-gradient)' }}>\n    <AILabel>AI-generated</AILabel>\n    {content}\n  </div>\n);",
+          "bad": "// AICard.tsx — uses var(--ai-gradient) but no AI-marker rendered\nconst AICard = () => (\n  <div style={{ background: 'var(--ai-gradient)' }}>\n    {content}\n  </div>\n);"
+        },
+        {
+          "good": "// AnswerCard.tsx — data-ai attribute used as explicit annotation\n<div data-ai style={{ background: 'var(--p-color-bg-magic)' }}>\n  {aiAnswer}\n</div>",
+          "bad": "// AnswerCard.tsx — magic token applied, no marker whatsoever\n<div style={{ background: 'var(--p-color-bg-magic)' }}>\n  {aiAnswer}\n</div>"
+        },
+        {
+          "good": "// Component.tsx — no AI tokens, no AI-marker needed\nconst Card = () => <div style={{ color: 'var(--color-primary)' }}>{content}</div>;",
+          "bad": "// AIAssistant.vue — uses --ai-surface token, missing data-ai or AIBadge\n<template><div :style=\"{ background: 'var(--ai-surface)' }\">{{ answer }}</div></template>"
+        }
+      ],
+      "allowlist": [
+        "component files larger than 1 MB — skipped",
+        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`",
+        "repos with no reserved AI tokens anywhere — rule is a no-op (zero findings, zero opportunities)",
+        "findings where token reference is ambiguous (dot-path heuristic only) — emitted as LOW confidence and suppressed by default"
+      ]
     }
   ]
 }
