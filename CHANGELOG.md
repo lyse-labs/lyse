@@ -26,6 +26,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ai-governance/ai-tokens-reserved` rule (Track 3.1) — scans the design-system
+  token layer (JSON/YAML token files and CSS custom properties) for reserved
+  AI-marker token names: Carbon dragon-fruit gradient family, Polaris magic
+  namespace, Workday Canvas `*-ai-*` segment, and generic `ai`-prefixed/-segmented
+  names. Emits a single `info` finding listing matched token names (up to 20) when
+  at least one is found; neutral when none are present. Shared helper
+  `detectReservedAiTokens(repoRoot)` exported from `parsers/ai-tokens.ts` for
+  reuse by the upcoming Track 3.3 enforcement rule.
+
 - **AI-Governance axis (Face B) plumbing** — added the `ai-governance` scoring
   axis (`AxisName`) and reliability sub-axis label (`AxisLabel`), the foundation
   for the AI-Governance signal family (Track 1 / roadmap §6). The axis is

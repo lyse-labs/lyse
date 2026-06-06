@@ -16,7 +16,7 @@
         "additionalProperties": false,
         "properties": {
           "id": { "type": "string" },
-          "axis": { "type": "string", "enum": ["tokens", "a11y", "components", "stories", "ai-surface"] },
+          "axis": { "type": "string", "enum": ["tokens", "a11y", "components", "stories", "ai-surface", "ai-governance"] },
           "defaultSeverity": { "type": "string", "enum": ["error", "warning", "info"] },
           "shortDescription": { "type": "string" },
           "fullDescription": { "type": "string" },

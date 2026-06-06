@@ -22,6 +22,7 @@ export const SUB_AXES: SubAxisRecord[] = [
   { id: "ai-surface.llms-txt-structure", axis: "ai-surface", name: "llms.txt structure", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-surface/llms-txt-structure"], llmDriven: false },
   { id: "ai-surface.shadcn-registry-valid", axis: "ai-surface", name: "shadcn registry validity", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-surface/shadcn-registry-valid"], llmDriven: false },
   { id: "ai-surface.agent-instruction-files", axis: "ai-surface", name: "Agent instruction files (Cursor / Claude)", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-surface/agent-instruction-files"], llmDriven: false },
+  { id: "ai-governance.ai-tokens-reserved", axis: "ai-governance", name: "Reserved AI design tokens", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-governance/ai-tokens-reserved"], llmDriven: false },
 ];
 
 export function getSubAxis(id: string): SubAxisRecord | undefined {

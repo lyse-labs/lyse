@@ -17,7 +17,7 @@ describe("RULE_MANIFEST_OBJECT", () => {
   it("each rule has all required fields", () => {
     for (const r of RULE_METADATA) {
       expect(r.id).toBeTruthy();
-      expect(["tokens", "a11y", "components", "stories", "ai-surface"]).toContain(r.axis);
+      expect(["tokens", "a11y", "components", "stories", "ai-surface", "ai-governance"]).toContain(r.axis);
       expect(["error", "warning", "info"]).toContain(r.defaultSeverity);
       expect(r.shortDescription.length).toBeGreaterThan(0);
       expect(r.fullDescription.length).toBeGreaterThan(0);
