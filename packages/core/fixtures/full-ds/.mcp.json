@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "lyse": {
+      "command": "npx",
+      "args": ["-y", "@lyse-labs/lyse"]
+    }
+  }
+}

@@ -18,7 +18,7 @@ const CANDIDATE_PATHS = [
   "claude_desktop_config.json",
 ];
 
-const README_CANDIDATES = ["README.md", "README.mdx", "Readme.md", "readme.md"];
+const README_CANDIDATES = ["README.md", "README", "readme.md", "README.mdx"];
 
 const DISABLE_DIRECTIVE = `lyse-disable ${RULE_ID}`;
 
@@ -70,8 +70,8 @@ function discoverConfigs(repoRoot: string): string[] {
   return found;
 }
 
-function validateServerEntry(name: unknown, entry: unknown): ServerValidation {
-  if (typeof name !== "string" || name.trim().length === 0) {
+function validateServerEntry(name: string, entry: unknown): ServerValidation {
+  if (name.trim().length === 0) {
     return { ok: false, reason: "server name is not a non-empty string" };
   }
   if (typeof entry !== "object" || entry === null) {
