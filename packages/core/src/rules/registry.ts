@@ -19,6 +19,7 @@ import { rule as rAiTokensReserved } from "./ai-governance-ai-tokens-reserved.js
 import { rule as rAiMarkerComponentPresent } from "./ai-governance-ai-marker-component-present.js";
 import { rule as rExplainabilityAffordance } from "./ai-governance-explainability-affordance.js";
 import { rule as rAiTokenRequiresMarker } from "./ai-governance-ai-token-requires-marker.js";
+import { rule as rAiLoadingErrorStates } from "./ai-governance-ai-loading-error-states.js";
 import { rule as rHumanControlAffordances } from "./ai-governance-human-control-affordances.js";
 import { rule as rAiMarkerAntiPatterns } from "./ai-governance-ai-marker-anti-patterns.js";
 import type { Rule } from "../types.js";
@@ -45,6 +46,7 @@ export const ruleObjects: Rule[] = [
   rAiMarkerComponentPresent,
   rExplainabilityAffordance,
   rAiTokenRequiresMarker,
+  rAiLoadingErrorStates,
   rHumanControlAffordances,
   rAiMarkerAntiPatterns,
 ];
