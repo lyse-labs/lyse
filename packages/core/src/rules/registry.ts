@@ -15,6 +15,7 @@ import { rule as rMcpConfigPresent } from "./ai-surface-mcp-config-present.js";
 import { rule as rLlmsTxtStructure } from "./ai-surface-llms-txt-structure.js";
 import { rule as rShadcnRegistryValid } from "./ai-surface-shadcn-registry-valid.js";
 import { rule as rAgentInstructionFiles } from "./ai-surface-agent-instruction-files.js";
+import { rule as rAiMarkerComponentPresent } from "./ai-governance-ai-marker-component-present.js";
 import type { Rule } from "../types.js";
 
 export const ruleObjects: Rule[] = [
@@ -35,6 +36,7 @@ export const ruleObjects: Rule[] = [
   rLlmsTxtStructure,
   rShadcnRegistryValid,
   rAgentInstructionFiles,
+  rAiMarkerComponentPresent,
 ];
 
 export const ruleMap = new Map<string, Rule>(ruleObjects.map((r) => [r.id, r]));

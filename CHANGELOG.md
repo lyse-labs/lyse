@@ -26,6 +26,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ai-governance/ai-marker-component-present` rule — detects whether a design
+  system ships an AI-marker component (AILabel, AIBadge, GenAIAvatar, Polaris
+  `magic-*`, etc.) that visually identifies AI-generated output. Emits `info`
+  when a marker is found (positive confirmation), `warning` when reserved AI
+  tokens are present but no marker component is exported, and no finding when
+  the DS has no AI surface at all. Allowlist via
+  `lyse-disable ai-governance/ai-marker-component-present` in README.
+  Part of Track 3.2 — Face B (AI-Governance).
+
 - **AI-Governance axis (Face B) plumbing** — added the `ai-governance` scoring
   axis (`AxisName`) and reliability sub-axis label (`AxisLabel`), the foundation
   for the AI-Governance signal family (Track 1 / roadmap §6). The axis is

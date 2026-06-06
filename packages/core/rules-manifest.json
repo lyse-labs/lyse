@@ -401,6 +401,30 @@
         "files matching `ctx.excludePaths` config",
         "repos that ship only AGENTS.md/CLAUDE.md but neither Cursor rules nor Claude skills — emit one warning (not error) to nudge adoption"
       ]
+    },
+    {
+      "id": "ai-governance/ai-marker-component-present",
+      "axis": "ai-governance",
+      "defaultSeverity": "warning",
+      "shortDescription": "Design system should ship an AI-marker component",
+      "fullDescription": "Scans the component export surface (index entry + component file names) for an AI-marker component: a dedicated label, badge, avatar, or tag that visually identifies AI-generated output. Canonical examples include Carbon `AILabel`, Polaris `magic-*` components, and generics (`AIBadge`, `GenAIAvatar`, `AIIndicator`). When no marker component is found but reserved AI tokens exist, emits a `warning`; when a marker is found, emits an `info` finding naming it. Repos with no AI surface at all emit no finding (N/A).",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-ai-marker-component-present.md",
+      "rationale": "Why it matters\n\nAI-generated output that is indistinguishable from human-authored content violates emerging AI transparency requirements (EU AI Act recital 50, NIST AI RMF) and erodes user trust. A design system that ships AI tokens or AI-branded features but no dedicated marker component forces every product team to invent their own disclosure pattern — creating fragmentation and inconsistency.\n\nThe rule detects this gap early, before the DS is consumed by dozens of product teams. When a marker is present it reports an info finding (positive signal) rather than staying silent, so auditors can confirm the component exists without hunting through the codebase.\n\nThe secondary warning — tokens present but no marker — catches the most dangerous scenario: a DS that has begun an AI design language but hasn't closed the loop with a visual disclosure component.",
+      "examples": [
+        {
+          "good": "// src/index.ts\nexport { AILabel } from './ai-label';\nexport { GenAIAvatar } from './gen-ai-avatar';",
+          "bad": "// src/index.ts — exports Button, Card, Modal but no AI-marker component even though --ai-color tokens exist"
+        },
+        {
+          "good": "// components/magic-button.tsx — Polaris magic-* component exported from index",
+          "bad": "// AI tokens defined in tokens/ai.json but no corresponding marker component shipped"
+        }
+      ],
+      "allowlist": [
+        "repos with no AI surface (no AI tokens AND no marker component) — rule is N/A, no finding emitted",
+        "star re-exports (`export * from ...`) — treated as opaque marker presence, no warning emitted",
+        "repos containing `lyse-disable ai-governance/ai-marker-component-present` in README — rule is N/A"
+      ]
     }
   ]
 }
