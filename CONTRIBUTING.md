@@ -39,7 +39,6 @@ pnpm -F lyse build && node packages/core/dist/cli.js audit fixtures/full-ds
 ## Project structure
 
 - `packages/core/` — the `lyse` npm package (CLI, library, MCP server, codemods).
-- `packages/create/` — the `create-lyse` package: zero-install entry point for `npm create lyse@latest`.
 - `docs/` — public documentation.
 - `.github/` — issue/PR templates, workflows.
 

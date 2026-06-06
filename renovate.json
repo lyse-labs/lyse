@@ -40,13 +40,6 @@
       "matchUpdateTypes": ["minor", "patch"]
     },
     {
-      "description": "Catch-all group for everything else under packages/create",
-      "matchManagers": ["npm"],
-      "matchFileNames": ["packages/create/package.json"],
-      "groupName": "create-minor-patch",
-      "matchUpdateTypes": ["minor", "patch"]
-    },
-    {
       "description": "Catch-all group for everything else at the root",
       "matchManagers": ["npm"],
       "matchFileNames": ["package.json"],

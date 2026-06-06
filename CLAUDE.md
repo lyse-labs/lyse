@@ -7,7 +7,6 @@ Project context, conventions, and overrides for AI assistants working in this re
 Lyse is an open-source design system drift scanner.
 
 - **packages/core** — the `@lyse-labs/lyse` npm package (CLI binary `lyse`): library, MCP server, codemods, rules engine.
-- **packages/create** — the `create-lyse` scaffolding package (unscoped, to keep `npm create lyse@latest` working).
 - **docs/** — public, user-facing and contributor-facing documentation.
 
 The companion benchmark corpus (70 OSS design systems) lives in the separate
