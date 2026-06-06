@@ -4,7 +4,7 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**17 sub-axes total** — stable: 3 · experimental: 14 · disabled: 0
+**17 sub-axes total** — stable: 0 · experimental: 17 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
@@ -21,9 +21,9 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `components.native-shadows` | `components` | Native shadow elements | **experimental** | — | — | — |
 | `stories.coverage` | `stories` | Storybook coverage | **experimental** | — | — | — |
 | `ai-surface.agent-instruction-files` | `ai-surface` | Agent instruction files (Cursor / Claude) | **experimental** | — | — | — |
-| `ai-surface.agents-md-quality` | `ai-surface` | AGENTS.md quality | **stable** | — | — | — |
-| `ai-surface.component-manifest-json` | `ai-surface` | Component manifest JSON | **stable** | — | — | — |
-| `ai-surface.ds-index-exported` | `ai-surface` | DS index export | **stable** | — | — | — |
+| `ai-surface.agents-md-quality` | `ai-surface` | AGENTS.md quality | **experimental** | — | — | — |
+| `ai-surface.component-manifest-json` | `ai-surface` | Component manifest JSON | **experimental** | — | — | — |
+| `ai-surface.ds-index-exported` | `ai-surface` | DS index export | **experimental** | — | — | — |
 | `ai-surface.llms-txt-structure` | `ai-surface` | llms.txt structure | **experimental** | — | — | — |
 | `ai-surface.mcp-config-present` | `ai-surface` | MCP config present | **experimental** | — | — | — |
 | `ai-surface.shadcn-registry-valid` | `ai-surface` | shadcn registry validity | **experimental** | — | — | — |

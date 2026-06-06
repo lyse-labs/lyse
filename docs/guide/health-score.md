@@ -136,7 +136,7 @@ Lyse ships **12 deterministic static rules across 5 axes**. Default audits are s
 | Stories | `stories/coverage` | Storybook or alternative documentation per component |
 | AI surface | `ai-surface/agents-md-quality`, `ai-surface/component-manifest-json`, `ai-surface/ds-index-exported` | Machine-readable signals coding agents rely on |
 
-Each rule contributes 1 sub-axis to the reliability catalogue (12 sub-axes total). The full catalogue lives at [`docs/architecture/sub-axes.md`](../architecture/sub-axes.md); promotion to `stable` requires N ≥ 30 hand-labelled samples + Wilson 95 % LB ≥ 0.90 on recall.
+Each rule contributes 1 sub-axis to the reliability catalogue (17 sub-axes total). The full catalogue lives at [`docs/architecture/sub-axes.md`](../architecture/sub-axes.md); promotion to `stable` requires N ≥ 30 hand-labelled samples + Wilson 95 % LB ≥ 0.90 on recall.
 
 Known limitations:
 
