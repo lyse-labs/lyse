@@ -11,11 +11,11 @@ import type {
 import { createLyseRule } from "./_rule-module.js";
 import {
   scanForMarkerComponents,
+  makeAllowlistCheck,
 } from "./ai-governance-ai-marker-component-present.js";
 import { detectReservedAiTokens } from "../parsers/ai-tokens.js";
 
 const RULE_ID = "ai-governance/value-gate-doc-present";
-const MAX_ALLOWLIST_FILE_BYTES = 1_000_000;
 const MAX_DOC_BYTES = 500_000;
 const DISABLE_DIRECTIVE = `lyse-disable ${RULE_ID}`;
 
@@ -121,21 +121,7 @@ export function discoverGateDoc(repoRoot: string): GateDocResult | null {
   return null;
 }
 
-function isAllowlisted(repoRoot: string): boolean {
-  for (const candidate of ALLOWLIST_CANDIDATES) {
-    const abs = join(repoRoot, candidate);
-    if (!existsSync(abs)) continue;
-    try {
-      const stat = statSync(abs);
-      if (!stat.isFile() || stat.size > MAX_ALLOWLIST_FILE_BYTES) continue;
-      const raw = readFileSync(abs, "utf8");
-      if (raw.includes(DISABLE_DIRECTIVE)) return true;
-    } catch {
-      // unreadable — fall through
-    }
-  }
-  return false;
-}
+const isAllowlisted = makeAllowlistCheck(DISABLE_DIRECTIVE);
 
 function hasAiSurface(repoRoot: string): boolean {
   const markerComponents = scanForMarkerComponents(repoRoot);

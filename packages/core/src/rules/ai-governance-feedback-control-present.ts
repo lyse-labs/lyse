@@ -1,4 +1,3 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import fg from "fast-glob";
 import type {
@@ -10,16 +9,17 @@ import type {
 } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import {
-  isAiMarkerName,
   extractNamesFromSource,
   extractVueNames,
   safeReadText,
+  COMPONENT_GLOB,
+  SCAN_IGNORE,
+  fileHasAiMarker,
+  makeAllowlistCheck,
 } from "./ai-governance-ai-marker-component-present.js";
 
 const RULE_ID = "ai-governance/feedback-control-present";
-const MAX_ALLOWLIST_FILE_BYTES = 1_000_000;
 const DISABLE_DIRECTIVE = `lyse-disable ${RULE_ID}`;
-
 const ALLOWLIST_CANDIDATES = [
   "README.md",
   "README",
@@ -29,17 +29,7 @@ const ALLOWLIST_CANDIDATES = [
   ".lyse.yml",
 ];
 
-const COMPONENT_GLOB = "**/*.{tsx,jsx,vue}";
-
-const IGNORE = [
-  "**/node_modules/**",
-  "**/dist/**",
-  "**/build/**",
-  "**/.git/**",
-  "**/.next/**",
-  "**/out/**",
-  "**/coverage/**",
-];
+const isAllowlisted = makeAllowlistCheck(DISABLE_DIRECTIVE);
 
 // Feedback control vocabulary — case-insensitive substring match after
 // separator normalisation (kebab/snake stripped before comparison).
@@ -80,38 +70,10 @@ export function detectCategorizedFeedback(source: string): boolean {
   return ENUM_OR_TYPE_RE.test(source) || OPTIONS_ARRAY_RE.test(source);
 }
 
-function isAllowlisted(repoRoot: string): boolean {
-  for (const candidate of ALLOWLIST_CANDIDATES) {
-    const abs = join(repoRoot, candidate);
-    if (!existsSync(abs)) continue;
-    try {
-      const stat = statSync(abs);
-      if (!stat.isFile() || stat.size > MAX_ALLOWLIST_FILE_BYTES) continue;
-      const raw = readFileSync(abs, "utf8");
-      if (raw.includes(DISABLE_DIRECTIVE)) return true;
-    } catch {
-      // unreadable allowlist source — fall through
-    }
-  }
-  return false;
-}
-
 function deriveNameFromPath(relPath: string): string {
   const parts = relPath.split("/");
   const file = parts[parts.length - 1] ?? "";
   return file.replace(/\.(tsx|jsx|vue)$/, "");
-}
-
-// Per-file AI-marker check (same logic as human-control-affordances).
-function fileHasAiMarker(source: string, relPath: string): boolean {
-  const names = relPath.endsWith(".vue")
-    ? extractVueNames(source)
-    : extractNamesFromSource(source);
-  if (names.some((n) => isAiMarkerName(n))) return true;
-  for (const m of source.matchAll(/<\s*([A-Za-z][\w.-]*)/g)) {
-    if (m[1] && isAiMarkerName(m[1])) return true;
-  }
-  return false;
 }
 
 interface FeedbackScan {
@@ -127,7 +89,8 @@ interface FeedbackEntry {
 
 // Per-file co-location: only count a feedback control found in a FILE that
 // ALSO contains an AI marker in that same file.
-export function scanForFeedbackControls(repoRoot: string): FeedbackScan {
+// Accepts an optional pre-computed file list to avoid a second glob in evaluate.
+export function scanForFeedbackControls(repoRoot: string, files?: string[]): FeedbackScan {
   const found = new Map<string, FeedbackEntry>();
 
   function record(name: string, categorized: boolean): void {
@@ -140,18 +103,23 @@ export function scanForFeedbackControls(repoRoot: string): FeedbackScan {
     }
   }
 
-  let componentFiles: string[] = [];
-  try {
-    componentFiles = fg.sync(COMPONENT_GLOB, {
-      cwd: repoRoot,
-      absolute: false,
-      dot: false,
-      ignore: IGNORE,
-      onlyFiles: true,
-      unique: true,
-    });
-  } catch {
-    // non-fatal
+  let componentFiles: string[];
+  if (files !== undefined) {
+    componentFiles = files;
+  } else {
+    componentFiles = [];
+    try {
+      componentFiles = fg.sync(COMPONENT_GLOB, {
+        cwd: repoRoot,
+        absolute: false,
+        dot: false,
+        ignore: SCAN_IGNORE,
+        onlyFiles: true,
+        unique: true,
+      });
+    } catch {
+      // non-fatal
+    }
   }
 
   for (const rel of componentFiles.sort()) {
@@ -193,14 +161,14 @@ const evaluate = async (
   if (!ctx.repoRoot) return { findings, opportunities: 0 };
   if (isAllowlisted(ctx.repoRoot)) return { findings, opportunities: 0 };
 
-  // Check whether any AI-marker file exists at all (repo-wide gate).
+  // Glob once — reuse the file list for both the gate check and the full scan.
   let componentFiles: string[] = [];
   try {
     componentFiles = fg.sync(COMPONENT_GLOB, {
       cwd: ctx.repoRoot,
       absolute: false,
       dot: false,
-      ignore: IGNORE,
+      ignore: SCAN_IGNORE,
       onlyFiles: true,
       unique: true,
     });
@@ -219,7 +187,7 @@ const evaluate = async (
   }
   if (!anyAiMarker) return { findings, opportunities: 0 };
 
-  const { names, categorized } = scanForFeedbackControls(ctx.repoRoot);
+  const { names, categorized } = scanForFeedbackControls(ctx.repoRoot, componentFiles);
 
   if (names.length > 0) {
     const list = names.join(", ");

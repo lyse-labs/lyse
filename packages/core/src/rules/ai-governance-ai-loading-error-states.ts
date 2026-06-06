@@ -1,4 +1,3 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import fg from "fast-glob";
 import type {
@@ -14,36 +13,16 @@ import {
   safeReadText,
   extractNamesFromSource,
   extractVueNames,
+  COMPONENT_GLOB,
+  SCAN_IGNORE,
+  deriveComponentNameFromPath,
+  makeAllowlistCheck,
 } from "./ai-governance-ai-marker-component-present.js";
 
 const RULE_ID = "ai-governance/ai-loading-error-states";
-const MAX_ALLOWLIST_FILE_BYTES = 1_000_000;
 const DISABLE_DIRECTIVE = `lyse-disable ${RULE_ID}`;
 
-const ALLOWLIST_CANDIDATES = [
-  "README.md",
-  "README",
-  "README.mdx",
-  "readme.md",
-  ".lyse.yaml",
-  ".lyse.yml",
-];
-
-function isAllowlisted(repoRoot: string): boolean {
-  for (const candidate of ALLOWLIST_CANDIDATES) {
-    const abs = join(repoRoot, candidate);
-    if (!existsSync(abs)) continue;
-    try {
-      const stat = statSync(abs);
-      if (!stat.isFile() || stat.size > MAX_ALLOWLIST_FILE_BYTES) continue;
-      const raw = readFileSync(abs, "utf8");
-      if (raw.includes(DISABLE_DIRECTIVE)) return true;
-    } catch {
-      // unreadable — fall through
-    }
-  }
-  return false;
-}
+const isAllowlisted = makeAllowlistCheck(DISABLE_DIRECTIVE);
 
 // Component names whose presence alone implies a named AI loading state.
 const LOADING_NAME_PATTERNS = [
@@ -96,23 +75,6 @@ export function detectAiErrorState(source: string, componentName: string): boole
 
 export const _internal = { detectNamedLoadingWithText, detectAiErrorState, isAllowlisted };
 
-const COMPONENT_GLOB = "**/*.{tsx,jsx,vue}";
-const IGNORE = [
-  "**/node_modules/**",
-  "**/dist/**",
-  "**/build/**",
-  "**/.git/**",
-  "**/.next/**",
-  "**/out/**",
-  "**/coverage/**",
-];
-
-function deriveComponentNameFromPath(relPath: string): string {
-  const parts = relPath.split("/");
-  const file = parts[parts.length - 1] ?? "";
-  return file.replace(/\.(tsx|jsx|vue)$/, "");
-}
-
 function namesFromFile(source: string, relPath: string): string[] {
   if (relPath.endsWith(".vue")) return extractVueNames(source);
   const fromSource = extractNamesFromSource(source);
@@ -146,7 +108,7 @@ const evaluate = async (
       cwd: ctx.repoRoot,
       absolute: false,
       dot: false,
-      ignore: IGNORE,
+      ignore: SCAN_IGNORE,
       onlyFiles: true,
       unique: true,
     }).sort();
@@ -219,14 +181,6 @@ const evaluate = async (
       });
     }
   }
-
-  const SEV_ORDER: Record<string, number> = { warning: 0, info: 1, error: 2 };
-  findings.sort((a, b) => {
-    const sa = SEV_ORDER[a.severity] ?? 99;
-    const sb = SEV_ORDER[b.severity] ?? 99;
-    if (sa !== sb) return sa - sb;
-    return a.message.localeCompare(b.message);
-  });
 
   return { findings, opportunities: componentFiles.length };
 };

@@ -49,9 +49,10 @@ const INDEX_CANDIDATES = [
   "index.tsx",
 ];
 
-const COMPONENT_GLOB = "**/*.{tsx,jsx,vue}";
+// Shared across all component-scanning ai-governance rules.
+export const COMPONENT_GLOB = "**/*.{tsx,jsx,vue}";
 
-const IGNORE = [
+export const SCAN_IGNORE = [
   "**/node_modules/**",
   "**/dist/**",
   "**/build/**",
@@ -60,6 +61,9 @@ const IGNORE = [
   "**/out/**",
   "**/coverage/**",
 ];
+
+// Keep the module-level alias used internally.
+const IGNORE = SCAN_IGNORE;
 
 const MAX_FILE_BYTES = 1_000_000;
 
@@ -138,10 +142,46 @@ export function extractVueNames(source: string): string[] {
   return names;
 }
 
-function deriveComponentNameFromPath(relPath: string): string {
+export function deriveComponentNameFromPath(relPath: string): string {
   const parts = relPath.split("/");
   const file = parts[parts.length - 1] ?? "";
   return file.replace(/\.(tsx|jsx|vue)$/, "");
+}
+
+// Shared per-file AI-marker check used by explainability, feedback-control,
+// human-control-affordances, and ai-loading-error-states rules.
+export function fileHasAiMarker(source: string, relPath: string): boolean {
+  const names = relPath.endsWith(".vue")
+    ? extractVueNames(source)
+    : extractNamesFromSource(source);
+  if (names.some((n) => isAiMarkerName(n))) return true;
+  for (const m of source.matchAll(/<\s*([A-Za-z][\w.-]*)/g)) {
+    if (m[1] && isAiMarkerName(m[1])) return true;
+  }
+  return false;
+}
+
+// Factory for the per-rule allowlist check. Each rule passes its own
+// DISABLE_DIRECTIVE so the check reads the same files but looks for the
+// rule-specific disable comment.
+export function makeAllowlistCheck(
+  disableDirective: string,
+): (repoRoot: string) => boolean {
+  return function isAllowlistedFor(repoRoot: string): boolean {
+    for (const candidate of ALLOWLIST_CANDIDATES) {
+      const abs = join(repoRoot, candidate);
+      if (!existsSync(abs)) continue;
+      try {
+        const stat = statSync(abs);
+        if (!stat.isFile() || stat.size > MAX_ALLOWLIST_FILE_BYTES) continue;
+        const raw = readFileSync(abs, "utf8");
+        if (raw.includes(disableDirective)) return true;
+      } catch {
+        // unreadable — fall through
+      }
+    }
+    return false;
+  };
 }
 
 export function scanForMarkerComponents(repoRoot: string): string[] {
@@ -298,4 +338,9 @@ export const _internal = {
   extractNamesFromSource,
   DISABLE_DIRECTIVE,
   ALLOWLIST_CANDIDATES,
+  COMPONENT_GLOB,
+  SCAN_IGNORE,
+  deriveComponentNameFromPath,
+  fileHasAiMarker,
+  makeAllowlistCheck,
 };

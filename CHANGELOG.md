@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a **Limitations** section to `docs/rules/ai-governance-explainability-affordance.md` and `docs/rules/ai-governance-human-control-affordances.md` noting that detection is static + name/co-location based; behavioral verification (affordance wired to AI output at every render site) is deferred to Track 4.
 ### Changed
 
+- **Track 3 DRY + perf refactor (internal, no behavior change):** consolidated 11 duplicate `isAllowlisted` functions, `COMPONENT_GLOB`, `SCAN_IGNORE`, `fileHasAiMarker`, `deriveComponentNameFromPath`, and `safeReadText` copies into the shared hub `ai-governance-ai-marker-component-present`. Added `makeAllowlistCheck` factory. `feedback-control-present` and `explainability-affordance` now glob the component tree once per `evaluate` call instead of twice. Removed redundant `findings.sort()` in `ai-loading-error-states` and `disclaimer-present` (rule-runner re-sorts globally). No change to rule outputs, findings content, or test assertions. Refs lyse-labs/lyse-internal#15.
+
 - `ai-governance/disclaimer-present` and `ai-governance/ai-content-live-region`: the
   `warning` path now emits a single **aggregate** repo-level finding that lists all
   affected files (first 20, then "+N more"), instead of one warning per non-compliant

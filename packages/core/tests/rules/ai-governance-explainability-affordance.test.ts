@@ -7,9 +7,13 @@ import {
   isExplainabilityAffordanceName,
   isMarkerWithPopover,
   scanForExplainabilityAffordances,
-  scanForAiMarkers,
 } from "../../src/rules/ai-governance-explainability-affordance.js";
+import { scanForMarkerComponents } from "../../src/rules/ai-governance-ai-marker-component-present.js";
 import type { RuleContext, ParsedFiles } from "../../src/types.js";
+
+function scanForAiMarkers(repoRoot: string): boolean {
+  return scanForMarkerComponents(repoRoot).length > 0;
+}
 
 const emptyParsed: ParsedFiles = { ts: [], css: [], cssInJs: [] };
 
