@@ -37,7 +37,7 @@ describe("renderSarif", () => {
 
   it("includes ALL rules in tool.driver.rules (not just those with findings)", () => {
     const sarif = JSON.parse(renderSarif(sample));
-    expect(sarif.runs[0].tool.driver.rules).toHaveLength(17);
+    expect(sarif.runs[0].tool.driver.rules).toHaveLength(18);
     const ids = sarif.runs[0].tool.driver.rules.map((r: { id: string }) => r.id);
     expect(ids).toContain("tokens/no-hardcoded-color");
     expect(ids).toContain("tokens/dtcg-conformance");

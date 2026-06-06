@@ -19,11 +19,12 @@ const EXPECTED_IDS = [
   "ai-surface/llms-txt-structure",
   "ai-surface/shadcn-registry-valid",
   "ai-surface/agent-instruction-files",
+  "ai-governance/ai-tokens-reserved",
 ];
 
 describe("rules/registry", () => {
-  it("ruleObjects contains exactly 17 rules", () => {
-    expect(ruleObjects).toHaveLength(17);
+  it("ruleObjects contains exactly 18 rules", () => {
+    expect(ruleObjects).toHaveLength(18);
   });
 
   it("ruleObjects has all expected rule IDs", () => {
@@ -33,8 +34,8 @@ describe("rules/registry", () => {
     }
   });
 
-  it("ruleMap has exactly 17 entries", () => {
-    expect(ruleMap.size).toBe(17);
+  it("ruleMap has exactly 18 entries", () => {
+    expect(ruleMap.size).toBe(18);
   });
 
   it("ruleMap has all expected rule IDs as keys", () => {
