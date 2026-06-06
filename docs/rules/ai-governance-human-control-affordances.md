@@ -73,6 +73,13 @@ export { AIBadge } from './ai-badge';
 
 ---
 
+## Limitations
+
+Detection is **static, name-based, and co-location dependent**:
+
+- An `info` finding means "a control-vocabulary component exists in a file that also contains an AI-marker" — not "the control is present at every AI output render site in consuming applications".
+- Behavioral verification — confirming controls appear wherever AI-generated content is rendered — is deferred to Track 4.
+
 ## Auto-fix
 
 None. Control affordances require intentional design decisions about the correction UX; they cannot be mechanically generated.

@@ -16,6 +16,19 @@ import {
   safeReadText,
 } from "./ai-governance-ai-marker-component-present.js";
 
+// Returns true when a file's source contains an AI-marker identifier or JSX tag.
+// Mirrors the same helper in ai-governance-human-control-affordances.ts.
+function fileHasAiMarker(source: string, relPath: string): boolean {
+  const names = relPath.endsWith(".vue")
+    ? extractVueNames(source)
+    : extractNamesFromSource(source);
+  if (names.some((n) => isAiMarkerName(n))) return true;
+  for (const m of source.matchAll(/<\s*([A-Za-z][\w.-]*)/g)) {
+    if (m[1] && isAiMarkerName(m[1])) return true;
+  }
+  return false;
+}
+
 const RULE_ID = "ai-governance/explainability-affordance";
 
 const MAX_ALLOWLIST_FILE_BYTES = 1_000_000;
@@ -99,15 +112,6 @@ export function isMarkerWithPopover(name: string, source: string): boolean {
 export function scanForExplainabilityAffordances(repoRoot: string): string[] {
   const found: string[] = [];
 
-  for (const candidate of INDEX_CANDIDATES) {
-    const abs = join(repoRoot, candidate);
-    const source = safeReadText(abs);
-    if (!source) continue;
-    for (const name of extractNamesFromSource(source)) {
-      if (isExplainabilityAffordanceName(name)) found.push(name);
-    }
-  }
-
   let componentFiles: string[] = [];
   try {
     componentFiles = fg.sync(COMPONENT_GLOB, {
@@ -125,17 +129,22 @@ export function scanForExplainabilityAffordances(repoRoot: string): string[] {
   for (const rel of componentFiles) {
     const baseName = deriveNameFromPath(rel);
     const source = safeReadText(join(repoRoot, rel));
-
-    if (isExplainabilityAffordanceName(baseName)) {
-      found.push(baseName);
-      continue;
-    }
-
     if (!source) continue;
 
+    const hasMarker = fileHasAiMarker(source, rel) || isAiMarkerName(baseName);
+
+    if (!hasMarker) continue;
+
+    // File contains an AI marker — now check for co-located affordance names.
     const names = rel.endsWith(".vue")
       ? extractVueNames(source)
       : extractNamesFromSource(source);
+
+    // Also check the file name itself (e.g. AIConfidenceDisplay.tsx where the
+    // file is both a marker AND an affordance by name).
+    if (isExplainabilityAffordanceName(baseName)) {
+      found.push(baseName);
+    }
 
     for (const name of names) {
       if (isExplainabilityAffordanceName(name)) {

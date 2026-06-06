@@ -143,14 +143,14 @@ describe("scanForAiMarkers", () => {
 // Integration: rule.evaluate
 // ---------------------------------------------------------------------------
 describe("rule ai-governance/explainability-affordance", () => {
-  // Fixture 1: ExplainPopover bound to AI-marker → info
-  it("emits info when ExplainPopover is exported alongside an AI-marker component", async () => {
-    mkdirSync(join(tmp, "src"), { recursive: true });
+  // Fixture 1: ExplainPopover co-located with AI-marker in same file → info
+  it("emits info when ExplainPopover is co-located with an AI-marker component in the same file", async () => {
+    mkdirSync(join(tmp, "src", "components"), { recursive: true });
     writeFileSync(
-      join(tmp, "src", "index.ts"),
+      join(tmp, "src", "components", "AILabel.tsx"),
       [
-        "export { AILabel } from './ai-label';",
-        "export { ExplainPopover } from './explain-popover';",
+        "export function AILabel() { return null; }",
+        "export function ExplainPopover() { return null; }",
       ].join("\n"),
     );
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
@@ -163,8 +163,9 @@ describe("rule ai-governance/explainability-affordance", () => {
     expect(f.message).toContain("HAX G11");
   });
 
-  // Fixture 2: Standalone CitationList component → info
-  it("emits info when CitationList component file is present with an AI-marker", async () => {
+  // Fixture 2 (regression): CitationList in a SEPARATE file from AI-marker → warning
+  // Generic affordance-named component with no AI marker in its own file earns no credit.
+  it("emits warning when CitationList is in a separate file from the AI-marker (no co-location)", async () => {
     mkdirSync(join(tmp, "src", "components"), { recursive: true });
     writeFileSync(
       join(tmp, "src", "components", "AIBadge.tsx"),
@@ -176,18 +177,18 @@ describe("rule ai-governance/explainability-affordance", () => {
     );
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
     expect(result.findings).toHaveLength(1);
-    expect(result.findings[0]!.severity).toBe("info");
-    expect(result.findings[0]!.message).toContain("CitationList");
+    expect(result.findings[0]!.severity).toBe("warning");
+    expect(result.findings[0]!.message).toContain("no explainability affordance");
   });
 
-  // Fixture 3: ConfidenceDisplay component → info
-  it("emits info when ConfidenceDisplay is exported with AI-marker present", async () => {
-    mkdirSync(join(tmp, "src"), { recursive: true });
+  // Fixture 3: ConfidenceDisplay co-located with AI-marker → info
+  it("emits info when ConfidenceDisplay is co-located with AI-marker in the same file", async () => {
+    mkdirSync(join(tmp, "src", "components"), { recursive: true });
     writeFileSync(
-      join(tmp, "src", "index.ts"),
+      join(tmp, "src", "components", "AILabel.tsx"),
       [
-        "export { AILabel } from './ai-label';",
-        "export { ConfidenceDisplay } from './confidence';",
+        "export function AILabel() { return null; }",
+        "export function ConfidenceDisplay() { return null; }",
       ].join("\n"),
     );
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
@@ -261,8 +262,8 @@ describe("rule ai-governance/explainability-affordance", () => {
     expect(result.findings).toHaveLength(0);
   });
 
-  // Fixture 8: WhyThis component with GenAI marker → info
-  it("emits info when WhyThis component is exported alongside GenAI marker", async () => {
+  // Fixture 8 (regression): WhyThisResult in a SEPARATE file from AI-marker → warning
+  it("emits warning when WhyThisResult is in a separate file from the GenAI marker (no co-location)", async () => {
     mkdirSync(join(tmp, "src", "components"), { recursive: true });
     writeFileSync(
       join(tmp, "src", "components", "GenAIAvatar.tsx"),
@@ -274,8 +275,109 @@ describe("rule ai-governance/explainability-affordance", () => {
     );
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
     expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.severity).toBe("warning");
+    expect(result.findings[0]!.message).toContain("no explainability affordance");
+  });
+
+  // Fixture 9 (co-location pass): WhyThisResult co-located with GenAI marker → info
+  it("emits info when WhyThisResult is co-located with GenAI marker in the same file", async () => {
+    mkdirSync(join(tmp, "src", "components"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "components", "GenAIAvatar.tsx"),
+      [
+        "export const GenAIAvatar = () => null;",
+        "export const WhyThisResult = () => null;",
+      ].join("\n"),
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
     expect(result.findings[0]!.severity).toBe("info");
     expect(result.findings[0]!.message).toContain("WhyThisResult");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Unit: scanForExplainabilityAffordances (co-location semantics)
+// ---------------------------------------------------------------------------
+describe("scanForExplainabilityAffordances — co-location", () => {
+  it("returns empty when affordance file has no AI marker in it", () => {
+    mkdirSync(join(tmp, "src", "components"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "components", "AILabel.tsx"),
+      "export const AILabel = () => null;",
+    );
+    writeFileSync(
+      join(tmp, "src", "components", "ConfidenceDisplay.tsx"),
+      "export const ConfidenceDisplay = () => null;",
+    );
+    expect(scanForExplainabilityAffordances(tmp)).toEqual([]);
+  });
+
+  it("returns affordance name when co-located with AI marker", () => {
+    mkdirSync(join(tmp, "src", "components"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "components", "AILabel.tsx"),
+      [
+        "export const AILabel = () => null;",
+        "export const ConfidenceDisplay = () => null;",
+      ].join("\n"),
+    );
+    const result = scanForExplainabilityAffordances(tmp);
+    expect(result).toContain("ConfidenceDisplay");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AI co-location regression — generic affordance-named component in non-AI file
+// ---------------------------------------------------------------------------
+describe("AI co-location — affordance in non-AI file earns no credit", () => {
+  // Core regression: AILabel.tsx (marker) + ConfidenceDisplay.tsx (generic, no marker) → warning
+  it("emits warning when ConfidenceDisplay.tsx has no AI marker in its file (false positive blocked)", async () => {
+    mkdirSync(join(tmp, "src", "components"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "components", "AILabel.tsx"),
+      "export const AILabel = () => null;",
+    );
+    writeFileSync(
+      join(tmp, "src", "components", "ConfidenceDisplay.tsx"),
+      "export const ConfidenceDisplay = () => null;",
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.severity).toBe("warning");
+    expect(result.findings[0]!.message).toContain("no explainability affordance");
+  });
+
+  // Passes when ConfidenceDisplay is co-located with AI marker → info
+  it("emits info when ConfidenceDisplay is co-located with AILabel in the same file", async () => {
+    mkdirSync(join(tmp, "src", "components"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "components", "AILabel.tsx"),
+      [
+        "export const AILabel = () => null;",
+        "export const ConfidenceDisplay = () => null;",
+      ].join("\n"),
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.severity).toBe("info");
+    expect(result.findings[0]!.message).toContain("ConfidenceDisplay");
+  });
+
+  // SourcesPanel in a non-AI file (e.g. search results panel) → no credit
+  it("emits warning when SourcesPanel.tsx has no AI marker in its file", async () => {
+    mkdirSync(join(tmp, "src", "components"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "components", "AIBadge.tsx"),
+      "export const AIBadge = () => null;",
+    );
+    writeFileSync(
+      join(tmp, "src", "components", "SourcesPanel.tsx"),
+      "export const SourcesPanel = () => null;",
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.severity).toBe("warning");
   });
 });
 
