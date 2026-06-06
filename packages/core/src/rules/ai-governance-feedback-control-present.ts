@@ -10,11 +10,11 @@ import type {
 } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import {
+  isAiMarkerName,
   extractNamesFromSource,
   extractVueNames,
   safeReadText,
 } from "./ai-governance-ai-marker-component-present.js";
-import { scanForAiMarkers } from "./ai-governance-explainability-affordance.js";
 
 const RULE_ID = "ai-governance/feedback-control-present";
 const MAX_ALLOWLIST_FILE_BYTES = 1_000_000;
@@ -41,15 +41,9 @@ const IGNORE = [
   "**/coverage/**",
 ];
 
-const INDEX_CANDIDATES = [
-  "src/index.ts",
-  "src/index.tsx",
-  "index.ts",
-  "index.tsx",
-];
-
-// Feedback control vocabulary — case-insensitive substring match.
-// Names ending in 'icon' (icon primitives) are excluded by the check below.
+// Feedback control vocabulary — case-insensitive substring match after
+// separator normalisation (kebab/snake stripped before comparison).
+// Names ending in display-counter suffixes or Icon primitives are excluded.
 const FEEDBACK_PATTERNS = [
   "feedback",
   "thumbsup",
@@ -59,11 +53,17 @@ const FEEDBACK_PATTERNS = [
   "helpful",
 ] as const;
 
-const ICON_SUFFIX_RE = /icon$/i;
+// Exclude icon primitives AND display-only counters/result labels.
+const EXCLUDE_SUFFIX_RE = /(?:icon|count|result|total|tally|text)$/i;
+
+// Normalise kebab-case and snake_case names before vocabulary matching.
+function normaliseName(name: string): string {
+  return name.toLowerCase().replace(/[-_]/g, "");
+}
 
 export function isFeedbackControlName(name: string): boolean {
-  const lower = name.toLowerCase();
-  if (ICON_SUFFIX_RE.test(lower)) return false;
+  const lower = normaliseName(name);
+  if (EXCLUDE_SUFFIX_RE.test(lower)) return false;
   return FEEDBACK_PATTERNS.some((p) => lower.includes(p));
 }
 
@@ -102,36 +102,41 @@ function deriveNameFromPath(relPath: string): string {
   return file.replace(/\.(tsx|jsx|vue)$/, "");
 }
 
+// Per-file AI-marker check (same logic as human-control-affordances).
+function fileHasAiMarker(source: string, relPath: string): boolean {
+  const names = relPath.endsWith(".vue")
+    ? extractVueNames(source)
+    : extractNamesFromSource(source);
+  if (names.some((n) => isAiMarkerName(n))) return true;
+  for (const m of source.matchAll(/<\s*([A-Za-z][\w.-]*)/g)) {
+    if (m[1] && isAiMarkerName(m[1])) return true;
+  }
+  return false;
+}
+
 interface FeedbackScan {
   names: string[];
   categorized: boolean;
 }
 
-// Tracks original display name and whether categorized, keyed by lowercase.
+// Tracks original display name and whether categorized, keyed by normalised form.
 interface FeedbackEntry {
   displayName: string;
   categorized: boolean;
 }
 
+// Per-file co-location: only count a feedback control found in a FILE that
+// ALSO contains an AI marker in that same file.
 export function scanForFeedbackControls(repoRoot: string): FeedbackScan {
   const found = new Map<string, FeedbackEntry>();
 
   function record(name: string, categorized: boolean): void {
-    const key = name.toLowerCase();
+    const key = normaliseName(name);
     const existing = found.get(key);
     if (!existing) {
       found.set(key, { displayName: name, categorized });
     } else {
       found.set(key, { displayName: existing.displayName, categorized: existing.categorized || categorized });
-    }
-  }
-
-  for (const candidate of INDEX_CANDIDATES) {
-    const abs = join(repoRoot, candidate);
-    const source = safeReadText(abs);
-    if (!source) continue;
-    for (const name of extractNamesFromSource(source)) {
-      if (isFeedbackControlName(name)) record(name, false);
     }
   }
 
@@ -150,16 +155,17 @@ export function scanForFeedbackControls(repoRoot: string): FeedbackScan {
   }
 
   for (const rel of componentFiles.sort()) {
-    const baseName = deriveNameFromPath(rel);
     const source = safeReadText(join(repoRoot, rel));
+    if (!source) continue;
 
+    if (!fileHasAiMarker(source, rel)) continue;
+
+    const baseName = deriveNameFromPath(rel);
     if (isFeedbackControlName(baseName)) {
-      const categorized = source ? detectCategorizedFeedback(source) : false;
-      record(baseName, categorized);
+      record(baseName, detectCategorizedFeedback(source));
       continue;
     }
 
-    if (!source) continue;
     const names = rel.endsWith(".vue")
       ? extractVueNames(source)
       : extractNamesFromSource(source);
@@ -187,8 +193,31 @@ const evaluate = async (
   if (!ctx.repoRoot) return { findings, opportunities: 0 };
   if (isAllowlisted(ctx.repoRoot)) return { findings, opportunities: 0 };
 
-  const markerPresent = scanForAiMarkers(ctx.repoRoot);
-  if (!markerPresent) return { findings, opportunities: 0 };
+  // Check whether any AI-marker file exists at all (repo-wide gate).
+  let componentFiles: string[] = [];
+  try {
+    componentFiles = fg.sync(COMPONENT_GLOB, {
+      cwd: ctx.repoRoot,
+      absolute: false,
+      dot: false,
+      ignore: IGNORE,
+      onlyFiles: true,
+      unique: true,
+    });
+  } catch {
+    // non-fatal
+  }
+
+  let anyAiMarker = false;
+  for (const rel of componentFiles) {
+    const source = safeReadText(join(ctx.repoRoot, rel));
+    if (!source) continue;
+    if (fileHasAiMarker(source, rel)) {
+      anyAiMarker = true;
+      break;
+    }
+  }
+  if (!anyAiMarker) return { findings, opportunities: 0 };
 
   const { names, categorized } = scanForFeedbackControls(ctx.repoRoot);
 
@@ -229,7 +258,7 @@ export const rule: Rule = createLyseRule({
     defaultSeverity: "warning",
     shortDescription: "Detect a feedback control on AI output",
     fullDescription:
-      "When an AI-marker component is detected in the design system (per `scanForAiMarkers` exported by `ai-governance/explainability-affordance`), this rule checks whether a companion feedback control exists. Detection is two-phase. Phase 1 — name-based scan: reads `src/index.ts` and component files (`**/*.{tsx,jsx,vue}`) checking exported identifiers and file base names against the feedback vocabulary (case-insensitive substring): `feedback`, `thumbsup`, `thumbsdown`, `rating`, `vote`, `helpful`. Names ending in `Icon` (icon primitives) are excluded. Phase 2 — categorized bonus: for each matched feedback component file, checks whether the source exposes a reason vocabulary word (`inaccurate`, `unhelpful`, `offensive`, `tooLong`, `harmful`, `misleading`, `irrelevant`) alongside an enum object, union type, or options array. Three outcomes: AI-marker present + feedback control found → `info` (notes if categorized; HAX G15 / PAIR Feedback cited); AI-marker present + no feedback control → `warning`; no AI-marker → no finding.",
+      "When an AI-marker component is detected in the design system, this rule checks whether a companion feedback control exists co-located in the same file. Detection is per-file: a feedback vocabulary match only earns credit when the same file also contains an AI-marker (component name or JSX tag). Detection is two-phase. Phase 1 — name-based scan: checks exported identifiers and file base names against the feedback vocabulary (case-insensitive substring, separator-normalised): `feedback`, `thumbsup`, `thumbsdown`, `rating`, `vote`, `helpful`. Names ending in `Icon`, `Count`, `Result`, `Total`, `Tally`, or `Text` suffixes (display counters / icon primitives) are excluded. Phase 2 — categorized bonus: for each matched feedback component file, checks whether the source exposes a reason vocabulary word (`inaccurate`, `unhelpful`, `offensive`, `tooLong`, `harmful`, `misleading`, `irrelevant`) alongside an enum object, union type, or options array. Three outcomes: AI-marker present + feedback control co-located → `info` (notes if categorized; HAX G15 / PAIR Feedback cited); AI-marker present + no co-located feedback control → `warning`; no AI-marker anywhere → no finding.",
     helpUri:
       "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-feedback-control-present.md",
     rationale: `Why it matters
@@ -240,19 +269,19 @@ Vendor mandates: Microsoft Fluent 2 AI design guidelines mandate a feedback affo
 
 Categorized feedback (why was it bad?) provides richer model-improvement signal than binary thumbs alone. This rule rewards designs that expose a reason enum (inaccurate, unhelpful, offensive) by noting the categorized bonus in the info message.
 
-The rule crosses two conditions: it only fires when an AI-marker component is confirmed present (via the shared \`scanForAiMarkers\` gate from Track 3.5). A DS with no AI surface is not penalized.`,
+The rule uses per-file co-location: a feedback control only earns credit when it lives in the same file as an AI-marker component or JSX tag. Generic form-validation components (ValidationFeedback), display counters (VoteCount), or product review widgets (ProductRating) in unrelated files do not falsely count. The rule fires only when at least one AI-marker file exists. A DS with no AI surface is not penalized.`,
     examples: [
       {
-        good: "// src/index.ts\nexport { AILabel } from './ai-label';\nexport { ThumbsUp, ThumbsDown } from './thumbs';",
-        bad: "// src/index.ts\nexport { AILabel } from './ai-label';\n// no feedback control exported",
+        good: "// AiFeedback.tsx — co-located with AI marker\nexport const AILabel = () => null;\nexport const ThumbsUp = () => null;\nexport const ThumbsDown = () => null;",
+        bad: "// ValidationFeedback.tsx — form errors, no AI marker\nexport const ValidationFeedback = () => null;\n// AILabel.tsx — separate file, no feedback control",
       },
       {
-        good: "// AiFeedback.tsx — exposes categorized reasons\nexport const AiFeedback = () => null;\nexport const FeedbackReason = { inaccurate: 'inaccurate', unhelpful: 'unhelpful', offensive: 'offensive' } as const;",
+        good: "// AiFeedback.tsx — exposes categorized reasons alongside AI marker\nexport const AIBadge = () => null;\nexport const AiFeedback = () => null;\nexport const FeedbackReason = { inaccurate: 'inaccurate', unhelpful: 'unhelpful', offensive: 'offensive' } as const;",
         bad: "// AiFeedback.tsx — no reason categories\nexport const AiFeedback = () => null;",
       },
       {
-        good: "// StarRating.tsx present alongside AIBadge.tsx",
-        bad: "// AIBadge.tsx present but no rating, vote, or helpful component shipped",
+        good: "// StarRating.tsx present alongside AIBadge in the same file",
+        bad: "// AIBadge.tsx present but no rating, vote, or helpful component shipped in the same file",
       },
     ],
     allowlist: [
