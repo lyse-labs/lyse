@@ -37,8 +37,9 @@ Lyse globs `**/*.{tsx,jsx,vue}` and for each file runs two detectors:
    region must structurally wrap the AI output, not merely co-exist in the file.
 
 Cross-condition:
-- AI surface present, proximate live region **absent** → `warning`.
-- AI surface present, proximate live region **present** → `info` (notes the mechanism).
+- AI surface present, **proximate** live region **absent** → one **aggregate** `warning` listing all affected
+  files (up to 20, then "+N more").
+- AI surface present, **proximate** live region **present** → `info` (notes the mechanism).
 - No AI surface → no finding, `opportunities: 0`.
 
 ## Examples

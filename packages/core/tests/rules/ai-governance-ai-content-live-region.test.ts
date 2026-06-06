@@ -163,7 +163,7 @@ export function StreamingPanel() {
     expect(result.findings[0]!.message).toMatch(/isLiveRegion/);
   });
 
-  it("emits warning when AIResponse component has no live region", async () => {
+  it("emits exactly 1 aggregate warning (not per-file) when AIResponse component has no live region", async () => {
     mkdirSync(join(tmp, "src"), { recursive: true });
     writeFileSync(join(tmp, "src", "Response.tsx"), `
 export function Response({ text }: { text: string }) {
@@ -175,8 +175,24 @@ export function Response({ text }: { text: string }) {
 }
 `);
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
-    expect(result.findings[0]!.severity).toBe("warning");
-    expect(result.findings[0]!.message).toMatch(/no live region/i);
+    const warnings = result.findings.filter((f) => f.severity === "warning");
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]!.message).toMatch(/no live region/i);
+    expect(warnings[0]!.message).toMatch(/Response\.tsx/);
+  });
+
+  it("emits 1 aggregate warning listing all N files when N AI-surface files have no live region (not N warnings)", async () => {
+    mkdirSync(join(tmp, "src"), { recursive: true });
+    writeFileSync(join(tmp, "src", "AIComp1.tsx"), `export function C1() { return <div><ChatAIResponse content="x" /></div>; }`);
+    writeFileSync(join(tmp, "src", "AIComp2.tsx"), `export function C2() { return <div><AILabel>AI</AILabel></div>; }`);
+    writeFileSync(join(tmp, "src", "AIComp3.tsx"), `export function C3() { return <div><OutputBlock isGenerating /></div>; }`);
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    const warnings = result.findings.filter((f) => f.severity === "warning");
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]!.message).toMatch(/3 files/);
+    expect(warnings[0]!.message).toMatch(/AIComp1\.tsx/);
+    expect(warnings[0]!.message).toMatch(/AIComp2\.tsx/);
+    expect(warnings[0]!.message).toMatch(/AIComp3\.tsx/);
   });
 
   it("emits warning on Vue SFC with isGenerating prop and no live region", async () => {
