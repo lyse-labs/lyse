@@ -43,8 +43,20 @@ describe("detectAiOutputSurface", () => {
     expect(detectAiOutputSurface(`<ChatMessage role="assistant" />`)).toBe(true);
   });
 
-  it("detects isStreaming prop as streaming indicator", () => {
+  it("does NOT flag SystemChatMessageDisplay (substring but not segment match)", () => {
+    expect(detectAiOutputSurface(`<SystemChatMessageDisplay msg={m} />`)).toBe(false);
+  });
+
+  it("detects isStreaming prop as streaming indicator (JSX prop on component)", () => {
     expect(detectAiOutputSurface(`<MessageBubble isStreaming={streaming} />`)).toBe(true);
+  });
+
+  it("does NOT detect isStreaming in a TypeScript interface as streaming indicator", () => {
+    expect(detectAiOutputSurface(`interface Props { isStreaming: boolean; isGenerating: boolean; }`)).toBe(false);
+  });
+
+  it("does NOT detect isStreaming in a destructuring as streaming indicator", () => {
+    expect(detectAiOutputSurface(`const { isStreaming } = props;`)).toBe(false);
   });
 
   it("detects isGenerating prop as streaming indicator", () => {
@@ -123,7 +135,11 @@ export function AiAnswer({ content }: { content: string }) {
     mkdirSync(join(tmp, "src"), { recursive: true });
     writeFileSync(join(tmp, "src", "ChatOutput.tsx"), `
 export function ChatOutput({ msg }: { msg: string }) {
-  return <div role="status"><ChatMessage role="assistant">{msg}</ChatMessage></div>;
+  return (
+    <div role="status">
+      <ChatMessage role="assistant">{msg}</ChatMessage>
+    </div>
+  );
 }
 `);
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
@@ -131,11 +147,15 @@ export function ChatOutput({ msg }: { msg: string }) {
     expect(result.findings[0]!.message).toMatch(/role="status"|role=.status/);
   });
 
-  it("emits info when isLiveRegion accompanies a streaming component", async () => {
+  it("emits info when isLiveRegion wraps a streaming AI component", async () => {
     mkdirSync(join(tmp, "src"), { recursive: true });
     writeFileSync(join(tmp, "src", "StreamingPanel.tsx"), `
-export function StreamingPanel({ isStreaming }: { isStreaming: boolean }) {
-  return <TextContent isLiveRegion>{isStreaming ? "..." : "done"}</TextContent>;
+export function StreamingPanel() {
+  return (
+    <TextContent isLiveRegion>
+      <AIResponseBlock isStreaming={streaming} />
+    </TextContent>
+  );
 }
 `);
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
@@ -147,7 +167,11 @@ export function StreamingPanel({ isStreaming }: { isStreaming: boolean }) {
     mkdirSync(join(tmp, "src"), { recursive: true });
     writeFileSync(join(tmp, "src", "Response.tsx"), `
 export function Response({ text }: { text: string }) {
-  return <div className="response"><ChatAIResponse content={text} /></div>;
+  return (
+    <div className="response">
+      <ChatAIResponse content={text} />
+    </div>
+  );
 }
 `);
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
@@ -160,7 +184,7 @@ export function Response({ text }: { text: string }) {
     writeFileSync(join(tmp, "src", "AiStream.vue"), `
 <template>
   <div class="stream">
-    <output-block :isGenerating="generating" />
+    <AIResponseBlock :isGenerating="generating" />
   </div>
 </template>
 <script setup lang="ts">
@@ -169,6 +193,41 @@ const generating = ref(false);
 `);
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
     expect(result.findings[0]!.severity).toBe("warning");
+  });
+
+  it("emits warning when toast with role=status is in same file as AI output but does NOT wrap it (Fix 1: no false credit)", async () => {
+    mkdirSync(join(tmp, "src"), { recursive: true });
+    writeFileSync(join(tmp, "src", "ChatPage.tsx"), `
+function Toast() {
+  return <div role="status">Saved!</div>;
+}
+
+export function ChatPage() {
+  return (
+    <div>
+      <Toast />
+      <ChatAIResponse content={content} />
+    </div>
+  );
+}
+`);
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings[0]!.severity).toBe("warning");
+  });
+
+  it("emits info when AI output is wrapped in aria-live div (Fix 1: proximity confirmed)", async () => {
+    mkdirSync(join(tmp, "src"), { recursive: true });
+    writeFileSync(join(tmp, "src", "ChatWrapped.tsx"), `
+export function ChatWrapped() {
+  return (
+    <div aria-live="polite">
+      <ChatAIResponse content={content} />
+    </div>
+  );
+}
+`);
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings[0]!.severity).toBe("info");
   });
 
   it("emits info on Vue SFC with aria-live and AI marker", async () => {

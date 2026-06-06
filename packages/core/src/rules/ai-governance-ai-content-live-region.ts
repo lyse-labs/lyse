@@ -55,10 +55,38 @@ function isAllowlisted(repoRoot: string): boolean {
   return false;
 }
 
-const AI_RESPONSE_TAG_RE = /AIResponse|ChatMessage/;
+// Fix 3: match "AIResponse" or "ChatMessage" as a complete PascalCase segment
+// within a component tag name — not as an arbitrary substring.
+//
+// Rules (by example):
+//   ChatAIResponse  → match  (AIResponse is a terminal segment after a prior word)
+//   AIResponseBlock → match  (AIResponse is a leading segment before a following word)
+//   ChatMessage     → match  (exact or terminal)
+//   MyChatMessage   → match  (ChatMessage is terminal)
+//   SystemChatMessageDisplay → NO match (ChatMessage is in the middle with Display after it)
+//
+// Implementation: the keyword must either start the tag name (at index 0)
+// OR be preceded by at least one lowercase character (end of a prior word),
+// AND the keyword must end the tag name OR be followed by an uppercase letter
+// (start of the next segment). We use two conditions:
+//   "ends the name after a prior word"  → /[a-z]KEYWORD$/
+//   "starts the name with more after"   → /^KEYWORD[A-Z]/
+//   "is the entire name"                → exact equality
+function hasAiResponseSegment(tagName: string): boolean {
+  for (const kw of ["AIResponse", "ChatMessage"] as const) {
+    if (tagName === kw) return true;
+    // Terminal: preceded by lowercase (end of another word), at end of string.
+    if (new RegExp(`[a-z]${kw}$`).test(tagName)) return true;
+    // Leading: at start of string, followed by uppercase (more words after).
+    if (new RegExp(`^${kw}[A-Z]`).test(tagName)) return true;
+  }
+  return false;
+}
 
-// Streaming / generating indicators — isLoading alone is excluded (too generic).
-const STREAMING_PROP_RE = /\b(isStreaming|isGenerating)\b/;
+// Fix 2: streaming prop detection restricted to JSX prop context.
+// Scan JSX open tags and test their attribute text for the prop names.
+const JSX_TAG_WITH_ATTRS_RE = /<([A-Z][A-Za-z\d.]*)\b([^>]*?)(?:\/?>)/gms;
+const STREAMING_ATTR_RE = /\b(?:isStreaming|isGenerating)\b/;
 
 // JSX/Vue open-tag scanner.
 const JSX_OPEN_TAG_RE = /<\s*([A-Za-z][\w.]*)/g;
@@ -70,9 +98,16 @@ export function detectAiOutputSurface(source: string): boolean {
     const tag = m[1];
     if (!tag) continue;
     if (isAiMarkerName(tag)) return true;
-    if (AI_RESPONSE_TAG_RE.test(tag)) return true;
+    // Fix 3: segment-level match, not substring.
+    if (hasAiResponseSegment(tag)) return true;
   }
-  if (STREAMING_PROP_RE.test(source)) return true;
+  // Fix 2: only credit isStreaming/isGenerating when used as a JSX prop.
+  JSX_TAG_WITH_ATTRS_RE.lastIndex = 0;
+  let tm: RegExpExecArray | null;
+  while ((tm = JSX_TAG_WITH_ATTRS_RE.exec(source)) !== null) {
+    const attrs = tm[2] ?? "";
+    if (STREAMING_ATTR_RE.test(attrs)) return true;
+  }
   return false;
 }
 
@@ -93,6 +128,95 @@ function describeLiveRegion(source: string): string {
   if (/\brole\s*=\s*["'`]status["'`]/i.test(source)) return `role="status"`;
   if (/\brole\s*=\s*["'`]alert["'`]/i.test(source)) return `role="alert"`;
   return "isLiveRegion";
+}
+
+// Fix 1: Proximity check — credit info only when the live-region attribute
+// wraps the AI-output component, not just co-exists in the same file.
+//
+// Pragmatic static approximation (documented limitation):
+// We extract JSX/template "return blocks" by splitting on `return (` and `};`
+// boundaries, then check if both a live-region attribute AND an AI-output tag
+// appear within the same block. A live-region element that is in a separate
+// component function (e.g. a toast) does not wrap the AI output.
+//
+// Additionally, within a candidate block, we require that the live-region
+// open tag appears BEFORE the AI-output tag in source order (wraps it from
+// above), which is the correct DOM wrapping direction.
+//
+// Limitation: does not handle all patterns (e.g. conditional renders that
+// conditionally include both) — bias is conservative (WARNING when in doubt).
+const LIVE_REGION_OPEN_RE =
+  /<[A-Za-z][\w.]*\b[^>]*?(?:aria-live\s*=\s*["'`](?:polite|assertive)["'`]|\brole\s*=\s*["'`](?:status|alert)["'`]|\bisLiveRegion\b)[^>]*?(?:\/?>)/gms;
+
+function isLiveRegionProximate(source: string): boolean {
+  // Collect positions of live-region open tags.
+  const livePositions: number[] = [];
+  LIVE_REGION_OPEN_RE.lastIndex = 0;
+  let lm: RegExpExecArray | null;
+  while ((lm = LIVE_REGION_OPEN_RE.exec(source)) !== null) {
+    livePositions.push(lm.index);
+  }
+  if (livePositions.length === 0) return false;
+
+  // Collect positions of AI-output tags.
+  const aiPositions: number[] = [];
+  JSX_OPEN_TAG_RE.lastIndex = 0;
+  let am: RegExpExecArray | null;
+  while ((am = JSX_OPEN_TAG_RE.exec(source)) !== null) {
+    const tag = am[1];
+    if (!tag) continue;
+    if (isAiMarkerName(tag) || hasAiResponseSegment(tag)) {
+      aiPositions.push(am.index);
+    }
+  }
+  // Also collect positions of streaming-prop JSX tags.
+  JSX_TAG_WITH_ATTRS_RE.lastIndex = 0;
+  let tm2: RegExpExecArray | null;
+  while ((tm2 = JSX_TAG_WITH_ATTRS_RE.exec(source)) !== null) {
+    const attrs = tm2[2] ?? "";
+    if (STREAMING_ATTR_RE.test(attrs)) {
+      aiPositions.push(tm2.index);
+    }
+  }
+
+  if (aiPositions.length === 0) return false;
+
+  // For proximity: split the source into component-function "slots" by
+  // detecting JSX return blocks. A simple heuristic: a "block" is the region
+  // between consecutive occurrences of `return (` or `return <` (function
+  // body boundaries). We check whether any (livePos, aiPos) pair share the
+  // same slot AND live region opens before the AI-output tag.
+  //
+  // Slot boundaries: positions of `return ` keyword + open paren/angle.
+  const RETURN_RE = /\breturn\s*[(<]/g;
+  const returnPositions: number[] = [0];
+  let rm: RegExpExecArray | null;
+  RETURN_RE.lastIndex = 0;
+  while ((rm = RETURN_RE.exec(source)) !== null) {
+    returnPositions.push(rm.index);
+  }
+  returnPositions.push(source.length);
+
+  function slotOf(pos: number): number {
+    let slot = 0;
+    for (let i = 0; i < returnPositions.length - 1; i++) {
+      const start = returnPositions[i];
+      const end = returnPositions[i + 1];
+      if (start !== undefined && end !== undefined && pos >= start && pos < end) {
+        slot = i;
+        break;
+      }
+    }
+    return slot;
+  }
+
+  for (const aiPos of aiPositions) {
+    const aiSlot = slotOf(aiPos);
+    for (const livePos of livePositions) {
+      if (slotOf(livePos) === aiSlot && livePos < aiPos) return true;
+    }
+  }
+  return false;
 }
 
 const evaluate = async (
@@ -130,7 +254,9 @@ const evaluate = async (
 
     hasAiSurface = true;
 
-    if (detectLiveRegion(source)) {
+    // Fix 1: require proximity — live region must wrap the AI output, not just
+    // co-exist in the same file (e.g. a toast component in a different function).
+    if (isLiveRegionProximate(source)) {
       const mechanism = describeLiveRegion(source);
       findings.push({
         ruleId: RULE_ID,
