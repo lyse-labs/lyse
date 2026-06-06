@@ -77,29 +77,7 @@ export interface ControlHit {
   label?: string;
 }
 
-const EXPORTED_NAME_RE =
-  /\bexport\s+(?:default\s+)?(?:function\s+([A-Za-z_$][\w$]*)|(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=)/g;
-const EXPORT_BLOCK_RE = /\bexport\s*\{([^}]+)\}/g;
 const BUTTON_OR_CTA_RE = /<(button|Button|a)\b[^>]*>/g;
-
-function extractExportedNames(source: string): string[] {
-  const names: string[] = [];
-  EXPORTED_NAME_RE.lastIndex = 0;
-  let m: RegExpExecArray | null;
-  while ((m = EXPORTED_NAME_RE.exec(source)) !== null) {
-    const name = m[1] ?? m[2];
-    if (name) names.push(name);
-  }
-  EXPORT_BLOCK_RE.lastIndex = 0;
-  while ((m = EXPORT_BLOCK_RE.exec(source)) !== null) {
-    for (const part of (m[1] ?? "").split(",")) {
-      const tokens = part.trim().split(/\s+as\s+/);
-      const n = (tokens.length > 1 ? tokens[1] : tokens[0])?.trim();
-      if (n) names.push(n);
-    }
-  }
-  return names;
-}
 
 function isPerOutputName(name: string): boolean {
   const lower = name.toLowerCase();
@@ -124,7 +102,7 @@ function extractButtonLabels(source: string): string[] {
 
 export function detectPerOutputControls(source: string): ControlHit[] {
   const hits: ControlHit[] = [];
-  for (const name of extractExportedNames(source)) {
+  for (const name of extractNamesFromSource(source)) {
     if (isPerOutputName(name)) hits.push({ name });
   }
   for (const label of extractButtonLabels(source)) {
@@ -146,7 +124,7 @@ const GLOBAL_NAME_PATTERNS = [
 ];
 
 const GLOBAL_LABEL_RE =
-  /\blabel\s*=\s*["'`](Disable AI|AI features|AI settings|Enable AI|AI on|AI off)["'`]/i;
+  /(?<![a-zA-Z-])label\s*=\s*["'`](Disable AI|AI features|AI settings|Enable AI|AI on|AI off)["'`]/i;
 
 function isGlobalAiToggleName(name: string): boolean {
   const lower = name.toLowerCase();
@@ -154,7 +132,7 @@ function isGlobalAiToggleName(name: string): boolean {
 }
 
 export function detectGlobalAiToggle(source: string): boolean {
-  for (const name of extractExportedNames(source)) {
+  for (const name of extractNamesFromSource(source)) {
     if (isGlobalAiToggleName(name)) return true;
   }
   return GLOBAL_LABEL_RE.test(source);
@@ -227,8 +205,6 @@ const evaluate = async (
 
   componentFiles.sort();
 
-  const opportunities = componentFiles.length;
-
   let seenMarker = false;
   const allControlHits: ControlHit[] = [];
   let hasGlobalToggle = false;
@@ -238,15 +214,20 @@ const evaluate = async (
     const source = safeReadText(abs);
     if (!source) continue;
 
-    if (fileHasAiMarker(source, rel)) seenMarker = true;
-    const hits = detectPerOutputControls(source);
-    allControlHits.push(...hits);
+    const hasMarker = fileHasAiMarker(source, rel);
+    if (hasMarker) {
+      seenMarker = true;
+      const hits = detectPerOutputControls(source);
+      allControlHits.push(...hits);
+    }
     if (detectGlobalAiToggle(source)) hasGlobalToggle = true;
   }
 
   if (!seenMarker) {
-    return { findings, opportunities };
+    return { findings, opportunities: 0 };
   }
+
+  const opportunities = componentFiles.length;
 
   if (allControlHits.length > 0) {
     const names = allControlHits

@@ -174,9 +174,9 @@ describe("detectGlobalAiToggle", () => {
 
 describe("rule.evaluate — integration", () => {
   // Fixture 1: AI marker present + RegenerateButton → info, message contains "HAX G8"
-  it("fixture 1: AI marker + RegenerateButton → info with HAX G8", async () => {
+  it("fixture 1: AI marker + RegenerateButton (co-located) → info with HAX G8", async () => {
     writeFileSync(join(tmp, "AIBadge.tsx"), `export function AIBadge() { return <span>AI</span>; }`);
-    writeFileSync(join(tmp, "RegenerateButton.tsx"), `export function RegenerateButton() { return <button>Regenerate</button>; }`);
+    writeFileSync(join(tmp, "RegenerateButton.tsx"), `export function RegenerateButton() { return <><AIBadge /><button>Regenerate</button></>; }`);
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
     expect(result.findings).toHaveLength(1);
     expect(result.findings[0]?.severity).toBe("info");
@@ -208,10 +208,10 @@ describe("rule.evaluate — integration", () => {
   });
 
   // Fixture 4: AI marker + ConfirmOutput + DismissResult → info, lists both
-  it("fixture 4: AI marker + Confirm + Dismiss → info listing both", async () => {
+  it("fixture 4: AI marker + Confirm + Dismiss (co-located) → info listing both", async () => {
     writeFileSync(join(tmp, "AIMarker.tsx"), `export function AIMarker() { return <span>AI</span>; }`);
-    writeFileSync(join(tmp, "ConfirmOutput.tsx"), `export function ConfirmOutput() { return <button>Confirm</button>; }`);
-    writeFileSync(join(tmp, "DismissResult.tsx"), `export function DismissResult() { return <button>Dismiss</button>; }`);
+    writeFileSync(join(tmp, "ConfirmOutput.tsx"), `export function ConfirmOutput() { return <><AIMarker /><button>Confirm</button></>; }`);
+    writeFileSync(join(tmp, "DismissResult.tsx"), `export function DismissResult() { return <><AIMarker /><button>Dismiss</button></>; }`);
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
     expect(result.findings).toHaveLength(1);
     expect(result.findings[0]?.severity).toBe("info");
@@ -271,5 +271,16 @@ export default { name: 'AIWidget' };
     expect(result.findings).toHaveLength(1);
     expect(result.findings[0]?.severity).toBe("info");
     expect(result.findings[0]?.message).toContain("Undo");
+  });
+
+  // Fixture 10: generic ConfirmDialog.tsx (no AI marker) + AIBadge.tsx elsewhere → WARNING
+  // Proves generic controls do NOT earn credit without AI co-location (Fix 1).
+  it("fixture 10: generic ConfirmDialog (no AI marker) + AIBadge elsewhere → warning", async () => {
+    writeFileSync(join(tmp, "AIBadge.tsx"), `export function AIBadge() { return <span>AI</span>; }`);
+    writeFileSync(join(tmp, "ConfirmDialog.tsx"), `export function ConfirmDialog() { return <button>Confirm</button>; }`);
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.severity).toBe("warning");
+    expect(result.findings[0]?.message).toContain("HAX G8");
   });
 });
