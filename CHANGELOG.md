@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `ai-governance/disclaimer-present` and `ai-governance/ai-content-live-region`: the
+  `warning` path now emits a single **aggregate** repo-level finding that lists all
+  affected files (first 20, then "+N more"), instead of one warning per non-compliant
+  file. On a design system with N AI-surface files, each rule now emits at most 1
+  warning (was O(N)). `info` findings (compliant files) remain per-file.
+  Follow-up to lyse-labs/lyse-internal#15.
+
 ### Removed
 
 - `create-lyse` package (the unscoped `npm create lyse@latest` wrapper).

@@ -219,6 +219,8 @@ function isLiveRegionProximate(source: string): boolean {
   return false;
 }
 
+const MAX_LISTED_FILES = 20;
+
 const evaluate = async (
   ctx: RuleContext,
   _files: ParsedFiles,
@@ -244,6 +246,7 @@ const evaluate = async (
   componentFiles.sort();
 
   let hasAiSurface = false;
+  const missingLiveRegionFiles: string[] = [];
 
   for (const rel of componentFiles) {
     const abs = join(ctx.repoRoot, rel);
@@ -268,19 +271,27 @@ const evaluate = async (
           "Live region detected — verify that the region wraps AI output directly and uses aria-live=\"polite\" for non-urgent streaming content.",
       });
     } else {
-      findings.push({
-        ruleId: RULE_ID,
-        axis: "ai-governance",
-        severity: "warning",
-        location: { file: rel, line: 1, column: 1 },
-        message: `AI output or streaming component detected but no live region found — screen-reader users will not hear streamed content. Wrap the output in aria-live="polite", role="status", or PatternFly isLiveRegion.`,
-        suggestion:
-          "Add aria-live=\"polite\" (or role=\"status\") to the container wrapping the AI output component, or use PatternFly's isLiveRegion prop.",
-      });
+      missingLiveRegionFiles.push(rel);
     }
   }
 
   if (!hasAiSurface) return { findings: [], opportunities: 0 };
+
+  if (missingLiveRegionFiles.length > 0) {
+    const listed = missingLiveRegionFiles.slice(0, MAX_LISTED_FILES);
+    const overflow = missingLiveRegionFiles.length - listed.length;
+    const fileList = listed.join(", ") + (overflow > 0 ? `, +${overflow} more` : "");
+    findings.unshift({
+      ruleId: RULE_ID,
+      axis: "ai-governance",
+      severity: "warning",
+      location: { file: missingLiveRegionFiles[0] ?? "src/index.ts", line: 1, column: 1 },
+      message:
+        `${missingLiveRegionFiles.length} file${missingLiveRegionFiles.length === 1 ? "" : "s"} contain an AI output or streaming component with no live region — screen-reader users will not hear streamed content: ${fileList}. Wrap each output in aria-live="polite", role="status", or PatternFly isLiveRegion.`,
+      suggestion:
+        "Add aria-live=\"polite\" (or role=\"status\") to the container wrapping the AI output component, or use PatternFly's isLiveRegion prop.",
+    });
+  }
 
   return { findings, opportunities: componentFiles.length };
 };

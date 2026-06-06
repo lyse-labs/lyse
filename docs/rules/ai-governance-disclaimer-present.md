@@ -21,7 +21,8 @@ Globs `**/*.{tsx,jsx,vue}`, reads each file, and applies two detectors:
    `ai-governance/ai-marker-component-present` to recognise Carbon `AILabel`, `AIBadge`,
    `AITag`, Polaris `magic-*`, `GenAI*` variants, and `*AIMarker*` components.
 
-Cross-condition: marker present + no disclaimer emits `warning`. Disclaimer detected emits `info`.
+Cross-condition: marker present + no disclaimer emits one **aggregate** `warning` listing all
+affected files (up to 20, then "+N more"). Disclaimer detected emits `info` per file.
 No AI surface emits nothing.
 
 ## Examples

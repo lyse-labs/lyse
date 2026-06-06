@@ -34,8 +34,9 @@ Lyse globs `**/*.{tsx,jsx,vue}` and for each file runs two detectors:
    - `isLiveRegion` prop (PatternFly).
 
 Cross-condition:
-- AI surface present, live region **absent** → `warning`.
-- AI surface present, live region **present** → `info` (notes the mechanism).
+- AI surface present, live region **absent** → one **aggregate** `warning` listing all affected
+  files (up to 20, then "+N more").
+- AI surface present, live region **present** → `info` per file (notes the mechanism).
 - No AI surface → no finding, `opportunities: 0`.
 
 ## Examples
