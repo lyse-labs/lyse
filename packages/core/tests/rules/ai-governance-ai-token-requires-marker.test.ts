@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { rule, _internal } from "../../src/rules/ai-governance-ai-token-requires-marker.js";
 import type { RuleContext, ParsedFiles } from "../../src/types.js";
 
-const { analyseComponent, isReservedSegment } = _internal;
+const { analyseComponent, isAllowlisted } = _internal;
 
 const emptyParsed: ParsedFiles = { ts: [], css: [], cssInJs: [] };
 
@@ -31,35 +31,29 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// Unit: isReservedSegment
+// Unit: isAllowlisted
 // ---------------------------------------------------------------------------
-describe("isReservedSegment", () => {
-  it("matches --ai-primary", () => {
-    expect(isReservedSegment("--ai-primary")).toBe(true);
+describe("isAllowlisted", () => {
+  it("returns true when README.md contains the disable directive", () => {
+    writeFileSync(
+      join(tmp, "README.md"),
+      "# My DS\n\n<!-- lyse-disable ai-governance/ai-token-requires-marker -->\n",
+    );
+    expect(isAllowlisted(tmp)).toBe(true);
   });
 
-  it("matches --p-color-bg-magic", () => {
-    expect(isReservedSegment("--p-color-bg-magic")).toBe(true);
+  it("returns true when .lyse.yaml contains the disable directive", () => {
+    writeFileSync(join(tmp, ".lyse.yaml"), "lyse-disable ai-governance/ai-token-requires-marker\n");
+    expect(isAllowlisted(tmp)).toBe(true);
   });
 
-  it("matches color.ai.primary (dot path)", () => {
-    expect(isReservedSegment("color.ai.primary")).toBe(true);
+  it("returns false when no allowlist file exists", () => {
+    expect(isAllowlisted(tmp)).toBe(false);
   });
 
-  it("matches dragon-fruit", () => {
-    expect(isReservedSegment("dragon-fruit")).toBe(true);
-  });
-
-  it("does NOT match --color-primary (no ai segment)", () => {
-    expect(isReservedSegment("--color-primary")).toBe(false);
-  });
-
-  it("does NOT match --rain-color (ai substring in 'rain' is not a segment)", () => {
-    expect(isReservedSegment("--rain-color")).toBe(false);
-  });
-
-  it("does NOT match color.captain (captain contains 'ai' but not as a segment)", () => {
-    expect(isReservedSegment("color.captain")).toBe(false);
+  it("returns false when README.md exists but lacks the directive", () => {
+    writeFileSync(join(tmp, "README.md"), "# My DS\n\nNo disable here.\n");
+    expect(isAllowlisted(tmp)).toBe(false);
   });
 });
 
@@ -185,6 +179,26 @@ describe("analyseComponent", () => {
     const result = analyseComponent(src);
     expect(result.usesReservedToken).toBe(true);
     expect(result.hasAiMarker).toBe(true);
+  });
+
+  // Fixture 9 (ARIA regression): aria-label="AI result" is NOT a valid marker.
+  // A file with var(--ai-surface), no marker component, and aria-label mentioning
+  // "AI" MUST still produce confidence=high and hasAiMarker=false.
+  it("aria-label containing 'ai' is NOT a valid marker — confidence stays high", () => {
+    const src = `
+      const Result = () => (
+        <div
+          aria-label="AI result"
+          style={{ background: 'var(--ai-surface)' }}
+        >
+          {content}
+        </div>
+      );
+    `;
+    const result = analyseComponent(src);
+    expect(result.usesReservedToken).toBe(true);
+    expect(result.hasAiMarker).toBe(false);
+    expect(result.confidence).toBe("high");
   });
 });
 
@@ -371,5 +385,55 @@ const Card = () => <div>{val}</div>;`,
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
     expect(result.findings.length).toBeGreaterThan(0);
     expect(result.findings[0]!.severity).toBe("error");
+  });
+
+  // Fixture 10 (Fix 1 — allowlist): lyse-disable in README suppresses all findings
+  it("emits no finding when README.md contains the lyse-disable directive", async () => {
+    writeFileSync(
+      join(tmp, "README.md"),
+      "# DS\n\n<!-- lyse-disable ai-governance/ai-token-requires-marker -->\n",
+    );
+    writeFileSync(
+      join(tmp, "tokens.json"),
+      JSON.stringify({ color: { ai: { primary: "#abc" } } }),
+    );
+    mkdirSync(join(tmp, "src"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "AICard.tsx"),
+      `const AICard = () => (
+  <div style={{ background: 'var(--ai-surface)' }}>
+    {content}
+  </div>
+);`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(0);
+    expect(result.opportunities).toBe(0);
+  });
+
+  // Fixture 11 (Fix 2 — ARIA regression): aria-label="AI result" is NOT a marker.
+  // var(--ai-surface) with no JSX marker or data-ai MUST emit an error at high confidence.
+  it("emits error when component has var(--ai-surface), no marker, and aria-label with 'ai'", async () => {
+    writeFileSync(
+      join(tmp, "tokens.json"),
+      JSON.stringify({ color: { ai: { surface: "#f0f4ff" } } }),
+    );
+    mkdirSync(join(tmp, "src"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "AIResult.tsx"),
+      `const Result = () => (
+  <div
+    aria-label="AI result"
+    style={{ background: 'var(--ai-surface)' }}
+  >
+    {content}
+  </div>
+);`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings.length).toBeGreaterThan(0);
+    const f = result.findings[0]!;
+    expect(f.severity).toBe("error");
+    expect(f.confidence).toBe("high");
   });
 });

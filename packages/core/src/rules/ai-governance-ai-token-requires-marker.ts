@@ -1,4 +1,4 @@
-import { statSync, readFileSync } from "node:fs";
+import { existsSync, statSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import fg from "fast-glob";
 import type {
@@ -11,10 +11,37 @@ import type {
   ClassifyContext,
 } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
-import { detectReservedAiTokens } from "../parsers/ai-tokens.js";
+import { detectReservedAiTokens, isReservedTokenName } from "../parsers/ai-tokens.js";
 import { AI_MARKER_NAMES, isAiMarkerName } from "./ai-governance-ai-marker-component-present.js";
 
 const RULE_ID = "ai-governance/ai-token-requires-marker";
+const DISABLE_DIRECTIVE = `lyse-disable ${RULE_ID}`;
+const MAX_ALLOWLIST_FILE_BYTES = 1_000_000;
+
+const ALLOWLIST_CANDIDATES = [
+  "README.md",
+  "README",
+  "README.mdx",
+  "readme.md",
+  ".lyse.yaml",
+  ".lyse.yml",
+];
+
+function isAllowlisted(repoRoot: string): boolean {
+  for (const candidate of ALLOWLIST_CANDIDATES) {
+    const abs = join(repoRoot, candidate);
+    if (!existsSync(abs)) continue;
+    try {
+      const stat = statSync(abs);
+      if (!stat.isFile() || stat.size > MAX_ALLOWLIST_FILE_BYTES) continue;
+      const raw = readFileSync(abs, "utf8");
+      if (raw.includes(DISABLE_DIRECTIVE)) return true;
+    } catch {
+      // unreadable allowlist source — fall through
+    }
+  }
+  return false;
+}
 
 const COMPONENT_GLOB = "**/*.{tsx,jsx,vue}";
 
@@ -47,24 +74,6 @@ const JSX_TAG_RE = /<([A-Za-z][A-Za-z0-9_-]*)(?:\s|\/|>)/g;
 // Matches `data-ai` or `data-ai-*` attribute (explicit AI annotation).
 const DATA_AI_ATTR_RE = /\bdata-ai(?:-[a-z][a-z0-9-]*)?\b/;
 
-// Matches `aria-label` values that mention ai (loose, to catch aria-based markers).
-// Not used for high-confidence scoring — only for LOW confidence hints.
-const ARIA_AI_RE = /aria-[a-z]+=["'][^"']*\bai\b[^"']*["']/i;
-
-// Segment-level reserved-token check (mirrors the parser logic for dot paths).
-const SEGMENT_SPLIT = /[-_./\s]+/;
-
-function isReservedSegment(raw: string): boolean {
-  const lower = raw.toLowerCase();
-  if (lower.includes("dragon-fruit") || lower.includes("dragonfruit")) return true;
-  const segs = lower.split(SEGMENT_SPLIT).filter((s) => s.length > 0);
-  for (const seg of segs) {
-    if (seg === "ai") return true;
-    if (seg.startsWith("magic")) return true;
-  }
-  return false;
-}
-
 function safeReadText(absPath: string): string | null {
   try {
     const stat = statSync(absPath);
@@ -90,21 +99,21 @@ function analyseComponent(source: string): ComponentAnalysis {
   let m: RegExpExecArray | null;
   while ((m = CSS_VAR_RE.exec(source)) !== null) {
     const name = m[1];
-    if (name && isReservedSegment(name)) tokenRefs.push(name);
+    if (name && isReservedTokenName(name)) tokenRefs.push(name);
   }
 
   // 2. Detect bare --token-name references (not declarations).
   BARE_CSS_TOKEN_RE.lastIndex = 0;
   while ((m = BARE_CSS_TOKEN_RE.exec(source)) !== null) {
     const name = m[1];
-    if (name && isReservedSegment(name) && !tokenRefs.includes(name)) tokenRefs.push(name);
+    if (name && isReservedTokenName(name) && !tokenRefs.includes(name)) tokenRefs.push(name);
   }
 
   // 3. Detect dot-path token references in JS/TS expressions.
   DOT_TOKEN_RE.lastIndex = 0;
   while ((m = DOT_TOKEN_RE.exec(source)) !== null) {
     const path = m[1];
-    if (path && isReservedSegment(path) && !tokenRefs.includes(path)) tokenRefs.push(path);
+    if (path && isReservedTokenName(path) && !tokenRefs.includes(path)) tokenRefs.push(path);
   }
 
   const usesReservedToken = tokenRefs.length > 0;
@@ -135,23 +144,21 @@ function analyseComponent(source: string): ComponentAnalysis {
     let mm: RegExpExecArray | null;
     while ((mm = CSS_VAR_RE.exec(source)) !== null) {
       const name = mm[1];
-      if (name && isReservedSegment(name)) { hasCssRef = true; break; }
+      if (name && isReservedTokenName(name)) { hasCssRef = true; break; }
     }
     if (!hasCssRef) {
       while ((mm = BARE_CSS_TOKEN_RE.exec(source)) !== null) {
         const name = mm[1];
-        if (name && isReservedSegment(name)) { hasCssRef = true; break; }
+        if (name && isReservedTokenName(name)) { hasCssRef = true; break; }
       }
     }
     return hasCssRef;
   })();
 
-  const markerIsUnambiguous = markerViaJsx || markerViaDataAttr;
-
   let confidence: "high" | "low";
   if (!usesReservedToken) {
     confidence = "high";
-  } else if (tokenIsUnambiguous && (markerIsUnambiguous || !ARIA_AI_RE.test(source))) {
+  } else if (tokenIsUnambiguous) {
     confidence = "high";
   } else {
     confidence = "low";
@@ -166,6 +173,7 @@ const evaluate = async (
 ): Promise<RuleEvalResult> => {
   const findings: Finding[] = [];
   if (!ctx.repoRoot) return { findings, opportunities: 0 };
+  if (isAllowlisted(ctx.repoRoot)) return { findings, opportunities: 0 };
 
   // Fast-exit: no reserved tokens declared at all → nothing to check.
   const reservedTokens = detectReservedAiTokens(ctx.repoRoot);
@@ -270,6 +278,8 @@ The marker vocabulary (\`AI_MARKER_NAMES\`) is shared with sibling rule \`ai-gov
 
 export const _internal = {
   analyseComponent,
-  isReservedSegment,
+  isAllowlisted,
+  DISABLE_DIRECTIVE,
+  ALLOWLIST_CANDIDATES,
   AI_MARKER_NAMES,
 };
