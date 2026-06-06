@@ -401,6 +401,34 @@
         "files matching `ctx.excludePaths` config",
         "repos that ship only AGENTS.md/CLAUDE.md but neither Cursor rules nor Claude skills — emit one warning (not error) to nudge adoption"
       ]
+    },
+    {
+      "id": "ai-governance/ai-tokens-reserved",
+      "axis": "ai-governance",
+      "defaultSeverity": "info",
+      "shortDescription": "Inventory reserved AI-marker design tokens",
+      "fullDescription": "Scans token sources (`tokens.json`, `tokens/**/*.json`, `*.tokens.json`, and `**/*.css` `--*` custom properties) for token names that match reserved AI-marker vocabularies: Carbon (`dragon-fruit`, `*-ai-*` color tokens), Shopify Polaris (`--p-color-*-magic*`, `magic-*`), Workday Canvas (`*-ai-*` segment), and the generic leading/trailing `ai` segment. Matching is segment-anchored (split by `-`, `_`, `.`, `/`) so `rain`, `paint`, `mainColor`, `captain`, `detail` do not trigger. Emits one info finding listing up to 20 matched names when reserved tokens are present; emits nothing when none are. Severity is informational — a DS with no AI surface is not penalized here; the gating rule lives in Track 3.3 (`ai-governance/ai-token-requires-marker`).",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-ai-tokens-reserved.md",
+      "rationale": "Why it matters\n\nAI-marker tokens are how a design system tells consumers — humans and agents — that a UI region was produced by AI. Carbon's `dragon-fruit` AI gradient, Polaris's `magic` namespace, and Workday Canvas's `*-ai-*` color tokens are the three established vocabularies; a fourth generic `ai` segment covers the long tail.\n\nTrack 3 of the Lyse roadmap (Face B — AI-Governance) treats these tokens as the foundation for the composite gating rule `ai-governance/ai-token-requires-marker` (Track 3.3), which enforces that AI-produced surfaces actually wear the AI marker. This rule is the inventory step: detect which reserved tokens the repo declares so 3.3 has a deterministic set to check against. It carries no penalty — a DS with zero AI tokens (no AI surface) emits no finding and is not down-scored. The teeth live in 3.3.\n\nThe shared parser `detectReservedAiTokens(repoRoot)` is exported from `packages/core/src/parsers/ai-tokens.ts` so 3.3 reuses the exact same detection set.",
+      "examples": [
+        {
+          "good": "/* tokens.json */ { \"color\": { \"primary\": \"#0070f3\" } }",
+          "bad": "/* tokens.json */ { \"color\": { \"ai\": { \"primary\": \"#0070f3\" } } }"
+        },
+        {
+          "good": ":root { --color-primary: #0070f3; }",
+          "bad": ":root { --p-color-bg-magic: #f4f0fd; }"
+        },
+        {
+          "good": "/* tokens.json */ { \"gradient\": { \"sunrise\": \"...\" } }",
+          "bad": "/* tokens.json */ { \"gradient\": { \"dragon-fruit\": \"...\" } }"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable ai-governance/ai-tokens-reserved` in an adjacent README or `.lyse.yaml` — rule is N/A",
+        "token files larger than 2 MB — skipped to avoid pathological cases",
+        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
+      ]
     }
   ]
 }

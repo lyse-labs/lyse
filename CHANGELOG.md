@@ -26,6 +26,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ai-governance/ai-tokens-reserved` rule — first rule shipped under the
+  `ai-governance` axis (Track 3 / Face B). Inventories reserved AI-marker
+  design tokens (Carbon `dragon-fruit` / `*-ai-*`, Polaris `magic`, Workday
+  Canvas `*-ai-*`, generic leading-`ai` segment) declared in `tokens.json`,
+  `tokens/**/*.json`, `*.tokens.json`, and `**/*.css` `--*` custom
+  properties. Severity is `info` — a DS with no AI surface emits no finding
+  and is not penalised. The shared parser `detectReservedAiTokens(repoRoot)`
+  (exported from `packages/core/src/parsers/ai-tokens.ts`) is reused by the
+  downstream gating rule `ai-governance/ai-token-requires-marker` (Track
+  3.3). Allowlist via `// lyse-disable ai-governance/ai-tokens-reserved` in
+  an adjacent README or `.lyse.yaml`.
 - **AI-Governance axis (Face B) plumbing** — added the `ai-governance` scoring
   axis (`AxisName`) and reliability sub-axis label (`AxisLabel`), the foundation
   for the AI-Governance signal family (Track 1 / roadmap §6). The axis is
