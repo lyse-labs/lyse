@@ -26,6 +26,7 @@ const EXPECTED_IDS = [
   "ai-governance/ai-loading-error-states",
   "ai-governance/human-control-affordances",
   "ai-governance/ai-marker-anti-patterns",
+  "ai-governance/ai-content-live-region",
   "ai-governance/disclaimer-present",
   "ai-governance/feedback-control-present",
 ];

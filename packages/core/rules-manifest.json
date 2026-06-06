@@ -607,6 +607,31 @@
       ]
     },
     {
+      "id": "ai-governance/ai-content-live-region",
+      "axis": "ai-governance",
+      "defaultSeverity": "warning",
+      "shortDescription": "Detect ARIA live region on AI output / streaming components",
+      "fullDescription": "Globs `**/*.{tsx,jsx,vue}` and runs two per-file detectors: one that identifies AI-output/streaming surfaces (AI_MARKER_NAMES, *AIResponse*, *ChatMessage*, isStreaming, isGenerating props), another that detects live-region attributes (aria-live=\"polite|assertive\", role=\"status\", role=\"alert\", PatternFly isLiveRegion). Cross-condition: AI surface present but no live region → `warning`; AI surface inside a live region → `info` naming the mechanism; no AI/streaming surface → no finding.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-ai-content-live-region.md",
+      "rationale": "Why it matters\n\nScreen-reader users rely on ARIA live regions to hear dynamically updated content. When an AI model streams a response token-by-token, the DOM updates silently unless the container carries aria-live=\"polite\", role=\"status\", role=\"alert\", or an equivalent framework mechanism. Without a live region, visually impaired users miss the entire AI response — a failure of both accessibility and AI-governance (the system produces output that some users cannot perceive).\n\nWAI-ARIA specifies that aria-live=\"polite\" announces changes after the user is idle (appropriate for non-urgent AI output); aria-live=\"assertive\" / role=\"alert\" interrupt immediately (use only for errors). PatternFly provides isLiveRegion as a prop on several container components to avoid hand-rolling the attribute.\n\nThis rule checks the static presence of a live-region mechanism in the same file as an AI-output or streaming component — it does not verify runtime behaviour or dynamic DOM updates.",
+      "examples": [
+        {
+          "good": "// aria-live wraps AI output (React)\nexport function AiAnswer({ content }: { content: string }) {\n  return (\n    <div aria-live=\"polite\">\n      <AILabel>AI</AILabel>\n      <p>{content}</p>\n    </div>\n  );\n}",
+          "bad": "// AI output with no live region\nexport function AiAnswer({ content }: { content: string }) {\n  return (\n    <div className=\"response\">\n      <ChatAIResponse content={content} />\n    </div>\n  );\n}"
+        },
+        {
+          "good": "// PatternFly isLiveRegion\n<TextContent isLiveRegion>{streamedContent}</TextContent>",
+          "bad": "// isStreaming prop but no live region wrapper\n<OutputBlock isGenerating={generating} />"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable ai-governance/ai-content-live-region` in an adjacent README or `.lyse.yaml` — rule is N/A",
+        "repos with no AI-output or streaming component — no AI surface detected, rule emits nothing",
+        "files larger than 1 MB — skipped to avoid pathological cases",
+        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
+      ]
+    },
+    {
       "id": "ai-governance/disclaimer-present",
       "axis": "ai-governance",
       "defaultSeverity": "warning",
