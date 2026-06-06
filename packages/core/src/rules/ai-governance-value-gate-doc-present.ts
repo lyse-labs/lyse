@@ -38,13 +38,13 @@ const STATIC_CANDIDATES = [
   ".lyse/ai-value-gate.md",
 ];
 
-// Glob patterns for docs/**/ and docs/ai/*.md — broad net for convention-varying repos.
+// Glob patterns for docs/**/ — name-constrained to avoid catching arbitrary AI docs.
 const DOC_GLOBS = [
   "docs/**/ai-value-gate.md",
   "docs/**/ai-governance.md",
   "docs/**/ai-readiness.md",
   "docs/**/ai-checklist.md",
-  "docs/ai/*.md",
+  "**/AI_GOVERNANCE.md",
 ];
 
 const IGNORE = ["**/node_modules/**", "**/dist/**", "**/build/**", "**/.git/**"];
@@ -58,7 +58,7 @@ const GATE_PATTERNS: RegExp[] = [
   /\bshould\s+this\s+(?:feature\s+)?(?:be|use)\s+ai\b/i,
   /\bis\s+ai\s+the\s+right\s+tool\b/i,
   /\bai[-\s]readiness\b/i,
-  /\bwhy\s+ai\b.*\?/i,
+  /\bwhy\s+ai\s*\?/i,
   /\bdeterministic\s+rule\b.*instead\s+of\s+ai\b/i,
 ];
 
@@ -159,7 +159,7 @@ const evaluate = async (
       ruleId: RULE_ID,
       axis: "ai-governance",
       severity: "warning",
-      location: { file: "docs/AI_GOVERNANCE.md", line: 1, column: 1 },
+      location: { file: "AI_GOVERNANCE.md", line: 1, column: 1 },
       message:
         "No AI value-gate governance doc found — this DS ships an AI surface but documents no go/no-go decision gate (ServiceNow \"10-Q\" pattern). Create a doc that answers: is AI needed, is it the right tool, what is the fallback?",
       suggestion:
@@ -200,7 +200,7 @@ export const rule: Rule = createLyseRule({
     defaultSeverity: "warning",
     shortDescription: "AI value-gate governance doc must be present when an AI surface exists",
     fullDescription:
-      "When a design system ships an AI surface — detected by an AI-marker component (via the `AI_MARKER_NAMES` vocabulary from Track 3.2) or reserved AI-marker design tokens (Track 3.1, `detectReservedAiTokens`) — this rule checks that a governance value-gate doc exists and contains structured go/no-go decision language. Candidate locations scanned: `AI_GOVERNANCE.md` at repo root, `docs/ai-value-gate.md`, `docs/ai-governance.md`, `docs/ai-readiness.md`, `docs/ai-checklist.md`, `.lyse/ai-value-gate.md`, and any `docs/ai/*.md` file. A doc is considered valid if it contains at least one of: \"is AI needed\", \"value gate\", \"go/no-go\", \"should this be AI\", \"is AI the right tool\", \"ai-readiness\", \"why AI?\", or \"deterministic rule ... instead of AI\". Emits `warning` when AI surface exists but no doc found, or doc found but lacks gate language. Emits `info` when a valid value-gate doc is present. Emits nothing when the DS has no AI surface.",
+      "When a design system ships an AI surface — detected by an AI-marker component (via the `AI_MARKER_NAMES` vocabulary from Track 3.2) or reserved AI-marker design tokens (Track 3.1, `detectReservedAiTokens`) — this rule checks that a governance value-gate doc exists and contains structured go/no-go decision language. Candidate locations scanned: `AI_GOVERNANCE.md` at repo root, `docs/ai-value-gate.md`, `docs/ai-governance.md`, `docs/ai-readiness.md`, `docs/ai-checklist.md`, `.lyse/ai-value-gate.md`, and `AI_GOVERNANCE.md` anywhere in the repo tree. A doc is considered valid if it contains at least one of: \"is AI needed\", \"value gate\", \"go/no-go\", \"should this be AI\", \"is AI the right tool\", \"ai-readiness\", \"why AI?\", or \"deterministic rule ... instead of AI\". Emits `warning` when AI surface exists but no doc found, or doc found but lacks gate language. Emits `info` when a valid value-gate doc is present. Emits nothing when the DS has no AI surface.",
     helpUri:
       "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-value-gate-doc-present.md",
     rationale: `Why it matters
