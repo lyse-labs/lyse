@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { SUB_AXES, getSubAxis } from "../sub-axes.js";
+import { ruleObjects } from "../../../rules/registry.js";
 
-const VALID_AXES = new Set(["tokens", "a11y", "components", "stories", "ai-surface"]);
+const VALID_AXES = new Set(["tokens", "a11y", "components", "stories", "ai-surface", "ai-governance"]);
 
 describe("SUB_AXES catalogue", () => {
-  it("contains exactly 17 sub-axes (1 per shipped rule)", () => {
-    expect(SUB_AXES.length).toBe(17);
+  it("contains one sub-axis per shipped rule", () => {
+    expect(SUB_AXES.length).toBe(ruleObjects.length);
   });
   it("each id is unique", () => {
     const ids = SUB_AXES.map((s) => s.id);

@@ -1,6 +1,6 @@
 export type Severity = "error" | "warning" | "info";
 
-export type AxisName = "tokens" | "a11y" | "components" | "stories" | "ai-surface";
+export type AxisName = "tokens" | "a11y" | "components" | "stories" | "ai-surface" | "ai-governance";
 
 export type BuiltInRuleId =
   | "tokens/no-hardcoded-color"

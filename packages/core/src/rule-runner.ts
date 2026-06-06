@@ -7,7 +7,7 @@ export interface RunRulesResult {
   parseErrors: ParseError[];
 }
 
-const ZERO: Record<AxisName, number> = { tokens: 0, a11y: 0, components: 0, stories: 0, "ai-surface": 0 };
+const ZERO: Record<AxisName, number> = { tokens: 0, a11y: 0, components: 0, stories: 0, "ai-surface": 0, "ai-governance": 0 };
 
 export async function runRules(rules: Rule[], ctx: RuleContext, parsed: ParsedFiles): Promise<RunRulesResult> {
   const findings: Finding[] = [];

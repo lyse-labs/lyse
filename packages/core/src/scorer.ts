@@ -30,7 +30,7 @@ const SEVERITY_WEIGHT: Record<Severity, number> = { error: 4, warning: 2, info: 
 // LOO MAE: 10.36 pts (target <= 8). See `docs/architecture/calibration.md`.
 export const SCORING_K = 0;
 
-const AXIS_ORDER: AxisName[] = ["tokens", "a11y", "components", "stories", "ai-surface"];
+const AXIS_ORDER: AxisName[] = ["tokens", "a11y", "components", "stories", "ai-surface", "ai-governance"];
 
 export type MaturityTier =
   | "Foundational"
@@ -159,6 +159,7 @@ export function scoreFromFindings(
     components: { errorCount: 0, warningCount: 0, infoCount: 0 },
     stories: { errorCount: 0, warningCount: 0, infoCount: 0 },
     "ai-surface": { errorCount: 0, warningCount: 0, infoCount: 0 },
+    "ai-governance": { errorCount: 0, warningCount: 0, infoCount: 0 },
   };
   for (const f of findings) {
     const bucket = buckets[f.axis];
