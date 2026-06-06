@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ai-governance/human-control-affordances` (Track 3.6): detects per-output control affordances
+  (Regenerate/Retry/Stop/Edit/Undo/Confirm/Dismiss/Accept/Reject) and global AI disable toggle.
+  Warns when an AI marker surface exists but no correction/dismissal controls are shipped (HAX G8 / G9).
+  Allowlist: `lyse-disable ai-governance/human-control-affordances`.
 - `ai-governance/explainability-affordance` rule — Track 3.5 (Face B).
   Detects whether the DS ships a companion explainability affordance alongside an
   AI-marker component. Name-based detection covers components whose exported

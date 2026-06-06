@@ -1,4 +1,4 @@
-// 21 sub-axes, 1:1 mapped to the 21 shipped rules.
+// 22 sub-axes, 1:1 mapped to the 22 shipped rules.
 // Each sub-axis declares the scoring axis it reports under (5 total per
 // AxisName in packages/core/src/types.ts: tokens, a11y, components, stories,
 // ai-surface). Naming rules report under the components axis.
@@ -26,6 +26,7 @@ export const SUB_AXES: SubAxisRecord[] = [
   { id: "ai-governance.ai-marker-component-present", axis: "ai-governance", name: "AI-marker component present", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-governance/ai-marker-component-present"], llmDriven: false },
   { id: "ai-governance.explainability-affordance", axis: "ai-governance", name: "Explainability affordance", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-governance/explainability-affordance"], llmDriven: false },
   { id: "ai-governance.ai-token-requires-marker", axis: "ai-governance", name: "AI token requires co-located marker", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-governance/ai-token-requires-marker"], llmDriven: false },
+  { id: "ai-governance.human-control-affordances", axis: "ai-governance", name: "Human-control affordances", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-governance/human-control-affordances"], llmDriven: false },
 ];
 
 export function getSubAxis(id: string): SubAxisRecord | undefined {
