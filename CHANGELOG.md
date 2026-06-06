@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ai-governance/value-gate-doc-present` (Track 3.11): detects whether a DS with an AI surface (AI-marker component or reserved AI tokens) documents a structured go/no-go AI value-gate (ServiceNow "10-Q" pattern). Emits `warning` when absent or lacking gate language; emits `info` when a valid gate doc is present. Reuses `scanForMarkerComponents` (3.2) and `detectReservedAiTokens` (3.1) for surface detection. Allowlist via `lyse-disable ai-governance/value-gate-doc-present`. Closes lyse-labs/lyse-internal#47.
+
 - `ai-governance/ai-content-live-region` (Track 3.10): warns when an AI-output or
   streaming component (`AI_MARKER_NAMES`, `*AIResponse*`, `*ChatMessage*`, `isStreaming`,
   `isGenerating`) is present without an ARIA live region (`aria-live="polite|assertive"`,

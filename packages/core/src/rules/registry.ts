@@ -25,6 +25,7 @@ import { rule as rAiMarkerAntiPatterns } from "./ai-governance-ai-marker-anti-pa
 import { rule as rAiContentLiveRegion } from "./ai-governance-ai-content-live-region.js";
 import { rule as rDisclaimerPresent } from "./ai-governance-disclaimer-present.js";
 import { rule as rFeedbackControlPresent } from "./ai-governance-feedback-control-present.js";
+import { rule as rValueGateDocPresent } from "./ai-governance-value-gate-doc-present.js";
 import type { Rule } from "../types.js";
 
 export const ruleObjects: Rule[] = [
@@ -55,6 +56,7 @@ export const ruleObjects: Rule[] = [
   rAiContentLiveRegion,
   rDisclaimerPresent,
   rFeedbackControlPresent,
+  rValueGateDocPresent,
 ];
 
 export const ruleMap = new Map<string, Rule>(ruleObjects.map((r) => [r.id, r]));

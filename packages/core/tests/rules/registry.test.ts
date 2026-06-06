@@ -29,6 +29,7 @@ const EXPECTED_IDS = [
   "ai-governance/ai-content-live-region",
   "ai-governance/disclaimer-present",
   "ai-governance/feedback-control-present",
+  "ai-governance/value-gate-doc-present",
 ];
 
 describe("rules/registry", () => {
