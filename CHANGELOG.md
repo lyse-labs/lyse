@@ -88,6 +88,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `$extensions.lyse.disable: ["tokens/dtcg-conformance"]` (or `"all"`).
   Implements lyse-labs/lyse-internal#24.
 
+### Changed (BREAKING)
+
+- `tokens/dtcg-conformance`: most type-shape mismatch findings escalate from
+  `warning` to `error`. Existing token files with malformed `$value` shapes
+  that previously emitted warnings now emit errors. Composite types
+  (`shadow`, `typography`, `border`, `transition`, `gradient`) keep `warning`.
+
 ### Documentation
 
 - New per-rule page `docs/rules/tokens-dtcg-conformance.md` (Why · How ·

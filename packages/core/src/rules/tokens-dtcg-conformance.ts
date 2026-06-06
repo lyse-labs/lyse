@@ -25,6 +25,9 @@ import { normalizeToDtcg } from "../tokens/normalizer.js";
 const MAX_FILE_BYTES = 1_000_000;
 const RULE_ID = "tokens/dtcg-conformance";
 
+// Hoisted to module scope — avoids re-allocating a Set on every token visit.
+const compositeTypes: ReadonlySet<DtcgType> = new Set<DtcgType>(["shadow", "typography", "border", "transition", "gradient"]);
+
 /**
  * Discovers DTCG-shaped JSON files under the repo:
  *   - `**\/*.tokens.json`
@@ -189,6 +192,9 @@ function validateColorValue(value: unknown): ValueShape {
   }
   const v = value.trim();
   if (HEX_RE.test(v)) return { ok: true };
+  // WHY: we accept any well-formed fn-call body (color(), oklab(), lab(), lch(), hwb(), …) on
+  // presence of the opening paren + closing paren alone. Full CSS color parsing is out of scope
+  // for a token-level validator — delegate that to a CSS parser.
   if (COLOR_FN_RE.test(v) && v.endsWith(")")) return { ok: true };
   if (NAMED_CSS_COLORS.has(v.toLowerCase())) return { ok: true };
   return { ok: false, reason: `color $value "${value}" is not a recognized CSS color (hex, rgb()/rgba(), hsl()/hsla(), oklch(), or named)` };
@@ -423,6 +429,15 @@ interface WalkOutcome {
 function walkDocument(doc: DtcgDocument): WalkOutcome {
   const result: WalkOutcome = { tokenCount: 0, issues: [] };
 
+  // $schema is informational — only flag if it's the wrong type
+  if ("$schema" in doc && typeof (doc as Record<string, unknown>)["$schema"] !== "string") {
+    result.issues.push({
+      path: "$schema",
+      severity: "warning",
+      message: `$schema must be a string URL when present (got ${typeof (doc as Record<string, unknown>)["$schema"]})`,
+    });
+  }
+
   const visit = (node: unknown, path: string[], inheritedType: DtcgType | undefined) => {
     if (typeof node !== "object" || node === null || Array.isArray(node)) return;
     if (isDtcgToken(node)) {
@@ -460,8 +475,7 @@ function walkDocument(doc: DtcgDocument): WalkOutcome {
         // --- type-specific value validation ---
         const r = validateTypedValue(effectiveType, value);
         if (r && !r.ok && r.reason) {
-          const compositeTypes: DtcgType[] = ["shadow", "typography", "border", "transition", "gradient"];
-          const severity: Severity = compositeTypes.includes(effectiveType) ? "warning" : "error";
+          const severity: Severity = compositeTypes.has(effectiveType) ? "warning" : "error";
           result.issues.push({
             path: tokenPath,
             severity,
