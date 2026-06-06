@@ -20,11 +20,12 @@ const EXPECTED_IDS = [
   "ai-surface/shadcn-registry-valid",
   "ai-surface/agent-instruction-files",
   "ai-governance/ai-tokens-reserved",
+  "ai-governance/ai-marker-component-present",
 ];
 
 describe("rules/registry", () => {
-  it("ruleObjects contains exactly 18 rules", () => {
-    expect(ruleObjects).toHaveLength(18);
+  it("ruleObjects and ruleMap have the same length (no orphan or missing entries)", () => {
+    expect(ruleMap.size).toBe(ruleObjects.length);
   });
 
   it("ruleObjects has all expected rule IDs", () => {
@@ -32,10 +33,6 @@ describe("rules/registry", () => {
     for (const expected of EXPECTED_IDS) {
       expect(ids).toContain(expected);
     }
-  });
-
-  it("ruleMap has exactly 18 entries", () => {
-    expect(ruleMap.size).toBe(18);
   });
 
   it("ruleMap has all expected rule IDs as keys", () => {

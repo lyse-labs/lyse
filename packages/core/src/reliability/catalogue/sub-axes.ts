@@ -1,4 +1,4 @@
-// 17 sub-axes, 1:1 mapped to the 17 shipped rules.
+// 18 sub-axes, 1:1 mapped to the 18 shipped rules.
 // Each sub-axis declares the scoring axis it reports under (5 total per
 // AxisName in packages/core/src/types.ts: tokens, a11y, components, stories,
 // ai-surface). Naming rules report under the components axis.
@@ -23,6 +23,7 @@ export const SUB_AXES: SubAxisRecord[] = [
   { id: "ai-surface.shadcn-registry-valid", axis: "ai-surface", name: "shadcn registry validity", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-surface/shadcn-registry-valid"], llmDriven: false },
   { id: "ai-surface.agent-instruction-files", axis: "ai-surface", name: "Agent instruction files (Cursor / Claude)", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-surface/agent-instruction-files"], llmDriven: false },
   { id: "ai-governance.ai-tokens-reserved", axis: "ai-governance", name: "Reserved AI-marker tokens inventory", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-governance/ai-tokens-reserved"], llmDriven: false },
+  { id: "ai-governance.ai-marker-component-present", axis: "ai-governance", name: "AI-marker component present", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-governance/ai-marker-component-present"], llmDriven: false },
 ];
 
 export function getSubAxis(id: string): SubAxisRecord | undefined {
