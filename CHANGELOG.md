@@ -26,6 +26,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ai-governance/explainability-affordance` rule — Track 3.5 (Face B).
+  Detects whether the DS ships a companion explainability affordance alongside an
+  AI-marker component. Name-based detection covers components whose exported
+  identifier or file name contains `Explain`, `Explainability`, `WhyThis`,
+  `Citation`, `Sources`, `Confidence`, or `Provenance` (case-insensitive).
+  Popover/tooltip ARIA detection covers AI-marker components that carry
+  `aria-describedby` or `role="dialog"` / `role="tooltip"`. Emits `info` when
+  an affordance is found; emits `warning` (cross-condition) when an AI-marker is
+  present but no affordance is detected; emits nothing when the DS has no AI
+  surface. Reuses `AI_MARKER_NAMES` from `ai-governance/ai-marker-component-present`.
+  Guidelines: HAX G11 / PAIR Explainability. Behavioral slice (indicator wherever
+  AI output appears) deferred to Track 4.
 - `ai-governance/ai-token-requires-marker` rule — Track 3.3 (Face B). Carbon mandatory composite: each component file that references a reserved AI token (`var(--ai-*)`, `--p-color-*-magic*`, `color.ai.*`, `dragon-fruit`, etc.) must render an AI-marker component (AILabel, AIBadge, `magic-*` tag, etc.) or carry an explicit `data-ai` attribute. Missing marker = `error`. Detection is HIGH-confidence only when the token reference is an unambiguous `var(--…)` or bare `--token` form; dot-path heuristic hits are suppressed (LOW confidence). Fast-exit: rule is a no-op when `detectReservedAiTokens` finds zero reserved tokens. Imports `isReservedTokenName` directly from `parsers/ai-tokens.ts` (single source of truth — no local redefinition) and `AI_MARKER_NAMES` from `ai-governance/ai-marker-component-present`. Allowlist via `lyse-disable ai-governance/ai-token-requires-marker` in an adjacent README or `.lyse.yaml`.
 - `ai-governance/ai-marker-component-present` rule — Track 3.2 (Face B).
   Detects whether the DS ships a dedicated AI-marker component (Carbon `AILabel`,

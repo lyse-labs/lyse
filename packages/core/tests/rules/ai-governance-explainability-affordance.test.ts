@@ -1,0 +1,336 @@
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  rule,
+  isExplainabilityAffordanceName,
+  isMarkerWithPopover,
+  scanForExplainabilityAffordances,
+  scanForAiMarkers,
+} from "../../src/rules/ai-governance-explainability-affordance.js";
+import type { RuleContext, ParsedFiles } from "../../src/types.js";
+
+const emptyParsed: ParsedFiles = { ts: [], css: [], cssInJs: [] };
+
+function makeCtx(repoRoot: string): RuleContext {
+  return {
+    repoRoot,
+    tokens: null,
+    componentsModule: null,
+    componentInventory: [],
+    storyIndex: null,
+    excludePaths: [],
+  };
+}
+
+let tmp: string;
+
+beforeEach(() => {
+  tmp = mkdtempSync(join(tmpdir(), "lyse-explainability-"));
+});
+
+afterEach(() => {
+  rmSync(tmp, { recursive: true, force: true });
+});
+
+// ---------------------------------------------------------------------------
+// Unit: isExplainabilityAffordanceName
+// ---------------------------------------------------------------------------
+describe("isExplainabilityAffordanceName", () => {
+  it("matches Explain* names", () => {
+    expect(isExplainabilityAffordanceName("ExplainPopover")).toBe(true);
+    expect(isExplainabilityAffordanceName("Explainability")).toBe(true);
+    expect(isExplainabilityAffordanceName("explain-panel")).toBe(true);
+  });
+
+  it("matches WhyThis", () => {
+    expect(isExplainabilityAffordanceName("WhyThisResult")).toBe(true);
+    expect(isExplainabilityAffordanceName("whythis")).toBe(true);
+  });
+
+  it("matches Citation and Sources", () => {
+    expect(isExplainabilityAffordanceName("CitationList")).toBe(true);
+    expect(isExplainabilityAffordanceName("SourcesPanel")).toBe(true);
+  });
+
+  it("matches Confidence and Provenance", () => {
+    expect(isExplainabilityAffordanceName("ConfidenceDisplay")).toBe(true);
+    expect(isExplainabilityAffordanceName("ProvenanceInfo")).toBe(true);
+  });
+
+  it("does NOT match unrelated component names", () => {
+    expect(isExplainabilityAffordanceName("Button")).toBe(false);
+    expect(isExplainabilityAffordanceName("AILabel")).toBe(false);
+    expect(isExplainabilityAffordanceName("Card")).toBe(false);
+    expect(isExplainabilityAffordanceName("Dialog")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Unit: isMarkerWithPopover
+// ---------------------------------------------------------------------------
+describe("isMarkerWithPopover", () => {
+  it("returns true for AI-marker name with aria-describedby in source", () => {
+    const src = `export function AILabel() {
+  return <button aria-describedby="why-panel">AI</button>;
+}`;
+    expect(isMarkerWithPopover("AILabel", src)).toBe(true);
+  });
+
+  it("returns true for AI-marker name with role=dialog in source", () => {
+    const src = `export function AIBadge() {
+  return <div><span>AI</span><div role="dialog">Explanation</div></div>;
+}`;
+    expect(isMarkerWithPopover("AIBadge", src)).toBe(true);
+  });
+
+  it("returns true for AI-marker name with role=tooltip in source", () => {
+    const src = `export const AITag = () => (
+  <span><label>AI</label><div role="tooltip">Why AI generated this</div></span>
+);`;
+    expect(isMarkerWithPopover("AITag", src)).toBe(true);
+  });
+
+  it("returns false for non-marker name even with aria-describedby", () => {
+    const src = `export function Button() {
+  return <button aria-describedby="help">Click</button>;
+}`;
+    expect(isMarkerWithPopover("Button", src)).toBe(false);
+  });
+
+  it("returns false for AI-marker name without popover ARIA attributes", () => {
+    const src = `export function AILabel() {
+  return <span className="ai-badge">AI</span>;
+}`;
+    expect(isMarkerWithPopover("AILabel", src)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Unit: scanForAiMarkers
+// ---------------------------------------------------------------------------
+describe("scanForAiMarkers", () => {
+  it("returns false when no AI-marker components present", () => {
+    mkdirSync(join(tmp, "src"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "index.ts"),
+      "export { Button } from './button';\nexport { Card } from './card';",
+    );
+    expect(scanForAiMarkers(tmp)).toBe(false);
+  });
+
+  it("returns true when AILabel is exported from src/index.ts", () => {
+    mkdirSync(join(tmp, "src"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "index.ts"),
+      "export { AILabel } from './ai-label';\nexport { Button } from './button';",
+    );
+    expect(scanForAiMarkers(tmp)).toBe(true);
+  });
+
+  it("returns true when AIBadge component file is present", () => {
+    mkdirSync(join(tmp, "src", "components"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "components", "AIBadge.tsx"),
+      "export const AIBadge = () => null;",
+    );
+    expect(scanForAiMarkers(tmp)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Integration: rule.evaluate
+// ---------------------------------------------------------------------------
+describe("rule ai-governance/explainability-affordance", () => {
+  // Fixture 1: ExplainPopover bound to AI-marker → info
+  it("emits info when ExplainPopover is exported alongside an AI-marker component", async () => {
+    mkdirSync(join(tmp, "src"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "index.ts"),
+      [
+        "export { AILabel } from './ai-label';",
+        "export { ExplainPopover } from './explain-popover';",
+      ].join("\n"),
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    const f = result.findings[0]!;
+    expect(f.severity).toBe("info");
+    expect(f.axis).toBe("ai-governance");
+    expect(f.ruleId).toBe("ai-governance/explainability-affordance");
+    expect(f.message).toContain("ExplainPopover");
+    expect(f.message).toContain("HAX G11");
+  });
+
+  // Fixture 2: Standalone CitationList component → info
+  it("emits info when CitationList component file is present with an AI-marker", async () => {
+    mkdirSync(join(tmp, "src", "components"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "components", "AIBadge.tsx"),
+      "export const AIBadge = () => null;",
+    );
+    writeFileSync(
+      join(tmp, "src", "components", "CitationList.tsx"),
+      "export const CitationList = () => null;",
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.severity).toBe("info");
+    expect(result.findings[0]!.message).toContain("CitationList");
+  });
+
+  // Fixture 3: ConfidenceDisplay component → info
+  it("emits info when ConfidenceDisplay is exported with AI-marker present", async () => {
+    mkdirSync(join(tmp, "src"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "index.ts"),
+      [
+        "export { AILabel } from './ai-label';",
+        "export { ConfidenceDisplay } from './confidence';",
+      ].join("\n"),
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.severity).toBe("info");
+    expect(result.findings[0]!.message).toContain("ConfidenceDisplay");
+  });
+
+  // Fixture 4: AI-marker with aria-describedby popover → info
+  it("emits info when AI-marker component source includes aria-describedby", async () => {
+    mkdirSync(join(tmp, "src", "components"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "components", "AILabel.tsx"),
+      [
+        "export function AILabel() {",
+        '  return <button aria-describedby="explain-panel">AI</button>;',
+        "}",
+      ].join("\n"),
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.severity).toBe("info");
+    expect(result.findings[0]!.message).toContain("HAX G11");
+  });
+
+  // Fixture 5: AI-marker present but no explainability affordance → warning
+  it("emits warning when AI-marker exists but no explainability affordance is found", async () => {
+    mkdirSync(join(tmp, "src"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "index.ts"),
+      [
+        "export { AILabel } from './ai-label';",
+        "export { Button } from './button';",
+      ].join("\n"),
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    const f = result.findings[0]!;
+    expect(f.severity).toBe("warning");
+    expect(f.ruleId).toBe("ai-governance/explainability-affordance");
+    expect(f.message).toContain("HAX G11");
+    expect(f.message).toContain("no explainability affordance");
+  });
+
+  // Fixture 6: No AI-marker at all → no finding
+  it("emits no finding when no AI-marker component is present", async () => {
+    mkdirSync(join(tmp, "src"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "index.ts"),
+      "export { Button } from './button';\nexport { Card } from './card';",
+    );
+    writeFileSync(
+      join(tmp, "tokens.json"),
+      JSON.stringify({ color: { primary: "#0070f3" } }),
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  // Fixture 7: repoRoot not set → no finding
+  it("returns no findings when repoRoot is not set", async () => {
+    const ctx: RuleContext = {
+      repoRoot: "",
+      tokens: null,
+      componentsModule: null,
+      componentInventory: [],
+      storyIndex: null,
+      excludePaths: [],
+    };
+    const result = await rule.evaluate(ctx, emptyParsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  // Fixture 8: WhyThis component with GenAI marker → info
+  it("emits info when WhyThis component is exported alongside GenAI marker", async () => {
+    mkdirSync(join(tmp, "src", "components"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "components", "GenAIAvatar.tsx"),
+      "export const GenAIAvatar = () => null;",
+    );
+    writeFileSync(
+      join(tmp, "src", "components", "WhyThisResult.tsx"),
+      "export const WhyThisResult = () => null;",
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.severity).toBe("info");
+    expect(result.findings[0]!.message).toContain("WhyThisResult");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fix 1: allowlist suppression
+// ---------------------------------------------------------------------------
+describe("allowlist — lyse-disable directive", () => {
+  it("emits no finding when README.md contains the lyse-disable directive", async () => {
+    mkdirSync(join(tmp, "src"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "index.ts"),
+      [
+        "export { AILabel } from './ai-label';",
+        "export { Button } from './button';",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(tmp, "README.md"),
+      "# My DS\n\n<!-- lyse-disable ai-governance/explainability-affordance -->\n",
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(0);
+    expect(result.opportunities).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fix 2: .ts utility files do NOT produce findings (glob narrowed to tsx/jsx/vue)
+// ---------------------------------------------------------------------------
+describe("glob narrowing — .ts utility files excluded", () => {
+  it("does NOT produce a finding for a DataSources.ts utility file", async () => {
+    mkdirSync(join(tmp, "src", "utils"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "utils", "DataSources.ts"),
+      "export function fetchDataSources() { return []; }",
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(0);
+    expect(result.opportunities).toBe(0);
+  });
+
+  it("does NOT produce a finding for a sources.ts utility file even with an AI-marker present", async () => {
+    mkdirSync(join(tmp, "src", "components"), { recursive: true });
+    mkdirSync(join(tmp, "src", "utils"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "components", "AIBadge.tsx"),
+      "export const AIBadge = () => null;",
+    );
+    writeFileSync(
+      join(tmp, "src", "utils", "sources.ts"),
+      "export function getSources() { return []; }",
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.severity).toBe("warning");
+    expect(result.findings[0]!.message).not.toContain("sources");
+  });
+});

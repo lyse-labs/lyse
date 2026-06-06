@@ -460,6 +460,35 @@
       ]
     },
     {
+      "id": "ai-governance/explainability-affordance",
+      "axis": "ai-governance",
+      "defaultSeverity": "warning",
+      "shortDescription": "Detect an explainability affordance paired with AI-marker components",
+      "fullDescription": "When an AI-marker component is detected in the design system (per the shared `isAiMarkerName` predicate exported by `ai-governance/ai-marker-component-present`), this rule checks whether a companion explainability affordance exists. Detection is name-based: any exported identifier or component file whose name contains `Explain`, `Explainability`, `WhyThis`, `Citation`, `Sources`, `Confidence`, or `Provenance` (case-insensitive) qualifies. A marker component that opens a popover or tooltip carrying explanation content (`aria-describedby` / `role=\"dialog\"` / `role=\"tooltip\"`) also satisfies the rule. Emits `info` when an affordance is found; emits `warning` when an AI-marker exists but no affordance is detected. Emits nothing when no AI-marker is present (no AI surface). Guidelines: HAX G11 (Explain AI decisions) / PAIR Explainability. The behavioral slice — verifying that an indicator appears wherever AI output is rendered — is deferred to Track 4.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-explainability-affordance.md",
+      "rationale": "Why it matters\n\nUsers interacting with AI-generated content have a right to understand why a particular output was produced. HAX G11 (Google PAIR / IBM Human-AI Experience guidelines) requires that AI-powered interfaces expose an explanation pathway — a popover, citation list, confidence meter, or similar affordance — so users can evaluate trustworthiness and take informed action.\n\nWithout this affordance, consumers of the design system have no standard component to reach for when building explainable AI interfaces, leading to ad-hoc implementations with inconsistent UX and missing accessibility attributes.\n\nThis rule checks only the static \"affordance present\" slice (Track 3.5): does the DS export a component whose name signals explainability intent, or does an AI-marker component carry the appropriate ARIA binding to open an explanation panel? The behavioral slice — ensuring such an indicator appears wherever AI output is rendered in a consuming application — requires semantic location detection and is out of scope here; it will be addressed in Track 4.\n\nA DS with no AI-marker component at all has no AI surface and is not penalised.",
+      "examples": [
+        {
+          "good": "// src/index.ts\nexport { AILabel } from './ai-label';\nexport { ExplainPopover } from './explain-popover';",
+          "bad": "// src/index.ts\nexport { AILabel } from './ai-label';\n// no Explain/Citation/Confidence component exported"
+        },
+        {
+          "good": "// AILabel.tsx — marker bound to explanation panel\n<button aria-describedby=\"explain-panel\">AI</button>\n<div id=\"explain-panel\" role=\"dialog\">Why: …</div>",
+          "bad": "// AILabel.tsx — marker with no explanation binding\n<span className=\"ai-badge\">AI</span>"
+        },
+        {
+          "good": "// src/index.ts\nexport { ConfidenceDisplay } from './confidence-display';\nexport { CitationList } from './citation-list';",
+          "bad": "// AI tokens and AIBadge exported, but no explainability affordance component present"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable ai-governance/explainability-affordance` in an adjacent README or `.lyse.yaml` — rule is N/A",
+        "repos with no AI-marker component — no AI surface detected, rule emits nothing",
+        "files larger than 1 MB — skipped to avoid pathological cases",
+        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
+      ]
+    },
+    {
       "id": "ai-governance/ai-token-requires-marker",
       "axis": "ai-governance",
       "defaultSeverity": "error",
