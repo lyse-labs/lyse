@@ -14,9 +14,9 @@ HAX G11 (IBM Human-AI Experience) and Google PAIR Explainability guidelines requ
 
 The rule first checks whether an AI-marker component is present (using the shared `AI_MARKER_NAMES` vocabulary imported from `ai-governance/ai-marker-component-present`). If no AI-marker is found, the rule emits nothing — the DS has no AI surface.
 
-When an AI-marker is detected, detection runs in two passes:
+When an AI-marker is detected, detection runs in two passes. Both passes operate on component files only — only affordances found in files that **also contain an AI-marker identifier** are credited. A `ConfidenceDisplay` component in a file with no AI-marker does not earn credit; it must be co-located with (or live in the same file as) an AI-marker component.
 
-**Pass 1 — name-based scan.** The rule reads `src/index.ts`, `src/index.tsx`, `index.ts`, and `index.tsx` and extracts all exported identifiers. It also globs `**/*.{tsx,jsx,vue,ts}` (excluding `node_modules`, `dist`, `build`, `.git`, `.next`, `out`, `coverage`) and checks each file by file name and exported identifier. Any name that contains one of the following patterns (case-insensitive substring match) is treated as an explainability affordance:
+**Pass 1 — name-based co-location scan.** The rule globs `**/*.{tsx,jsx,vue}` (excluding `node_modules`, `dist`, `build`, `.git`, `.next`, `out`, `coverage`). For each file that contains an AI-marker identifier, it checks all exported identifiers in that file. Any name that contains one of the following patterns (case-insensitive substring match) is treated as an explainability affordance:
 
 | Pattern | Example matches |
 |---|---|
@@ -42,16 +42,15 @@ This rule implements only the **static "affordance present" slice** (Track 3.5).
 
 ## Examples
 
-### Good — ExplainPopover exported alongside AI-marker
+### Good — ExplainPopover co-located with AI-marker in the same file
 
-```ts
-// src/index.ts
-export { AILabel } from './ai-label';
-export { ExplainPopover } from './explain-popover';
-export { Button } from './button';
+```tsx
+// AILabel.tsx — marker and affordance exported from the same file
+export function AILabel() { return null; }
+export function ExplainPopover() { return null; }
 ```
 
-### Good — AI-marker with aria-describedby binding
+### Good — AI-marker with aria-describedby binding (popover in same file)
 
 ```tsx
 // AILabel.tsx — marker opens an explanation panel
@@ -65,22 +64,31 @@ export function AILabel() {
 }
 ```
 
-### Good — Confidence display component
+### Good — Confidence display co-located with AI-marker
 
-```ts
-// src/index.ts
-export { AIBadge } from './ai-badge';
-export { ConfidenceDisplay } from './confidence-display';
-export { CitationList } from './citation-list';
+```tsx
+// AILabel.tsx — marker and confidence meter in the same component file
+export function AILabel() { return null; }
+export function ConfidenceDisplay() { return null; }
 ```
 
-### Bad — AI-marker present but no explainability affordance
+### Bad — affordance in a separate file from the AI-marker (no co-location)
 
-```ts
-// src/index.ts — AILabel exported but no Explain/Citation/Confidence companion
-export { AILabel } from './ai-label';
-export { Button } from './button';
-export { Card } from './card';
+```tsx
+// AILabel.tsx
+export const AILabel = () => null;
+
+// ConfidenceDisplay.tsx — generic health metric, no AI marker in this file
+export const ConfidenceDisplay = () => null;
+```
+
+→ Rule emits `warning`: AI-marker is present but no co-located explainability affordance was detected.
+
+### Bad — AI-marker present, no affordance at all
+
+```tsx
+// AILabel.tsx — just the marker
+export const AILabel = () => null;
 ```
 
 → Rule emits `warning`: AI-marker is present but no explainability affordance was detected.
@@ -94,6 +102,14 @@ export { Card } from './card';
 ```
 
 → No finding. DS has no AI surface; rule is silent.
+
+## Limitations
+
+Detection is **static and name/co-location based**:
+
+- An `info` finding means "an affordance component exists in the same file as an AI-marker component" — not "the affordance is wired to every AI output render site in consuming applications".
+- A `ConfidenceDisplay` or `SourcesPanel` that lives in a file with no AI-marker identifier is **not credited**, even if it is conceptually related to AI output. This prevents false positives from generic health metrics or search-results panels whose names happen to match the affordance vocabulary.
+- Behavioral verification — confirming the affordance actually appears wherever AI-generated content is rendered — is deferred to Track 4.
 
 ## Auto-fix
 

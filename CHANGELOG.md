@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `ai-governance/explainability-affordance` (Track 3.5): affordance detection now requires AI co-location — only affordance components found in the **same file** as an AI-marker identifier are credited. A generic `ConfidenceDisplay` (health metric) or `SourcesPanel` (search results) in a file with no AI marker no longer earns `info`. Removes false-positive "governed" signals that arose from name-matching across unrelated files.
+
+### Documentation
+
+- Added a **Limitations** section to `docs/rules/ai-governance-explainability-affordance.md` and `docs/rules/ai-governance-human-control-affordances.md` noting that detection is static + name/co-location based; behavioral verification (affordance wired to AI output at every render site) is deferred to Track 4.
+
 ### Removed
 
 - `create-lyse` package (the unscoped `npm create lyse@latest` wrapper).
