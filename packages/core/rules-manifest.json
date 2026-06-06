@@ -634,6 +634,35 @@
         "files larger than 1 MB — skipped to avoid pathological cases",
         "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
       ]
+    },
+    {
+      "id": "ai-governance/feedback-control-present",
+      "axis": "ai-governance",
+      "defaultSeverity": "warning",
+      "shortDescription": "Detect a feedback control on AI output",
+      "fullDescription": "When an AI-marker component is detected in the design system, this rule checks whether a companion feedback control exists co-located in the same file. Detection is per-file: a feedback vocabulary match only earns credit when the same file also contains an AI-marker (component name or JSX tag). Detection is two-phase. Phase 1 — name-based scan: checks exported identifiers and file base names against the feedback vocabulary (case-insensitive substring, separator-normalised): `feedback`, `thumbsup`, `thumbsdown`, `rating`, `vote`, `helpful`. Names ending in `Icon`, `Count`, `Result`, `Total`, `Tally`, or `Text` suffixes (display counters / icon primitives) are excluded. Phase 2 — categorized bonus: for each matched feedback component file, checks whether the source exposes a reason vocabulary word (`inaccurate`, `unhelpful`, `offensive`, `tooLong`, `harmful`, `misleading`, `irrelevant`) alongside an enum object, union type, or options array. Three outcomes: AI-marker present + feedback control co-located → `info` (notes if categorized; HAX G15 / PAIR Feedback cited); AI-marker present + no co-located feedback control → `warning`; no AI-marker anywhere → no finding.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-feedback-control-present.md",
+      "rationale": "Why it matters\n\nUsers interacting with AI-generated content need a structured way to signal output quality. HAX G15 (IBM Human-AI Experience guidelines, Granular feedback) and the Google PAIR Feedback & Control guidebook require that AI-powered interfaces expose a feedback control — thumbs up/down, rating, or helpful/unhelpful — so users can communicate when AI output is wrong, harmful, or unhelpful.\n\nVendor mandates: Microsoft Fluent 2 AI design guidelines mandate a feedback affordance on AI output; Amazon Cloudscape AI components documentation encourages it; Red Hat PatternFly AI component guidance recommends it. Without a dedicated component, teams implement ad-hoc controls with inconsistent UX, missing accessibility attributes, and no shared vocabulary for categorized negative feedback.\n\nCategorized feedback (why was it bad?) provides richer model-improvement signal than binary thumbs alone. This rule rewards designs that expose a reason enum (inaccurate, unhelpful, offensive) by noting the categorized bonus in the info message.\n\nThe rule uses per-file co-location: a feedback control only earns credit when it lives in the same file as an AI-marker component or JSX tag. Generic form-validation components (ValidationFeedback), display counters (VoteCount), or product review widgets (ProductRating) in unrelated files do not falsely count. The rule fires only when at least one AI-marker file exists. A DS with no AI surface is not penalized.",
+      "examples": [
+        {
+          "good": "// AiFeedback.tsx — co-located with AI marker\nexport const AILabel = () => null;\nexport const ThumbsUp = () => null;\nexport const ThumbsDown = () => null;",
+          "bad": "// ValidationFeedback.tsx — form errors, no AI marker\nexport const ValidationFeedback = () => null;\n// AILabel.tsx — separate file, no feedback control"
+        },
+        {
+          "good": "// AiFeedback.tsx — exposes categorized reasons alongside AI marker\nexport const AIBadge = () => null;\nexport const AiFeedback = () => null;\nexport const FeedbackReason = { inaccurate: 'inaccurate', unhelpful: 'unhelpful', offensive: 'offensive' } as const;",
+          "bad": "// AiFeedback.tsx — no reason categories\nexport const AiFeedback = () => null;"
+        },
+        {
+          "good": "// StarRating.tsx present alongside AIBadge in the same file",
+          "bad": "// AIBadge.tsx present but no rating, vote, or helpful component shipped in the same file"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable ai-governance/feedback-control-present` in an adjacent README or `.lyse.yaml` — rule is N/A",
+        "repos with no AI-marker component — no AI surface detected, rule emits nothing",
+        "files larger than 1 MB — skipped to avoid pathological cases",
+        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
+      ]
     }
   ]
 }
