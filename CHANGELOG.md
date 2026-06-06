@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `ai-governance/ai-loading-error-states` (Track 3.7): warns when an AI marker surface exists but lacks a named loading state with paired text (bare spinners fail) or an AI-specific error state component; emits `info` when both are present. Recovery-flow detection deferred to Track 4. Allowlist via `lyse-disable ai-governance/ai-loading-error-states`. Closes lyse-labs/lyse-internal#43.
+- `ai-governance/feedback-control-present` (Track 3.8): detects a feedback control (thumbs, rating, vote, helpful) on AI output; notes categorized reason enum; cross-condition warning when AI-marker present but no feedback control found (HAX G15 / PAIR Feedback). Allowlist: `lyse-disable ai-governance/feedback-control-present`. Closes lyse-labs/lyse-internal#44.
 
 - `ai-governance/human-control-affordances` (Track 3.6): detects per-output control affordances
   (Regenerate/Retry/Stop/Edit/Undo/Confirm/Dismiss/Accept/Reject) and global AI disable toggle.
