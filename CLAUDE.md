@@ -47,6 +47,36 @@ Before every commit, verify that ALL relevant documentation is in sync:
 - `main` is the only long-lived branch.
 - Feature branches: `feat/<topic>`, `fix/<topic>`, `docs/<topic>`, `chore/<topic>`.
 
+## PR descriptions
+
+Keep PR descriptions short and scannable. The template has 3 sections:
+**What** (1-2 sentences), **Why** (link the issue or 1 sentence), **Test
+plan** (bullet checklist, not prose).
+
+- Don't paste reproducer code, stack traces, or design notes into the PR
+  body — they belong in the issue, in the commit message, or in a comment.
+- Don't write a "How" section that just restates the code. The diff is the
+  How.
+- Don't add multi-paragraph rationale. If the *why* needs more than one
+  sentence, write a doc / ADR and link it.
+
+A reviewer should see the PR header and immediately know (a) what
+changed, (b) why, and (c) how to verify. Anything beyond that earns
+its place by being load-bearing for review.
+
+## Merge rules (on `main`)
+
+`main` is protected. Settings as of 2026-06-06:
+
+- **Required checks:** `test`, `perf`, `Check markdown links`
+- **Linear history** required — rebase against `main` before merge if behind
+- **No merge commits** — use `gh pr merge --squash` or `gh pr merge --rebase`
+- **Conversation resolution** required — all review threads must be
+  marked "resolved" before merge
+
+Admins (`thomaseyaa`, `noemuch`) can bypass protection in emergencies but
+should not as a routine.
+
 ## Code style
 
 - Strict TypeScript: `exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`.
