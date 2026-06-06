@@ -26,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ai-governance/ai-content-live-region` (Track 3.10): warns when an AI-output or
+  streaming component (`AI_MARKER_NAMES`, `*AIResponse*`, `*ChatMessage*`, `isStreaming`,
+  `isGenerating`) is present without an ARIA live region (`aria-live="polite|assertive"`,
+  `role="status|alert"`, PatternFly `isLiveRegion`); emits info when a live region is
+  detected. Allowlist via `lyse-disable ai-governance/ai-content-live-region`.
+
 - `ai-governance/ai-loading-error-states` (Track 3.7): warns when an AI marker surface exists but lacks a named loading state with paired text (bare spinners fail) or an AI-specific error state component; emits `info` when both are present. Recovery-flow detection deferred to Track 4. Allowlist via `lyse-disable ai-governance/ai-loading-error-states`. Closes lyse-labs/lyse-internal#43.
 
 - `ai-governance/human-control-affordances` (Track 3.6): detects per-output control affordances

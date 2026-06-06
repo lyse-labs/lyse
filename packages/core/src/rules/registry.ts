@@ -22,6 +22,7 @@ import { rule as rAiTokenRequiresMarker } from "./ai-governance-ai-token-require
 import { rule as rAiLoadingErrorStates } from "./ai-governance-ai-loading-error-states.js";
 import { rule as rHumanControlAffordances } from "./ai-governance-human-control-affordances.js";
 import { rule as rAiMarkerAntiPatterns } from "./ai-governance-ai-marker-anti-patterns.js";
+import { rule as rAiContentLiveRegion } from "./ai-governance-ai-content-live-region.js";
 import type { Rule } from "../types.js";
 
 export const ruleObjects: Rule[] = [
@@ -49,6 +50,7 @@ export const ruleObjects: Rule[] = [
   rAiLoadingErrorStates,
   rHumanControlAffordances,
   rAiMarkerAntiPatterns,
+  rAiContentLiveRegion,
 ];
 
 export const ruleMap = new Map<string, Rule>(ruleObjects.map((r) => [r.id, r]));
