@@ -122,6 +122,8 @@ rules:
     severity: info
 ```
 
+**Note on inline `// lyse-disable` directives:** this rule operates on JSON config files which do not support comments, so per-line inline directives don't apply. Use `.lyse.yaml` `excludePaths` for file-level skipping instead.
+
 ## What does NOT trigger this rule
 
 - Repos with neither `components.json` nor any registry file → rule is N/A (no finding).
