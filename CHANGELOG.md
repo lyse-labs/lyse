@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- `create-lyse` package (the unscoped `npm create lyse@latest` wrapper).
+  Lyse is a drift scanner for existing projects, not a project scaffolder
+  — the `create-*` convention is for project starters (Vite, Next, React).
+  Users should run `npx @lyse-labs/lyse init` instead, which matches the
+  install flow of comparable scanner/linter tools (ESLint, Prettier,
+  Biome, Knip). The `packages/create/` workspace has been removed and
+  both published versions (`0.1.0-alpha.2`, `0.1.0-alpha.3`) have been
+  unpublished from npm.
+
 ### Fixed
 - Reverted erroneous `stable` promotion of 3 AI-Consumable sub-axes (`agents-md-quality`, `component-manifest-json`, `ds-index-exported`). They were promoted without calibration evidence (all measurement fields were `null`), which directly contradicted the public falsifiable claim in `docs/architecture/reliability.md` that the promotion gate requires N≥30 + Wilson 95% LB ≥0.90 on recall. Until the Bench corpus runs and populates the 5 measurement fields, all 17 sub-axes ship as `experimental`.
 - Bumped stale `12 sub-axes` references in `reliability.md` and `health-score.md` to the actual count (17).
@@ -122,9 +133,7 @@ publisher and is in tombstone state, so installs use the scoped form:
     npx @lyse-labs/lyse audit
     npm install -g @lyse-labs/lyse
 
-The CLI binary itself is still invoked as `lyse` after install. The
-companion scaffolding package `create-lyse` keeps its unscoped name so
-that `npm create lyse@latest` continues to work as a one-shot bootstrap.
+The CLI binary itself is still invoked as `lyse` after install.
 
 ### Added
 
