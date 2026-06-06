@@ -148,10 +148,19 @@ describe("detectAiInCtaLabel", () => {
 // Integration: rule.evaluate
 // ---------------------------------------------------------------------------
 describe("rule.evaluate — integration", () => {
-  it("sparkle-only .tsx → 1 warning, message contains SAP Fiori", async () => {
+  it("sparkle-only .tsx with no AI context → 0 findings (decorative sparkle is not flagged)", async () => {
     writeFileSync(
       join(tmp, "Summary.tsx"),
       `export function Summary() { return <span>✨ {text}</span>; }`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("AI marker component exporting AI name + sparkle sole marker → 1 warning (SAP Fiori)", async () => {
+    writeFileSync(
+      join(tmp, "AIBadge.tsx"),
+      `export function AIBadge() { return <span>✨</span>; }`,
     );
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
     expect(result.findings).toHaveLength(1);
@@ -188,14 +197,13 @@ describe("rule.evaluate — integration", () => {
     expect(result.findings).toHaveLength(0);
   });
 
-  it("Vue SFC sparkle-only → 1 warning", async () => {
+  it("Vue SFC sparkle-only with no AI context → 0 findings", async () => {
     writeFileSync(
       join(tmp, "Summary.vue"),
       `<template><span>✨ {{ summary }}</span></template>`,
     );
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
-    expect(result.findings).toHaveLength(1);
-    expect(result.findings[0]?.message).toContain("SAP Fiori");
+    expect(result.findings).toHaveLength(0);
   });
 
   it("README with lyse-disable → 0 findings (allowlist)", async () => {
@@ -218,17 +226,16 @@ describe("rule.evaluate — integration", () => {
     expect(result.opportunities).toBe(0);
   });
 
-  it("jsx file with sparkle-only → 1 warning", async () => {
+  it("jsx file with sparkle-only and no AI context → 0 findings", async () => {
     writeFileSync(
       join(tmp, "Icon.jsx"),
       `import { Sparkles } from "lucide-react";\nexport function Icon() { return <Sparkles/>; }`,
     );
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
-    expect(result.findings).toHaveLength(1);
-    expect(result.findings[0]?.message).toContain("SAP Fiori");
+    expect(result.findings).toHaveLength(0);
   });
 
-  it("file with both anti-patterns → at least the CTA finding is emitted", async () => {
+  it("CTA file with AI label + separate sparkle-only file without AI context → 1 CTA warning only", async () => {
     writeFileSync(
       join(tmp, "CTA.tsx"),
       `export function CTA() { return <button>Ask AI</button>; }`,
@@ -241,8 +248,8 @@ describe("rule.evaluate — integration", () => {
     const ctaFindings = result.findings.filter((f) => f.message.includes("GitLab"));
     const sparkleFindings = result.findings.filter((f) => f.message.includes("SAP Fiori"));
     expect(ctaFindings).toHaveLength(1);
-    expect(sparkleFindings).toHaveLength(1);
-    expect(result.findings).toHaveLength(2);
+    expect(sparkleFindings).toHaveLength(0);
+    expect(result.findings).toHaveLength(1);
   });
 
   it("opportunities equals number of component files scanned", async () => {
@@ -266,7 +273,7 @@ describe("rule.evaluate — integration", () => {
     expect(result.opportunities).toBe(0);
   });
 
-  it("regression: file with sparkle-only AND <button>Ask AI</button> emits TWO warnings (A + B)", async () => {
+  it("regression: file with sparkle + CTA AI label but no AI context → only 1 CTA warning (B), no sparkle warning", async () => {
     writeFileSync(
       join(tmp, "Mixed.tsx"),
       `export function Mixed() {
@@ -281,9 +288,18 @@ describe("rule.evaluate — integration", () => {
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
     const sparkleFindings = result.findings.filter((f) => f.message.includes("SAP Fiori"));
     const ctaFindings = result.findings.filter((f) => f.message.includes("GitLab"));
-    expect(sparkleFindings).toHaveLength(1);
+    expect(sparkleFindings).toHaveLength(0);
     expect(ctaFindings).toHaveLength(1);
-    expect(result.findings).toHaveLength(2);
+    expect(result.findings).toHaveLength(1);
+  });
+
+  it("regression: HeroBanner with decorative sparkle and no AI context → 0 findings", async () => {
+    writeFileSync(
+      join(tmp, "HeroBanner.tsx"),
+      `export function HeroBanner() { return <div>✨ Welcome!</div>; }`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(0);
   });
 
   it("role=\"button\" element with AI label → 1 CTA warning", async () => {

@@ -36,10 +36,20 @@ const DISCLAIMER_PHRASES: RegExp[] = [
   /\bpowered\s+by\s+ai\b/i,
 ];
 
-// WHY toLowerCase+includes: word-boundary `\b` fails inside compound PascalCase names
-// like AIDisclaimer where adjacent chars are all word characters.
+// WHY AI prefix check: generic legal/cookie/privacy disclaimers co-located
+// with an AI marker must not earn info credit — only AI-specific disclaimer
+// components count. Exact `Disclaimer` (standalone) is always AI-disclaimer
+// context; prefixed names must carry an AI-domain qualifier.
 function hasDisclaimerTagName(name: string): boolean {
-  return name.toLowerCase().includes("disclaimer");
+  const lower = name.toLowerCase();
+  if (!lower.includes("disclaimer")) return false;
+  if (lower === "disclaimer") return true;
+  return (
+    lower.startsWith("ai") ||
+    lower.startsWith("genai") ||
+    lower.startsWith("generative") ||
+    lower.startsWith("llm")
+  );
 }
 
 const ALLOWLIST_CANDIDATES = [
