@@ -1,4 +1,4 @@
-import { statSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import fg from "fast-glob";
 import type {
@@ -10,15 +10,27 @@ import type {
 } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import {
-  AI_MARKER_NAMES,
   isAiMarkerName,
+  extractNamesFromSource,
+  extractVueNames,
+  safeReadText,
 } from "./ai-governance-ai-marker-component-present.js";
 
 const RULE_ID = "ai-governance/explainability-affordance";
 
-const MAX_FILE_BYTES = 1_000_000;
+const MAX_ALLOWLIST_FILE_BYTES = 1_000_000;
+const DISABLE_DIRECTIVE = `lyse-disable ${RULE_ID}`;
 
-const COMPONENT_GLOB = "**/*.{tsx,jsx,vue,ts}";
+const ALLOWLIST_CANDIDATES = [
+  "README.md",
+  "README",
+  "README.mdx",
+  "readme.md",
+  ".lyse.yaml",
+  ".lyse.yml",
+];
+
+const COMPONENT_GLOB = "**/*.{tsx,jsx,vue}";
 
 const IGNORE = [
   "**/node_modules/**",
@@ -52,50 +64,20 @@ const AFFORDANCE_PATTERNS = [
 const ARIA_POPOVER_RE =
   /\baria-describedby\s*=|role\s*=\s*["'](?:dialog|tooltip)["']/i;
 
-const NAMED_EXPORT_RE =
-  /\bexport\s+(?:default\s+)?(?:function\s+([A-Za-z_$][\w$]*)|(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=)/g;
-const NAMED_EXPORT_BLOCK_RE = /\bexport\s*\{([^}]+)\}/g;
-const VUE_COMPONENT_NAME_RE = /(?:name\s*:\s*['"]([A-Za-z_$][\w$]*)['"])/g;
-
-function safeReadText(absPath: string): string | null {
-  try {
-    const stat = statSync(absPath);
-    if (!stat.isFile() || stat.size > MAX_FILE_BYTES || stat.size === 0)
-      return null;
-    return readFileSync(absPath, "utf8");
-  } catch {
-    return null;
-  }
-}
-
-function extractNamesFromSource(source: string): string[] {
-  const names: string[] = [];
-  NAMED_EXPORT_RE.lastIndex = 0;
-  let m: RegExpExecArray | null;
-  while ((m = NAMED_EXPORT_RE.exec(source)) !== null) {
-    const name = m[1] ?? m[2];
-    if (name) names.push(name);
-  }
-  NAMED_EXPORT_BLOCK_RE.lastIndex = 0;
-  while ((m = NAMED_EXPORT_BLOCK_RE.exec(source)) !== null) {
-    const block = m[1] ?? "";
-    for (const part of block.split(",")) {
-      const tokens = part.trim().split(/\s+as\s+/);
-      const surfaceName = tokens.length > 1 ? tokens[1] : tokens[0];
-      if (surfaceName?.trim()) names.push(surfaceName.trim());
+function isAllowlisted(repoRoot: string): boolean {
+  for (const candidate of ALLOWLIST_CANDIDATES) {
+    const abs = join(repoRoot, candidate);
+    if (!existsSync(abs)) continue;
+    try {
+      const stat = statSync(abs);
+      if (!stat.isFile() || stat.size > MAX_ALLOWLIST_FILE_BYTES) continue;
+      const raw = readFileSync(abs, "utf8");
+      if (raw.includes(DISABLE_DIRECTIVE)) return true;
+    } catch {
+      // unreadable allowlist source — fall through
     }
   }
-  return names;
-}
-
-function extractVueNames(source: string): string[] {
-  const names: string[] = [];
-  VUE_COMPONENT_NAME_RE.lastIndex = 0;
-  let m: RegExpExecArray | null;
-  while ((m = VUE_COMPONENT_NAME_RE.exec(source)) !== null) {
-    if (m[1]) names.push(m[1]);
-  }
-  return names;
+  return false;
 }
 
 function deriveNameFromPath(relPath: string): string {
@@ -224,6 +206,9 @@ const evaluate = async (
   if (!ctx.repoRoot) {
     return { findings, opportunities: 0 };
   }
+  if (isAllowlisted(ctx.repoRoot)) {
+    return { findings, opportunities: 0 };
+  }
 
   const markerPresent = scanForAiMarkers(ctx.repoRoot);
   if (!markerPresent) {
@@ -267,7 +252,7 @@ export const rule: Rule = createLyseRule({
     shortDescription:
       "Detect an explainability affordance paired with AI-marker components",
     fullDescription:
-      "When an AI-marker component is detected in the design system (per the shared `AI_MARKER_NAMES` set exported by `ai-governance/ai-marker-component-present`), this rule checks whether a companion explainability affordance exists. Detection is name-based: any exported identifier or component file whose name contains `Explain`, `Explainability`, `WhyThis`, `Citation`, `Sources`, `Confidence`, or `Provenance` (case-insensitive) qualifies. A marker component that opens a popover or tooltip carrying explanation content (`aria-describedby` / `role=\"dialog\"` / `role=\"tooltip\"`) also satisfies the rule. Emits `info` when an affordance is found; emits `warning` when an AI-marker exists but no affordance is detected. Emits nothing when no AI-marker is present (no AI surface). Guidelines: HAX G11 (Explain AI decisions) / PAIR Explainability. The behavioral slice — verifying that an indicator appears wherever AI output is rendered — is deferred to Track 4.",
+      "When an AI-marker component is detected in the design system (per the shared `isAiMarkerName` predicate exported by `ai-governance/ai-marker-component-present`), this rule checks whether a companion explainability affordance exists. Detection is name-based: any exported identifier or component file whose name contains `Explain`, `Explainability`, `WhyThis`, `Citation`, `Sources`, `Confidence`, or `Provenance` (case-insensitive) qualifies. A marker component that opens a popover or tooltip carrying explanation content (`aria-describedby` / `role=\"dialog\"` / `role=\"tooltip\"`) also satisfies the rule. Emits `info` when an affordance is found; emits `warning` when an AI-marker exists but no affordance is detected. Emits nothing when no AI-marker is present (no AI surface). Guidelines: HAX G11 (Explain AI decisions) / PAIR Explainability. The behavioral slice — verifying that an indicator appears wherever AI output is rendered — is deferred to Track 4.",
     helpUri:
       "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-explainability-affordance.md",
     rationale: `Why it matters
@@ -294,6 +279,7 @@ A DS with no AI-marker component at all has no AI surface and is not penalised.`
       },
     ],
     allowlist: [
+      "repos containing `lyse-disable ai-governance/explainability-affordance` in an adjacent README or `.lyse.yaml` — rule is N/A",
       "repos with no AI-marker component — no AI surface detected, rule emits nothing",
       "files larger than 1 MB — skipped to avoid pathological cases",
       "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`",
@@ -304,10 +290,12 @@ A DS with no AI-marker component at all has no AI surface and is not penalised.`
 });
 
 export const _internal = {
+  isAllowlisted,
   isExplainabilityAffordanceName,
   isMarkerWithPopover,
   scanForExplainabilityAffordances,
   scanForAiMarkers,
   AFFORDANCE_PATTERNS,
-  AI_MARKER_NAMES,
+  DISABLE_DIRECTIVE,
+  ALLOWLIST_CANDIDATES,
 };

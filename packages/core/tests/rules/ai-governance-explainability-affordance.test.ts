@@ -278,3 +278,59 @@ describe("rule ai-governance/explainability-affordance", () => {
     expect(result.findings[0]!.message).toContain("WhyThisResult");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Fix 1: allowlist suppression
+// ---------------------------------------------------------------------------
+describe("allowlist — lyse-disable directive", () => {
+  it("emits no finding when README.md contains the lyse-disable directive", async () => {
+    mkdirSync(join(tmp, "src"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "index.ts"),
+      [
+        "export { AILabel } from './ai-label';",
+        "export { Button } from './button';",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(tmp, "README.md"),
+      "# My DS\n\n<!-- lyse-disable ai-governance/explainability-affordance -->\n",
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(0);
+    expect(result.opportunities).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fix 2: .ts utility files do NOT produce findings (glob narrowed to tsx/jsx/vue)
+// ---------------------------------------------------------------------------
+describe("glob narrowing — .ts utility files excluded", () => {
+  it("does NOT produce a finding for a DataSources.ts utility file", async () => {
+    mkdirSync(join(tmp, "src", "utils"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "utils", "DataSources.ts"),
+      "export function fetchDataSources() { return []; }",
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(0);
+    expect(result.opportunities).toBe(0);
+  });
+
+  it("does NOT produce a finding for a sources.ts utility file even with an AI-marker present", async () => {
+    mkdirSync(join(tmp, "src", "components"), { recursive: true });
+    mkdirSync(join(tmp, "src", "utils"), { recursive: true });
+    writeFileSync(
+      join(tmp, "src", "components", "AIBadge.tsx"),
+      "export const AIBadge = () => null;",
+    );
+    writeFileSync(
+      join(tmp, "src", "utils", "sources.ts"),
+      "export function getSources() { return []; }",
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.severity).toBe("warning");
+    expect(result.findings[0]!.message).not.toContain("sources");
+  });
+});

@@ -95,7 +95,7 @@ export function isAiMarkerName(name: string): boolean {
   return false;
 }
 
-function safeReadText(absPath: string): string | null {
+export function safeReadText(absPath: string): string | null {
   try {
     const stat = statSync(absPath);
     if (!stat.isFile() || stat.size > MAX_FILE_BYTES || stat.size === 0) return null;
@@ -128,7 +128,7 @@ export function extractNamesFromSource(source: string): string[] {
   return names;
 }
 
-function extractVueNames(source: string): string[] {
+export function extractVueNames(source: string): string[] {
   const names: string[] = [];
   VUE_COMPONENT_NAME_RE.lastIndex = 0;
   let m: RegExpExecArray | null;
