@@ -518,6 +518,35 @@
       ]
     },
     {
+      "id": "ai-governance/human-control-affordances",
+      "axis": "ai-governance",
+      "defaultSeverity": "warning",
+      "shortDescription": "Detect human-control affordances over AI output",
+      "fullDescription": "Scans component files (`**/*.{tsx,jsx,vue}`) for two groups of human-control affordances. Group 1 — per-output controls: exported component names or button labels matching the correction/dismissal vocabulary (Regenerate, Retry, Stop, Edit, Undo, Confirm, Dismiss, Accept, Reject). Group 2 — global AI toggle: exported names or toggle labels indicating a settings surface that lets users disable AI (AISettings, AiPreferences, DisableAI, or a label 'Disable AI' / 'AI features'). Cross-condition: when an AI-marker component is present (per the shared `isAiMarkerName` predicate) but no per-output control is found, emits `warning`; when controls are detected, emits `info` listing them and noting global toggle presence. Emits nothing when the DS has no AI surface. Guidelines: HAX G8 (efficient correction) / G9 (efficient dismissal).",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-human-control-affordances.md",
+      "rationale": "Why it matters\n\nHAX G8 (efficient correction) and G9 (efficient dismissal) are foundational human-AI interaction guidelines: users must be able to correct, stop, retry, or dismiss AI-generated output without friction. Without corresponding affordances in the design system, consuming teams implement ad-hoc controls that are inconsistent, inaccessible, and miss the correction loop entirely.\n\nThis rule performs static detection: does the DS export components covering the standard correction/dismissal vocabulary? It does not verify usage site coverage (deferred to Track 4).\n\nA DS with no AI-marker component emits nothing and is not penalised.",
+      "examples": [
+        {
+          "good": "// src/index.ts\nexport { AIBadge } from './ai-badge';\nexport { RegenerateButton } from './regenerate-button';\nexport { AISettings } from './ai-settings';",
+          "bad": "// src/index.ts\nexport { AIBadge } from './ai-badge';\n// no correction or dismissal controls exported"
+        },
+        {
+          "good": "// AIControls.tsx\nexport function RegenerateButton() { return <button>Regenerate</button>; }\nexport function DismissResult() { return <button>Dismiss</button>; }",
+          "bad": "// No per-output control components; users have no standardised way to correct AI output"
+        },
+        {
+          "good": "// AISettings.tsx\nexport function AISettings() {\n  return <Toggle label=\"Disable AI\" />;\n}",
+          "bad": "// AI surface present but no global disable/settings toggle shipped"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable ai-governance/human-control-affordances` in an adjacent README or `.lyse.yaml` — rule is N/A",
+        "repos with no AI-marker component at all — no AI surface detected, rule emits nothing",
+        "files larger than 1 MB — skipped to avoid pathological cases",
+        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
+      ]
+    },
+    {
       "id": "ai-governance/ai-marker-anti-patterns",
       "axis": "ai-governance",
       "defaultSeverity": "warning",

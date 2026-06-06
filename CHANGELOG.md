@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ai-governance/human-control-affordances` (Track 3.6): detects per-output control affordances
+  (Regenerate/Retry/Stop/Edit/Undo/Confirm/Dismiss/Accept/Reject) and global AI disable toggle.
+  Warns when an AI marker surface exists but no correction/dismissal controls are shipped (HAX G8 / G9).
+  Allowlist: `lyse-disable ai-governance/human-control-affordances`.
 - `ai-governance/ai-marker-anti-patterns` rule — Track 3.4 (Face B).
   Lints two forbidden AI-marking anti-patterns in component files (`**/*.{tsx,jsx,vue}`).
   Anti-pattern A (SAP Fiori XAI): a sparkle signal (`✨` literal, `Sparkle`/`Sparkles`/`SparkleIcon`

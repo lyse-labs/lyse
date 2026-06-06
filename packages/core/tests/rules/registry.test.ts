@@ -23,6 +23,7 @@ const EXPECTED_IDS = [
   "ai-governance/ai-marker-component-present",
   "ai-governance/explainability-affordance",
   "ai-governance/ai-token-requires-marker",
+  "ai-governance/human-control-affordances",
   "ai-governance/ai-marker-anti-patterns",
 ];
 
