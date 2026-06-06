@@ -57,6 +57,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Promote the 3 AI-Consumable sub-axes (`ai-surface.agents-md-quality`,
+  `ai-surface.component-manifest-json`, `ai-surface.ds-index-exported`)
+  from `experimental` to `stable` in
+  `packages/core/src/reliability/catalogue/sub-axes.ts`. Detection logic
+  is unchanged; this is a scoring-status promotion only. Audit Health
+  Score is unaffected at v0.1 (the active `scoreFromFindings` scorer is
+  axis-weighted and ignores sub-axis status); the change is visible
+  through `lyse explain --score` and `docs/architecture/per-rule-slo.md`.
 - `tokens/dtcg-conformance` is now a strict W3C DTCG validator. The rule
   walks every leaf token and emits one finding per check:
   - **warning** — leaf has `$value` but no `$type` (with an inferred-type

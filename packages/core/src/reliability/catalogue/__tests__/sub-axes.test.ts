@@ -25,4 +25,12 @@ describe("SUB_AXES catalogue", () => {
       expect(VALID_AXES.has(s.axis)).toBe(true);
     }
   });
+  it("the 3 AI-Consumable sub-axes are promoted to `stable`", () => {
+    const stable = SUB_AXES.filter((s) => s.status === "stable").map((s) => s.id).sort();
+    expect(stable).toEqual([
+      "ai-surface.agents-md-quality",
+      "ai-surface.component-manifest-json",
+      "ai-surface.ds-index-exported",
+    ]);
+  });
 });
