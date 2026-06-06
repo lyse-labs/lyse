@@ -106,7 +106,15 @@ const evaluate = async (
     componentFiles = fg
       .sync("**/*.{tsx,jsx,vue}", {
         cwd: ctx.repoRoot,
-        ignore: ["**/node_modules/**", "**/dist/**", "**/build/**"],
+        ignore: [
+          "**/node_modules/**",
+          "**/dist/**",
+          "**/build/**",
+          "**/.git/**",
+          "**/.next/**",
+          "**/out/**",
+          "**/coverage/**",
+        ],
         absolute: false,
         onlyFiles: true,
         unique: true,
