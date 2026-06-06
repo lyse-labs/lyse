@@ -21,8 +21,8 @@ const DISABLE_DIRECTIVE = `lyse-disable ${RULE_ID}`;
 
 // WHY separate constant: the exact GitLab Pajamas canonical wording is the
 // highest-confidence signal that a team has adopted the industry-standard
-// disclaimer. Verified from Pajamas AI experience guidelines (plain text ref
-// below); embed verbatim so substring match is unambiguous.
+// disclaimer. Verify against Pajamas AI experience guidelines before updating;
+// embed verbatim so substring match is unambiguous.
 const GITLAB_EXACT_DISCLAIMER =
   "AI-generated content may be inaccurate. Always check important information.";
 
@@ -142,11 +142,11 @@ const evaluate = async (
     const hasMarker = detectAiMarkerInSource(source);
     const disclaimer = detectDisclaimer(source);
 
-    if (!hasMarker && !disclaimer.found) continue;
+    if (!hasMarker) continue;
 
     anyAiSurface = true;
 
-    if (hasMarker && !disclaimer.found) {
+    if (!disclaimer.found) {
       findings.push({
         ruleId: RULE_ID,
         axis: "ai-governance",
