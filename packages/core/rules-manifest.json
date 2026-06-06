@@ -535,8 +535,8 @@
           "bad": "<button>AI</button>"
         },
         {
-          "good": "<button>Ask AI to explain</button>",
-          "bad": "<Button>Ask AI</Button>"
+          "good": "<button>Draft reply</button>",
+          "bad": "<button>Ask AI</button>"
         }
       ],
       "allowlist": [

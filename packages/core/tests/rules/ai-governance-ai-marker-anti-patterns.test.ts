@@ -134,6 +134,14 @@ describe("detectAiInCtaLabel", () => {
   it("does NOT flag an empty button", () => {
     expect(detectAiInCtaLabel(`<button></button>`)).toEqual([]);
   });
+
+  it("flags role=\"button\" element with standalone AI label", () => {
+    expect(detectAiInCtaLabel(`<div role="button">Ask AI</div>`)).toEqual([{ label: "Ask AI" }]);
+  });
+
+  it("flags role=\'button\' (single-quoted) element with AI label", () => {
+    expect(detectAiInCtaLabel(`<span role='button'>AI</span>`)).toEqual([{ label: "AI" }]);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -256,5 +264,35 @@ describe("rule.evaluate — integration", () => {
     const result = await rule.evaluate(ctx, emptyParsed);
     expect(result.findings).toHaveLength(0);
     expect(result.opportunities).toBe(0);
+  });
+
+  it("regression: file with sparkle-only AND <button>Ask AI</button> emits TWO warnings (A + B)", async () => {
+    writeFileSync(
+      join(tmp, "Mixed.tsx"),
+      `export function Mixed() {
+  return (
+    <div>
+      <span>✨ {summary}</span>
+      <button>Ask AI</button>
+    </div>
+  );
+}`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    const sparkleFindings = result.findings.filter((f) => f.message.includes("SAP Fiori"));
+    const ctaFindings = result.findings.filter((f) => f.message.includes("GitLab"));
+    expect(sparkleFindings).toHaveLength(1);
+    expect(ctaFindings).toHaveLength(1);
+    expect(result.findings).toHaveLength(2);
+  });
+
+  it("role=\"button\" element with AI label → 1 CTA warning", async () => {
+    writeFileSync(
+      join(tmp, "RoleButton.tsx"),
+      `export function RoleButton() { return <div role="button">Ask AI</div>; }`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    const ctaFindings = result.findings.filter((f) => f.message.includes("GitLab"));
+    expect(ctaFindings).toHaveLength(1);
   });
 });
