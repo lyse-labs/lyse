@@ -46,6 +46,7 @@ jobs:
             --exclude "^https?://(.+\.)?medium\.com"
             --exclude "^https?://dash\.cloudflare\.com"
             --exclude "^https?://ojs\.aaai\.org"
+            --exclude "^https?://(www\.)?conventionalcommits\.org"
             --accept 200,206,429
             './**/*.md'
           fail: true

@@ -10,4 +10,6 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 
 | Rule | Sub-axis | Precision (Wilson LB) | Recall (Wilson LB) | N samples | Last calibrated |
 |---|---|---|---|---|---|
-| _none yet_ | _no sub-axis is in `stable` status at this time_ | — | — | — | — |
+| `ai-surface/agents-md-quality` | `ai-surface.agents-md-quality` | — | — | — | — |
+| `ai-surface/component-manifest-json` | `ai-surface.component-manifest-json` | — | — | — | — |
+| `ai-surface/ds-index-exported` | `ai-surface.ds-index-exported` | — | — | — | — |
