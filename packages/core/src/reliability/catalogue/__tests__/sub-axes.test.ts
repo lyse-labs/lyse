@@ -25,12 +25,13 @@ describe("SUB_AXES catalogue", () => {
       expect(VALID_AXES.has(s.axis)).toBe(true);
     }
   });
-  it("the 3 AI-Consumable sub-axes are promoted to `stable`", () => {
-    const stable = SUB_AXES.filter((s) => s.status === "stable").map((s) => s.id).sort();
-    expect(stable).toEqual([
-      "ai-surface.agents-md-quality",
-      "ai-surface.component-manifest-json",
-      "ai-surface.ds-index-exported",
-    ]);
+  it("no sub-axis is promoted to `stable` without calibration evidence", () => {
+    for (const s of SUB_AXES) {
+      if (s.status === "stable") {
+        expect(s.recallWilsonLowerBound, `${s.id}: stable promotion requires recallWilsonLowerBound`).not.toBeNull();
+        expect(s.recallWilsonLowerBound).toBeGreaterThanOrEqual(0.9);
+        expect(s.lastCalibrated, `${s.id}: stable promotion requires lastCalibrated timestamp`).not.toBeNull();
+      }
+    }
   });
 });

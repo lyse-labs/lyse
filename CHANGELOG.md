@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Reverted erroneous `stable` promotion of 3 AI-Consumable sub-axes (`agents-md-quality`, `component-manifest-json`, `ds-index-exported`). They were promoted without calibration evidence (all measurement fields were `null`), which directly contradicted the public falsifiable claim in `docs/architecture/reliability.md` that the promotion gate requires N≥30 + Wilson 95% LB ≥0.90 on recall. Until the Bench corpus runs and populates the 5 measurement fields, all 17 sub-axes ship as `experimental`.
+- Bumped stale `12 sub-axes` references in `reliability.md` and `health-score.md` to the actual count (17).
+- Regenerated `rules-manifest.json` and `docs/architecture/sub-axes.md` from rule metadata (single source of truth).
+- Added test invariant: any sub-axis with `status: stable` MUST have non-null `recallWilsonLowerBound \geq 0.9` and non-null `lastCalibrated` (enforces the promotion gate at code level so future violations fail CI).
+
 ### Added
 
 - `ai-surface/mcp-config-present` rule — detects whether a design system
