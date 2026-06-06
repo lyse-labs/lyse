@@ -546,6 +546,65 @@
         "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`",
         "recovery-flow detection (retry orchestration, post-error navigation) — explicitly deferred to Track 4 (#16)"
       ]
+    },
+    {
+      "id": "ai-governance/human-control-affordances",
+      "axis": "ai-governance",
+      "defaultSeverity": "warning",
+      "shortDescription": "Detect human-control affordances over AI output",
+      "fullDescription": "Scans component files (`**/*.{tsx,jsx,vue}`) for two groups of human-control affordances. Group 1 — per-output controls: exported component names or button labels matching the correction/dismissal vocabulary (Regenerate, Retry, Stop, Edit, Undo, Confirm, Dismiss, Accept, Reject). Group 2 — global AI toggle: exported names or toggle labels indicating a settings surface that lets users disable AI (AISettings, AiPreferences, DisableAI, or a label 'Disable AI' / 'AI features'). Cross-condition: when an AI-marker component is present (per the shared `isAiMarkerName` predicate) but no per-output control is found, emits `warning`; when controls are detected, emits `info` listing them and noting global toggle presence. Emits nothing when the DS has no AI surface. Guidelines: HAX G8 (efficient correction) / G9 (efficient dismissal).",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-human-control-affordances.md",
+      "rationale": "Why it matters\n\nHAX G8 (efficient correction) and G9 (efficient dismissal) are foundational human-AI interaction guidelines: users must be able to correct, stop, retry, or dismiss AI-generated output without friction. Without corresponding affordances in the design system, consuming teams implement ad-hoc controls that are inconsistent, inaccessible, and miss the correction loop entirely.\n\nThis rule performs static detection: does the DS export components covering the standard correction/dismissal vocabulary? It does not verify usage site coverage (deferred to Track 4).\n\nA DS with no AI-marker component emits nothing and is not penalised.",
+      "examples": [
+        {
+          "good": "// src/index.ts\nexport { AIBadge } from './ai-badge';\nexport { RegenerateButton } from './regenerate-button';\nexport { AISettings } from './ai-settings';",
+          "bad": "// src/index.ts\nexport { AIBadge } from './ai-badge';\n// no correction or dismissal controls exported"
+        },
+        {
+          "good": "// AIControls.tsx\nexport function RegenerateButton() { return <button>Regenerate</button>; }\nexport function DismissResult() { return <button>Dismiss</button>; }",
+          "bad": "// No per-output control components; users have no standardised way to correct AI output"
+        },
+        {
+          "good": "// AISettings.tsx\nexport function AISettings() {\n  return <Toggle label=\"Disable AI\" />;\n}",
+          "bad": "// AI surface present but no global disable/settings toggle shipped"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable ai-governance/human-control-affordances` in an adjacent README or `.lyse.yaml` — rule is N/A",
+        "repos with no AI-marker component at all — no AI surface detected, rule emits nothing",
+        "files larger than 1 MB — skipped to avoid pathological cases",
+        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
+      ]
+    },
+    {
+      "id": "ai-governance/ai-marker-anti-patterns",
+      "axis": "ai-governance",
+      "defaultSeverity": "warning",
+      "shortDescription": "Lint AI-marker anti-patterns in component source files",
+      "fullDescription": "Scans component files (`**/*.{tsx,jsx,vue}`) for two forbidden AI-marking anti-patterns. Anti-pattern A: a sparkle signal (`✨` literal, `Sparkle`/`Sparkles`/`SparkleIcon` import, or `icon=\"sparkle*\"` prop) used as the sole AI marker with no accompanying text label or AI-marker component — SAP Fiori XAI forbids icon-only marking because it fails accessibility and is ambiguous. Anti-pattern B: the standalone, case-sensitive token `AI` used as the primary action label of a `<button>`, `<Button>`, or `<a>` element — GitLab Pajamas forbids this because `AI` describes the technology, not the user action. Both detectors are pure source heuristics with no runtime or behavioral analysis. Emits `warning` for each occurrence. A sparkle accompanied by a text AI-marker or AI-marker component (`AILabel`, `AIBadge`, magic-* etc.) is not flagged. `AI` appearing only in body or descriptor text (headings, paragraphs) is not flagged.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-ai-marker-anti-patterns.md",
+      "rationale": "Why it matters\n\nIcon-only AI marking (a lone sparkle ✨) silently fails users who rely on assistive technology: a screen reader announces an image description or nothing at all — not \"AI-generated.\" SAP Fiori XAI made this explicit: sparkle MUST be paired with a text label or dedicated AI-marker component. Lyse enforces the same constraint statically.\n\nLabelling a CTA button \"AI\" is a UX anti-pattern: \"AI\" is a noun describing technology, not an action verb. GitLab Pajamas explicitly forbids it, recommending \"Summarize,\" \"Explain,\" or \"Generate\" instead — words that tell the user what will happen, not what engine does it. Lyse catches this in source before it ships.\n\nBoth findings are warnings (not errors) because the fix is mechanical and low-risk.",
+      "examples": [
+        {
+          "good": "<span><AILabel>AI</AILabel> <Sparkles aria-hidden/></span>",
+          "bad": "<span>✨ {generatedText}</span>"
+        },
+        {
+          "good": "<button>Summarize</button>",
+          "bad": "<button>AI</button>"
+        },
+        {
+          "good": "<button>Draft reply</button>",
+          "bad": "<button>Ask AI</button>"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable ai-governance/ai-marker-anti-patterns` in an adjacent README or `.lyse.yaml` — rule is N/A for the entire repo",
+        "files larger than 1 MB — skipped to avoid pathological cases",
+        "files under `node_modules/`, `dist/`, `build/`",
+        "sparkle accompanied by a text AI-marker (`AILabel`, `AIBadge`, magic-*, GenAI*, etc.) — not flagged",
+        "`AI` in non-CTA elements (headings, paragraphs, spans) — not flagged"
+      ]
     }
   ]
 }

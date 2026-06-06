@@ -28,6 +28,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `ai-governance/ai-loading-error-states` (Track 3.7): warns when an AI marker surface exists but lacks a named loading state with paired text (bare spinners fail) or an AI-specific error state component; emits `info` when both are present. Recovery-flow detection deferred to Track 4. Allowlist via `lyse-disable ai-governance/ai-loading-error-states`. Closes lyse-labs/lyse-internal#43.
 
+- `ai-governance/human-control-affordances` (Track 3.6): detects per-output control affordances
+  (Regenerate/Retry/Stop/Edit/Undo/Confirm/Dismiss/Accept/Reject) and global AI disable toggle.
+  Warns when an AI marker surface exists but no correction/dismissal controls are shipped (HAX G8 / G9).
+  Allowlist: `lyse-disable ai-governance/human-control-affordances`.
+- `ai-governance/ai-marker-anti-patterns` rule — Track 3.4 (Face B).
+  Lints two forbidden AI-marking anti-patterns in component files (`**/*.{tsx,jsx,vue}`).
+  Anti-pattern A (SAP Fiori XAI): a sparkle signal (`✨` literal, `Sparkle`/`Sparkles`/`SparkleIcon`
+  import, or `icon="sparkle*"` prop) used as the sole AI marker with no accompanying text label
+  or AI-marker component — icon-only marking fails accessibility and is semantically ambiguous.
+  Anti-pattern B (GitLab Pajamas): the standalone case-sensitive token `AI` used as the primary
+  action label of a `<button>`, `<Button>`, or `<a>` element — `AI` is a noun, not an action verb.
+  Both detectors emit `warning`. A sparkle accompanied by a text marker or AI-marker component
+  (`AILabel`, `AIBadge`, `magic-*`, etc.) is not flagged; `AI` in non-CTA elements (headings,
+  paragraphs) is not flagged. Reuses `isAiMarkerName` and `safeReadText` from
+  `ai-governance/ai-marker-component-present`. Allowlist via
+  `lyse-disable ai-governance/ai-marker-anti-patterns` in an adjacent README or `.lyse.yaml`.
 - `ai-governance/explainability-affordance` rule — Track 3.5 (Face B).
   Detects whether the DS ships a companion explainability affordance alongside an
   AI-marker component. Name-based detection covers components whose exported
