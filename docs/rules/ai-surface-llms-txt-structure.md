@@ -99,6 +99,6 @@ Set `severity: off` to disable the rule entirely (it then contributes neither fi
 ## See also
 
 - [llmstxt.org](https://llmstxt.org/) — the upstream specification.
-- [`ai-surface/agents-md-quality`](./README.md) — the sibling rule that grades `AGENTS.md`.
-- [`ai-surface/component-manifest-json`](./README.md) — the sibling rule that grades the component manifest.
+- [`ai-surface/agents-md-quality`](./ai-surface-agents-md-quality.md) — the sibling rule that grades `AGENTS.md`.
+- [`ai-surface/component-manifest-json`](./ai-surface-component-manifest-json.md) — the sibling rule that grades the component manifest.
 - [Health Score](../guide/health-score.md) — how rules combine into the final score.

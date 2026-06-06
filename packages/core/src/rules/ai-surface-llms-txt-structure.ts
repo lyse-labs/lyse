@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type {
   Rule,
@@ -36,7 +36,6 @@ function readFileIfSmall(absPath: string): string | null {
 function hasAllowlistDirective(repoRoot: string): boolean {
   for (const candidate of README_CANDIDATES) {
     const abs = join(repoRoot, candidate);
-    if (!existsSync(abs)) continue;
     const content = readFileIfSmall(abs);
     if (content !== null && content.includes(ALLOWLIST_DIRECTIVE)) {
       return true;
@@ -223,8 +222,17 @@ Absence is a missed opportunity, not a bug — agents fall back to scanning the 
 The companion \`llms-full.txt\` — a single-file inlining of every linked document — is a strong bonus signal but is not enforced as a hard requirement.`,
     examples: [
       {
-        good: "# Acme DS\\n\\n> A token-first React design system.\\n\\n## Docs\\n\\n- [Quickstart](https://acme.dev/quickstart): Get started in 3 minutes.\\n- [API reference](https://acme.dev/api): Full method index.",
-        bad: "Welcome to Acme DS. We ship Buttons and Cards.\\n\\n- random link list",
+        good: `# Acme DS
+
+> A token-first React design system.
+
+## Docs
+
+- [Quickstart](https://acme.dev/quickstart): Get started in 3 minutes.
+- [API reference](https://acme.dev/api): Full method index.`,
+        bad: `Welcome to Acme DS. We ship Buttons and Cards.
+
+- random link list`,
       },
     ],
     allowlist: [
@@ -238,7 +246,4 @@ The companion \`llms-full.txt\` — a single-file inlining of every linked docum
 
 export const _internal = {
   analyseStructure,
-  hasAllowlistDirective,
-  README_CANDIDATES,
-  ALLOWLIST_DIRECTIVE,
 };
