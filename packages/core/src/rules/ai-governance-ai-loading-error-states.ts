@@ -59,7 +59,7 @@ const LOADING_NAME_PATTERNS = [
 // Matches: loadingText prop, aria-label attribute, or a visible AI-progress
 // status string (quoted or unquoted in JSX text content).
 const PAIRED_TEXT_RE =
-  /loadingText|aria-label\s*=|["` >]Generating|["` >]Thinking|Please wait|"Loading AI/i;
+  /loadingText|aria-label\s*=|["` >]Generating|["` >]Thinking|Please wait|["` >]Loading AI/i;
 
 // Names that are unambiguously descriptive and carry implicit text semantics.
 const SELF_DESCRIBING_LOADING = ["generating", "thinking", "streamingindicator"];
@@ -72,14 +72,16 @@ export function detectNamedLoadingWithText(source: string, componentName: string
   return PAIRED_TEXT_RE.test(source);
 }
 
-const AI_KEYWORDS = ["ai", "generation", "genai", "llm", "generative"];
-const ERROR_KEYWORDS = ["error", "failure", "failed", "timeout", "retry"];
+// Match "ai" only on a word/segment boundary to avoid false positives from
+// substrings like "email", "retail", "cocktail".
+const AI_WORD_RE = /(^|[^a-z])ai([^a-z]|$)/;
+const AI_COMPOUND_KEYWORDS = ["generation", "genai", "llm", "generative"];
+const ERROR_KEYWORDS = ["error", "failure", "failed", "timeout"];
 
 const ERROR_NAME_PATTERNS = [
   "aierror",
   "generationerror",
   "aifailure",
-  "airetry",
   "generationfailed",
   "aitimeout",
 ];
@@ -87,7 +89,7 @@ const ERROR_NAME_PATTERNS = [
 export function detectAiErrorState(source: string, componentName: string): boolean {
   const lower = componentName.toLowerCase();
   if (ERROR_NAME_PATTERNS.some((p) => lower.includes(p))) return true;
-  const hasAi = AI_KEYWORDS.some((k) => lower.includes(k));
+  const hasAi = AI_WORD_RE.test(lower) || AI_COMPOUND_KEYWORDS.some((k) => lower.includes(k));
   const hasError = ERROR_KEYWORDS.some((k) => lower.includes(k));
   return hasAi && hasError;
 }
@@ -236,7 +238,7 @@ export const rule: Rule = createLyseRule({
     defaultSeverity: "warning",
     shortDescription: "Named AI loading state with paired text + AI-specific error state present",
     fullDescription:
-      "Scans component files (`**/*.{tsx,jsx,vue}`) for (a) a named AI loading state that carries paired visible or accessible text — not a bare spinner — and (b) an AI-specific error state component. Recognised loading vocabulary: `*Generating*`, `*Thinking*`, `*AILoading*`, `*StreamingIndicator*`, `*AIStatus*`, `*LoadingState*`. A bare generic spinner (`Spinner`, `LoadingSpinner`) without an AI-named wrapper and without a `loadingText` prop or visible status string does NOT satisfy the requirement. Recognised error vocabulary: `*AIError*`, `*GenerationError*`, `*AIFailure*`, `*AIRetry*`, `*GenerationFailed*`, `*AITimeout*`, or any name combining an AI keyword (`ai`, `generation`, `genai`, `llm`) with an error keyword (`error`, `failure`, `failed`, `timeout`). Emits `warning` for each absent state type when an AI marker surface is detected; emits `info` when both are present; emits nothing when no AI surface is detected. Recovery-flow detection (retry orchestration, post-error behavior) is out of scope — tracked in Track 4 (#16).",
+      "Scans component files (`**/*.{tsx,jsx,vue}`) for (a) a named AI loading state that carries paired visible or accessible text — not a bare spinner — and (b) an AI-specific error state component. Recognised loading vocabulary: `*Generating*`, `*Thinking*`, `*AILoading*`, `*StreamingIndicator*`, `*AIStatus*`, `*LoadingState*`. A bare generic spinner (`Spinner`, `LoadingSpinner`) without an AI-named wrapper and without a `loadingText` prop or visible status string does NOT satisfy the requirement. Recognised error vocabulary: `*AIError*`, `*GenerationError*`, `*AIFailure*`, `*GenerationFailed*`, `*AITimeout*`, or any name combining an AI keyword (`ai`, `generation`, `genai`, `llm`, `generative`) with an error keyword (`error`, `failure`, `failed`, `timeout`). Emits `warning` for each absent state type when an AI marker surface is detected; emits `info` when both are present; emits nothing when no AI surface is detected. Recovery-flow detection (retry orchestration, post-error behavior) is out of scope — tracked in Track 4 (#16).",
     helpUri:
       "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-ai-loading-error-states.md",
     rationale: `Why it matters

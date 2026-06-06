@@ -130,6 +130,34 @@ describe("detectAiErrorState", () => {
       "AILabel"
     )).toBe(false);
   });
+
+  it("returns false for EmailError — 'ai' substring in 'email' must not match", () => {
+    expect(detectAiErrorState(
+      `export const EmailError = () => <p>Email delivery failed.</p>;`,
+      "EmailError"
+    )).toBe(false);
+  });
+
+  it("returns false for RetailFailure — 'ai' substring in 'retail' must not match", () => {
+    expect(detectAiErrorState(
+      `export const RetailFailure = () => <p>Retail operation failed.</p>;`,
+      "RetailFailure"
+    )).toBe(false);
+  });
+
+  it("returns false for DetailTimeout — 'ai' substring in 'detail' must not match", () => {
+    expect(detectAiErrorState(
+      `export const DetailTimeout = () => <p>Request timed out.</p>;`,
+      "DetailTimeout"
+    )).toBe(false);
+  });
+
+  it("returns false for CocktailError — 'ai' substring in 'cocktail' must not match", () => {
+    expect(detectAiErrorState(
+      `export const CocktailError = () => <p>Cocktail order failed.</p>;`,
+      "CocktailError"
+    )).toBe(false);
+  });
 });
 
 // Integration — rule.evaluate
@@ -245,5 +273,18 @@ describe("rule.evaluate — integration", () => {
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
     expect(result.findings).toHaveLength(0);
     expect(result.opportunities).toBe(0);
+  });
+
+  // Fixture 9: EmailError must NOT receive false AI-error credit — rule still warns
+  it("EmailError does not count as an AI error state — warning still emitted when no real AI error component is present", async () => {
+    mkdirSync(join(tmp, "src"), { recursive: true });
+    writeFileSync(join(tmp, "src", "AILabel.tsx"),
+      `export const AILabel = () => <span>AI</span>;`);
+    writeFileSync(join(tmp, "src", "Generating.tsx"),
+      `export const Generating = () => <div>Generating…</div>;`);
+    writeFileSync(join(tmp, "src", "EmailError.tsx"),
+      `export const EmailError = () => <p>Email delivery failed.</p>;`);
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings.some((f) => f.severity === "warning" && f.message.includes("error"))).toBe(true);
   });
 });
