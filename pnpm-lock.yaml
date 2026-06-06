@@ -143,8 +143,6 @@ importers:
         specifier: 4.1.8
         version: 4.1.8(@types/node@22.19.19)(vite@8.0.14(@types/node@22.19.19)(esbuild@0.28.0)(tsx@4.22.4)(yaml@2.9.0))
 
-  packages/create: {}
-
 packages:
 
   '@anthropic-ai/sdk@0.100.1':
