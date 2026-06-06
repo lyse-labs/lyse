@@ -37,7 +37,7 @@ const MAX_FILE_BYTES = 2_000_000;
 // captain, detail) does NOT match.
 const SEGMENT_SPLIT = /[-_./\s]+/;
 
-function isReservedTokenName(rawName: string): boolean {
+export function isReservedTokenName(rawName: string): boolean {
   const lower = rawName.toLowerCase();
   if (lower.includes("dragon-fruit") || lower.includes("dragonfruit")) {
     return true;
