@@ -545,6 +545,36 @@
         "files larger than 1 MB — skipped to avoid pathological cases",
         "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
       ]
+    },
+    {
+      "id": "ai-governance/ai-marker-anti-patterns",
+      "axis": "ai-governance",
+      "defaultSeverity": "warning",
+      "shortDescription": "Lint AI-marker anti-patterns in component source files",
+      "fullDescription": "Scans component files (`**/*.{tsx,jsx,vue}`) for two forbidden AI-marking anti-patterns. Anti-pattern A: a sparkle signal (`✨` literal, `Sparkle`/`Sparkles`/`SparkleIcon` import, or `icon=\"sparkle*\"` prop) used as the sole AI marker with no accompanying text label or AI-marker component — SAP Fiori XAI forbids icon-only marking because it fails accessibility and is ambiguous. Anti-pattern B: the standalone, case-sensitive token `AI` used as the primary action label of a `<button>`, `<Button>`, or `<a>` element — GitLab Pajamas forbids this because `AI` describes the technology, not the user action. Both detectors are pure source heuristics with no runtime or behavioral analysis. Emits `warning` for each occurrence. A sparkle accompanied by a text AI-marker or AI-marker component (`AILabel`, `AIBadge`, magic-* etc.) is not flagged. `AI` appearing only in body or descriptor text (headings, paragraphs) is not flagged.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-ai-marker-anti-patterns.md",
+      "rationale": "Why it matters\n\nIcon-only AI marking (a lone sparkle ✨) silently fails users who rely on assistive technology: a screen reader announces an image description or nothing at all — not \"AI-generated.\" SAP Fiori XAI made this explicit: sparkle MUST be paired with a text label or dedicated AI-marker component. Lyse enforces the same constraint statically.\n\nLabelling a CTA button \"AI\" is a UX anti-pattern: \"AI\" is a noun describing technology, not an action verb. GitLab Pajamas explicitly forbids it, recommending \"Summarize,\" \"Explain,\" or \"Generate\" instead — words that tell the user what will happen, not what engine does it. Lyse catches this in source before it ships.\n\nBoth findings are warnings (not errors) because the fix is mechanical and low-risk.",
+      "examples": [
+        {
+          "good": "<span><AILabel>AI</AILabel> <Sparkles aria-hidden/></span>",
+          "bad": "<span>✨ {generatedText}</span>"
+        },
+        {
+          "good": "<button>Summarize</button>",
+          "bad": "<button>AI</button>"
+        },
+        {
+          "good": "<button>Draft reply</button>",
+          "bad": "<button>Ask AI</button>"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable ai-governance/ai-marker-anti-patterns` in an adjacent README or `.lyse.yaml` — rule is N/A for the entire repo",
+        "files larger than 1 MB — skipped to avoid pathological cases",
+        "files under `node_modules/`, `dist/`, `build/`",
+        "sparkle accompanied by a text AI-marker (`AILabel`, `AIBadge`, magic-*, GenAI*, etc.) — not flagged",
+        "`AI` in non-CTA elements (headings, paragraphs, spans) — not flagged"
+      ]
     }
   ]
 }

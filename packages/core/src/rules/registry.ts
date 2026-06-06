@@ -20,6 +20,7 @@ import { rule as rAiMarkerComponentPresent } from "./ai-governance-ai-marker-com
 import { rule as rExplainabilityAffordance } from "./ai-governance-explainability-affordance.js";
 import { rule as rAiTokenRequiresMarker } from "./ai-governance-ai-token-requires-marker.js";
 import { rule as rHumanControlAffordances } from "./ai-governance-human-control-affordances.js";
+import { rule as rAiMarkerAntiPatterns } from "./ai-governance-ai-marker-anti-patterns.js";
 import type { Rule } from "../types.js";
 
 export const ruleObjects: Rule[] = [
@@ -45,6 +46,7 @@ export const ruleObjects: Rule[] = [
   rExplainabilityAffordance,
   rAiTokenRequiresMarker,
   rHumanControlAffordances,
+  rAiMarkerAntiPatterns,
 ];
 
 export const ruleMap = new Map<string, Rule>(ruleObjects.map((r) => [r.id, r]));
