@@ -1,5 +1,5 @@
 import { readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join } from "node:path";
 import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 import type {
@@ -60,7 +60,7 @@ function parseFrontmatter(content: string): FrontmatterParseResult {
   return { ok: true, data: parsed as Record<string, unknown> };
 }
 
-function isStringOrStringArray(value: unknown): boolean {
+function isStringOrStringArray(value: unknown): value is string | string[] {
   if (typeof value === "string") return value.length > 0;
   if (Array.isArray(value)) {
     return value.length > 0 && value.every((v) => typeof v === "string" && v.length > 0);
@@ -80,8 +80,8 @@ function validateCursorRuleFrontmatter(fm: Record<string, unknown>): CursorValid
   const description = fm.description;
   if (typeof description !== "string" || description.trim().length === 0) {
     errors.push("missing required `description` (string)");
-  } else if (description.length > DESCRIPTION_MAX_CHARS) {
-    warnings.push(`\`description\` is ${description.length} chars (> ${DESCRIPTION_MAX_CHARS}); consider shortening`);
+  } else if (description.trim().length > DESCRIPTION_MAX_CHARS) {
+    warnings.push(`\`description\` is ${description.trim().length} chars (> ${DESCRIPTION_MAX_CHARS}); consider shortening`);
   }
 
   if (!("globs" in fm)) {
@@ -116,8 +116,8 @@ function validateSkillFrontmatter(fm: Record<string, unknown>): SkillValidation 
   const description = fm.description;
   if (typeof description !== "string" || description.trim().length === 0) {
     errors.push("missing required `description` (string)");
-  } else if (description.length > DESCRIPTION_MAX_CHARS) {
-    warnings.push(`\`description\` is ${description.length} chars (> ${DESCRIPTION_MAX_CHARS}); consider shortening`);
+  } else if (description.trim().length > DESCRIPTION_MAX_CHARS) {
+    warnings.push(`\`description\` is ${description.trim().length} chars (> ${DESCRIPTION_MAX_CHARS}); consider shortening`);
   }
 
   return { errors, warnings };
@@ -169,6 +169,9 @@ const evaluate = async (
       suggestion:
         "add at least one Cursor rule under `.cursor/rules/` or one Claude skill under `.claude/skills/<name>/SKILL.md` so coding agents have project-specific guidance",
     });
+    // WHY: opportunities: 1 (not 0) signals one actionable fix exists (add any instruction file).
+    // This differs from sibling rules that return opportunities: N (one per candidate path) because
+    // here the surface is entirely absent — there is no per-file opportunity to count.
     return { findings, opportunities: 1 };
   }
 
@@ -178,7 +181,7 @@ const evaluate = async (
     opportunities += 1;
     const abs = join(ctx.repoRoot, rel);
     const { content, bytes } = readFileIfSmall(abs);
-    const relPath = relative(ctx.repoRoot, abs) || rel;
+    const relPath = rel;
     if (content === null) {
       findings.push({
         ruleId: RULE_ID,
@@ -238,7 +241,7 @@ const evaluate = async (
     opportunities += 1;
     const abs = join(ctx.repoRoot, rel);
     const { content, bytes } = readFileIfSmall(abs);
-    const relPath = relative(ctx.repoRoot, abs) || rel;
+    const relPath = rel;
     if (content === null) {
       findings.push({
         ruleId: RULE_ID,

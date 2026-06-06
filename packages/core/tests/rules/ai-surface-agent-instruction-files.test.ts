@@ -162,6 +162,28 @@ describe("rule ai-surface/agent-instruction-files", () => {
     expect(warnings.some((f) => f.message.includes("chars"))).toBe(true);
   });
 
+  it("emits a warning when Cursor rule has alwaysApply as a non-boolean (e.g. string)", async () => {
+    writeCursorRule(
+      tmp,
+      "always-string",
+      ['description: My rule', 'globs: "src/**/*.ts"', 'alwaysApply: "true"'].join("\n"),
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    const warnings = result.findings.filter((f) => f.severity === "warning");
+    expect(warnings.some((f) => f.message.includes("alwaysApply"))).toBe(true);
+  });
+
+  it("emits an error when the .mdc file has invalid (unparseable) YAML frontmatter", async () => {
+    mkdirSync(join(tmp, ".cursor", "rules"), { recursive: true });
+    writeFileSync(
+      join(tmp, ".cursor", "rules", "bad-yaml.mdc"),
+      "---\n: bad\n  : worse\n---\n# title\n",
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    const errors = result.findings.filter((f) => f.severity === "error");
+    expect(errors.some((f) => f.message.includes("invalid frontmatter"))).toBe(true);
+  });
+
   it("respects excludePaths", async () => {
     writeCursorRule(tmp, "skip-me", "garbage");
     const ctx: RuleContext = { ...makeCtx(tmp), excludePaths: [".cursor/**"] };
