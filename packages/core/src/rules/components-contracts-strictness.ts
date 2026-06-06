@@ -205,7 +205,7 @@ export function scanComponentContracts(
         if (decl.type === "FunctionDeclaration") {
           const id = (decl as t.FunctionDeclaration).id;
           const name = id?.name ?? "default";
-          if (isPascalCase(name) || name === "default") {
+          if (isPascalCase(name)) {
             resolveAndCollect(name, (decl as t.FunctionDeclaration).params);
           }
         }
@@ -223,9 +223,7 @@ export function scanComponentContracts(
 // ---------------------------------------------------------------------------
 
 const PACKAGE_JSON_PATTERNS = [
-  "package.json",
-  "packages/*/package.json",
-  "apps/*/package.json",
+  "**/package.json",
 ];
 
 interface PackageJsonShape {
@@ -251,10 +249,10 @@ function readJsonIfSmall(absPath: string): unknown | null {
   }
 }
 
-interface PackageCheckOutcome {
-  kind: "missing-types" | "types-points-to-missing-file" | "ok";
-  typesPath?: string;
-}
+type PackageCheckOutcome =
+  | { kind: "missing-types" }
+  | { kind: "types-points-to-missing-file"; typesPath: string }
+  | { kind: "ok"; typesPath: string };
 
 export function checkPackageJsonTypes(
   pkg: PackageJsonShape,
@@ -360,7 +358,6 @@ const evaluate = async (
       const data = readJsonIfSmall(abs) as PackageJsonShape | null;
       if (!data) continue;
       if (!looksLikePublishablePackage(data)) continue;
-      opportunities += 1;
       const outcome = checkPackageJsonTypes(data, dirname(abs));
       if (outcome.kind === "missing-types") {
         findings.push({
@@ -394,7 +391,7 @@ export const rule: Rule = createLyseRule({
     defaultSeverity: "warning",
     shortDescription: "Component prop contracts must be strictly typed and .d.ts shipped",
     fullDescription:
-      "Scans exported PascalCase components in .tsx/.jsx files for lax TypeScript prop contracts that hinder AI-agent code generation: props typed `any` or `unknown` (error), and variant-like props (name matching variant/size/intent/color/tone/appearance/kind/type) typed plain `string` instead of a string-literal union (warning). Also checks each publishable package.json for a `types` or `typings` field and that the referenced file exists post-build (warning when missing).",
+      "Scans exported PascalCase components in .tsx/.jsx files for lax TypeScript prop contracts that hinder AI-agent code generation: props typed `any` or `unknown` (error), and variant-like props (name matching variant/size/intent/color/tone/appearance/kind) typed plain `string` instead of a string-literal union (warning). Also checks each publishable package.json for a `types` or `typings` field and that the referenced file exists post-build (warning when missing).",
     helpUri:
       "https://github.com/lyse-labs/lyse/blob/main/docs/rules/components-contracts-strictness.md",
     rationale: `Why it matters
