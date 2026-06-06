@@ -23,6 +23,8 @@ import { rule as rAiLoadingErrorStates } from "./ai-governance-ai-loading-error-
 import { rule as rHumanControlAffordances } from "./ai-governance-human-control-affordances.js";
 import { rule as rAiMarkerAntiPatterns } from "./ai-governance-ai-marker-anti-patterns.js";
 import { rule as rAiContentLiveRegion } from "./ai-governance-ai-content-live-region.js";
+import { rule as rDisclaimerPresent } from "./ai-governance-disclaimer-present.js";
+import { rule as rFeedbackControlPresent } from "./ai-governance-feedback-control-present.js";
 import type { Rule } from "../types.js";
 
 export const ruleObjects: Rule[] = [
@@ -51,6 +53,8 @@ export const ruleObjects: Rule[] = [
   rHumanControlAffordances,
   rAiMarkerAntiPatterns,
   rAiContentLiveRegion,
+  rDisclaimerPresent,
+  rFeedbackControlPresent,
 ];
 
 export const ruleMap = new Map<string, Rule>(ruleObjects.map((r) => [r.id, r]));
