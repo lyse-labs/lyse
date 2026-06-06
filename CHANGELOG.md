@@ -26,6 +26,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ai-governance/ai-marker-component-present` rule — Track 3.2 (Face B).
+  Detects whether the DS ships a dedicated AI-marker component (Carbon `AILabel`,
+  generic `AIBadge` / `AITag` / `AIIndicator` / `AIAvatar`, `GenAI*` variants,
+  `*AIMarker*`, Polaris `magic-*`). Scans the export surface (`src/index.ts`,
+  `index.ts`, etc.) and component files (`**/*.{tsx,jsx,vue}`) by file name and
+  exported identifier. Emits `info` when a marker component is found; emits
+  `warning` (cross-condition) when reserved AI tokens exist (via the shared
+  `detectReservedAiTokens` parser) but no marker component is detected; emits
+  nothing when the DS has no AI surface. Exports `AI_MARKER_NAMES` for reuse by
+  sibling rules (Track 3.3 / 3.5). Allowlist via
+  `// lyse-disable ai-governance/ai-marker-component-present` in an adjacent
+  README or `.lyse.yaml`.
+- Registry count-assertion hardening — `registry.test.ts` and `sarif.test.ts`
+  no longer hardcode the rule count (was `18`). `registry.test.ts` asserts
+  `ruleMap.size === ruleObjects.length`; `sarif.test.ts` derives the expected
+  count from `RULE_METADATA.length`. Future rule PRs do not need to touch these
+  assertions.
 - `ai-governance/ai-tokens-reserved` rule — first rule shipped under the
   `ai-governance` axis (Track 3 / Face B). Inventories reserved AI-marker
   design tokens (Carbon `dragon-fruit` / `*-ai-*`, Polaris `magic`, Workday

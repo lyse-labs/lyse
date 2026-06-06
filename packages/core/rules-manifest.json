@@ -429,6 +429,35 @@
         "token files larger than 2 MB — skipped to avoid pathological cases",
         "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
       ]
+    },
+    {
+      "id": "ai-governance/ai-marker-component-present",
+      "axis": "ai-governance",
+      "defaultSeverity": "warning",
+      "shortDescription": "Detect AI-marker component in the DS export surface",
+      "fullDescription": "Scans the design system's export surface (`src/index.ts`, `index.ts`, etc.) and component files (`**/*.{tsx,jsx,vue}`) for a dedicated AI-marker component — a label, badge, avatar, or indicator that visually marks AI-generated output. Recognised vocabularies: Carbon `AILabel`, generic `AIBadge` / `AITag` / `AIIndicator` / `AIAvatar`, `GenAI*` variants, `*AIMarker*`, and Polaris `magic-*` components. Emits `info` when a marker component is found; emits `warning` when reserved AI tokens exist (detected by the shared `detectReservedAiTokens` parser) but no marker component is present; emits nothing when the DS has no AI surface at all.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-ai-marker-component-present.md",
+      "rationale": "Why it matters\n\nAI-marker components are the visual contract between the design system and consumers: they signal \"this content was produced by AI.\" Without a dedicated component, individual teams reinvent ad-hoc markers, breaking consistency and accessibility.\n\nThe most important case to flag is a DS that ships reserved AI tokens (signaling AI-surface intent) but provides no corresponding component — consumers have no standardised way to mark AI provenance visually.\n\nThis rule emits `info` when a marker component is detected (inventory), and `warning` when reserved tokens exist but no marker component is found. A DS with no AI surface emits nothing and is not penalised.\n\nThe exported `AI_MARKER_NAMES` constant is shared with sibling rules (Track 3.3 / 3.5) to ensure a single vocabulary source of truth.",
+      "examples": [
+        {
+          "good": "// src/index.ts\nexport { AILabel } from './ai-label';\nexport { Button } from './button';",
+          "bad": "// src/index.ts — no AI-marker component exported\nexport { Button } from './button';"
+        },
+        {
+          "good": "// AILabel.tsx — component file named with the marker vocabulary",
+          "bad": "// tokens.json has `color.ai.primary` but no AILabel/AIBadge component exists"
+        },
+        {
+          "good": "// Polaris-style: magic-icon.tsx component file detected",
+          "bad": "// Reserved tokens present, no marker component shipped"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable ai-governance/ai-marker-component-present` in an adjacent README or `.lyse.yaml` — rule is N/A",
+        "repos with no reserved AI tokens AND no marker component — no AI surface detected, rule emits nothing",
+        "files larger than 1 MB — skipped to avoid pathological cases",
+        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
+      ]
     }
   ]
 }

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { renderSarif } from "../../src/reporters/sarif.js";
+import { RULE_METADATA } from "../../src/rules/manifest.js";
 import type { AuditResult } from "../../src/types.js";
 
 const sample: AuditResult = {
@@ -37,7 +38,7 @@ describe("renderSarif", () => {
 
   it("includes ALL rules in tool.driver.rules (not just those with findings)", () => {
     const sarif = JSON.parse(renderSarif(sample));
-    expect(sarif.runs[0].tool.driver.rules).toHaveLength(18);
+    expect(sarif.runs[0].tool.driver.rules).toHaveLength(RULE_METADATA.length);
     const ids = sarif.runs[0].tool.driver.rules.map((r: { id: string }) => r.id);
     expect(ids).toContain("tokens/no-hardcoded-color");
     expect(ids).toContain("tokens/dtcg-conformance");
