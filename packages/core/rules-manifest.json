@@ -516,6 +516,36 @@
         "repos with no reserved AI tokens anywhere — rule is a no-op (zero findings, zero opportunities)",
         "findings where token reference is ambiguous (dot-path heuristic only) — emitted as LOW confidence and suppressed by default"
       ]
+    },
+    {
+      "id": "ai-governance/ai-loading-error-states",
+      "axis": "ai-governance",
+      "defaultSeverity": "warning",
+      "shortDescription": "Named AI loading state with paired text + AI-specific error state present",
+      "fullDescription": "Scans component files (`**/*.{tsx,jsx,vue}`) for (a) a named AI loading state that carries paired visible or accessible text — not a bare spinner — and (b) an AI-specific error state component. Recognised loading vocabulary: `*Generating*`, `*Thinking*`, `*AILoading*`, `*StreamingIndicator*`, `*AIStatus*`, `*LoadingState*`. A bare generic spinner (`Spinner`, `LoadingSpinner`) without an AI-named wrapper and without a `loadingText` prop or visible status string does NOT satisfy the requirement. Recognised error vocabulary: `*AIError*`, `*GenerationError*`, `*AIFailure*`, `*AIRetry*`, `*GenerationFailed*`, `*AITimeout*`, or any name combining an AI keyword (`ai`, `generation`, `genai`, `llm`) with an error keyword (`error`, `failure`, `failed`, `timeout`). Emits `warning` for each absent state type when an AI marker surface is detected; emits `info` when both are present; emits nothing when no AI surface is detected. Recovery-flow detection (retry orchestration, post-error behavior) is out of scope — tracked in Track 4 (#16).",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-ai-loading-error-states.md",
+      "rationale": "Why it matters\n\nAI-generating surfaces have two failure modes invisible to generic DS rules: (1) a loading state that gives no context — users see a spinner but don't know if the model is generating, stuck, or done — and (2) a generic error boundary that offers no AI-specific message, leaving users without guidance when a generation fails.\n\nAWS Cloudscape's generative-AI patterns mandate that every AI loading state carry named, visible text (e.g. \"Generating response…\") so users understand what the system is doing and can judge when to wait vs. cancel. A bare, unlabelled spinner violates this requirement.\n\nAn AI-specific error component is equally critical: it must communicate that the AI operation failed (not a generic network error) and ideally suggest next steps — though the recovery-flow logic itself is deferred to Track 4.\n\nThis rule detects the static presence of both states. It cross-conditions: if an AI marker is found but either state is absent, a warning is emitted; if both are present, an info finding confirms the DS is provisioned for AI-state handling.",
+      "examples": [
+        {
+          "good": "// Generating.tsx\nexport const Generating = () => (\n  <div role=\"status\" aria-live=\"polite\">\n    <Spinner /> Generating response…\n  </div>\n);",
+          "bad": "// LoadingSpinner.tsx — bare spinner, no AI name, no paired text\nexport const LoadingSpinner = () => <svg className=\"spin\" />;"
+        },
+        {
+          "good": "// AILoading.tsx — loadingText prop satisfies paired-text requirement\nexport function AILoading({ loadingText }: { loadingText: string }) {\n  return <div><Spinner /><span>{loadingText}</span></div>;\n}",
+          "bad": "// No AI-named loading state at all — only generic Spinner exported"
+        },
+        {
+          "good": "// AIError.tsx\nexport const AIError = ({ message }: { message: string }) => (\n  <div role=\"alert\">\n    <strong>Generation failed</strong>\n    <p>{message}</p>\n  </div>\n);",
+          "bad": "// ErrorBoundary.tsx — generic, gives no AI context\nexport class ErrorBoundary extends React.Component {\n  render() { return this.props.children; }\n}"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable ai-governance/ai-loading-error-states` in an adjacent README, README.md, README.mdx, .lyse.yaml, or .lyse.yml — rule is N/A",
+        "repos with no AI marker surface detected (no AILabel, AIBadge, magic-* etc.) — no AI surface, rule emits nothing",
+        "files larger than 1 MB — skipped to avoid pathological cases",
+        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`",
+        "recovery-flow detection (retry orchestration, post-error navigation) — explicitly deferred to Track 4 (#16)"
+      ]
     }
   ]
 }
