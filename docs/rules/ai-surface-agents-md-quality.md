@@ -1,6 +1,6 @@
 # `ai-surface/agents-md-quality`
 
-> **Axis:** AI surface · **Severity:** info · **Auto-fixable:** no
+> **Axis:** AI surface · **Severity:** warning · **Auto-fixable:** no
 
 Stub — full doc pending. Verifies that an `AGENTS.md` file at the repository root is command-first and machine-readable, so coding agents can discover canonical commands without scraping the README.
 
