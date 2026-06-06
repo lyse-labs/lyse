@@ -17,6 +17,7 @@ import { rule as rShadcnRegistryValid } from "./ai-surface-shadcn-registry-valid
 import { rule as rAgentInstructionFiles } from "./ai-surface-agent-instruction-files.js";
 import { rule as rAiTokensReserved } from "./ai-governance-ai-tokens-reserved.js";
 import { rule as rAiMarkerComponentPresent } from "./ai-governance-ai-marker-component-present.js";
+import { rule as rExplainabilityAffordance } from "./ai-governance-explainability-affordance.js";
 import type { Rule } from "../types.js";
 
 export const ruleObjects: Rule[] = [
@@ -39,6 +40,7 @@ export const ruleObjects: Rule[] = [
   rAgentInstructionFiles,
   rAiTokensReserved,
   rAiMarkerComponentPresent,
+  rExplainabilityAffordance,
 ];
 
 export const ruleMap = new Map<string, Rule>(ruleObjects.map((r) => [r.id, r]));

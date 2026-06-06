@@ -26,6 +26,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ai-governance/explainability-affordance` rule — Track 3.5 (Face B).
+  Detects whether the DS ships a companion explainability affordance alongside an
+  AI-marker component. Name-based detection covers components whose exported
+  identifier or file name contains `Explain`, `Explainability`, `WhyThis`,
+  `Citation`, `Sources`, `Confidence`, or `Provenance` (case-insensitive).
+  Popover/tooltip ARIA detection covers AI-marker components that carry
+  `aria-describedby` or `role="dialog"` / `role="tooltip"`. Emits `info` when
+  an affordance is found; emits `warning` (cross-condition) when an AI-marker is
+  present but no affordance is detected; emits nothing when the DS has no AI
+  surface. Reuses `AI_MARKER_NAMES` from `ai-governance/ai-marker-component-present`.
+  Guidelines: HAX G11 / PAIR Explainability. Behavioral slice (indicator wherever
+  AI output appears) deferred to Track 4.
 - `ai-governance/ai-marker-component-present` rule — Track 3.2 (Face B).
   Detects whether the DS ships a dedicated AI-marker component (Carbon `AILabel`,
   generic `AIBadge` / `AITag` / `AIIndicator` / `AIAvatar`, `GenAI*` variants,
