@@ -1,6 +1,6 @@
 # `tokens/dtcg-conformance`
 
-> **Axis:** Tokens · **Severity:** warning (some sub-checks error) · **Auto-fixable:** no · **Version:** v2
+> **Axis:** Tokens · **Severity:** warning (some sub-checks error) · **Auto-fixable:** no
 
 Strict validation of design-token JSON files against the W3C Design Tokens
 Community Group draft (DTCG). Each leaf token is checked for `$value`
@@ -101,7 +101,15 @@ and copy-pasteable JSON snippets.
 
 ## Allowlist
 
-Three escape hatches, in order of preference:
+Three escape hatches, in order of preference.
+
+> **Why `$extensions.lyse.disable` and not `allowedTokenPaths`?**
+> An earlier design of this rule proposed an `allowedTokenPaths` config list.
+> That idea was superseded by the DTCG-canonical `$extensions` escape hatch:
+> because JSON has no comments, the only portable way to annotate individual
+> tokens is via `$extensions` — it travels through Style Dictionary, Tokens
+> Studio, and Figma Tokens without being stripped. `allowedTokenPaths` is not
+> implemented; use `$extensions.lyse.disable` instead.
 
 **1. Per-token, inline.** Use the standard DTCG `$extensions` field — this
 travels with the token through any tooling chain that respects the spec:
