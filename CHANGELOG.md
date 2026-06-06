@@ -26,6 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **AI-Governance axis (Face B) plumbing** — added the `ai-governance` scoring
+  axis (`AxisName`) and reliability sub-axis label (`AxisLabel`), the foundation
+  for the AI-Governance signal family (Track 1 / roadmap §6). The axis is
+  additive: `ai-surface` (Face A, AI-Consumable) is unchanged, so the 17 shipped
+  rule IDs and the Health Score are untouched. An axis with no rules yet scores
+  `N/A` and is excluded from the final average (score-neutral until governance
+  rules ship). Locked by a scorer invariant test.
 - `ai-surface/mcp-config-present` rule — detects whether a design system
   repository declares an MCP server (Model Context Protocol), signaling
   AI-Consumable readiness. Looks for `.mcp.json` (Claude Code),

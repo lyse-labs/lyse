@@ -9,7 +9,8 @@ export type AxisLabel =
   | "a11y"
   | "components"
   | "stories"
-  | "ai-surface";
+  | "ai-surface"
+  | "ai-governance";
 
 export interface SubAxisRecord {
   id: SubAxisId;

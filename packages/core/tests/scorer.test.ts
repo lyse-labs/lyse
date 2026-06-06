@@ -11,13 +11,14 @@ function noFindings(): Record<AxisName, AxisFindings> {
     components: { ...ZERO_FINDINGS },
     stories: { ...ZERO_FINDINGS },
     "ai-surface": { ...ZERO_FINDINGS },
+    "ai-governance": { ...ZERO_FINDINGS },
   };
 }
 
 describe("scorer v2 — base cases", () => {
   it("perfect score when no violations", () => {
     const out = score(noFindings(), {
-      tokens: 10, a11y: 5, components: 3, stories: 2, "ai-surface": 0,
+      tokens: 10, a11y: 5, components: 3, stories: 2, "ai-surface": 0, "ai-governance": 0,
     });
     expect(out.finalScore).toBe(100);
     expect(out.tier).toBe("Autonomous");
@@ -25,11 +26,24 @@ describe("scorer v2 — base cases", () => {
     expect(out.axes.find((a) => a.axis === "tokens")!.score).toBe(100);
   });
 
+  it("ai-governance is a valid axis; empty (Track 3 not yet shipped) → N/A, score unchanged", () => {
+    // Track 1 (#13) adds the ai-governance axis as plumbing before any rule
+    // exists. An empty axis (0 opportunities) MUST score N/A and be excluded
+    // from the average, so the Health Score is identical to pre-axis-split.
+    const out = score(noFindings(), {
+      tokens: 10, a11y: 5, components: 3, stories: 2, "ai-surface": 0, "ai-governance": 0,
+    });
+    const gov = out.axes.find((a) => a.axis === "ai-governance")!;
+    expect(gov).toBeDefined();
+    expect(gov.score).toBe("N/A");
+    expect(out.finalScore).toBe(100); // unchanged by the empty governance axis
+  });
+
   it("axis with 0 opportunities returns N/A and is excluded from average", () => {
     const findings = noFindings();
     findings.tokens = { errorCount: 0, warningCount: 0, infoCount: 0 };
     const out = score(findings, {
-      tokens: 10, a11y: 5, components: 3, stories: 0, "ai-surface": 0,
+      tokens: 10, a11y: 5, components: 3, stories: 0, "ai-surface": 0, "ai-governance": 0,
     });
     const stories = out.axes.find((a) => a.axis === "stories")!;
     expect(stories.score).toBe("N/A");
@@ -46,7 +60,7 @@ describe("scorer v2 — severity weighting", () => {
     const findings = noFindings();
     findings.tokens = { errorCount: 0, warningCount: 0, infoCount: 100 };
     const out = score(findings, {
-      tokens: 100, a11y: 0, components: 0, stories: 0, "ai-surface": 0,
+      tokens: 100, a11y: 0, components: 0, stories: 0, "ai-surface": 0, "ai-governance": 0,
     });
     const axis = out.axes.find((a) => a.axis === "tokens")!;
     expect(axis.score).toBe(0);
@@ -59,7 +73,7 @@ describe("scorer v2 — severity weighting", () => {
     const findings = noFindings();
     findings.tokens = { errorCount: 25, warningCount: 0, infoCount: 0 };
     const out = score(findings, {
-      tokens: 100, a11y: 0, components: 0, stories: 0, "ai-surface": 0,
+      tokens: 100, a11y: 0, components: 0, stories: 0, "ai-surface": 0, "ai-governance": 0,
     });
     expect(out.axes.find((a) => a.axis === "tokens")!.score).toBe(0);
   });
@@ -70,7 +84,7 @@ describe("scorer v2 — severity weighting", () => {
     const findings = noFindings();
     findings.tokens = { errorCount: 1, warningCount: 5, infoCount: 10 };
     const out = score(findings, {
-      tokens: 100, a11y: 0, components: 0, stories: 0, "ai-surface": 0,
+      tokens: 100, a11y: 0, components: 0, stories: 0, "ai-surface": 0, "ai-governance": 0,
     });
     const axis = out.axes.find((a) => a.axis === "tokens")!;
     expect(axis.weightedFindings).toBe(24);
@@ -88,7 +102,7 @@ describe("scorer v2 — severity weighting", () => {
     const findings = noFindings();
     findings.tokens = { errorCount: 1, warningCount: 0, infoCount: 0 };
     const out = score(findings, {
-      tokens: 10000, a11y: 0, components: 0, stories: 0, "ai-surface": 0,
+      tokens: 10000, a11y: 0, components: 0, stories: 0, "ai-surface": 0, "ai-governance": 0,
     });
     const axis = out.axes.find((a) => a.axis === "tokens")!;
     expect(axis.rateScore).toBe(100); // rounded from 99.96
@@ -108,7 +122,7 @@ describe("scorer v2 — equal-weight averaging", () => {
     findings.a11y = { errorCount: 0, warningCount: 0, infoCount: 20 };
     findings.components = { errorCount: 0, warningCount: 0, infoCount: 40 };
     const out = score(findings, {
-      tokens: 100, a11y: 100, components: 100, stories: 0, "ai-surface": 0,
+      tokens: 100, a11y: 100, components: 100, stories: 0, "ai-surface": 0, "ai-governance": 0,
     });
     expect(out.axes.find((a) => a.axis === "tokens")!.score).toBe(80);
     expect(out.axes.find((a) => a.axis === "a11y")!.score).toBe(80);
@@ -118,7 +132,7 @@ describe("scorer v2 — equal-weight averaging", () => {
 
   it("no active axes — all opportunities=0 yields N/A score and N/A tier", () => {
     const out = score(noFindings(), {
-      tokens: 0, a11y: 0, components: 0, stories: 0, "ai-surface": 0,
+      tokens: 0, a11y: 0, components: 0, stories: 0, "ai-surface": 0, "ai-governance": 0,
     });
     expect(out.finalScore).toBe("N/A");
     expect(out.tier).toBe("N/A");
@@ -163,7 +177,7 @@ describe("scorer v2 — scoreFromFindings adapter", () => {
       mk("tokens", "info"),
     ];
     const out = scoreFromFindings(findings, {
-      tokens: 100, a11y: 0, components: 0, stories: 0, "ai-surface": 0,
+      tokens: 100, a11y: 0, components: 0, stories: 0, "ai-surface": 0, "ai-governance": 0,
     });
     const axis = out.axes.find((a) => a.axis === "tokens")!;
     // weighted = 4 + 2 + 2 + 1 = 9 → rate = 91. K=0 → cap = 100. min(91, 100) = 91.
