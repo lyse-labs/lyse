@@ -1,7 +1,7 @@
 // 28 sub-axes, 1:1 mapped to the 28 shipped rules.
-// Each sub-axis declares the scoring axis it reports under (5 total per
+// Each sub-axis declares the scoring axis it reports under (6 total per
 // AxisName in packages/core/src/types.ts: tokens, a11y, components, stories,
-// ai-surface). Naming rules report under the components axis.
+// ai-surface, ai-governance). Naming rules report under the components axis.
 import type { SubAxisRecord } from "../types.js";
 
 export const SUB_AXES: SubAxisRecord[] = [

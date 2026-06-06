@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unpublished from npm.
 
 ### Fixed
+- `ai-governance/ai-marker-anti-patterns`: `fg.sync` ignore list was missing `**/.git/**`, `**/.next/**`, `**/out/**`, `**/coverage/**` — the rule could scan generated/VCS directories. Updated to match the canonical 7-entry ignore list used by sibling rules (`ai-content-live-region`, `parsers/ai-tokens.ts`).
+- `docs/rules/ai-governance-ai-content-live-region.md`: "How it works" described a plain same-file co-existence check; the implementation actually requires proximity (`isLiveRegionProximate`). Updated to accurately describe the return-block proximity requirement.
+- `docs/rules/ai-governance-explainability-affordance.md`: Allowlist section falsely claimed "does not yet support a per-repo disable directive." The rule has a wired `lyse-disable` allowlist. Replaced with the correct `lyse-disable` directive and use-when guidance matching sibling docs.
+- `packages/core/src/reliability/catalogue/sub-axes.ts`: header comment listed 5 axes, omitting `ai-governance` (the 6th). Updated to list all 6.
 - Reverted erroneous `stable` promotion of 3 AI-Consumable sub-axes (`agents-md-quality`, `component-manifest-json`, `ds-index-exported`). They were promoted without calibration evidence (all measurement fields were `null`), which directly contradicted the public falsifiable claim in `docs/architecture/reliability.md` that the promotion gate requires N≥30 + Wilson 95% LB ≥0.90 on recall. Until the Bench corpus runs and populates the 5 measurement fields, all 17 sub-axes ship as `experimental`.
 - Bumped stale `12 sub-axes` references in `reliability.md` and `health-score.md` to the actual count (17).
 - Regenerated `rules-manifest.json` and `docs/architecture/sub-axes.md` from rule metadata (single source of truth).
