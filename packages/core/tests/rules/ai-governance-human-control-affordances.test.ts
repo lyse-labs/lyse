@@ -132,6 +132,10 @@ describe("detectPerOutputControls — negative", () => {
   it("returns empty array when source has no controls at all", () => {
     expect(detectPerOutputControls(`export function Card() {}`)).toEqual([]);
   });
+
+  it("does NOT credit a generic 'Edit' button label (over-broad label removed)", () => {
+    expect(detectPerOutputControls(`<button>Edit</button>`)).toEqual([]);
+  });
 });
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -282,5 +286,30 @@ export default { name: 'AIWidget' };
     expect(result.findings).toHaveLength(1);
     expect(result.findings[0]?.severity).toBe("warning");
     expect(result.findings[0]?.message).toContain("HAX G8");
+  });
+
+  // Fixture 11: AI marker file whose only control is <button>Edit</button> → warning
+  // Proves the generic "edit" label no longer over-credits (Fix 3).
+  it("fixture 11: AI marker + only generic <button>Edit</button> → warning (edit label removed)", async () => {
+    writeFileSync(
+      join(tmp, "AICard.tsx"),
+      `export function AICard() { return <div><AIBadge /><button>Edit</button></div>; }`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.severity).toBe("warning");
+    expect(result.findings[0]?.message).toContain("HAX G8");
+  });
+
+  // Fixture 12: AI marker + EditResponse (compound name) still earns credit via name patterns.
+  it("fixture 12: AI marker + EditResponse component → info (compound edit name still credited)", async () => {
+    writeFileSync(
+      join(tmp, "AIEdit.tsx"),
+      `export function AIEdit() { return <div><AIBadge /><EditResponse /></div>; }\nexport function EditResponse() { return <button>Edit response</button>; }`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.severity).toBe("info");
+    expect(result.findings[0]?.message).toContain("EditResponse");
   });
 });

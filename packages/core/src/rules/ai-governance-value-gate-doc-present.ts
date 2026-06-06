@@ -47,7 +47,15 @@ const DOC_GLOBS = [
   "**/AI_GOVERNANCE.md",
 ];
 
-const IGNORE = ["**/node_modules/**", "**/dist/**", "**/build/**", "**/.git/**"];
+const IGNORE = [
+  "**/node_modules/**",
+  "**/dist/**",
+  "**/build/**",
+  "**/.git/**",
+  "**/.next/**",
+  "**/out/**",
+  "**/coverage/**",
+];
 
 // Gate-language patterns modelled on ServiceNow "10-Q" value gate.
 // Each pattern targets a distinct phrasing family; case-insensitive.
@@ -232,7 +240,7 @@ Follow the design tokens from the \`ai\` namespace.`,
       "repos containing `lyse-disable ai-governance/value-gate-doc-present` in README, README.md, README.mdx, readme.md, .lyse.yaml, or .lyse.yml — rule is N/A",
       "DSs with no AI surface (no AI-marker component and no reserved AI tokens) — rule emits nothing",
       "doc files larger than 500 KB — skipped to avoid pathological cases",
-      "files under `node_modules/`, `dist/`, `build/`, `.git/`",
+      "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`",
     ],
   },
   defaultOptions: [],

@@ -11,6 +11,7 @@ import type {
 import { createLyseRule } from "./_rule-module.js";
 import {
   isAiMarkerName,
+  extractNamesFromSource,
   safeReadText,
 } from "./ai-governance-ai-marker-component-present.js";
 
@@ -63,6 +64,16 @@ export function detectSparkleOnlyMarker(source: string): boolean {
     if (tag[1] !== undefined && isAiMarkerName(tag[1])) return false;
   }
   return true;
+}
+
+export function fileHasAiContext(source: string): boolean {
+  for (const name of extractNamesFromSource(source)) {
+    if (isAiMarkerName(name)) return true;
+  }
+  for (const tag of source.matchAll(/<\s*([A-Za-z][\w.-]*)/g)) {
+    if (tag[1] !== undefined && isAiMarkerName(tag[1])) return true;
+  }
+  return false;
 }
 
 const CTA_OPEN = /<(button|Button|a)\b[^>]*>|<[A-Za-z][\w.-]*\b[^>]*\brole\s*=\s*["']button["'][^>]*>/g;
@@ -128,7 +139,7 @@ const evaluate = async (
     const source = safeReadText(join(ctx.repoRoot, rel));
     if (!source) continue;
 
-    if (detectSparkleOnlyMarker(source)) {
+    if (fileHasAiContext(source) && detectSparkleOnlyMarker(source)) {
       findings.push({
         ruleId: RULE_ID,
         axis: "ai-governance",
@@ -207,6 +218,7 @@ Both findings are warnings (not errors) because the fix is mechanical and low-ri
 export const _internal = {
   detectSparkleOnlyMarker,
   detectAiInCtaLabel,
+  fileHasAiContext,
   isAllowlisted,
   DISABLE_DIRECTIVE,
   ALLOWLIST_CANDIDATES,

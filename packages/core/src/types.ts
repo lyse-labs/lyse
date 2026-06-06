@@ -30,7 +30,18 @@ export type BuiltInRuleId =
   | "ai-surface/mcp-config-present"
   | "ai-surface/llms-txt-structure"
   | "ai-surface/shadcn-registry-valid"
-  | "ai-surface/agent-instruction-files";
+  | "ai-surface/agent-instruction-files"
+  | "ai-governance/ai-content-live-region"
+  | "ai-governance/ai-loading-error-states"
+  | "ai-governance/ai-marker-anti-patterns"
+  | "ai-governance/ai-marker-component-present"
+  | "ai-governance/ai-token-requires-marker"
+  | "ai-governance/ai-tokens-reserved"
+  | "ai-governance/disclaimer-present"
+  | "ai-governance/explainability-affordance"
+  | "ai-governance/feedback-control-present"
+  | "ai-governance/human-control-affordances"
+  | "ai-governance/value-gate-doc-present";
 
 export type RuleId = BuiltInRuleId | string;
 

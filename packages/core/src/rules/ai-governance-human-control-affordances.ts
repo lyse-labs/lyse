@@ -64,7 +64,6 @@ const PER_OUTPUT_LABELS: ReadonlySet<string> = new Set([
   "retry",
   "stop",
   "stop generating",
-  "edit",
   "undo",
   "confirm",
   "dismiss",
