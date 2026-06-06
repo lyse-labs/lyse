@@ -14,9 +14,8 @@ idle (appropriate for non-urgent AI output); `aria-live="assertive"` / `role="al
 interrupt immediately (use only for errors). PatternFly provides `isLiveRegion` as
 a prop on several container components to avoid hand-rolling the attribute.
 
-This rule checks the static presence of a live-region mechanism in the same file
-as an AI-output or streaming component — it does not verify runtime behaviour or
-dynamic DOM updates.
+This rule checks for a proximate live-region mechanism relative to the AI-output
+component — it does not verify runtime behaviour or dynamic DOM updates.
 
 ## How it works
 
@@ -28,14 +27,19 @@ Lyse globs `**/*.{tsx,jsx,vue}` and for each file runs two detectors:
      `GenAIAvatar`, `GenAIBadge`, `GenAILabel`, `GenAITag`, Polaris `magic-*`.
    - A component name matching `*AIResponse*` or `*ChatMessage*`.
    - A JSX/Vue prop `isStreaming` or `isGenerating` (streaming indicators).
-2. **Live region** — the same file contains one of:
-   - `aria-live="polite"` or `aria-live="assertive"`.
-   - `role="status"` or `role="alert"`.
-   - `isLiveRegion` prop (PatternFly).
+2. **Live region proximity** — a live-region attribute is detected in the same file
+   AND is determined to be proximate to the AI-output tag via `isLiveRegionProximate`.
+   Proximity means the live-region open tag (`aria-live="polite|assertive"`,
+   `role="status|alert"`, or `isLiveRegion` prop) appears within the same JSX
+   return block as the AI-output component, before it in source order (i.e. wraps
+   the AI output from above). A `role="status"` toast component defined in a separate
+   function elsewhere in the same file does **not** satisfy this check — the live
+   region must structurally wrap the AI output, not merely co-exist in the file.
 
 Cross-condition:
-- AI surface present, live region **absent** → `warning`.
-- AI surface present, live region **present** → `info` (notes the mechanism).
+- AI surface present, **proximate** live region **absent** → one **aggregate** `warning` listing all affected
+  files (up to 20, then "+N more").
+- AI surface present, **proximate** live region **present** → `info` (notes the mechanism).
 - No AI surface → no finding, `opportunities: 0`.
 
 ## Examples

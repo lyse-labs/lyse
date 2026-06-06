@@ -117,9 +117,17 @@ This rule has no auto-fix. Shipping an explainability affordance is a deliberate
 
 ## Allowlist
 
-This rule does not yet support a per-repo disable directive. If your DS satisfies the explainability requirement through a mechanism outside the recognised vocabulary (e.g. a `Rationale` or `AISummary` component), open an issue to request vocabulary expansion.
+Add to your `README.md` or `.lyse.yaml`:
 
-You can disable globally in `.lyse.yaml`:
+```
+lyse-disable ai-governance/explainability-affordance
+```
+
+Use when:
+- Your DS satisfies the explainability requirement through a component outside the recognised vocabulary (e.g. a `Rationale` or `AISummary` component) — open an issue to request vocabulary expansion, then allowlist in the interim.
+- The explainability affordance lives in a separate package not visible to Lyse's scan root.
+
+You can also disable globally via the rules config in `.lyse.yaml`:
 
 ```yaml
 rules:

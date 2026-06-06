@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 
 - Added a **Limitations** section to `docs/rules/ai-governance-explainability-affordance.md` and `docs/rules/ai-governance-human-control-affordances.md` noting that detection is static + name/co-location based; behavioral verification (affordance wired to AI output at every render site) is deferred to Track 4.
+### Changed
+
+- `ai-governance/disclaimer-present` and `ai-governance/ai-content-live-region`: the
+  `warning` path now emits a single **aggregate** repo-level finding that lists all
+  affected files (first 20, then "+N more"), instead of one warning per non-compliant
+  file. On a design system with N AI-surface files, each rule now emits at most 1
+  warning (was O(N)). `info` findings (compliant files) remain per-file.
+  Follow-up to lyse-labs/lyse-internal#15.
 
 ### Removed
 
@@ -27,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unpublished from npm.
 
 ### Fixed
+- `ai-governance/ai-marker-anti-patterns`: `fg.sync` ignore list was missing `**/.git/**`, `**/.next/**`, `**/out/**`, `**/coverage/**` — the rule could scan generated/VCS directories. Updated to match the canonical 7-entry ignore list used by sibling rules (`ai-content-live-region`, `parsers/ai-tokens.ts`).
+- `docs/rules/ai-governance-ai-content-live-region.md`: "How it works" described a plain same-file co-existence check; the implementation actually requires proximity (`isLiveRegionProximate`). Updated to accurately describe the return-block proximity requirement.
+- `docs/rules/ai-governance-explainability-affordance.md`: Allowlist section falsely claimed "does not yet support a per-repo disable directive." The rule has a wired `lyse-disable` allowlist. Replaced with the correct `lyse-disable` directive and use-when guidance matching sibling docs.
+- `packages/core/src/reliability/catalogue/sub-axes.ts`: header comment listed 5 axes, omitting `ai-governance` (the 6th). Updated to list all 6.
 - Reverted erroneous `stable` promotion of 3 AI-Consumable sub-axes (`agents-md-quality`, `component-manifest-json`, `ds-index-exported`). They were promoted without calibration evidence (all measurement fields were `null`), which directly contradicted the public falsifiable claim in `docs/architecture/reliability.md` that the promotion gate requires N≥30 + Wilson 95% LB ≥0.90 on recall. Until the Bench corpus runs and populates the 5 measurement fields, all 17 sub-axes ship as `experimental`.
 - Bumped stale `12 sub-axes` references in `reliability.md` and `health-score.md` to the actual count (17).
 - Regenerated `rules-manifest.json` and `docs/architecture/sub-axes.md` from rule metadata (single source of truth).
