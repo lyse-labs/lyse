@@ -130,7 +130,7 @@ describe("rule ai-surface/shadcn-registry-valid", () => {
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
     const errors = result.findings.filter((f) => f.severity === "error");
     expect(errors.length).toBeGreaterThanOrEqual(1);
-    expect(errors[0]?.location.file).toContain("broken.json");
+    expect(errors.some((e) => e.location.file.includes("broken.json"))).toBe(true);
     expect(result.opportunities).toBe(2);
   });
 

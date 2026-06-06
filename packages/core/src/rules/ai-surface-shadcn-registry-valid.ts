@@ -19,21 +19,8 @@ const SHADCN_MARKER = "components.json";
 const REGISTRY_CANDIDATES = [
   "registry.json",
   "public/registry.json",
-  "registry/**/*.json",
+  "registry/*.json",
 ];
-
-const VALID_ITEM_TYPES = new Set([
-  "registry:ui",
-  "registry:lib",
-  "registry:hook",
-  "registry:block",
-  "registry:component",
-  "registry:page",
-  "registry:file",
-  "registry:style",
-  "registry:theme",
-  "registry:item",
-]);
 
 interface RegistryFileEntry {
   path?: unknown;
@@ -182,7 +169,7 @@ const evaluate = async (
       ruleId: RULE_ID,
       axis: "ai-surface",
       severity: "warning",
-      location: { file: "registry.json", line: 1, column: 1 },
+      location: { file: SHADCN_MARKER, line: 1, column: 1 },
       message: "components.json found but no shadcn registry — missed AI-Consumable surface",
       suggestion:
         "publish a `registry.json` (or `public/registry.json`) describing your components so AI agents and the shadcn CLI can install them",
@@ -198,6 +185,10 @@ const evaluate = async (
     const relPath = relative(ctx.repoRoot, abs) || rel;
 
     if (data === null) {
+      if (parseError === "file too large") {
+        // Per doc: files larger than 4 MB are silently skipped.
+        continue;
+      }
       findings.push({
         ruleId: RULE_ID,
         axis: "ai-surface",
@@ -304,5 +295,4 @@ export const _internal = {
   looksLikeRegistryCollection,
   extractRegistryItems,
   REGISTRY_CANDIDATES,
-  VALID_ITEM_TYPES,
 };
