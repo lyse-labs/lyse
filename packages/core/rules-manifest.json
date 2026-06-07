@@ -707,7 +707,7 @@
         "repos containing `lyse-disable ai-governance/value-gate-doc-present` in README, README.md, README.mdx, readme.md, .lyse.yaml, or .lyse.yml — rule is N/A",
         "DSs with no AI surface (no AI-marker component and no reserved AI tokens) — rule emits nothing",
         "doc files larger than 500 KB — skipped to avoid pathological cases",
-        "files under `node_modules/`, `dist/`, `build/`, `.git/`"
+        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
       ]
     }
   ]

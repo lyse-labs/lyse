@@ -7,8 +7,31 @@ export interface AnthropicAdapterOptions {
   fetchFn?: typeof globalThis.fetch;
 }
 
-const INPUT_USD_PER_TOKEN = 3 / 1_000_000;
-const OUTPUT_USD_PER_TOKEN = 15 / 1_000_000;
+// Heuristic upper-bound rates (USD per 1M tokens). These are conservative estimates;
+// actual pricing may differ. Used only for budget tracking, not billing.
+const MODEL_RATES: Array<{
+  pattern: RegExp;
+  inputPer1M: number;
+  outputPer1M: number;
+}> = [
+  { pattern: /haiku/i,  inputPer1M: 0.8,  outputPer1M: 4 },
+  { pattern: /sonnet/i, inputPer1M: 3,    outputPer1M: 15 },
+  { pattern: /opus/i,   inputPer1M: 15,   outputPer1M: 75 },
+];
+
+// Conservative default for unknown models.
+const DEFAULT_RATE = { inputPer1M: 15, outputPer1M: 75 };
+
+function rateForModel(model: string): { inputPer1M: number; outputPer1M: number } {
+  for (const entry of MODEL_RATES) {
+    if (entry.pattern.test(model)) return entry;
+  }
+  return DEFAULT_RATE;
+}
+
+function isTextBlock(b: Anthropic.ContentBlock): b is Anthropic.TextBlock {
+  return b.type === "text";
+}
 
 export class AnthropicAdapter implements ConnectorClient {
   private readonly client: Anthropic;
@@ -35,15 +58,12 @@ export class AnthropicAdapter implements ConnectorClient {
       })),
     });
 
-    const text =
-      response.content
-        .filter((b) => b.type === "text")
-        .map((b) => ("text" in b ? (b as { text: string }).text : ""))
-        .join("") ?? "";
+    const text = response.content.filter(isTextBlock).map((b) => b.text).join("");
 
+    const rate = rateForModel(this.opts.model);
     const usdSpent =
-      response.usage.input_tokens * INPUT_USD_PER_TOKEN +
-      response.usage.output_tokens * OUTPUT_USD_PER_TOKEN;
+      response.usage.input_tokens * (rate.inputPer1M / 1_000_000) +
+      response.usage.output_tokens * (rate.outputPer1M / 1_000_000);
 
     return {
       text,

@@ -28,7 +28,11 @@ class BudgetedCachedClient implements ConnectorClient {
       if (cached !== null) return cached;
     }
 
-    const estimate = opts?.estimateUsd ?? 0.01;
+    const estimate =
+      opts?.estimateUsd ??
+      // Rough heuristic: total chars / 4 ≈ tokens, priced at conservative $0.015/1k input tokens.
+      // Upper-bound so the budget guard fires before a frontier call, not after.
+      (messages.reduce((sum, m) => sum + m.content.length, 0) / 4) * (0.015 / 1000);
     if (!this.budget.canSpend(estimate)) {
       return { text: "", usdSpent: 0, modelUsed: "none", llmQuality: "lower", cacheHit: false };
     }
@@ -40,14 +44,23 @@ class BudgetedCachedClient implements ConnectorClient {
     }
 
     if (this.cache !== null) {
-      await this.cache.set(this.model, messages, result);
+      try {
+        await this.cache.set(this.model, messages, result);
+      } catch {
+        // Non-fatal: cache write failed (e.g. disk full / permission error). Return the result anyway.
+      }
     }
 
     return result;
   }
 }
 
-function buildCache(llm: LyseConfig["llm"], opts: ResolveConnectorOptions): ResponseCache | null {
+function buildCache(
+  llm: LyseConfig["llm"],
+  opts: ResolveConnectorOptions,
+  flags: AuditFlags | undefined,
+): ResponseCache | null {
+  if (flags?.noCache === true) return null;
   const maxAgeDays = llm?.cacheMaxAgeDays;
   if (maxAgeDays === undefined || maxAgeDays <= 0) return null;
   return new ResponseCache({
@@ -80,7 +93,7 @@ export function resolveConnector(
   if (!llm?.provider && !llm?.connector) return new NoopAdapter();
 
   const budget = buildBudget(llm, flags, opts);
-  const cache = buildCache(llm, opts);
+  const cache = buildCache(llm, opts, flags);
 
   const provider = flags?.llmProvider ?? llm?.provider;
   const connector = llm?.connector;
@@ -170,6 +183,14 @@ export function resolveConnector(
       return new BudgetedCachedClient(adapter, budget, cache, oaiModel);
     }
     return new NoopAdapter();
+  }
+
+  if (provider === "mcp") {
+    return {
+      async complete(_messages: ChatMessage[], _opts?: CompleteOptions): Promise<ConnectorResult> {
+        throw new ConnectorNotImplementedError("mcp");
+      },
+    };
   }
 
   return new NoopAdapter();

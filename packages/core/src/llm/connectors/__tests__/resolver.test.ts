@@ -129,4 +129,40 @@ describe("resolveConnector", () => {
       client.complete([{ role: "user", content: "x" }]),
     ).rejects.toThrow("mcp-host");
   });
+
+  it("noCache: true — second identical call bypasses cache and calls transport again", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    const fetch = mockFetch("fresh-text");
+    const opts: ResolveConnectorOptions = {
+      budgetStatePath: tmpBudgetPath(),
+      cacheDir: tmpCacheDir(),
+      fetchFn: fetch as unknown as typeof globalThis.fetch,
+    };
+    const config: LyseConfig = {
+      llm: { provider: "openai", model: "gpt-4o-mini", cacheMaxAgeDays: 7 },
+    };
+
+    const msgs = [{ role: "user" as const, content: "hello" }];
+
+    const client1 = resolveConnector(config, { noCache: true }, opts);
+    const r1 = await client1.complete(msgs);
+    expect(r1.cacheHit).toBe(false);
+
+    const client2 = resolveConnector(config, { noCache: true }, opts);
+    const r2 = await client2.complete(msgs);
+    expect(r2.cacheHit).toBe(false);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("provider mcp throws ConnectorNotImplementedError", async () => {
+    const config: LyseConfig = { llm: { provider: "mcp" } };
+    const client = resolveConnector(config, undefined, {
+      budgetStatePath: tmpBudgetPath(),
+      cacheDir: tmpCacheDir(),
+    });
+    await expect(
+      client.complete([{ role: "user", content: "x" }]),
+    ).rejects.toThrow("mcp");
+  });
 });
