@@ -1,4 +1,3 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import fg from "fast-glob";
 import type {
@@ -12,12 +11,13 @@ import { createLyseRule } from "./_rule-module.js";
 import {
   isAiMarkerName,
   safeReadText,
+  COMPONENT_GLOB,
+  SCAN_IGNORE,
+  makeAllowlistCheck,
 } from "./ai-governance-ai-marker-component-present.js";
 
 const RULE_ID = "ai-governance/ai-content-live-region";
-const MAX_ALLOWLIST_FILE_BYTES = 1_000_000;
 const DISABLE_DIRECTIVE = `lyse-disable ${RULE_ID}`;
-
 const ALLOWLIST_CANDIDATES = [
   "README.md",
   "README",
@@ -27,33 +27,7 @@ const ALLOWLIST_CANDIDATES = [
   ".lyse.yml",
 ];
 
-const COMPONENT_GLOB = "**/*.{tsx,jsx,vue}";
-
-const IGNORE = [
-  "**/node_modules/**",
-  "**/dist/**",
-  "**/build/**",
-  "**/.git/**",
-  "**/.next/**",
-  "**/out/**",
-  "**/coverage/**",
-];
-
-function isAllowlisted(repoRoot: string): boolean {
-  for (const candidate of ALLOWLIST_CANDIDATES) {
-    const abs = join(repoRoot, candidate);
-    if (!existsSync(abs)) continue;
-    try {
-      const stat = statSync(abs);
-      if (!stat.isFile() || stat.size > MAX_ALLOWLIST_FILE_BYTES) continue;
-      const raw = readFileSync(abs, "utf8");
-      if (raw.includes(DISABLE_DIRECTIVE)) return true;
-    } catch {
-      // unreadable — fall through
-    }
-  }
-  return false;
-}
+const isAllowlisted = makeAllowlistCheck(DISABLE_DIRECTIVE);
 
 // Fix 3: match "AIResponse" or "ChatMessage" as a complete PascalCase segment
 // within a component tag name — not as an arbitrary substring.
@@ -235,7 +209,7 @@ const evaluate = async (
       cwd: ctx.repoRoot,
       absolute: false,
       dot: false,
-      ignore: IGNORE,
+      ignore: SCAN_IGNORE,
       onlyFiles: true,
       unique: true,
     });

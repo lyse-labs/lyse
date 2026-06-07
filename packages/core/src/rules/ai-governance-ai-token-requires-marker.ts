@@ -1,4 +1,3 @@
-import { existsSync, statSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import fg from "fast-glob";
 import type {
@@ -12,12 +11,17 @@ import type {
 } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { detectReservedAiTokens, isReservedTokenName } from "../parsers/ai-tokens.js";
-import { AI_MARKER_NAMES, isAiMarkerName } from "./ai-governance-ai-marker-component-present.js";
+import {
+  AI_MARKER_NAMES,
+  isAiMarkerName,
+  safeReadText,
+  COMPONENT_GLOB,
+  SCAN_IGNORE,
+  makeAllowlistCheck,
+} from "./ai-governance-ai-marker-component-present.js";
 
 const RULE_ID = "ai-governance/ai-token-requires-marker";
 const DISABLE_DIRECTIVE = `lyse-disable ${RULE_ID}`;
-const MAX_ALLOWLIST_FILE_BYTES = 1_000_000;
-
 const ALLOWLIST_CANDIDATES = [
   "README.md",
   "README",
@@ -27,35 +31,7 @@ const ALLOWLIST_CANDIDATES = [
   ".lyse.yml",
 ];
 
-function isAllowlisted(repoRoot: string): boolean {
-  for (const candidate of ALLOWLIST_CANDIDATES) {
-    const abs = join(repoRoot, candidate);
-    if (!existsSync(abs)) continue;
-    try {
-      const stat = statSync(abs);
-      if (!stat.isFile() || stat.size > MAX_ALLOWLIST_FILE_BYTES) continue;
-      const raw = readFileSync(abs, "utf8");
-      if (raw.includes(DISABLE_DIRECTIVE)) return true;
-    } catch {
-      // unreadable allowlist source — fall through
-    }
-  }
-  return false;
-}
-
-const COMPONENT_GLOB = "**/*.{tsx,jsx,vue}";
-
-const IGNORE = [
-  "**/node_modules/**",
-  "**/dist/**",
-  "**/build/**",
-  "**/.git/**",
-  "**/.next/**",
-  "**/out/**",
-  "**/coverage/**",
-];
-
-const MAX_FILE_BYTES = 1_000_000;
+const isAllowlisted = makeAllowlistCheck(DISABLE_DIRECTIVE);
 
 // Matches `var(--token-name)` CSS-in-JS / inline style references.
 const CSS_VAR_RE = /var\(\s*(--[a-zA-Z_][a-zA-Z0-9_-]*)\s*\)/g;
@@ -73,16 +49,6 @@ const JSX_TAG_RE = /<([A-Za-z][A-Za-z0-9_-]*)(?:\s|\/|>)/g;
 
 // Matches `data-ai` or `data-ai-*` attribute (explicit AI annotation).
 const DATA_AI_ATTR_RE = /\bdata-ai(?:-[a-z][a-z0-9-]*)?\b/;
-
-function safeReadText(absPath: string): string | null {
-  try {
-    const stat = statSync(absPath);
-    if (!stat.isFile() || stat.size > MAX_FILE_BYTES || stat.size === 0) return null;
-    return readFileSync(absPath, "utf8");
-  } catch {
-    return null;
-  }
-}
 
 interface ComponentAnalysis {
   usesReservedToken: boolean;
@@ -185,7 +151,7 @@ const evaluate = async (
       cwd: ctx.repoRoot,
       absolute: false,
       dot: false,
-      ignore: IGNORE,
+      ignore: SCAN_IGNORE,
       onlyFiles: true,
       unique: true,
     });
