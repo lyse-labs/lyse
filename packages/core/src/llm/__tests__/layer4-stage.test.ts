@@ -198,7 +198,7 @@ describe("runLayer4Stage — error handling", () => {
     expect(result.meta.error!.kind).toBe("ParseError");
   });
 
-  it("returns staticOnly:true when connector returns empty text (noop/over-budget)", async () => {
+  it("returns empty meta when connector returns empty text (noop/over-budget)", async () => {
     const repoRoot = makeRepoRoot();
     const noopConnector = mockConnector("", { usdSpent: 0, modelUsed: "none", llmQuality: "lower" as const });
 
@@ -208,6 +208,6 @@ describe("runLayer4Stage — error handling", () => {
     );
 
     expect(result.augmentedFindings).toHaveLength(0);
-    expect(result.meta.staticOnly).toBe(true);
+    expect(result.meta.staticOnly).toBeUndefined();
   });
 });

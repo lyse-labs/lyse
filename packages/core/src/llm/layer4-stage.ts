@@ -114,7 +114,7 @@ export async function runLayer4Stage(
   }
 
   if (connectorResult.text === "") {
-    return { augmentedFindings: [], meta: { staticOnly: true } };
+    return { augmentedFindings: [], meta: {} };
   }
 
   let parsed: LLMFindingsResponse;
