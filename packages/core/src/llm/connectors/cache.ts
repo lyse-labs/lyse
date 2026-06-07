@@ -28,7 +28,7 @@ export class ResponseCache {
   private isExpired(timestamp: string): boolean {
     const ageMs = Date.now() - new Date(timestamp).getTime();
     const ageDays = ageMs / (1000 * 60 * 60 * 24);
-    return ageDays > this.opts.maxAgeDays;
+    return ageDays >= this.opts.maxAgeDays;
   }
 
   async get(model: string, messages: ChatMessage[]): Promise<ConnectorResult | null> {
