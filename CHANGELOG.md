@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `mcp-host` stub — throws `ConnectorNotImplementedError` so Track 4.2 can detect and degrade gracefully.
   - `ResponseCache` — deterministic SHA-256 disk cache at `~/.cache/lyse/llm-responses/`, keyed on `{ model, messages }`, honoring `cacheMaxAgeDays`; cache hit sets `usdSpent: 0`.
   - `LLMBudget` wiring — `canSpend` pre-check + `record` post-call; over-budget calls return no-op result without throwing. API keys read from env only; no secrets logged. (Track 4.1 — closes lyse-labs/lyse-internal#54.)
+- **Layer 4 grader stage** (`packages/core/src/llm/layer4-stage.ts`): replaces the stub with a real LLM-powered augmentation pass. Resolves the Track 4.1 connector, builds a governance prompt from rubric dimensions, calls the LLM, and validates evidence. Ships with:
+  - `validateProposedFindings()` (`validator.ts`) — drops LLM-proposed findings whose cited file does not exist or whose snippet is not found in the file; path traversal attempts (`../../`) are also dropped. Count of dropped findings goes into `Layer4Meta.droppedHallucinations`.
+  - `RubricDimension` interface + empty stub (`rubric-stub.ts`) — Track 4.3 fills the real rubric.
+  - Graceful degradation: connector throws → `meta.error` set, audit continues with static score. Empty connector response (noop / over-budget) → empty `meta` with no augmented findings. `--static-only` / `config.llm.staticOnly` → `meta.staticOnly: true`.
+  - `Layer4StageOptions.connector` and `.rubricDimensions` injection points for deterministic tests (zero real network calls). (Track 4.2 — closes lyse-labs/lyse-internal#55.)
 
 ### Fixed
 
