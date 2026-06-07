@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **LLM connector resolver** (`packages/core/src/llm/connectors/`): `resolveConnector(config, flags, opts)` factory that routes audit runs to a uniform `ConnectorClient` interface or degrades to a no-op. Ships four implementations:
+  - `NoopAdapter` — safe default for `--static-only`, `provider: none`, unconfigured, or over-budget paths (zero cost, zero network).
+  - `OpenAICompatibleAdapter` — covers OpenAI, OpenRouter, and Ollama via a configurable `baseURL` and injectable `fetchFn` (no real network calls in tests).
+  - `AnthropicAdapter` — Anthropic `direct-api-key` via `@anthropic-ai/sdk` with injectable `fetch` option; default model `claude-sonnet-4-6`.
+  - `mcp-host` stub — throws `ConnectorNotImplementedError` so Track 4.2 can detect and degrade gracefully.
+  - `ResponseCache` — deterministic SHA-256 disk cache at `~/.cache/lyse/llm-responses/`, keyed on `{ model, messages }`, honoring `cacheMaxAgeDays`; cache hit sets `usdSpent: 0`.
+  - `LLMBudget` wiring — `canSpend` pre-check + `record` post-call; over-budget calls return no-op result without throwing. API keys read from env only; no secrets logged. (Track 4.1 — closes lyse-labs/lyse-internal#54.)
+
 ### Fixed
 
 - `ai-governance/explainability-affordance` (Track 3.5): affordance detection now requires AI co-location — only affordance components found in the **same file** as an AI-marker identifier are credited. A generic `ConfidenceDisplay` (health metric) or `SourcesPanel` (search results) in a file with no AI marker no longer earns `info`. Removes false-positive "governed" signals that arose from name-matching across unrelated files.
