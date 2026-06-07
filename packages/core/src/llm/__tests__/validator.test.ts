@@ -151,4 +151,25 @@ describe("validateProposedFindings", () => {
       suggestion: "Add AiMarker component",
     });
   });
+
+  it("drops finding with path traversal attempt", async () => {
+    const repoRoot = makeRepoRoot();
+    const outsideFile = join(tmpdir(), "secret.txt");
+    writeFileSync(outsideFile, "SECRET_KEY=abc123");
+
+    const proposed: ProposedFinding[] = [{
+      ruleId: "ai-governance/ai-loading-error-states",
+      axis: "ai-governance",
+      severity: "warning",
+      file: "../../secret.txt",
+      line: 1,
+      column: 1,
+      snippet: "SECRET_KEY=abc123",
+      message: "Traversal attempt",
+    }];
+
+    const result = await validateProposedFindings(proposed, repoRoot);
+    expect(result.findings).toHaveLength(0);
+    expect(result.droppedHallucinations).toBe(1);
+  });
 });

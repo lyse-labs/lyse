@@ -94,7 +94,7 @@ export async function runLayer4Stage(
   const dimensions = opts.rubricDimensions ?? getStubRubricDimensions();
 
   if (dimensions.length === 0) {
-    return { augmentedFindings: [], meta: { staticOnly: true } };
+    return { augmentedFindings: [], meta: {} };
   }
 
   const connector =

@@ -61,14 +61,14 @@ describe("runLayer4Stage — static-only paths", () => {
     expect(result.augmentedFindings).toHaveLength(0);
   });
 
-  it("returns staticOnly:true when rubric dimensions is empty", async () => {
+  it("returns empty meta when rubric dimensions is empty (no staticOnly flag)", async () => {
     const repoRoot = makeRepoRoot();
     const connector = mockConnector("{}");
     const result = await runLayer4Stage(
       { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
       { connector, rubricDimensions: [] },
     );
-    expect(result.meta.staticOnly).toBe(true);
+    expect(result.meta.staticOnly).toBeUndefined();
     expect(result.augmentedFindings).toHaveLength(0);
   });
 });

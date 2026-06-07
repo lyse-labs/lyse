@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import type { AxisName, Finding, Severity } from "../types.js";
 import type { RuleId } from "../types.js";
 
@@ -29,6 +29,10 @@ export async function validateProposedFindings(
 
   for (const p of proposed) {
     const absPath = join(repoRoot, p.file);
+    if (!absPath.startsWith(repoRoot + sep) && absPath !== repoRoot) {
+      droppedHallucinations++;
+      continue;
+    }
     let content: string;
     try {
       content = await readFile(absPath, "utf8");
