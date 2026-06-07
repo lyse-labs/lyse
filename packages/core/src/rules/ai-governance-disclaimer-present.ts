@@ -1,4 +1,3 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import fg from "fast-glob";
 import type {
@@ -13,10 +12,12 @@ import {
   AI_MARKER_NAMES,
   isAiMarkerName,
   safeReadText,
+  COMPONENT_GLOB,
+  SCAN_IGNORE,
+  makeAllowlistCheck,
 } from "./ai-governance-ai-marker-component-present.js";
 
 const RULE_ID = "ai-governance/disclaimer-present";
-const MAX_ALLOWLIST_FILE_BYTES = 1_000_000;
 const DISABLE_DIRECTIVE = `lyse-disable ${RULE_ID}`;
 
 // WHY separate constant: the exact GitLab Pajamas canonical wording is the
@@ -36,10 +37,20 @@ const DISCLAIMER_PHRASES: RegExp[] = [
   /\bpowered\s+by\s+ai\b/i,
 ];
 
-// WHY toLowerCase+includes: word-boundary `\b` fails inside compound PascalCase names
-// like AIDisclaimer where adjacent chars are all word characters.
+// WHY AI prefix check: generic legal/cookie/privacy disclaimers co-located
+// with an AI marker must not earn info credit — only AI-specific disclaimer
+// components count. Exact `Disclaimer` (standalone) is always AI-disclaimer
+// context; prefixed names must carry an AI-domain qualifier.
 function hasDisclaimerTagName(name: string): boolean {
-  return name.toLowerCase().includes("disclaimer");
+  const lower = name.toLowerCase();
+  if (!lower.includes("disclaimer")) return false;
+  if (lower === "disclaimer") return true;
+  return (
+    lower.startsWith("ai") ||
+    lower.startsWith("genai") ||
+    lower.startsWith("generative") ||
+    lower.startsWith("llm")
+  );
 }
 
 const ALLOWLIST_CANDIDATES = [
@@ -51,17 +62,7 @@ const ALLOWLIST_CANDIDATES = [
   ".lyse.yml",
 ];
 
-const COMPONENT_GLOB = "**/*.{tsx,jsx,vue}";
-
-const IGNORE = [
-  "**/node_modules/**",
-  "**/dist/**",
-  "**/build/**",
-  "**/.git/**",
-  "**/.next/**",
-  "**/out/**",
-  "**/coverage/**",
-];
+const isAllowlisted = makeAllowlistCheck(DISABLE_DIRECTIVE);
 
 interface DisclaimerResult {
   found: boolean;
@@ -90,22 +91,6 @@ export function detectAiMarkerInSource(source: string): boolean {
   return false;
 }
 
-function isAllowlisted(repoRoot: string): boolean {
-  for (const candidate of ALLOWLIST_CANDIDATES) {
-    const abs = join(repoRoot, candidate);
-    if (!existsSync(abs)) continue;
-    try {
-      const stat = statSync(abs);
-      if (!stat.isFile() || stat.size > MAX_ALLOWLIST_FILE_BYTES) continue;
-      const raw = readFileSync(abs, "utf8");
-      if (raw.includes(DISABLE_DIRECTIVE)) return true;
-    } catch {
-      // unreadable — fall through
-    }
-  }
-  return false;
-}
-
 const MAX_LISTED_FILES = 20;
 
 const evaluate = async (
@@ -123,7 +108,7 @@ const evaluate = async (
         cwd: ctx.repoRoot,
         absolute: false,
         dot: false,
-        ignore: IGNORE,
+        ignore: SCAN_IGNORE,
         onlyFiles: true,
         unique: true,
       })
@@ -192,16 +177,6 @@ const evaluate = async (
         `GitLab Pajamas canonical wording: "AI-generated content may be inaccurate. Always check important information."`,
     });
   }
-
-  findings.sort((a, b) => {
-    if (a.severity !== b.severity) {
-      return a.severity === "warning" ? -1 : 1;
-    }
-    const fa = a.location?.file ?? "";
-    const fb = b.location?.file ?? "";
-    if (fa !== fb) return fa < fb ? -1 : 1;
-    return (a.location?.line ?? 0) - (b.location?.line ?? 0);
-  });
 
   return { findings, opportunities: componentFiles.length };
 };

@@ -1,5 +1,3 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
 import type {
   Rule,
   RuleContext,
@@ -9,12 +7,11 @@ import type {
 } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { detectReservedAiTokens } from "../parsers/ai-tokens.js";
+import { makeAllowlistCheck } from "./ai-governance-ai-marker-component-present.js";
 
 const RULE_ID = "ai-governance/ai-tokens-reserved";
 const MAX_FINDING_NAMES = 20;
-const MAX_ALLOWLIST_FILE_BYTES = 1_000_000;
 const DISABLE_DIRECTIVE = `lyse-disable ${RULE_ID}`;
-
 const ALLOWLIST_CANDIDATES = [
   "README.md",
   "README",
@@ -24,21 +21,7 @@ const ALLOWLIST_CANDIDATES = [
   ".lyse.yml",
 ];
 
-function isAllowlisted(repoRoot: string): boolean {
-  for (const candidate of ALLOWLIST_CANDIDATES) {
-    const abs = join(repoRoot, candidate);
-    if (!existsSync(abs)) continue;
-    try {
-      const stat = statSync(abs);
-      if (!stat.isFile() || stat.size > MAX_ALLOWLIST_FILE_BYTES) continue;
-      const raw = readFileSync(abs, "utf8");
-      if (raw.includes(DISABLE_DIRECTIVE)) return true;
-    } catch {
-      // unreadable allowlist source — fall through
-    }
-  }
-  return false;
-}
+const isAllowlisted = makeAllowlistCheck(DISABLE_DIRECTIVE);
 
 const evaluate = async (
   ctx: RuleContext,

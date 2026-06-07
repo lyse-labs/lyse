@@ -11,11 +11,11 @@ import type {
 import { createLyseRule } from "./_rule-module.js";
 import {
   scanForMarkerComponents,
+  makeAllowlistCheck,
 } from "./ai-governance-ai-marker-component-present.js";
 import { detectReservedAiTokens } from "../parsers/ai-tokens.js";
 
 const RULE_ID = "ai-governance/value-gate-doc-present";
-const MAX_ALLOWLIST_FILE_BYTES = 1_000_000;
 const MAX_DOC_BYTES = 500_000;
 const DISABLE_DIRECTIVE = `lyse-disable ${RULE_ID}`;
 
@@ -47,7 +47,15 @@ const DOC_GLOBS = [
   "**/AI_GOVERNANCE.md",
 ];
 
-const IGNORE = ["**/node_modules/**", "**/dist/**", "**/build/**", "**/.git/**"];
+const IGNORE = [
+  "**/node_modules/**",
+  "**/dist/**",
+  "**/build/**",
+  "**/.git/**",
+  "**/.next/**",
+  "**/out/**",
+  "**/coverage/**",
+];
 
 // Gate-language patterns modelled on ServiceNow "10-Q" value gate.
 // Each pattern targets a distinct phrasing family; case-insensitive.
@@ -113,21 +121,7 @@ export function discoverGateDoc(repoRoot: string): GateDocResult | null {
   return null;
 }
 
-function isAllowlisted(repoRoot: string): boolean {
-  for (const candidate of ALLOWLIST_CANDIDATES) {
-    const abs = join(repoRoot, candidate);
-    if (!existsSync(abs)) continue;
-    try {
-      const stat = statSync(abs);
-      if (!stat.isFile() || stat.size > MAX_ALLOWLIST_FILE_BYTES) continue;
-      const raw = readFileSync(abs, "utf8");
-      if (raw.includes(DISABLE_DIRECTIVE)) return true;
-    } catch {
-      // unreadable — fall through
-    }
-  }
-  return false;
-}
+const isAllowlisted = makeAllowlistCheck(DISABLE_DIRECTIVE);
 
 function hasAiSurface(repoRoot: string): boolean {
   const markerComponents = scanForMarkerComponents(repoRoot);
@@ -232,7 +226,7 @@ Follow the design tokens from the \`ai\` namespace.`,
       "repos containing `lyse-disable ai-governance/value-gate-doc-present` in README, README.md, README.mdx, readme.md, .lyse.yaml, or .lyse.yml — rule is N/A",
       "DSs with no AI surface (no AI-marker component and no reserved AI tokens) — rule emits nothing",
       "doc files larger than 500 KB — skipped to avoid pathological cases",
-      "files under `node_modules/`, `dist/`, `build/`, `.git/`",
+      "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`",
     ],
   },
   defaultOptions: [],

@@ -19,12 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `ai-governance/ai-marker-anti-patterns` (Track 3.4): sparkle check now gated on AI context — `detectSparkleOnlyMarker` is only evaluated when the source file has an AI-marker name (exported component or JSX tag matching the AI-marker vocabulary). A decorative `✨` in a `HeroBanner` or marketing component with no AI context no longer triggers a false warning. Anti-pattern B (`"AI"` in CTA labels) is unchanged and always evaluated. Regression test: `HeroBanner.tsx` with `<div>✨ Welcome!</div>` → 0 findings.
+- `ai-governance/disclaimer-present` (Track 3.9): `*Disclaimer*` tag match narrowed to AI-specific disclaimers — `CookieDisclaimer`, `LegalDisclaimer`, and `PrivacyDisclaimer` co-located with an AI marker no longer falsely earn `info` credit. Only components whose name starts with `ai`, `genai`, `generative`, or `llm`, or the bare name `Disclaimer`, are counted as AI disclaimers. Disclaimer-text phrase matching is unchanged. Regression tests: `AIBadge + CookieDisclaimer` → `warning`; `AILabel + LegalDisclaimer` → `warning`.
+- `ai-governance/human-control-affordances` (Track 3.6): removed `"edit"` from `PER_OUTPUT_LABELS` — a generic `<button>Edit</button>` (e.g. an inline form field editor) is too common to reliably signal an AI-output correction control. Compound `EditResponse`/`EditOutput` exported names remain credited via `PER_OUTPUT_NAME_PATTERNS`. Regression test: AI-marker file with only `<button>Edit</button>` → `warning`.
+- `ai-governance/value-gate-doc-present` (Track 3.11): `fg.sync` IGNORE list for doc discovery was missing `**/.next/**`, `**/out/**`, and `**/coverage/**` — the rule could scan generated directories. Updated to the full 7-entry list matching `parsers/ai-tokens.ts` and sibling rules.
+- `types.ts`: all 11 `ai-governance/*` rule IDs added to `BuiltInRuleId` union for type-safety and autocomplete (`RuleId = BuiltInRuleId | string` so this is purely additive).
 - `ai-governance/explainability-affordance` (Track 3.5): affordance detection now requires AI co-location — only affordance components found in the **same file** as an AI-marker identifier are credited. A generic `ConfidenceDisplay` (health metric) or `SourcesPanel` (search results) in a file with no AI marker no longer earns `info`. Removes false-positive "governed" signals that arose from name-matching across unrelated files.
 
 ### Documentation
 
 - Added a **Limitations** section to `docs/rules/ai-governance-explainability-affordance.md` and `docs/rules/ai-governance-human-control-affordances.md` noting that detection is static + name/co-location based; behavioral verification (affordance wired to AI output at every render site) is deferred to Track 4.
 ### Changed
+
+- **Track 3 DRY + perf refactor (internal, no behavior change):** consolidated 11 duplicate `isAllowlisted` functions, `COMPONENT_GLOB`, `SCAN_IGNORE`, `fileHasAiMarker`, `deriveComponentNameFromPath`, and `safeReadText` copies into the shared hub `ai-governance-ai-marker-component-present`. Added `makeAllowlistCheck` factory. `feedback-control-present` and `explainability-affordance` now glob the component tree once per `evaluate` call instead of twice. Removed redundant `findings.sort()` in `ai-loading-error-states` and `disclaimer-present` (rule-runner re-sorts globally). No change to rule outputs, findings content, or test assertions. Refs lyse-labs/lyse-internal#15.
 
 - `ai-governance/disclaimer-present` and `ai-governance/ai-content-live-region`: the
   `warning` path now emits a single **aggregate** repo-level finding that lists all

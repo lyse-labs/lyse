@@ -1,4 +1,3 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import fg from "fast-glob";
 import type {
@@ -14,26 +13,17 @@ import {
   extractNamesFromSource,
   extractVueNames,
   safeReadText,
+  COMPONENT_GLOB,
+  SCAN_IGNORE,
+  fileHasAiMarker,
+  deriveComponentNameFromPath,
+  scanForMarkerComponents,
+  makeAllowlistCheck,
 } from "./ai-governance-ai-marker-component-present.js";
-
-// Returns true when a file's source contains an AI-marker identifier or JSX tag.
-// Mirrors the same helper in ai-governance-human-control-affordances.ts.
-function fileHasAiMarker(source: string, relPath: string): boolean {
-  const names = relPath.endsWith(".vue")
-    ? extractVueNames(source)
-    : extractNamesFromSource(source);
-  if (names.some((n) => isAiMarkerName(n))) return true;
-  for (const m of source.matchAll(/<\s*([A-Za-z][\w.-]*)/g)) {
-    if (m[1] && isAiMarkerName(m[1])) return true;
-  }
-  return false;
-}
 
 const RULE_ID = "ai-governance/explainability-affordance";
 
-const MAX_ALLOWLIST_FILE_BYTES = 1_000_000;
 const DISABLE_DIRECTIVE = `lyse-disable ${RULE_ID}`;
-
 const ALLOWLIST_CANDIDATES = [
   "README.md",
   "README",
@@ -41,25 +31,6 @@ const ALLOWLIST_CANDIDATES = [
   "readme.md",
   ".lyse.yaml",
   ".lyse.yml",
-];
-
-const COMPONENT_GLOB = "**/*.{tsx,jsx,vue}";
-
-const IGNORE = [
-  "**/node_modules/**",
-  "**/dist/**",
-  "**/build/**",
-  "**/.git/**",
-  "**/.next/**",
-  "**/out/**",
-  "**/coverage/**",
-];
-
-const INDEX_CANDIDATES = [
-  "src/index.ts",
-  "src/index.tsx",
-  "index.ts",
-  "index.tsx",
 ];
 
 // Name-based affordance detection patterns (case-insensitive substring match).
@@ -77,27 +48,7 @@ const AFFORDANCE_PATTERNS = [
 const ARIA_POPOVER_RE =
   /\baria-describedby\s*=|role\s*=\s*["'](?:dialog|tooltip)["']/i;
 
-function isAllowlisted(repoRoot: string): boolean {
-  for (const candidate of ALLOWLIST_CANDIDATES) {
-    const abs = join(repoRoot, candidate);
-    if (!existsSync(abs)) continue;
-    try {
-      const stat = statSync(abs);
-      if (!stat.isFile() || stat.size > MAX_ALLOWLIST_FILE_BYTES) continue;
-      const raw = readFileSync(abs, "utf8");
-      if (raw.includes(DISABLE_DIRECTIVE)) return true;
-    } catch {
-      // unreadable allowlist source — fall through
-    }
-  }
-  return false;
-}
-
-function deriveNameFromPath(relPath: string): string {
-  const parts = relPath.split("/");
-  const file = parts[parts.length - 1] ?? "";
-  return file.replace(/\.(tsx|jsx|vue|ts)$/, "");
-}
+const isAllowlisted = makeAllowlistCheck(DISABLE_DIRECTIVE);
 
 export function isExplainabilityAffordanceName(name: string): boolean {
   const lower = name.toLowerCase();
@@ -109,25 +60,31 @@ export function isMarkerWithPopover(name: string, source: string): boolean {
   return ARIA_POPOVER_RE.test(source);
 }
 
-export function scanForExplainabilityAffordances(repoRoot: string): string[] {
+// Accepts an optional pre-computed file list to avoid a second glob in evaluate.
+export function scanForExplainabilityAffordances(repoRoot: string, files?: string[]): string[] {
   const found: string[] = [];
 
-  let componentFiles: string[] = [];
-  try {
-    componentFiles = fg.sync(COMPONENT_GLOB, {
-      cwd: repoRoot,
-      absolute: false,
-      dot: false,
-      ignore: IGNORE,
-      onlyFiles: true,
-      unique: true,
-    });
-  } catch {
-    // non-fatal
+  let componentFiles: string[];
+  if (files !== undefined) {
+    componentFiles = files;
+  } else {
+    componentFiles = [];
+    try {
+      componentFiles = fg.sync(COMPONENT_GLOB, {
+        cwd: repoRoot,
+        absolute: false,
+        dot: false,
+        ignore: SCAN_IGNORE,
+        onlyFiles: true,
+        unique: true,
+      });
+    } catch {
+      // non-fatal
+    }
   }
 
   for (const rel of componentFiles) {
-    const baseName = deriveNameFromPath(rel);
+    const baseName = deriveComponentNameFromPath(rel);
     const source = safeReadText(join(repoRoot, rel));
     if (!source) continue;
 
@@ -167,46 +124,6 @@ export function scanForExplainabilityAffordances(repoRoot: string): string[] {
   return deduped.sort();
 }
 
-export function scanForAiMarkers(repoRoot: string): boolean {
-  for (const candidate of INDEX_CANDIDATES) {
-    const abs = join(repoRoot, candidate);
-    const source = safeReadText(abs);
-    if (!source) continue;
-    for (const name of extractNamesFromSource(source)) {
-      if (isAiMarkerName(name)) return true;
-    }
-  }
-
-  let componentFiles: string[] = [];
-  try {
-    componentFiles = fg.sync(COMPONENT_GLOB, {
-      cwd: repoRoot,
-      absolute: false,
-      dot: false,
-      ignore: IGNORE,
-      onlyFiles: true,
-      unique: true,
-    });
-  } catch {
-    return false;
-  }
-
-  for (const rel of componentFiles) {
-    const baseName = deriveNameFromPath(rel);
-    if (isAiMarkerName(baseName)) return true;
-    const source = safeReadText(join(repoRoot, rel));
-    if (!source) continue;
-    const names = rel.endsWith(".vue")
-      ? extractVueNames(source)
-      : extractNamesFromSource(source);
-    for (const name of names) {
-      if (isAiMarkerName(name)) return true;
-    }
-  }
-
-  return false;
-}
-
 const evaluate = async (
   ctx: RuleContext,
   _files: ParsedFiles,
@@ -219,12 +136,26 @@ const evaluate = async (
     return { findings, opportunities: 0 };
   }
 
-  const markerPresent = scanForAiMarkers(ctx.repoRoot);
-  if (!markerPresent) {
+  // Glob once — reuse file list for the marker gate check and affordance scan.
+  let componentFiles: string[] = [];
+  try {
+    componentFiles = fg.sync(COMPONENT_GLOB, {
+      cwd: ctx.repoRoot,
+      absolute: false,
+      dot: false,
+      ignore: SCAN_IGNORE,
+      onlyFiles: true,
+      unique: true,
+    });
+  } catch {
+    // non-fatal
+  }
+
+  if (scanForMarkerComponents(ctx.repoRoot).length === 0) {
     return { findings, opportunities: 0 };
   }
 
-  const affordances = scanForExplainabilityAffordances(ctx.repoRoot);
+  const affordances = scanForExplainabilityAffordances(ctx.repoRoot, componentFiles);
 
   if (affordances.length > 0) {
     const list = affordances.join(", ");
@@ -303,7 +234,6 @@ export const _internal = {
   isExplainabilityAffordanceName,
   isMarkerWithPopover,
   scanForExplainabilityAffordances,
-  scanForAiMarkers,
   AFFORDANCE_PATTERNS,
   DISABLE_DIRECTIVE,
   ALLOWLIST_CANDIDATES,
