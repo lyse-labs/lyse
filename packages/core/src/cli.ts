@@ -30,6 +30,7 @@ import { auditDirectory, RefuseToRunError } from "./commands/audit-pipeline.js";
 import type { AuditFlags } from "./commands/audit-pipeline.js";
 import { runShare } from "./commands/share.js";
 import { runInit } from "./commands/init.js";
+import { runAddCiGate, AddCiGateError } from "./commands/add-ci-gate.js";
 import { maybePromptForEmail, syncPendingEmail } from "./commands/email-prompt.js";
 import { runMcpSetup } from "./commands/mcp-setup.js";
 import { appendAuditEvent, appendCommandInvokedEvent } from "./history/ndjson-store.js";
@@ -794,6 +795,51 @@ const initCommand = defineCommand({
   },
 });
 
+const addCommand = defineCommand({
+  meta: { name: "add", description: "Add a Lyse feature to your repo (CI gate, etc.)" },
+  subCommands: {
+    "ci-gate": defineCommand({
+      meta: {
+        name: "ci-gate",
+        description: "Install the Lyse score-regression CI gate (.github/workflows/lyse.yml + .github/scripts/lyse-gate.mjs)",
+      },
+      args: {
+        path: { type: "positional", required: false, default: ".", description: "repository root" },
+        threshold: { type: "string", description: "max allowed score drop before the gate fails (default 0)" },
+        "lyse-version": { type: "string", description: "Lyse CLI version the workflow should pin (default: alpha)" },
+        force: { type: "boolean", default: false, description: "overwrite existing files" },
+        ...GLOBAL_FLAGS,
+      },
+      async run({ args }) {
+        applyGlobalFlags(args);
+        const cwd = resolve(String(args.path ?? "."));
+        try {
+          const opts: Parameters<typeof runAddCiGate>[0] = { cwd };
+          if (typeof args.threshold === "string") opts.threshold = Number(args.threshold);
+          if (typeof args["lyse-version"] === "string") opts.lyseVersion = args["lyse-version"];
+          if (args.force === true) opts.force = true;
+          const result = runAddCiGate(opts);
+          if (args.quiet !== true) {
+            for (const p of result.written) process.stdout.write(`Wrote ${p}\n`);
+            for (const s of result.skipped) process.stdout.write(`Skipped ${s.path} — ${s.reason}\n`);
+            if (result.written.length > 0) {
+              process.stdout.write(
+                "\nNext: commit these files and open a PR. Lyse will audit every subsequent PR.\n",
+              );
+            }
+          }
+        } catch (e) {
+          if (e instanceof AddCiGateError) {
+            process.stderr.write(`lyse add ci-gate: ${e.message}\n`);
+            process.exit(2);
+          }
+          throw e;
+        }
+      },
+    }),
+  },
+});
+
 const feedbackCommand = defineCommand({
   meta: {
     name: "feedback",
@@ -932,7 +978,7 @@ const main = defineCommand({
     quiet: { type: "boolean", description: "Suppress informational output" },
     "no-menu": { type: "boolean", description: "Skip the interactive menu (print help instead)" },
   },
-  subCommands: { init: initCommand, audit: auditCommand, fix: fixCommand, share: shareCommand, agents: agentsCommand, "agents-md": agentsMdCommand, "bench-pack": benchPackCommand, version: versionCommand, explain: explainCommand, mcp: mcpCommand, feedback: feedbackCommand, telemetry: telemetryCommand },
+  subCommands: { init: initCommand, audit: auditCommand, fix: fixCommand, add: addCommand, share: shareCommand, agents: agentsCommand, "agents-md": agentsMdCommand, "bench-pack": benchPackCommand, version: versionCommand, explain: explainCommand, mcp: mcpCommand, feedback: feedbackCommand, telemetry: telemetryCommand },
   async run({ args, cmd, rawArgs }) {
     applyGlobalFlags(args);
 

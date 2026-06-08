@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`lyse add ci-gate`** — new CLI command that installs the Lyse
+  score-regression CI gate into any repo. Drops
+  `.github/workflows/lyse.yml` (audits PR + main, posts a markdown
+  comment, fails on regression) and `.github/scripts/lyse-gate.mjs` (the
+  comparator). Supports `--threshold=N` (max allowed score drop, default
+  `0`), `--lyse-version=<v>` (pin the CLI version the workflow uses,
+  default `alpha`), and `--force` (overwrite existing files). Templates
+  are inlined in the command file so they survive the npm publish
+  pipeline. Workflow handles fork PRs (skips the comment, read-only
+  GITHUB_TOKEN), unbuildable `main` (gate skipped, baseline-unavailable
+  comment posted instead of failing every PR), and concurrent pushes
+  (`concurrency:` group cancels stale runs). Validated end-to-end on
+  `lyse-labs/lyse-playground`.
 - **LLM connector resolver** (`packages/core/src/llm/connectors/`): `resolveConnector(config, flags, opts)` factory that routes audit runs to a uniform `ConnectorClient` interface or degrades to a no-op. Ships four implementations:
   - `NoopAdapter` — safe default for `--static-only`, `provider: none`, unconfigured, or over-budget paths (zero cost, zero network).
   - `OpenAICompatibleAdapter` — covers OpenAI, OpenRouter, and Ollama via a configurable `baseURL` and injectable `fetchFn` (no real network calls in tests).
