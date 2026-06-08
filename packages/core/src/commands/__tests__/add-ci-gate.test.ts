@@ -3,11 +3,17 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runAddCiGate, AddCiGateError, CI_GATE_DEFAULTS } from "../add-ci-gate.js";
+import { VERSION } from "../../index.js";
 
 let tmp: string;
 
+function markAsRepo(dir: string): void {
+  writeFileSync(join(dir, "package.json"), '{"name": "test"}\n');
+}
+
 beforeEach(() => {
   tmp = mkdtempSync(join(tmpdir(), "lyse-add-ci-gate-"));
+  markAsRepo(tmp);
 });
 
 afterEach(() => {
@@ -38,6 +44,68 @@ describe("runAddCiGate", () => {
     const wf = readFileSync(join(tmp, ".github/workflows/lyse.yml"), "utf8");
     expect(wf).toContain(`LYSE_VERSION: "${CI_GATE_DEFAULTS.lyseVersion}"`);
     expect(wf).toContain(`GATE_THRESHOLD: "${CI_GATE_DEFAULTS.threshold}"`);
+  });
+
+  it("default lyseVersion is the running CLI version (not a moving tag like `alpha`)", () => {
+    expect(CI_GATE_DEFAULTS.lyseVersion).toBe(VERSION);
+    runAddCiGate({ cwd: tmp });
+    const wf = readFileSync(join(tmp, ".github/workflows/lyse.yml"), "utf8");
+    expect(wf).toContain(`LYSE_VERSION: "${VERSION}"`);
+  });
+
+  it("rejects empty --lyse-version", () => {
+    expect(() => runAddCiGate({ cwd: tmp, lyseVersion: "" })).toThrow(AddCiGateError);
+    expect(() => runAddCiGate({ cwd: tmp, lyseVersion: "" })).toThrow(/non-empty string/);
+  });
+
+  it("rejects --lyse-version containing shell metacharacters", () => {
+    expect(() => runAddCiGate({ cwd: tmp, lyseVersion: "1.0.0; rm -rf /" })).toThrow(AddCiGateError);
+    expect(() => runAddCiGate({ cwd: tmp, lyseVersion: "1.0.0 $(id)" })).toThrow(/invalid format/);
+    expect(() => runAddCiGate({ cwd: tmp, lyseVersion: "v1`whoami`" })).toThrow(/invalid format/);
+  });
+
+  it("accepts well-formed --lyse-version values (semver, dist-tag)", () => {
+    expect(() => runAddCiGate({ cwd: tmp, lyseVersion: "0.1.0-alpha.2", force: true })).not.toThrow();
+    expect(() => runAddCiGate({ cwd: tmp, lyseVersion: "latest", force: true })).not.toThrow();
+    expect(() => runAddCiGate({ cwd: tmp, lyseVersion: "alpha", force: true })).not.toThrow();
+  });
+
+  it("throws when target dir has neither .git/ nor package.json", () => {
+    const bare = mkdtempSync(join(tmpdir(), "lyse-add-ci-gate-bare-"));
+    try {
+      expect(() => runAddCiGate({ cwd: bare })).toThrow(AddCiGateError);
+      expect(() => runAddCiGate({ cwd: bare })).toThrow(/not a project root/);
+      expect(() => runAddCiGate({ cwd: bare })).toThrow(/--force-not-a-repo/);
+    } finally {
+      rmSync(bare, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts a git-only project root (no package.json)", () => {
+    const gitOnly = mkdtempSync(join(tmpdir(), "lyse-add-ci-gate-git-"));
+    try {
+      mkdirSync(join(gitOnly, ".git"));
+      expect(() => runAddCiGate({ cwd: gitOnly })).not.toThrow();
+      expect(existsSync(join(gitOnly, ".github/workflows/lyse.yml"))).toBe(true);
+    } finally {
+      rmSync(gitOnly, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts a package.json-only project root (no .git/)", () => {
+    // `tmp` itself is package.json-only thanks to the beforeEach marker.
+    expect(() => runAddCiGate({ cwd: tmp })).not.toThrow();
+    expect(existsSync(join(tmp, ".github/workflows/lyse.yml"))).toBe(true);
+  });
+
+  it("forceNotARepo bypasses the project-root check", () => {
+    const bare = mkdtempSync(join(tmpdir(), "lyse-add-ci-gate-bare-"));
+    try {
+      expect(() => runAddCiGate({ cwd: bare, forceNotARepo: true })).not.toThrow();
+      expect(existsSync(join(bare, ".github/workflows/lyse.yml"))).toBe(true);
+    } finally {
+      rmSync(bare, { recursive: true, force: true });
+    }
   });
 
   it("refuses to overwrite existing files without --force", () => {

@@ -32,6 +32,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`lyse add ci-gate` — 3 critical bugs from code review**:
+  - `--lyse-version=""` (empty string) was silently accepted and produced a
+    broken `LYSE_VERSION: ""` in the generated workflow, causing
+    `npx --yes @lyse-labs/lyse@` to fail in CI. Empty values are now
+    rejected with a clear error, and values are validated against
+    `/^[\w.-]+$/` to reject shell-metacharacter injection (defense in
+    depth — the workflow already double-quotes the value).
+  - Default `lyseVersion` was the moving dist-tag `"alpha"`, which
+    contradicted the workflow's own comment warning against moving tags
+    (the gate runs `lyse audit` twice and a tag that moves between calls
+    produces non-comparable reports). The default is now the version of
+    the CLI running the command (`VERSION` from `../index.js`), pinning
+    both audits to the same scorer + rule set.
+  - `lyse add ci-gate /etc` (or `~`) would silently write
+    `.github/workflows/lyse.yml` into any directory. Now refuses to write
+    if `cwd` contains neither `.git/` nor `package.json` and surfaces a
+    clear error pointing at the new `--force-not-a-repo` flag to bypass
+    the check intentionally.
 - `ai-governance/ai-marker-anti-patterns` (Track 3.4): sparkle check now gated on AI context — `detectSparkleOnlyMarker` is only evaluated when the source file has an AI-marker name (exported component or JSX tag matching the AI-marker vocabulary). A decorative `✨` in a `HeroBanner` or marketing component with no AI context no longer triggers a false warning. Anti-pattern B (`"AI"` in CTA labels) is unchanged and always evaluated. Regression test: `HeroBanner.tsx` with `<div>✨ Welcome!</div>` → 0 findings.
 - `ai-governance/disclaimer-present` (Track 3.9): `*Disclaimer*` tag match narrowed to AI-specific disclaimers — `CookieDisclaimer`, `LegalDisclaimer`, and `PrivacyDisclaimer` co-located with an AI marker no longer falsely earn `info` credit. Only components whose name starts with `ai`, `genai`, `generative`, or `llm`, or the bare name `Disclaimer`, are counted as AI disclaimers. Disclaimer-text phrase matching is unchanged. Regression tests: `AIBadge + CookieDisclaimer` → `warning`; `AILabel + LegalDisclaimer` → `warning`.
 - `ai-governance/human-control-affordances` (Track 3.6): removed `"edit"` from `PER_OUTPUT_LABELS` — a generic `<button>Edit</button>` (e.g. an inline form field editor) is too common to reliably signal an AI-output correction control. Compound `EditResponse`/`EditOutput` exported names remain credited via `PER_OUTPUT_NAME_PATTERNS`. Regression test: AI-marker file with only `<button>Edit</button>` → `warning`.

@@ -9,6 +9,7 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
+import { VERSION } from "../index.js";
 
 export interface AddCiGateOptions {
   /** Repo root where the .github/ folder should land. */
@@ -19,6 +20,8 @@ export interface AddCiGateOptions {
   threshold?: number;
   /** Overwrite existing files instead of refusing. */
   force?: boolean;
+  /** Bypass the project-root check (.git/ or package.json). */
+  forceNotARepo?: boolean;
 }
 
 export interface AddCiGateResult {
@@ -28,8 +31,19 @@ export interface AddCiGateResult {
 
 export class AddCiGateError extends Error {}
 
+// Matches the chars npm/semver versions and dist-tags use. Intentionally
+// strict to keep the value safe to interpolate into a shell command in the
+// generated workflow (defense in depth — the workflow does double-quote it).
+const LYSE_VERSION_PATTERN = /^[\w.-]+$/;
+
 export const CI_GATE_DEFAULTS = {
-  lyseVersion: "alpha",
+  // Default to the version of the CLI running this command. Pinning is
+  // important because the workflow runs `lyse audit` twice in a row and a
+  // moving tag like `@alpha` can update between the two calls, producing
+  // non-comparable reports.
+  get lyseVersion(): string {
+    return VERSION;
+  },
   threshold: 0,
 } as const;
 
@@ -39,6 +53,28 @@ export function runAddCiGate(opts: AddCiGateOptions): AddCiGateResult {
     throw new AddCiGateError(`Target directory does not exist: ${cwd}`);
   }
 
+  if (opts.forceNotARepo !== true) {
+    const hasGit = existsSync(join(cwd, ".git"));
+    const hasPkg = existsSync(join(cwd, "package.json"));
+    if (!hasGit && !hasPkg) {
+      throw new AddCiGateError(
+        `Target directory ${cwd} is not a project root (no .git/ or package.json found).\n` +
+          `If this is intentional, pass --force-not-a-repo.`,
+      );
+    }
+  }
+
+  if (opts.lyseVersion !== undefined) {
+    if (typeof opts.lyseVersion !== "string" || opts.lyseVersion.length === 0) {
+      throw new AddCiGateError(`--lyse-version must be a non-empty string`);
+    }
+    if (!LYSE_VERSION_PATTERN.test(opts.lyseVersion)) {
+      throw new AddCiGateError(
+        `--lyse-version has an invalid format (got: ${JSON.stringify(opts.lyseVersion)}). ` +
+          `Expected characters matching ${LYSE_VERSION_PATTERN} (e.g. "0.1.0-alpha.2", "alpha", "latest").`,
+      );
+    }
+  }
   const lyseVersion = opts.lyseVersion ?? CI_GATE_DEFAULTS.lyseVersion;
   const threshold = opts.threshold ?? CI_GATE_DEFAULTS.threshold;
   if (!Number.isFinite(threshold) || threshold < 0) {
