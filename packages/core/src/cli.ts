@@ -806,8 +806,13 @@ const addCommand = defineCommand({
       args: {
         path: { type: "positional", required: false, default: ".", description: "repository root" },
         threshold: { type: "string", description: "max allowed score drop before the gate fails (default 0)" },
-        "lyse-version": { type: "string", description: "Lyse CLI version the workflow should pin (default: alpha)" },
+        "lyse-version": { type: "string", description: "Lyse CLI version the workflow should pin (default: the running CLI version)" },
         force: { type: "boolean", default: false, description: "overwrite existing files" },
+        "force-not-a-repo": {
+          type: "boolean",
+          default: false,
+          description: "bypass the .git/ or package.json project-root check",
+        },
         ...GLOBAL_FLAGS,
       },
       async run({ args }) {
@@ -818,6 +823,7 @@ const addCommand = defineCommand({
           if (typeof args.threshold === "string") opts.threshold = Number(args.threshold);
           if (typeof args["lyse-version"] === "string") opts.lyseVersion = args["lyse-version"];
           if (args.force === true) opts.force = true;
+          if (args["force-not-a-repo"] === true) opts.forceNotARepo = true;
           const result = runAddCiGate(opts);
           if (args.quiet !== true) {
             for (const p of result.written) process.stdout.write(`Wrote ${p}\n`);
