@@ -1,0 +1,157 @@
+name: Lyse self-audit (dogfood)
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+# Dogfood: build the lyse CLI from this repo and audit our canonical
+# fixture DS (`packages/core/fixtures/full-ds`). The gate fails the PR if
+# the Health Score drops below `main_score - threshold` (default 0).
+env:
+  AUDIT_TARGET: "packages/core/fixtures/full-ds"
+
+concurrency:
+  group: lyse-self-audit-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  audit-push:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @lyse-labs/lyse build
+      - name: Lyse self-audit
+        run: node packages/core/dist/cli.js audit "$AUDIT_TARGET" --format=json > lyse-report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lyse-self-report-main
+          path: lyse-report.json
+
+  gate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          path: main
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: |
+            pr/pnpm-lock.yaml
+            main/pnpm-lock.yaml
+
+      - name: Build + audit PR
+        working-directory: pr
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm -F @lyse-labs/lyse build
+          node packages/core/dist/cli.js audit "$AUDIT_TARGET" --format=json > ../pr-report.json
+
+      # Best-effort baseline: if main does not build / does not audit, the
+      # gate is skipped (not failed) so the PR fixing main does not get
+      # blocked. The PR comment surfaces "baseline unavailable" instead.
+      - name: Build + audit main (best-effort baseline)
+        id: audit_main
+        working-directory: main
+        run: |
+          set +e
+          pnpm install --frozen-lockfile && \
+            pnpm -F @lyse-labs/lyse build && \
+            node packages/core/dist/cli.js audit "$AUDIT_TARGET" --format=json > ../main-report.json
+          echo "ok=$?" >> $GITHUB_OUTPUT
+
+      - name: Run gate
+        id: gate
+        if: steps.audit_main.outputs.ok == '0'
+        run: node pr/.github/scripts/lyse-gate.mjs main-report.json pr-report.json > comment.md
+        continue-on-error: true
+
+      - name: Build baseline-unavailable comment
+        if: steps.audit_main.outputs.ok != '0'
+        run: |
+          cat > comment.md <<'MD'
+          ## ❓ Lyse self-audit — baseline unavailable
+
+          Could not build/audit `main` to compute a regression baseline.
+          The PR was audited (artifact attached) but the gate is **skipped**
+          for this run. This usually means `main` does not currently build —
+          investigate separately.
+          MD
+
+      # Fork PRs get a read-only GITHUB_TOKEN regardless of `permissions:`,
+      # so we skip the comment step rather than fail the workflow.
+      - name: Detect fork PR
+        id: fork_check
+        run: |
+          IS_FORK="${{ github.event.pull_request.head.repo.full_name != github.repository }}"
+          echo "is_fork=$IS_FORK" >> $GITHUB_OUTPUT
+
+      - name: Post PR comment
+        if: always() && steps.fork_check.outputs.is_fork == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          MARKER='<!-- lyse-self-gate-comment -->'
+          printf '%s\n' "$MARKER" > comment-with-marker.md
+          cat comment.md >> comment-with-marker.md
+          EXISTING=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\") | select(.body | startswith(\"$MARKER\")) | .id" \
+            | head -1)
+          BODY_JSON=$(jq -Rs '{body: .}' < comment-with-marker.md)
+          if [ -n "$EXISTING" ]; then
+            printf '%s' "$BODY_JSON" | gh api -X PATCH "repos/$REPO/issues/comments/$EXISTING" --input -
+          else
+            printf '%s' "$BODY_JSON" | gh api -X POST "repos/$REPO/issues/$PR_NUMBER/comments" --input -
+          fi
+
+      - name: Skip comment notice (fork PR)
+        if: steps.fork_check.outputs.is_fork == 'true'
+        run: |
+          echo "::warning::Skipping PR comment — fork PRs get a read-only GITHUB_TOKEN."
+          echo "::warning::See the uploaded artifact for the full report."
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyse-self-reports
+          path: |
+            main-report.json
+            pr-report.json
+            comment.md
+          if-no-files-found: warn
+
+      - name: Fail on regression
+        if: steps.gate.outcome == 'failure'
+        run: |
+          echo "::error::Lyse self-audit gate detected a regression — see the PR comment for details."
+          exit 1

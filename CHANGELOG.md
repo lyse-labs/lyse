@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Lyse self-audit CI gate** (`.github/workflows/lyse-self-audit.yml` +
+  `.github/scripts/lyse-gate.mjs`). On every PR, the workflow builds the
+  CLI from this repo, audits `packages/core/fixtures/full-ds` on both
+  the PR branch and `main`, and compares the two Health Scores. If the
+  PR drops the score below `main_score - threshold` (default threshold
+  `0`), the check fails and a PR comment surfaces the score diff,
+  per-axis breakdown, and the list of newly introduced findings. Fork
+  PRs gracefully fall back to no-comment (GitHub forces
+  `GITHUB_TOKEN` read-only on forks). If `main` cannot be built/audited,
+  the gate is skipped (not failed) so the PR fixing main is not blocked.
+  Prototype for the public reusable action tracked in `lyse-internal#18`.
 - **LLM connector resolver** (`packages/core/src/llm/connectors/`): `resolveConnector(config, flags, opts)` factory that routes audit runs to a uniform `ConnectorClient` interface or degrades to a no-op. Ships four implementations:
   - `NoopAdapter` — safe default for `--static-only`, `provider: none`, unconfigured, or over-budget paths (zero cost, zero network).
   - `OpenAICompatibleAdapter` — covers OpenAI, OpenRouter, and Ollama via a configurable `baseURL` and injectable `fetchFn` (no real network calls in tests).
