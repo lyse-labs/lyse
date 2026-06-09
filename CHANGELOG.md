@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.1] — 2026-06-09
+
+This release adds the **AI-Governance axis** (11 new rules under a new
+scoring axis), the **LLM Layer 4** augmentation pipeline (connector
+resolver + grader stage + hallucination validator), and **`lyse add
+ci-gate`** — a new CLI command that installs the Lyse score-regression
+CI gate into any repo with one command.
+
 ### Added
 
 - **`lyse add ci-gate`** — new CLI command that installs the Lyse
