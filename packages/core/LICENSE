@@ -36,10 +36,5 @@ contributing back. The Commercial License exists for users whose own
 licensing or distribution model is incompatible with AGPLv3 (e.g. embedding
 Lyse's engine in a proprietary product).
 
-The **GitHub Action wrapper** (`lyse-labs/lyse-action`, separate
-repository) is published under the **MIT License** to maximise compatibility
-with the GitHub Actions / Marketplace ecosystem. Only the engine in this
-repository is AGPLv3-dual-licensed.
-
 For commercial licensing inquiries: noe@getlyse.com (TBD) /
 contact@lyse-labs.com.
