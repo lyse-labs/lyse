@@ -41,7 +41,9 @@ describe("runAuditTest helper", () => {
       });
       expect(r.status).toBe(0);
       const result = JSON.parse(r.stdout);
-      expect(result.meta?.layer4?.staticOnly).toBe(true);
+      // Track 4.2: empty connector response returns empty meta (no
+      // `staticOnly: true` fallback). The audit still succeeds.
+      expect(result.meta?.layer4?.staticOnly).toBeUndefined();
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

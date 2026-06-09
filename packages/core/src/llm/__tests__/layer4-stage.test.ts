@@ -1,0 +1,213 @@
+import { describe, expect, it } from "vitest";
+import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { runLayer4Stage } from "../layer4-stage.js";
+import type { ConnectorClient, ConnectorResult } from "../connectors/types.js";
+import type { RubricDimension } from "../rubric-stub.js";
+import type { LyseConfig } from "../../types.js";
+
+function makeRepoRoot(files?: Record<string, string>): string {
+  const dir = mkdtempSync(join(tmpdir(), "lyse-layer4-test-"));
+  if (files) {
+    for (const [rel, content] of Object.entries(files)) {
+      const abs = join(dir, rel);
+      mkdirSync(join(abs, ".."), { recursive: true });
+      writeFileSync(abs, content);
+    }
+  }
+  return dir;
+}
+
+function mockConnector(responseText: string, extra?: Partial<ConnectorResult>): ConnectorClient {
+  return {
+    complete: async () => ({
+      text: responseText,
+      usdSpent: 0.002,
+      modelUsed: "claude-sonnet-4-6",
+      llmQuality: "higher" as const,
+      cacheHit: false,
+      ...extra,
+    }),
+  };
+}
+
+const MIN_CONFIG: LyseConfig = {};
+
+const ONE_DIMENSION: RubricDimension[] = [{
+  key: "ai-error-state",
+  axis: "ai-governance",
+  ruleId: "ai-governance/ai-loading-error-states",
+  prompt: "Check that AI components have error states.",
+}];
+
+describe("runLayer4Stage — static-only paths", () => {
+  it("returns staticOnly:true when flags.staticOnly is set", async () => {
+    const repoRoot = makeRepoRoot();
+    const result = await runLayer4Stage(
+      { repoRoot, config: MIN_CONFIG, flags: { staticOnly: true }, staticFindings: [] },
+    );
+    expect(result.meta.staticOnly).toBe(true);
+    expect(result.augmentedFindings).toHaveLength(0);
+  });
+
+  it("returns staticOnly:true when config.llm.staticOnly is set", async () => {
+    const repoRoot = makeRepoRoot();
+    const config: LyseConfig = { llm: { staticOnly: true } };
+    const result = await runLayer4Stage(
+      { repoRoot, config, flags: undefined, staticFindings: [] },
+    );
+    expect(result.meta.staticOnly).toBe(true);
+    expect(result.augmentedFindings).toHaveLength(0);
+  });
+
+  it("returns empty meta when rubric dimensions is empty (no staticOnly flag)", async () => {
+    const repoRoot = makeRepoRoot();
+    const connector = mockConnector("{}");
+    const result = await runLayer4Stage(
+      { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
+      { connector, rubricDimensions: [] },
+    );
+    expect(result.meta.staticOnly).toBeUndefined();
+    expect(result.augmentedFindings).toHaveLength(0);
+  });
+});
+
+describe("runLayer4Stage — happy path", () => {
+  it("produces augmented findings when connector returns valid JSON", async () => {
+    const repoRoot = makeRepoRoot({ "src/Chat.tsx": "export function Chat() { return null; }" });
+    const responseJson = JSON.stringify({
+      findings: [{
+        ruleId: "ai-governance/ai-loading-error-states",
+        axis: "ai-governance",
+        severity: "warning",
+        file: "src/Chat.tsx",
+        line: 1,
+        column: 1,
+        snippet: "export function Chat()",
+        message: "Missing AI error state",
+      }],
+    });
+    const connector = mockConnector(responseJson);
+
+    const result = await runLayer4Stage(
+      { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
+      { connector, rubricDimensions: ONE_DIMENSION },
+    );
+
+    expect(result.augmentedFindings).toHaveLength(1);
+    expect(result.augmentedFindings[0]!.ruleId).toBe("ai-governance/ai-loading-error-states");
+    expect(result.meta.staticOnly).toBeUndefined();
+    expect(result.meta.modelUsed).toBe("claude-sonnet-4-6");
+    expect(result.meta.usdSpent).toBe(0.002);
+    expect(result.meta.droppedHallucinations).toBe(0);
+    expect(result.meta.llmQuality).toBe("higher");
+  });
+
+  it("sets cacheHit in meta when connector returns cacheHit:true", async () => {
+    const repoRoot = makeRepoRoot({ "Foo.tsx": "const x = 1;" });
+    const responseJson = JSON.stringify({ findings: [] });
+    const connector = mockConnector(responseJson, { cacheHit: true, usdSpent: 0 });
+
+    const result = await runLayer4Stage(
+      { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
+      { connector, rubricDimensions: ONE_DIMENSION },
+    );
+    expect(result.meta.cacheHit).toBe(true);
+    expect(result.meta.usdSpent).toBe(0);
+  });
+
+  it("populates droppedHallucinations for findings with missing files", async () => {
+    const repoRoot = makeRepoRoot();
+    const responseJson = JSON.stringify({
+      findings: [{
+        ruleId: "ai-governance/ai-loading-error-states",
+        axis: "ai-governance",
+        severity: "warning",
+        file: "src/GhostFile.tsx",
+        line: 1,
+        column: 1,
+        snippet: "export function Ghost()",
+        message: "Hallucination",
+      }],
+    });
+    const connector = mockConnector(responseJson);
+
+    const result = await runLayer4Stage(
+      { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
+      { connector, rubricDimensions: ONE_DIMENSION },
+    );
+
+    expect(result.augmentedFindings).toHaveLength(0);
+    expect(result.meta.droppedHallucinations).toBe(1);
+  });
+
+  it("handles JSON wrapped in markdown code fence", async () => {
+    const repoRoot = makeRepoRoot({ "Btn.tsx": "export const Btn = () => null;" });
+    const responseJson = "```json\n" + JSON.stringify({
+      findings: [{
+        ruleId: "ai-governance/ai-loading-error-states",
+        axis: "ai-governance",
+        severity: "info",
+        file: "Btn.tsx",
+        line: 1,
+        column: 1,
+        snippet: "export const Btn = () => null;",
+        message: "Btn found",
+      }],
+    }) + "\n```";
+    const connector = mockConnector(responseJson);
+
+    const result = await runLayer4Stage(
+      { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
+      { connector, rubricDimensions: ONE_DIMENSION },
+    );
+    expect(result.augmentedFindings).toHaveLength(1);
+  });
+});
+
+describe("runLayer4Stage — error handling", () => {
+  it("returns meta.error and empty findings when connector throws", async () => {
+    const repoRoot = makeRepoRoot();
+    const errorConnector: ConnectorClient = {
+      complete: async () => { throw new Error("network failure"); },
+    };
+
+    const result = await runLayer4Stage(
+      { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
+      { connector: errorConnector, rubricDimensions: ONE_DIMENSION },
+    );
+
+    expect(result.augmentedFindings).toHaveLength(0);
+    expect(result.meta.error).toBeDefined();
+    expect(result.meta.error!.kind).toBe("ConnectorError");
+    expect(result.meta.error!.message).toContain("network failure");
+  });
+
+  it("returns meta.error and empty findings when JSON is malformed", async () => {
+    const repoRoot = makeRepoRoot();
+    const connector = mockConnector("not json at all {{{");
+
+    const result = await runLayer4Stage(
+      { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
+      { connector, rubricDimensions: ONE_DIMENSION },
+    );
+
+    expect(result.augmentedFindings).toHaveLength(0);
+    expect(result.meta.error).toBeDefined();
+    expect(result.meta.error!.kind).toBe("ParseError");
+  });
+
+  it("returns empty meta when connector returns empty text (noop/over-budget)", async () => {
+    const repoRoot = makeRepoRoot();
+    const noopConnector = mockConnector("", { usdSpent: 0, modelUsed: "none", llmQuality: "lower" as const });
+
+    const result = await runLayer4Stage(
+      { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
+      { connector: noopConnector, rubricDimensions: ONE_DIMENSION },
+    );
+
+    expect(result.augmentedFindings).toHaveLength(0);
+    expect(result.meta.staticOnly).toBeUndefined();
+  });
+});
