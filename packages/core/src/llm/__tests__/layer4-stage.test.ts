@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -38,7 +38,12 @@ const ONE_DIMENSION: RubricDimension[] = [{
   key: "ai-error-state",
   axis: "ai-governance",
   ruleId: "ai-governance/ai-loading-error-states",
+  title: "AI error state",
+  question: "Do AI components have error states?",
+  scale: "0 = none; 3 = present.",
+  evidence: "Cite the error-state element.",
   prompt: "Check that AI components have error states.",
+  guidelines: [],
 }];
 
 describe("runLayer4Stage — static-only paths", () => {
@@ -273,6 +278,25 @@ describe("runLayer4Stage — real rubric default", () => {
       "value-gate-judgment",
     ]) {
       expect(captured).toContain(key);
+    }
+  });
+});
+
+describe("runLayer4Stage — timeout timer cleanup (regression)", () => {
+  it("clears the timeout timer when the connector resolves instantly (no leaked handle)", async () => {
+    vi.useFakeTimers();
+    try {
+      const repoRoot = makeRepoRoot({ "Foo.tsx": "const x = 1;" });
+      const connector = mockConnector(JSON.stringify({ findings: [] }));
+
+      await runLayer4Stage(
+        { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
+        { connector },
+      );
+
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
     }
   });
 });
