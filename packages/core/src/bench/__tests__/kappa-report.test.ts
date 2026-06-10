@@ -3,9 +3,9 @@ import { buildKappaReport } from "../kappa-report.js";
 import { KAPPA_FIXTURES } from "../../reliability/llm-eval/kappa-fixtures.js";
 
 describe("buildKappaReport", () => {
-  it("returns schema version kappa/1.0", () => {
+  it("returns schema version kappa/2.0", () => {
     const report = buildKappaReport(KAPPA_FIXTURES, { generatedAt: "2026-06-10T00:00:00.000Z" });
-    expect(report.schemaVersion).toBe("kappa/1.0");
+    expect(report.schemaVersion).toBe("kappa/2.0");
   });
 
   it("surfaces all three fixture dimensions, sorted alphabetically", () => {
