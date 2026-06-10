@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runLayer4Stage } from "../layer4-stage.js";
-import type { ConnectorClient, ConnectorResult } from "../connectors/types.js";
-import type { RubricDimension } from "../rubric-stub.js";
+import type { ChatMessage, ConnectorClient, ConnectorResult } from "../connectors/types.js";
+import type { RubricDimension } from "../rubric.js";
 import type { LyseConfig } from "../../types.js";
 
 function makeRepoRoot(files?: Record<string, string>): string {
@@ -38,7 +38,12 @@ const ONE_DIMENSION: RubricDimension[] = [{
   key: "ai-error-state",
   axis: "ai-governance",
   ruleId: "ai-governance/ai-loading-error-states",
+  title: "AI error state",
+  question: "Do AI components have error states?",
+  scale: "0 = none; 3 = present.",
+  evidence: "Cite the error-state element.",
   prompt: "Check that AI components have error states.",
+  guidelines: [],
 }];
 
 describe("runLayer4Stage — static-only paths", () => {
@@ -209,5 +214,89 @@ describe("runLayer4Stage — error handling", () => {
 
     expect(result.augmentedFindings).toHaveLength(0);
     expect(result.meta.staticOnly).toBeUndefined();
+  });
+});
+
+describe("runLayer4Stage — real rubric default", () => {
+  it("uses the real governance dimensions when none are passed and surfaces a validated finding", async () => {
+    const repoRoot = makeRepoRoot({
+      "src/Chat.tsx":
+        "export function Chat() { return <div>I feel happy to help you today friend</div>; }",
+    });
+    const responseJson = JSON.stringify({
+      findings: [
+        {
+          ruleId: "ai-governance/ai-marker-anti-patterns",
+          axis: "ai-governance",
+          severity: "warning",
+          file: "src/Chat.tsx",
+          line: 1,
+          column: 1,
+          snippet: "I feel happy to help you today friend",
+          message: "Anthropomorphic copy: first-person emotion",
+        },
+      ],
+    });
+    const connector = mockConnector(responseJson);
+
+    const result = await runLayer4Stage(
+      { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
+      { connector },
+    );
+
+    expect(result.augmentedFindings).toHaveLength(1);
+    expect(result.augmentedFindings[0]!.ruleId).toBe("ai-governance/ai-marker-anti-patterns");
+    expect(result.meta.droppedHallucinations).toBe(0);
+  });
+
+  it("includes every rubric dimension key in the assembled prompt", async () => {
+    const repoRoot = makeRepoRoot({ "Foo.tsx": "const x = 1;" });
+    let captured = "";
+    const spyConnector: ConnectorClient = {
+      complete: async (messages: ChatMessage[]) => {
+        captured = messages.map((m) => m.content).join("\n");
+        return {
+          text: JSON.stringify({ findings: [] }),
+          usdSpent: 0,
+          modelUsed: "claude-sonnet-4-6",
+          llmQuality: "higher" as const,
+          cacheHit: false,
+        };
+      },
+    };
+
+    await runLayer4Stage(
+      { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
+      { connector: spyConnector },
+    );
+
+    for (const key of [
+      "human-control-enforced",
+      "voice-anti-anthropomorphism",
+      "explanation-quality",
+      "risk-classification",
+      "value-gate-judgment",
+    ]) {
+      expect(captured).toContain(key);
+    }
+  });
+});
+
+describe("runLayer4Stage — timeout timer cleanup (regression)", () => {
+  it("clears the timeout timer when the connector resolves instantly (no leaked handle)", async () => {
+    vi.useFakeTimers();
+    try {
+      const repoRoot = makeRepoRoot({ "Foo.tsx": "const x = 1;" });
+      const connector = mockConnector(JSON.stringify({ findings: [] }));
+
+      await runLayer4Stage(
+        { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
+        { connector },
+      );
+
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

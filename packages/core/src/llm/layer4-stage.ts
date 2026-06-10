@@ -2,8 +2,8 @@ import type { AxisName, Finding, Layer4Meta, LyseConfig, Severity } from "../typ
 import type { AuditFlags } from "../commands/audit-flags.js";
 import type { ConnectorClient } from "./connectors/types.js";
 import { resolveConnector } from "./connectors/resolver.js";
-import type { RubricDimension } from "./rubric-stub.js";
-import { getStubRubricDimensions } from "./rubric-stub.js";
+import type { RubricDimension } from "./rubric.js";
+import { getRubricDimensions } from "./rubric.js";
 import type { ProposedFinding } from "./validator.js";
 import { validateProposedFindings } from "./validator.js";
 
@@ -106,12 +106,11 @@ function buildPrompt(dimensions: RubricDimension[], staticFindings: Finding[]): 
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    p,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`LLM connector timeout after ${ms}ms`)), ms),
-    ),
-  ]);
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`LLM connector timeout after ${ms}ms`)), ms);
+  });
+  return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
 }
 
 export async function runLayer4Stage(
@@ -125,7 +124,7 @@ export async function runLayer4Stage(
     return { augmentedFindings: [], meta: { staticOnly: true } };
   }
 
-  const dimensions = opts.rubricDimensions ?? getStubRubricDimensions();
+  const dimensions = opts.rubricDimensions ?? getRubricDimensions();
 
   if (dimensions.length === 0) {
     return { augmentedFindings: [], meta: {} };

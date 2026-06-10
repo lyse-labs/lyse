@@ -7,7 +7,13 @@
     { "id": "tokens",       "title": "Token Discipline",             "weight": 18, "subDimensions": [] },
     { "id": "components",   "title": "Component Architecture",       "weight": 18, "subDimensions": [] },
     { "id": "a11y",         "title": "Accessibility",                "weight": 18, "subDimensions": [] },
-    { "id": "governance",   "title": "Governance & Contribution",    "weight": 12, "subDimensions": [] },
+    { "id": "governance",   "title": "Governance & Contribution",    "weight": 12, "subDimensions": [
+      { "id": "human-control-enforced",    "weight": 25 },
+      { "id": "voice-anti-anthropomorphism", "weight": 15 },
+      { "id": "explanation-quality",       "weight": 20 },
+      { "id": "risk-classification",       "weight": 25 },
+      { "id": "value-gate-judgment",       "weight": 15 }
+    ] },
     { "id": "docs",         "title": "Documentation & Stories",      "weight": 8,  "subDimensions": [] },
     { "id": "ai_surface",   "title": "AI Readiness (2026)",          "weight": 8,  "subDimensions": [] },
     { "id": "visual",       "title": "Visual Design Quality",        "weight": 7,  "subDimensions": [] },
