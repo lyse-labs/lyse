@@ -6,8 +6,8 @@ import { ruleMap } from "../../rules/registry.js";
 describe("getRubricDimensions", () => {
   const dims = getRubricDimensions();
 
-  it("defines exactly 5 governance dimensions", () => {
-    expect(dims).toHaveLength(5);
+  it("defines exactly 6 governance dimensions", () => {
+    expect(dims).toHaveLength(6);
   });
 
   it("each dimension has a unique key", () => {
@@ -25,13 +25,31 @@ describe("getRubricDimensions", () => {
     }
   });
 
-  it("maps the 5 dimensions onto the expected registered rule ids", () => {
+  it("maps the 6 dimensions onto the expected registered rule ids", () => {
     const byKey = new Map<string, RubricDimension>(dims.map((d) => [d.key, d]));
     expect(byKey.get("human-control-enforced")?.ruleId).toBe("ai-governance/human-control-affordances");
     expect(byKey.get("voice-anti-anthropomorphism")?.ruleId).toBe("ai-governance/ai-marker-anti-patterns");
     expect(byKey.get("explanation-quality")?.ruleId).toBe("ai-governance/explainability-affordance");
     expect(byKey.get("risk-classification")?.ruleId).toBe("ai-governance/disclaimer-present");
     expect(byKey.get("value-gate-judgment")?.ruleId).toBe("ai-governance/value-gate-doc-present");
+    expect(byKey.get("recovery-flow-behavioral")?.ruleId).toBe("ai-governance/ai-loading-error-states");
+  });
+
+  it("recovery-flow-behavioral dimension is behavioral (not a presence re-check)", () => {
+    const byKey = new Map<string, RubricDimension>(dims.map((d) => [d.key, d]));
+    const dim = byKey.get("recovery-flow-behavioral");
+    expect(dim).toBeDefined();
+    expect(dim?.key).toBe("recovery-flow-behavioral");
+    expect(dim?.axis).toBe("ai-governance");
+    expect(dim?.ruleId).toBe("ai-governance/ai-loading-error-states");
+    expect(dim?.guidelines).toHaveLength(0);
+    // Prompt must mention recovery affordance and graceful degradation
+    expect(dim?.prompt).toMatch(/retry|regenerate|recovery/i);
+    expect(dim?.prompt).toMatch(/graceful/i);
+    // Must contain evidence-contract substrings
+    expect(dim?.prompt).toMatch(/exact code snippet/i);
+    expect(dim?.prompt).toMatch(/file path/i);
+    expect(dim?.prompt).toMatch(/\{ "findings": \[\] \}/);
   });
 
   it("each dimension carries the full rubric shape", () => {

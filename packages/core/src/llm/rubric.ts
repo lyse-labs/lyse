@@ -190,6 +190,37 @@ const DIMENSIONS: RubricDimension[] = [
     }),
     guidelines: [],
   },
+  {
+    key: "recovery-flow-behavioral",
+    axis: "ai-governance",
+    ruleId: "ai-governance/ai-loading-error-states",
+    title: "AI error recovery flow (behavioral)",
+    question:
+      "When an AI operation fails, is a recovery affordance (retry, regenerate, fallback action) actually wired to the AI error state — and does a graceful degradation path exist so the user is never left at a dead end?",
+    scale:
+      "0 = no recovery path; error state is a dead end with no user action; 1 = error state exists but offers no actionable affordance; 2 = affordance present but not wired to an actual retry/fallback handler; 3 = retry or regenerate affordance is wired to the AI call AND a graceful degradation path (fallback content or clear next step) is available.",
+    evidence:
+      "The AI error state component AND the recovery affordance (button, link, or handler) wired to it. Cite both the error state and the retry/fallback handler; an error state with no handler or with a handler that does not trigger a retry or provide a fallback path scores low.",
+    prompt: buildDimensionPrompt({
+      ruleId: "ai-governance/ai-loading-error-states",
+      title: "AI error recovery flow (behavioral)",
+      question:
+        "Is a retry or regenerate affordance wired to the AI error state, and does a graceful degradation path exist?",
+      scale:
+        "0 = dead-end error, no recovery; 1 = error state with no affordance; 2 = affordance not wired; 3 = wired retry/regenerate + graceful degradation.",
+      evidence:
+        "Cite the AI error state component and the retry/fallback handler that connects it to the AI request or provides a path forward.",
+      instructions: [
+        "An AI error state with no retry button, regenerate action, or fallback content is a dead end — flag it as a recovery gap.",
+        "Look for onClick/onRetry handlers, regenerate callbacks, or fallback content paths that the error state triggers or links to.",
+        "A retry handler that merely dismisses the error without re-invoking the AI call or providing fallback content does NOT satisfy the requirement.",
+        "Graceful degradation includes: showing cached/previous output, offering a manual fallback path, or navigating the user to an alternative action.",
+        "Do not re-check static presence of the error component (that is the Track 3.7 static rule's job); focus only on whether recovery is wired and a path forward exists.",
+        "If a retry or regenerate handler is demonstrably wired to the AI call, cite it as proof and do not flag.",
+      ],
+    }),
+    guidelines: [],
+  },
 ];
 
 export function getRubricDimensions(): RubricDimension[] {
