@@ -66,4 +66,18 @@ same `(repo, file, startLine)`. The Wilson-LB methodology in
 [Pillar 2 — Recall via the antivirus harness](#pillar-2--recall-via-the-antivirus-harness)
 remains unchanged — the bench composition is what evolves.
 
+## Static-vs-LLM agreement (Cohen's kappa)
+
+`packages/core/src/reliability/llm-eval/kappa.ts` computes, per governance
+dimension, Cohen's kappa between the static rule verdict and the LLM grade,
+plus precision/recall and their Wilson lower bounds (reusing
+`wilsonLowerBound` from `promotion.ts`). A low kappa means a static rule has
+drifted from the expert/LLM signal — the divergence signal Track 4.6 builds on.
+
+The sub-axis calibration fields (`precisionMeasured`, `recallMeasured`,
+`*WilsonLowerBound`, `lastCalibrated`) are **produced by running this
+machinery over a labeled corpus** — they are never hand-committed. Until a
+real per-dimension governance corpus exists, those fields stay `null`; the
+machinery is exercised against in-repo fixtures only.
+
 See also: [`docs/architecture/sub-axes.md`](./sub-axes.md), [`docs/architecture/per-rule-slo.md`](./per-rule-slo.md).
