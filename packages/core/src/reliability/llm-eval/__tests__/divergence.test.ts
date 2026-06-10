@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  DIVERGENCE_THRESHOLD,
-  detectDivergence,
-  type DivergenceDiagnostic,
-} from "../divergence.js";
+import { DIVERGENCE_THRESHOLD, detectDivergence } from "../divergence.js";
 import { KAPPA_FIXTURES } from "../kappa-fixtures.js";
 import { aggregateKappaByDimension } from "../kappa.js";
 
