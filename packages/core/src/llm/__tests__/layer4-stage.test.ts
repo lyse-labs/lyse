@@ -3,8 +3,8 @@ import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runLayer4Stage } from "../layer4-stage.js";
-import type { ConnectorClient, ConnectorResult } from "../connectors/types.js";
-import type { RubricDimension } from "../rubric-stub.js";
+import type { ChatMessage, ConnectorClient, ConnectorResult } from "../connectors/types.js";
+import type { RubricDimension } from "../rubric.js";
 import type { LyseConfig } from "../../types.js";
 
 function makeRepoRoot(files?: Record<string, string>): string {
@@ -209,5 +209,70 @@ describe("runLayer4Stage — error handling", () => {
 
     expect(result.augmentedFindings).toHaveLength(0);
     expect(result.meta.staticOnly).toBeUndefined();
+  });
+});
+
+describe("runLayer4Stage — real rubric default", () => {
+  it("uses the real governance dimensions when none are passed and surfaces a validated finding", async () => {
+    const repoRoot = makeRepoRoot({
+      "src/Chat.tsx":
+        "export function Chat() { return <div>I feel happy to help you today friend</div>; }",
+    });
+    const responseJson = JSON.stringify({
+      findings: [
+        {
+          ruleId: "ai-governance/ai-marker-anti-patterns",
+          axis: "ai-governance",
+          severity: "warning",
+          file: "src/Chat.tsx",
+          line: 1,
+          column: 1,
+          snippet: "I feel happy to help you today friend",
+          message: "Anthropomorphic copy: first-person emotion",
+        },
+      ],
+    });
+    const connector = mockConnector(responseJson);
+
+    const result = await runLayer4Stage(
+      { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
+      { connector },
+    );
+
+    expect(result.augmentedFindings).toHaveLength(1);
+    expect(result.augmentedFindings[0]!.ruleId).toBe("ai-governance/ai-marker-anti-patterns");
+    expect(result.meta.droppedHallucinations).toBe(0);
+  });
+
+  it("includes every rubric dimension key in the assembled prompt", async () => {
+    const repoRoot = makeRepoRoot({ "Foo.tsx": "const x = 1;" });
+    let captured = "";
+    const spyConnector: ConnectorClient = {
+      complete: async (messages: ChatMessage[]) => {
+        captured = messages.map((m) => m.content).join("\n");
+        return {
+          text: JSON.stringify({ findings: [] }),
+          usdSpent: 0,
+          modelUsed: "claude-sonnet-4-6",
+          llmQuality: "higher" as const,
+          cacheHit: false,
+        };
+      },
+    };
+
+    await runLayer4Stage(
+      { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
+      { connector: spyConnector },
+    );
+
+    for (const key of [
+      "human-control-enforced",
+      "voice-anti-anthropomorphism",
+      "explanation-quality",
+      "risk-classification",
+      "value-gate-judgment",
+    ]) {
+      expect(captured).toContain(key);
+    }
   });
 });
