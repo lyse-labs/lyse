@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getRubricDimensions } from "../rubric.js";
+import { getRubricDimensions, GUIDELINE_TRACEABILITY_MAP, VALID_GUIDELINE_IDS } from "../rubric.js";
 import type { RubricDimension } from "../rubric.js";
 import { ruleMap } from "../../rules/registry.js";
 
@@ -43,7 +43,7 @@ describe("getRubricDimensions", () => {
     expect(dim?.key).toBe("recovery-flow-behavioral");
     expect(dim?.axis).toBe("ai-governance");
     expect(dim?.ruleId).toBe("ai-governance/ai-loading-error-states");
-    expect(dim?.guidelines).toHaveLength(0);
+    expect(dim?.guidelines.length).toBeGreaterThanOrEqual(1);
     // Prompt must mention recovery affordance and graceful degradation
     expect(dim?.prompt).toMatch(/retry|regenerate|recovery/i);
     expect(dim?.prompt).toMatch(/graceful/i);
@@ -58,7 +58,7 @@ describe("getRubricDimensions", () => {
     const dim = byKey.get("explainability-coverage-behavioral");
     expect(dim).toBeDefined();
     expect(dim?.ruleId).toBe("ai-governance/explainability-affordance");
-    expect(dim?.guidelines).toEqual([]);
+    expect(dim?.guidelines.length).toBeGreaterThanOrEqual(1);
   });
 
   it("each dimension carries the full rubric shape", () => {
@@ -69,7 +69,7 @@ describe("getRubricDimensions", () => {
       expect(d.evidence.length).toBeGreaterThan(0);
       expect(d.prompt.length).toBeGreaterThan(0);
       expect(Array.isArray(d.guidelines)).toBe(true);
-      expect(d.guidelines).toHaveLength(0);
+      expect(d.guidelines.length).toBeGreaterThanOrEqual(1);
     }
   });
 
@@ -83,5 +83,71 @@ describe("getRubricDimensions", () => {
 
   it("is deterministic across calls", () => {
     expect(getRubricDimensions()).toEqual(getRubricDimensions());
+  });
+});
+
+describe("GUIDELINE_TRACEABILITY_MAP", () => {
+  const EXPECTED_KEYS = [
+    "human-control-enforced",
+    "voice-anti-anthropomorphism",
+    "explanation-quality",
+    "risk-classification",
+    "value-gate-judgment",
+    "recovery-flow-behavioral",
+    "explainability-coverage-behavioral",
+  ] as const;
+
+  it("covers all 7 dimensions", () => {
+    expect(Object.keys(GUIDELINE_TRACEABILITY_MAP).sort()).toEqual([...EXPECTED_KEYS].sort());
+  });
+
+  it("every dimension has at least 1 guideline mapping", () => {
+    for (const key of EXPECTED_KEYS) {
+      const ids = GUIDELINE_TRACEABILITY_MAP[key];
+      expect(ids, `${key} must have ≥1 guideline`).toBeDefined();
+      expect(ids!.length, `${key} must have ≥1 guideline`).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("all guideline ids are from the valid canonical set", () => {
+    for (const [key, ids] of Object.entries(GUIDELINE_TRACEABILITY_MAP)) {
+      for (const id of ids) {
+        expect(
+          VALID_GUIDELINE_IDS.has(id),
+          `${key}: "${id}" is not a valid canonical guideline id`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it("VALID_GUIDELINE_IDS covers HAX G1–G18 and PAIR chapters", () => {
+    for (let n = 1; n <= 18; n++) {
+      expect(VALID_GUIDELINE_IDS.has(`HAX G${n}`), `HAX G${n} missing from valid set`).toBe(true);
+    }
+    expect(VALID_GUIDELINE_IDS.has("PAIR Explainability")).toBe(true);
+    expect(VALID_GUIDELINE_IDS.has("PAIR Human Control")).toBe(true);
+    expect(VALID_GUIDELINE_IDS.has("PAIR Safety")).toBe(true);
+    expect(VALID_GUIDELINE_IDS.has("PAIR Feedback")).toBe(true);
+    expect(VALID_GUIDELINE_IDS.has("PAIR Augmentation")).toBe(true);
+    expect(VALID_GUIDELINE_IDS.has("PAIR Error Recovery")).toBe(true);
+  });
+
+  it("traceability map is consistent with getRubricDimensions() guidelines field", () => {
+    const dims = getRubricDimensions();
+    for (const d of dims) {
+      const mapped = GUIDELINE_TRACEABILITY_MAP[d.key];
+      expect(mapped, `${d.key} not in traceability map`).toBeDefined();
+      expect(d.guidelines).toEqual(mapped);
+    }
+  });
+
+  it("every dimension prompt cites its guideline id(s)", () => {
+    const dims = getRubricDimensions();
+    for (const d of dims) {
+      const ids = GUIDELINE_TRACEABILITY_MAP[d.key]!;
+      for (const id of ids) {
+        expect(d.prompt, `${d.key} prompt must cite guideline "${id}"`).toContain(id);
+      }
+    }
   });
 });

@@ -12,6 +12,49 @@ export interface RubricDimension {
   guidelines: string[];
 }
 
+// Canonical guideline ids from Microsoft HAX G1–G18 and Google PAIR chapters.
+export const VALID_GUIDELINE_IDS: ReadonlySet<string> = new Set([
+  // Microsoft HAX (Human-AI Experience) guidelines G1–G18
+  "HAX G1",
+  "HAX G2",
+  "HAX G3",
+  "HAX G4",
+  "HAX G5",
+  "HAX G6",
+  "HAX G7",
+  "HAX G8",
+  "HAX G9",
+  "HAX G10",
+  "HAX G11",
+  "HAX G12",
+  "HAX G13",
+  "HAX G14",
+  "HAX G15",
+  "HAX G16",
+  "HAX G17",
+  "HAX G18",
+  // Google PAIR Guidebook chapters
+  "PAIR Explainability",
+  "PAIR Human Control",
+  "PAIR Safety",
+  "PAIR Feedback",
+  "PAIR Augmentation",
+  "PAIR Error Recovery",
+  "PAIR Onboarding",
+  "PAIR Data",
+]);
+
+// Dimension key → canonical guideline ids (HAX G1–G18 / Google PAIR chapters).
+export const GUIDELINE_TRACEABILITY_MAP: Readonly<Record<string, readonly string[]>> = {
+  "human-control-enforced": ["HAX G8", "HAX G9", "PAIR Human Control"],
+  "voice-anti-anthropomorphism": ["HAX G4", "PAIR Explainability"],
+  "explanation-quality": ["HAX G11", "PAIR Explainability"],
+  "risk-classification": ["HAX G1", "HAX G2", "PAIR Safety"],
+  "value-gate-judgment": ["HAX G18", "PAIR Augmentation"],
+  "recovery-flow-behavioral": ["HAX G7", "PAIR Error Recovery"],
+  "explainability-coverage-behavioral": ["HAX G11", "PAIR Explainability"],
+};
+
 const EVIDENCE_CONTRACT = [
   "",
   "## Evidence contract (mandatory)",
@@ -29,10 +72,12 @@ function buildDimensionPrompt(parts: {
   scale: string;
   evidence: string;
   instructions: string[];
+  guidelineIds: readonly string[];
 }): string {
   return [
     `# Dimension: ${parts.title}`,
     `Rule id to attach to every finding: ${parts.ruleId}`,
+    `Canonical guidelines: ${parts.guidelineIds.join(" / ")}`,
     "",
     "## Canonical question",
     parts.question,
@@ -45,6 +90,7 @@ function buildDimensionPrompt(parts: {
     "",
     "## How to judge",
     ...parts.instructions.map((s) => `- ${s}`),
+    `- When emitting a finding message, cite the guideline id(s) that the violation contravenes: ${parts.guidelineIds.join(", ")}.`,
     EVIDENCE_CONTRACT,
   ].join("\n");
 }
@@ -75,8 +121,9 @@ const DIMENSIONS: RubricDimension[] = [
         "Look for abort/cancel signals, approval gates before commit, and undo paths that revert AI-written state.",
         "Do not flag controls that are demonstrably wired; cite the wiring line as proof.",
       ],
+      guidelineIds: GUIDELINE_TRACEABILITY_MAP["human-control-enforced"]!,
     }),
-    guidelines: [],
+    guidelines: [...GUIDELINE_TRACEABILITY_MAP["human-control-enforced"]!],
   },
   {
     key: "voice-anti-anthropomorphism",
@@ -103,8 +150,9 @@ const DIMENSIONS: RubricDimension[] = [
         "Do not flag neutral functional copy ('Generating…', 'AI suggestion') — that is correct machine voice.",
         "Cite the literal string from the source as the snippet.",
       ],
+      guidelineIds: GUIDELINE_TRACEABILITY_MAP["voice-anti-anthropomorphism"]!,
     }),
-    guidelines: [],
+    guidelines: [...GUIDELINE_TRACEABILITY_MAP["voice-anti-anthropomorphism"]!],
   },
   {
     key: "explanation-quality",
@@ -131,8 +179,9 @@ const DIMENSIONS: RubricDimension[] = [
         "Reward explanations that surface inputs, factors, sources, or confidence; cite the binding that supplies them.",
         "Judge content quality, not the mere presence of the affordance.",
       ],
+      guidelineIds: GUIDELINE_TRACEABILITY_MAP["explanation-quality"]!,
     }),
-    guidelines: [],
+    guidelines: [...GUIDELINE_TRACEABILITY_MAP["explanation-quality"]!],
   },
   {
     key: "risk-classification",
@@ -159,8 +208,9 @@ const DIMENSIONS: RubricDimension[] = [
         "Flag high-impact actions lacking a proportionate disclaimer or confirmation.",
         "Severity of the finding should track the assessed impact: error for high-impact unguarded actions.",
       ],
+      guidelineIds: GUIDELINE_TRACEABILITY_MAP["risk-classification"]!,
     }),
-    guidelines: [],
+    guidelines: [...GUIDELINE_TRACEABILITY_MAP["risk-classification"]!],
   },
   {
     key: "value-gate-judgment",
@@ -187,8 +237,9 @@ const DIMENSIONS: RubricDimension[] = [
         "Reward features with an explicit value-gate doc/comment tying AI to a need the deterministic path cannot meet.",
         "Cite the AI invocation as the snippet when justification is absent.",
       ],
+      guidelineIds: GUIDELINE_TRACEABILITY_MAP["value-gate-judgment"]!,
     }),
-    guidelines: [],
+    guidelines: [...GUIDELINE_TRACEABILITY_MAP["value-gate-judgment"]!],
   },
   {
     key: "recovery-flow-behavioral",
@@ -218,8 +269,9 @@ const DIMENSIONS: RubricDimension[] = [
         "Do not re-check static presence of the error component (that is the Track 3.7 static rule's job); focus only on whether recovery is wired and a path forward exists.",
         "If a retry or regenerate handler is demonstrably wired to the AI call, cite it as proof and do not flag.",
       ],
+      guidelineIds: GUIDELINE_TRACEABILITY_MAP["recovery-flow-behavioral"]!,
     }),
-    guidelines: [],
+    guidelines: [...GUIDELINE_TRACEABILITY_MAP["recovery-flow-behavioral"]!],
   },
   {
     key: "explainability-coverage-behavioral",
@@ -249,8 +301,9 @@ const DIMENSIONS: RubricDimension[] = [
         "A flat generic label ('AI generated this') with no Why or How scores low — flag it.",
         "Do not flag render sites where the AI-marker component itself carries the explanation via aria-describedby or role='dialog' with layered content.",
       ],
+      guidelineIds: GUIDELINE_TRACEABILITY_MAP["explainability-coverage-behavioral"]!,
     }),
-    guidelines: [],
+    guidelines: [...GUIDELINE_TRACEABILITY_MAP["explainability-coverage-behavioral"]!],
   },
 ];
 
