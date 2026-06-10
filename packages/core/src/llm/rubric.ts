@@ -221,6 +221,37 @@ const DIMENSIONS: RubricDimension[] = [
     }),
     guidelines: [],
   },
+  {
+    key: "explainability-coverage-behavioral",
+    axis: "ai-governance",
+    ruleId: "ai-governance/explainability-affordance",
+    title: "Explainability coverage & layering (behavioral, HAX G11 / PAIR Explainability)",
+    question:
+      "Is an explainability indicator reachable at every site where AI output is rendered (coverage), and does it support a layered What → Why → How structure?",
+    scale:
+      "0 = AI output rendered with no reachable explainability indicator; 1 = indicator exists somewhere but not at one or more render sites (coverage gap); 2 = indicator present at all render sites but explanation is flat (no What/Why/How layering); 3 = indicator reachable at every AI output site and supports What → Why → How.",
+    evidence:
+      "The AI output render site AND the explainability indicator (or its absence) co-located or reachable from it. For layering, cite the structure of the explanation content (What label, Why rationale, How action/source).",
+    prompt: buildDimensionPrompt({
+      ruleId: "ai-governance/explainability-affordance",
+      title: "Explainability coverage & layering (behavioral, HAX G11 / PAIR Explainability)",
+      question:
+        "Is an explainability indicator reachable at every site where AI output is rendered (coverage), and does it support a layered What → Why → How structure?",
+      scale:
+        "0 = AI output with no indicator; 1 = indicator exists but coverage gap at a render site; 2 = full coverage but flat explanation; 3 = full coverage with What/Why/How layering.",
+      evidence:
+        "Cite the AI output render site and the explainability indicator (or its absence) at that site. For layering, cite the explanation structure.",
+      instructions: [
+        "Identify every component or render site that surfaces AI-generated output (look for AI-marker components, AI badge labels, generated content props).",
+        "For each such site, check whether an explainability indicator (Explain, WhyThis, Citation, Confidence, Provenance or similar) is reachable — co-located, linked via aria-describedby, or composed into the same render tree.",
+        "Flag any render site that presents AI output without a reachable explainability indicator — this is a coverage gap that static presence checks miss.",
+        "For sites that do have an indicator, assess layering: does the explanation tell the user What was generated, Why (rationale, inputs, confidence), and How to act or verify (source, link, correction path)?",
+        "A flat generic label ('AI generated this') with no Why or How scores low — flag it.",
+        "Do not flag render sites where the AI-marker component itself carries the explanation via aria-describedby or role='dialog' with layered content.",
+      ],
+    }),
+    guidelines: [],
+  },
 ];
 
 export function getRubricDimensions(): RubricDimension[] {
