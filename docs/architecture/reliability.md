@@ -81,3 +81,26 @@ real per-dimension governance corpus exists, those fields stay `null`; the
 machinery is exercised against in-repo fixtures only.
 
 See also: [`docs/architecture/sub-axes.md`](./sub-axes.md), [`docs/architecture/per-rule-slo.md`](./per-rule-slo.md).
+
+### Divergence signal (Track 4.6)
+
+`packages/core/src/reliability/llm-eval/divergence.ts` implements the
+self-policing mechanism: when a static rule's kappa falls **strictly below**
+`DIVERGENCE_THRESHOLD = 0.4` (Landis & Koch 1977 "poor agreement" boundary),
+`detectDivergence()` emits a `DivergenceDiagnostic`.
+
+A `DivergenceDiagnostic` carries:
+
+- `type: "rule-divergence"` — identifies it as a rule-health signal, not a DS-facing `Finding`
+- `dimensionId` — the governance dimension that drifted
+- `kappa` — the raw kappa value
+- `disagreementRate` — `1 − observed agreement` (fraction of pairs where static ≠ LLM)
+
+`buildKappaReport()` (schema `kappa/2.0`) runs `detectDivergence` over the
+aggregated per-dimension results and attaches them under a `divergence` field.
+Consumers can check `report.divergence` to find rules that have drifted from
+the expert signal and should remain (or return to) `experimental` status.
+
+The sub-axis calibration fields in `sub-axes.ts` stay `null` — the divergence
+function operates on kappa inputs passed to it; it never commits measurement
+values directly.
