@@ -28,6 +28,10 @@ Highlights from the 12-rule set (full list at [`rules/`](./rules/)):
 | [`a11y/essentials`](./rules/a11y-essentials.md) | A11y | error | No |
 | [`stories/coverage`](./rules/storybook-coverage.md) | Stories | info | No |
 
+## Methodology
+
+- [Methodology](./methodology.md) — the two-faces model, signal inventory, maturity model, and how Lyse keeps scores honest.
+
 ## For contributors
 
 If you want to contribute code, rules, or docs:
