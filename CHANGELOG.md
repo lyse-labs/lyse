@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **CI:** the required `perf` check now runs on every PR and skip-succeeds
+  when `packages/core/**` is untouched, instead of being path-filtered.
+  Previously, docs-only PRs were blocked indefinitely on a `perf` status
+  that never reported.
+
 ## [0.2.0-alpha.1] — 2026-06-09
 
 This release adds the **AI-Governance axis** (11 new rules under a new
