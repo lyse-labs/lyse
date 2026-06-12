@@ -14,8 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   terms per domain) and a shared locale-keyed vocabulary module
   (`vocabularyFor`, `makeLocaleMatcher`, `aiNounAlternation`) covering
   en/fr/de/ja/es for AI nouns, disclaimer phrases, control labels, gate
-  phrases, and loading phrases. Rule detectors will consume it in follow-up
-  changes; no rule behavior changes yet.
+  phrases, and loading phrases. Consumed by the AI-marker gate and the
+  governance rules below.
 - **End-to-end i18n fixtures (Track 9.1).** New `fixtures/i18n-fr-ds`
   (`BadgeIA` marker, FR disclaimer, `Régénérer` control, FR
   `AI_GOVERNANCE.md`) and `fixtures/i18n-de-ds` (`KIBadge`, `KI-generiert`,
