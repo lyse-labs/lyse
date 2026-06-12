@@ -221,4 +221,5 @@ Auto-fix renames the declaration to \`use<CapitalizedName>\`. Cross-file callers
   create: () => ({ evaluate }),
   classifyConfidence,
   applyCodemod,
+  singleFileCapable: true,
 });

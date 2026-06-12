@@ -150,4 +150,5 @@ Lyse depends on the canonical \`eslint-plugin-jsx-a11y\` rather than re-porting 
   },
   defaultOptions: [],
   create: () => ({ evaluate }),
+  singleFileCapable: true,
 });

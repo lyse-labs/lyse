@@ -133,4 +133,5 @@ The rule only flags when the file already imports from the DS module — this is
   create: () => ({ evaluate }),
   classifyConfidence,
   applyCodemod,
+  singleFileCapable: true,
 });

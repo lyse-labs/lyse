@@ -229,4 +229,5 @@ Auto-fix renames the declaration and internal same-file references. Cross-file i
   create: () => ({ evaluate }),
   classifyConfidence,
   applyCodemod,
+  singleFileCapable: true,
 });

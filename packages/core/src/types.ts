@@ -176,6 +176,12 @@ export interface Rule {
   evaluate(ctx: RuleContext, parsedFiles: ParsedFiles): Promise<RuleEvalResult>;
   classifyConfidence?: (finding: Finding, ctx: ClassifyContext) => Confidence;
   applyCodemod?: (finding: Finding, ctx: CodemodContext) => CodemodResult;
+  /**
+   * True when the rule produces meaningful results from a single parsed file
+   * with no repo-wide index (component inventory, story index). The MCP
+   * `audit_file` tool runs only these; repo-wide rules need full `lyse audit`.
+   */
+  singleFileCapable?: boolean;
 }
 
 export interface ParsedFiles {

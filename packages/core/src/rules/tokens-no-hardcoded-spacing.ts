@@ -201,6 +201,7 @@ The allowlist accommodates 1px borders (\`border: 1px solid\`), zero, and full-v
   create: () => ({ evaluate }),
   classifyConfidence,
   applyCodemod,
+  singleFileCapable: true,
 });
 
 // silence "unused" — keyword detection is for future expansion.

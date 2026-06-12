@@ -36,6 +36,7 @@ export interface LyseRuleDefinition<
   create: () => { evaluate: LyseEvaluator };
   classifyConfidence?: Rule["classifyConfidence"];
   applyCodemod?: Rule["applyCodemod"];
+  singleFileCapable?: boolean;
 }
 
 const META_REGISTRY = new Map<string, LyseRuleMeta>();
@@ -51,6 +52,7 @@ export function createLyseRule<
     evaluate,
     ...(def.classifyConfidence ? { classifyConfidence: def.classifyConfidence } : {}),
     ...(def.applyCodemod ? { applyCodemod: def.applyCodemod } : {}),
+    ...(def.singleFileCapable ? { singleFileCapable: true } : {}),
   };
 }
 
