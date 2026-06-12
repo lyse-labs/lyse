@@ -103,6 +103,7 @@ Detection is **static, name-based, and co-location dependent**:
 
 - An `info` finding means "a control-vocabulary component exists in a file that also contains an AI-marker" — not "the control is present at every AI output render site in consuming applications".
 - Behavioral verification — confirming controls appear wherever AI-generated content is rendered — is deferred to Track 4.
+- Static substring matching means a non-control export containing "report" (e.g. `ReportChart`) co-located with an AI marker in a barrel file can be counted as a control; precise matching is deferred to Track 9.2 (stub resistance).
 
 ## Auto-fix
 

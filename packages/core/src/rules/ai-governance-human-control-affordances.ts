@@ -215,10 +215,10 @@ const evaluate = async (
     location: { file: "src/index.ts", line: 1, column: 1 },
     message:
       "AI surface detected but no per-output control affordances found (HAX G8 / HAX G9). " +
-      "Ship Regenerate / Stop / Edit / Undo / Confirm / Dismiss / Accept / Reject controls " +
+      "Ship Regenerate / Stop / Edit / Undo / Confirm / Dismiss / Accept / Reject / Report / Revert to AI / Use suggestion controls " +
       "so users can correct AI-generated output.",
     suggestion:
-      "Add per-output control components (e.g. RegenerateButton, StopGenerating, EditResponse, UndoAction, ConfirmOutput, DismissResult, AcceptSuggestion, RejectSuggestion) and a global AI settings/disable toggle (e.g. AISettings, AiPreferences, DisableAI).",
+      "Add per-output control components (e.g. RegenerateButton, StopGenerating, EditResponse, UndoAction, ConfirmOutput, DismissResult, AcceptSuggestion, RejectSuggestion, ReportButton, RevertToAIButton, UseSuggestionButton) and a global AI settings/disable toggle (e.g. AISettings, AiPreferences, DisableAI).",
   });
   return { findings, opportunities };
 };
@@ -232,7 +232,7 @@ export const rule: Rule = createLyseRule({
     fullDescription:
       "Scans component files (`**/*.{tsx,jsx,vue}`) for two groups of human-control affordances. " +
       "Group 1 — per-output controls: exported component names or button labels matching the correction/dismissal vocabulary " +
-      "(Regenerate, Retry, Stop, Edit, Undo, Confirm, Dismiss, Accept, Reject). " +
+      "(Regenerate, Retry, Stop, Edit, Undo, Confirm, Dismiss, Accept, Reject, Report, Revert to AI, Use suggestion). " +
       "Group 2 — global AI toggle: exported names or toggle labels indicating a settings surface that lets users disable AI " +
       "(AISettings, AiPreferences, DisableAI, or a label 'Disable AI' / 'AI features'). " +
       "Cross-condition: when an AI-marker component is present (per the shared `isAiMarkerName` predicate) but no per-output control is found, emits `warning`; " +

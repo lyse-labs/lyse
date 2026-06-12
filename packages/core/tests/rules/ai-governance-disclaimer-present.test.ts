@@ -128,8 +128,12 @@ describe("detectDisclaimer", () => {
     expect(detectDisclaimer(`<p>This output is AI-generated. Verify results before acting.</p>`).found).toBe(true);
   });
 
-  it("detects 'verify before using' phrase", () => {
-    expect(detectDisclaimer(`<p>AI output — verify before using.</p>`).found).toBe(true);
+  it("detects 'verify the output' phrase", () => {
+    expect(detectDisclaimer(`<p>AI output — verify the output before acting.</p>`).found).toBe(true);
+  });
+
+  it("does NOT detect 'verify before submitting' (generic form copy, no AI-disclaimer context)", () => {
+    expect(detectDisclaimer(`<p>Please verify before submitting the form.</p>`).found).toBe(false);
   });
 
   it("does NOT detect a generic 'Terms may change' non-AI disclaimer", () => {
