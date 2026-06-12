@@ -37,6 +37,22 @@ export const LyseConfigSchema = z.object({
       ]),
     )
     .optional(),
+  i18n: z
+    .object({
+      locales: z.array(z.string()).optional(),
+      vocabulary: z
+        .object({
+          aiNouns: z.array(z.string()).optional(),
+          disclaimerPhrases: z.array(z.string()).optional(),
+          controlLabels: z.array(z.string()).optional(),
+          gatePhrases: z.array(z.string()).optional(),
+          loadingPhrases: z.array(z.string()).optional(),
+        })
+        .optional(),
+    })
+    // YAML `i18n:` with no value parses as null — treat as "not set".
+    .nullish()
+    .transform((v) => v ?? undefined),
   llm: z
     .object({
       provider: z

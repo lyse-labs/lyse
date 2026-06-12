@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **i18n foundation (Track 9.1).** New optional `i18n` block in `.lyse.yaml`
+  (`locales` to pick built-in language packs, `vocabulary` to add custom
+  terms per domain) and a shared locale-keyed vocabulary module
+  (`vocabularyFor`, `makeLocaleMatcher`, `aiNounAlternation`) covering
+  en/fr/de/ja/es for AI nouns, disclaimer phrases, control labels, gate
+  phrases, and loading phrases. Rule detectors will consume it in follow-up
+  changes; no rule behavior changes yet.
+
 ### Changed
 
 - **MCP `audit_file` runs the full single-file rule set (Track 13.1).**

@@ -87,6 +87,69 @@ describe("safeParseLyseConfig", () => {
   });
 });
 
+describe("safeParseLyseConfig — i18n block", () => {
+  it("parses a full i18n block", () => {
+    const r = safeParseLyseConfig({
+      i18n: {
+        locales: ["en", "fr"],
+        vocabulary: {
+          aiNouns: ["xai"],
+          disclaimerPhrases: ["custom disclaimer"],
+          controlLabels: ["try again"],
+          gatePhrases: ["should we ship ai"],
+          loadingPhrases: ["crunching"],
+        },
+      },
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.value.i18n?.locales).toEqual(["en", "fr"]);
+      expect(r.value.i18n?.vocabulary?.aiNouns).toEqual(["xai"]);
+    }
+  });
+
+  it("absent i18n block parses as undefined", () => {
+    const r = safeParseLyseConfig({});
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.i18n).toBeUndefined();
+  });
+
+  it("accepts a partial i18n block (locales only)", () => {
+    const r = safeParseLyseConfig({ i18n: { locales: ["ja"] } });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.value.i18n?.locales).toEqual(["ja"]);
+      expect(r.value.i18n?.vocabulary).toBeUndefined();
+    }
+  });
+
+  it("accepts a partial vocabulary (one domain only)", () => {
+    const r = safeParseLyseConfig({
+      i18n: { vocabulary: { aiNouns: ["xai"] } },
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.i18n?.vocabulary?.aiNouns).toEqual(["xai"]);
+  });
+
+  it("treats YAML `i18n:` with no value (null) as not set", () => {
+    const r = safeParseLyseConfig({ i18n: null });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.i18n).toBeUndefined();
+  });
+
+  it("rejects non-string locales", () => {
+    const r = safeParseLyseConfig({ i18n: { locales: [1, 2] } });
+    expect(r.ok).toBe(false);
+  });
+
+  it("rejects non-array vocabulary domain values", () => {
+    const r = safeParseLyseConfig({
+      i18n: { vocabulary: { aiNouns: "xai" } },
+    });
+    expect(r.ok).toBe(false);
+  });
+});
+
 describe("parseLyseConfig", () => {
   it("returns validated object on valid input", () => {
     const v = parseLyseConfig({ designSystem: { componentsModule: "@ui/kit" } });

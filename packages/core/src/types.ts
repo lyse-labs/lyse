@@ -335,6 +335,16 @@ export interface LyseConfig {
     elements?: Record<string, string>;
     excludePaths?: string[];
   };
+  i18n?: {
+    locales?: string[];
+    vocabulary?: {
+      aiNouns?: string[];
+      disclaimerPhrases?: string[];
+      controlLabels?: string[];
+      gatePhrases?: string[];
+      loadingPhrases?: string[];
+    };
+  };
   llm?: {
     provider?: 'anthropic' | 'openai' | 'openai-compatible' | 'mcp' | 'none' | 'auto';
     model?: string;
