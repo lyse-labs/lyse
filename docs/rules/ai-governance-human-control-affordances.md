@@ -21,10 +21,10 @@ The rule globs `**/*.{tsx,jsx,vue}` (excluding `node_modules`, `dist`, `build`, 
 **Group 1 — per-output controls**
 
 Matches exported component names whose identifier (case-insensitive) contains one of:
-`regenerate`, `retry`, `stopgenerat`, `editresponse`, `editoutput`, `undo`, `confirm`, `dismiss`, `accept`, `reject`.
+`regenerate`, `retry`, `stopgenerat`, `editresponse`, `editoutput`, `undo`, `confirm`, `dismiss`, `accept`, `reject`, `report`, `reverttoai`, `usesuggestion`.
 
 Also matches button/anchor element text content (case-insensitive, exact) against:
-`Regenerate`, `Retry`, `Stop`, `Stop generating`, `Edit`, `Undo`, `Confirm`, `Dismiss`, `Accept`, `Reject`.
+`Regenerate`, `Retry`, `Stop`, `Stop generating`, `Undo`, `Confirm`, `Dismiss`, `Accept`, `Reject`, `Report`, `Revert to AI`, `Use suggestion`.
 
 **Group 2 — global AI toggle**
 
@@ -52,6 +52,9 @@ An AI-marker component must be present (detected via the shared `isAiMarkerName`
 export { AIBadge } from './ai-badge';
 export { RegenerateButton } from './regenerate-button';
 export { DismissResult } from './dismiss-result';
+export { ReportButton } from './report-button';
+export { RevertToAIButton } from './revert-to-ai-button';
+export { UseSuggestionButton } from './use-suggestion-button';
 export { AISettings } from './ai-settings';
 ```
 
@@ -59,6 +62,27 @@ export { AISettings } from './ai-settings';
 // RegenerateButton.tsx
 export function RegenerateButton() {
   return <button onClick={onRegenerate}>Regenerate</button>;
+}
+```
+
+```tsx
+// ReportButton.tsx — report incorrect/harmful AI output
+export function ReportButton() {
+  return <button onClick={onReport}>Report</button>;
+}
+```
+
+```tsx
+// RevertToAIButton.tsx — revert a human edit back to the AI suggestion
+export function RevertToAIButton() {
+  return <button onClick={onRevert}>Revert to AI</button>;
+}
+```
+
+```tsx
+// UseSuggestionButton.tsx — accept the AI suggestion inline (GitLab "use this" affordance)
+export function UseSuggestionButton() {
+  return <button onClick={onUseSuggestion}>Use suggestion</button>;
 }
 ```
 
@@ -79,6 +103,7 @@ Detection is **static, name-based, and co-location dependent**:
 
 - An `info` finding means "a control-vocabulary component exists in a file that also contains an AI-marker" — not "the control is present at every AI output render site in consuming applications".
 - Behavioral verification — confirming controls appear wherever AI-generated content is rendered — is deferred to Track 4.
+- Static substring matching means a non-control export containing "report" (e.g. `ReportChart`) co-located with an AI marker in a barrel file can be counted as a control; precise matching is deferred to Track 9.2 (stub resistance).
 
 ## Auto-fix
 

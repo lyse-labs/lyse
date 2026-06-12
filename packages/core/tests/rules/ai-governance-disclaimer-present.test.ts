@@ -115,6 +115,34 @@ describe("detectDisclaimer", () => {
   it("DOES detect LLMDisclaimer as an AI disclaimer", () => {
     expect(detectDisclaimer(`<LLMDisclaimer />`).found).toBe(true);
   });
+
+  it("detects 'Uses AI. Verify results.' combined phrase", () => {
+    expect(detectDisclaimer(`<p>Uses AI. Verify results.</p>`).found).toBe(true);
+  });
+
+  it("detects 'AI-assisted' hyphenated variant", () => {
+    expect(detectDisclaimer(`<span>AI-assisted</span>`).found).toBe(true);
+  });
+
+  it("detects 'verify results' phrase in a longer disclaimer", () => {
+    expect(detectDisclaimer(`<p>This output is AI-generated. Verify results before acting.</p>`).found).toBe(true);
+  });
+
+  it("detects 'verify the output' phrase", () => {
+    expect(detectDisclaimer(`<p>AI output — verify the output before acting.</p>`).found).toBe(true);
+  });
+
+  it("does NOT detect 'verify before submitting' (generic form copy, no AI-disclaimer context)", () => {
+    expect(detectDisclaimer(`<p>Please verify before submitting the form.</p>`).found).toBe(false);
+  });
+
+  it("does NOT detect a generic 'Terms may change' non-AI disclaimer", () => {
+    expect(detectDisclaimer(`<p>Terms may change without notice.</p>`).found).toBe(false);
+  });
+
+  it("does NOT detect a generic 'CookieDisclaimer' component as AI disclaimer", () => {
+    expect(detectDisclaimer(`<CookieDisclaimer />`).found).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

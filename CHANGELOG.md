@@ -20,6 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `stories/coverage`) need the full project graph and remain
   `lyse audit`-only; they will be exposed to agents via MCP resources in a
   later track.
+- **`ai-governance/human-control-affordances`** now detects three more
+  controls from the canonical AI-interaction guidance: `Report`,
+  `Revert to AI`, and `Use suggestion` (component names and button
+  labels).
+- **`ai-governance/disclaimer-present`** now recognises `AI-assisted`,
+  the literal `Uses AI. Verify results.`, and `verify results` /
+  `verify the output` phrasings, without widening false positives on
+  generic non-AI disclaimers (co-location with an AI marker still
+  required).
 
 ### Fixed
 
@@ -27,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when `packages/core/**` is untouched, instead of being path-filtered.
   Previously, docs-only PRs were blocked indefinitely on a `perf` status
   that never reported.
+
 
 ## [0.2.0-alpha.1] — 2026-06-09
 

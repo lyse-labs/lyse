@@ -90,6 +90,24 @@ describe("detectPerOutputControls — name-based", () => {
       expect.arrayContaining([expect.objectContaining({ name: "RetryRequest" })]),
     );
   });
+
+  it("detects ReportButton by exported name", () => {
+    expect(detectPerOutputControls(`export function ReportButton() {}`)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "ReportButton" })]),
+    );
+  });
+
+  it("detects RevertToAIButton by exported name", () => {
+    expect(detectPerOutputControls(`export function RevertToAIButton() {}`)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "RevertToAIButton" })]),
+    );
+  });
+
+  it("detects UseSuggestionButton by exported name", () => {
+    expect(detectPerOutputControls(`export const UseSuggestionButton = () => {}`)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "UseSuggestionButton" })]),
+    );
+  });
 });
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -112,6 +130,24 @@ describe("detectPerOutputControls — label-based", () => {
   it("detects a button labeled Undo", () => {
     expect(detectPerOutputControls(`<button>Undo</button>`)).toEqual(
       expect.arrayContaining([expect.objectContaining({ label: "Undo" })]),
+    );
+  });
+
+  it("detects a button labeled Report", () => {
+    expect(detectPerOutputControls(`<button>Report</button>`)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ label: "Report" })]),
+    );
+  });
+
+  it("detects a button labeled 'Revert to AI'", () => {
+    expect(detectPerOutputControls(`<button>Revert to AI</button>`)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ label: "Revert to AI" })]),
+    );
+  });
+
+  it("detects a button labeled 'Use suggestion'", () => {
+    expect(detectPerOutputControls(`<button>Use suggestion</button>`)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ label: "Use suggestion" })]),
     );
   });
 });
