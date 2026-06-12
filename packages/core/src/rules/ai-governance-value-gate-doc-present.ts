@@ -14,6 +14,7 @@ import {
   makeAllowlistCheck,
 } from "./ai-governance-ai-marker-component-present.js";
 import { detectReservedAiTokens } from "../parsers/ai-tokens.js";
+import { makeLocaleMatcher } from "./_i18n-vocabulary.js";
 
 const RULE_ID = "ai-governance/value-gate-doc-present";
 const MAX_DOC_BYTES = 500_000;
@@ -57,21 +58,17 @@ const IGNORE = [
   "**/coverage/**",
 ];
 
-// Gate-language patterns modelled on ServiceNow "10-Q" value gate.
-// Each pattern targets a distinct phrasing family; case-insensitive.
-const GATE_PATTERNS: RegExp[] = [
-  /\bis\s+ai\s+needed\b/i,
-  /\bvalue[-\s]gate\b/i,
-  /\bgo\s*\/\s*no[-\s]go\b/i,
-  /\bshould\s+this\s+(?:feature\s+)?(?:be|use)\s+ai\b/i,
-  /\bis\s+ai\s+the\s+right\s+tool\b/i,
-  /\bai[-\s]readiness\b/i,
-  /\bwhy\s+ai\s*\?/i,
-  /\bdeterministic\s+rule\b.*instead\s+of\s+ai\b/i,
-];
+// Language-agnostic structural gate signals: a markdown checklist (the
+// go/no-go form itself) or an explicit front-matter opt-in. Safe to credit
+// because doc discovery is already name-constrained to gate-doc filenames.
+const CHECKLIST_RE = /^[ \t]*[-*]\s+\[[ xX]\]/m;
+const FRONT_MATTER_GATE_RE = /^lyse-doc:\s*["']?value-gate["']?\s*$/m;
 
-export function detectGateLanguage(content: string): boolean {
-  return GATE_PATTERNS.some((re) => re.test(content));
+export function detectGateLanguage(content: string, repoRoot = ""): boolean {
+  if (CHECKLIST_RE.test(content) || FRONT_MATTER_GATE_RE.test(content)) {
+    return true;
+  }
+  return makeLocaleMatcher("gatePhrases", repoRoot).matchesPhrase(content);
 }
 
 interface GateDocResult {
@@ -95,7 +92,7 @@ export function discoverGateDoc(repoRoot: string): GateDocResult | null {
     if (!existsSync(abs)) continue;
     const content = readDocIfSmall(abs);
     if (content === null) continue;
-    return { rel: candidate, hasGateLanguage: detectGateLanguage(content) };
+    return { rel: candidate, hasGateLanguage: detectGateLanguage(content, repoRoot) };
   }
 
   let hits: string[] = [];
@@ -115,7 +112,7 @@ export function discoverGateDoc(repoRoot: string): GateDocResult | null {
   for (const rel of hits) {
     const content = readDocIfSmall(join(repoRoot, rel));
     if (content === null) continue;
-    return { rel, hasGateLanguage: detectGateLanguage(content) };
+    return { rel, hasGateLanguage: detectGateLanguage(content, repoRoot) };
   }
 
   return null;
@@ -194,7 +191,7 @@ export const rule: Rule = createLyseRule({
     defaultSeverity: "warning",
     shortDescription: "AI value-gate governance doc must be present when an AI surface exists",
     fullDescription:
-      "When a design system ships an AI surface — detected by an AI-marker component (via the `AI_MARKER_NAMES` vocabulary from Track 3.2) or reserved AI-marker design tokens (Track 3.1, `detectReservedAiTokens`) — this rule checks that a governance value-gate doc exists and contains structured go/no-go decision language. Candidate locations scanned: `AI_GOVERNANCE.md` at repo root, `docs/ai-value-gate.md`, `docs/ai-governance.md`, `docs/ai-readiness.md`, `docs/ai-checklist.md`, `.lyse/ai-value-gate.md`, and `AI_GOVERNANCE.md` anywhere in the repo tree. A doc is considered valid if it contains at least one of: \"is AI needed\", \"value gate\", \"go/no-go\", \"should this be AI\", \"is AI the right tool\", \"ai-readiness\", \"why AI?\", or \"deterministic rule ... instead of AI\". Emits `warning` when AI surface exists but no doc found, or doc found but lacks gate language. Emits `info` when a valid value-gate doc is present. Emits nothing when the DS has no AI surface.",
+      "When a design system ships an AI surface — detected by an AI-marker component (via the `AI_MARKER_NAMES` vocabulary from Track 3.2) or reserved AI-marker design tokens (Track 3.1, `detectReservedAiTokens`) — this rule checks that a governance value-gate doc exists and contains structured go/no-go decision language. Candidate locations scanned: `AI_GOVERNANCE.md` at repo root, `docs/ai-value-gate.md`, `docs/ai-governance.md`, `docs/ai-readiness.md`, `docs/ai-checklist.md`, `.lyse/ai-value-gate.md`, and `AI_GOVERNANCE.md` anywhere in the repo tree. A doc is considered valid if it carries a language-agnostic structural signal — a markdown checklist (`- [ ]` / `- [x]`) or the YAML front-matter key `lyse-doc: value-gate` — or gate phrasing from the locale-keyed `gatePhrases` vocabulary (en/fr/de/ja/es built-in, extensible via the `i18n` block in `.lyse.yaml`): e.g. \"is AI needed\", \"value gate\", \"go/no-go\", \"is AI the right tool\", \"L'IA est-elle nécessaire\", \"Ist KI notwendig\", \"AIは必要か\". Emits `warning` when AI surface exists but no doc found, or doc found but lacks gate language. Emits `info` when a valid value-gate doc is present. Emits nothing when the DS has no AI surface.",
     helpUri:
       "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-value-gate-doc-present.md",
     rationale: `Why it matters

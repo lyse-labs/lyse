@@ -35,6 +35,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   against the locale-keyed `controlLabels` vocabulary (en/fr/de/ja/es), so
   `Régénérer`, `Neu generieren`, or `再生成` earn the same credit as
   `Regenerate`. Identifier-name detection (primary) is unchanged.
+- **`ai-governance/value-gate-doc-present` is locale-aware (Track 9.1).**
+  Discovered gate docs are now validated by language-agnostic structure
+  first — a markdown checklist (`- [ ]` / `- [x]`) or the YAML front-matter
+  key `lyse-doc: value-gate` — and gate phrasing is matched against the
+  locale-keyed `gatePhrases` vocabulary (en/fr/de/ja/es) instead of
+  English-only regexes, so "L'IA est-elle nécessaire ?" counts. Filename
+  discovery is unchanged; a doc with neither structure nor gate language
+  still warns.
 - **Localized AI-marker detection (Track 9.1).** The shared `isAiMarkerName`
   predicate (gate for all 7 ai-governance rules) now also recognizes
   identifiers combining a structural marker word (`label`, `badge`, `tag`,
