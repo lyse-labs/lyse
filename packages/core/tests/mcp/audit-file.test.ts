@@ -113,6 +113,33 @@ describe("runAuditFile", () => {
     }
   });
 
+  it("runs the naming rules (registry-driven single-file set), not just the legacy 5", async () => {
+    const result = await runAuditFile({
+      path: "MixedBag.tsx",
+      content:
+        'import { useState } from "react";\n' +
+        'export function myWidget() { return <div style={{ background: "#123456" }} />; }\n' +
+        "export function myData() { const [v] = useState(0); return v; }\n",
+    });
+    const ids = new Set(result.violations.map((v) => v.rule_id));
+    expect(ids.has("tokens/no-hardcoded-color")).toBe(true);
+    expect(ids.has("naming/component-pascalcase")).toBe(true);
+    expect(ids.has("naming/hook-prefix")).toBe(true);
+  });
+
+  it("never emits repo-wide rule ids in single-file mode", async () => {
+    const result = await runAuditFile({
+      path: "Anything.tsx",
+      content:
+        'export function myWidget() { return <div style={{ background: "#123456" }} />; }\n',
+    });
+    for (const v of result.violations) {
+      expect(v.rule_id.startsWith("ai-governance/")).toBe(false);
+      expect(v.rule_id.startsWith("ai-surface/")).toBe(false);
+      expect(v.rule_id).not.toBe("stories/coverage");
+    }
+  });
+
   it("omits `reason` when an auto-fix rule resolves a suggestion (tailwind-resolved token)", async () => {
     const dir = mkdtempSync(join(tmpdir(), "lyse-88-"));
     try {
@@ -134,4 +161,18 @@ describe("runAuditFile", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("runs components/no-native-shadows single-file when componentsModule is configured", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "lyse-mcp-af-shadow-"));
+    writeFileSync(join(dir, ".lyse.yaml"), "designSystem:\n  componentsModule: \"@acme/ui\"\n");
+    const result = await runAuditFile({
+      path: join(dir, "Toolbar.tsx"),
+      content: 'import { Card } from "@acme/ui";\nexport default () => <button>save</button>;',
+      project_root: dir,
+    });
+    const shadow = result.violations.filter((v) => v.rule_id === "components/no-native-shadows");
+    expect(shadow.length).toBeGreaterThan(0);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
 });

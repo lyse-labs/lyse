@@ -457,4 +457,5 @@ When the rule fires, the suggestion includes the matching token from the project
   create: () => ({ evaluate }),
   classifyConfidence,
   applyCodemod,
+  singleFileCapable: true,
 });

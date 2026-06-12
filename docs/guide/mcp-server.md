@@ -126,6 +126,8 @@ Audit a single file. The optional `content` lets the agent pass an unsaved buffe
 
 **Use case:** the agent has just generated a new component. Before saving, it calls `audit_file` with the buffer content, sees 2 findings, fixes them, and only then writes the file.
 
+**Rule coverage:** `audit_file` runs the rules that produce meaningful results from a single file in isolation — `tokens/no-hardcoded-color`, `tokens/no-hardcoded-spacing`, `components/no-native-shadows`, `a11y/essentials`, `naming/component-pascalcase`, and `naming/hook-prefix`. Repo-wide rules (governance, AI-surface, story coverage) need the full project graph and only run under `lyse audit`; they will be exposed to agents via MCP resources in a later release.
+
 ### `suggest_fix(path, rule_id, line)`
 
 Request an auto-fix for a specific finding.
