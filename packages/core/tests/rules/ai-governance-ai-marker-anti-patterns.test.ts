@@ -145,6 +145,35 @@ describe("detectAiInCtaLabel", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Unit: localized anti-patterns (Track 9.1)
+// ---------------------------------------------------------------------------
+describe("localized anti-patterns (Track 9.1)", () => {
+  it("does NOT flag sparkle accompanied by 'Généré par IA' (fr)", () => {
+    expect(detectSparkleOnlyMarker(`✨ <span>Généré par IA</span>`)).toBe(false);
+  });
+
+  it("does NOT flag sparkle accompanied by standalone 'KI' text (de)", () => {
+    expect(detectSparkleOnlyMarker(`✨ <span>Von KI erstellt</span>`)).toBe(false);
+  });
+
+  it("flags <button>IA</button> as an AI-CTA anti-pattern (fr)", () => {
+    expect(detectAiInCtaLabel(`<button>IA</button>`)).toEqual([{ label: "IA" }]);
+  });
+
+  it("flags <button>KI</button> as an AI-CTA anti-pattern (de)", () => {
+    expect(detectAiInCtaLabel(`<button>KI</button>`)).toEqual([{ label: "KI" }]);
+  });
+
+  it("still flags <button>AI</button> (regression)", () => {
+    expect(detectAiInCtaLabel(`<button>AI</button>`)).toEqual([{ label: "AI" }]);
+  });
+
+  it("does NOT flag a normal <button>Save</button>", () => {
+    expect(detectAiInCtaLabel(`<button>Save</button>`)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Integration: rule.evaluate
 // ---------------------------------------------------------------------------
 describe("rule.evaluate — integration", () => {
@@ -172,6 +201,26 @@ describe("rule.evaluate — integration", () => {
     writeFileSync(
       join(tmp, "Actions.tsx"),
       `export function Actions() { return <button>Ask AI</button>; }`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.severity).toBe("warning");
+    expect(result.findings[0]?.message).toContain("GitLab");
+  });
+
+  it("FR component: BadgeIA marker + sparkle + 'Généré par IA' → 0 findings (Track 9.1)", async () => {
+    writeFileSync(
+      join(tmp, "BadgeIA.tsx"),
+      `export function BadgeIA() { return <span>✨ Généré par IA</span>; }`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("FR CTA <button>IA</button> → 1 warning, message contains GitLab (Track 9.1)", async () => {
+    writeFileSync(
+      join(tmp, "Actions.tsx"),
+      `export function Actions() { return <button>IA</button>; }`,
     );
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
     expect(result.findings).toHaveLength(1);
