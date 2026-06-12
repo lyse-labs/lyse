@@ -126,7 +126,7 @@ export function scanForFeedbackControls(repoRoot: string, files?: string[]): Fee
     const source = safeReadText(join(repoRoot, rel));
     if (!source) continue;
 
-    if (!fileHasAiMarker(source, rel)) continue;
+    if (!fileHasAiMarker(source, rel, repoRoot)) continue;
 
     const baseName = deriveNameFromPath(rel);
     if (isFeedbackControlName(baseName)) {
@@ -180,7 +180,7 @@ const evaluate = async (
   for (const rel of componentFiles) {
     const source = safeReadText(join(ctx.repoRoot, rel));
     if (!source) continue;
-    if (fileHasAiMarker(source, rel)) {
+    if (fileHasAiMarker(source, rel, ctx.repoRoot)) {
       anyAiMarker = true;
       break;
     }

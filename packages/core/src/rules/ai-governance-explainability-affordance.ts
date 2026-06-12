@@ -55,8 +55,12 @@ export function isExplainabilityAffordanceName(name: string): boolean {
   return AFFORDANCE_PATTERNS.some((p) => lower.includes(p));
 }
 
-export function isMarkerWithPopover(name: string, source: string): boolean {
-  if (!isAiMarkerName(name)) return false;
+export function isMarkerWithPopover(
+  name: string,
+  source: string,
+  repoRoot = "",
+): boolean {
+  if (!isAiMarkerName(name, repoRoot)) return false;
   return ARIA_POPOVER_RE.test(source);
 }
 
@@ -88,7 +92,8 @@ export function scanForExplainabilityAffordances(repoRoot: string, files?: strin
     const source = safeReadText(join(repoRoot, rel));
     if (!source) continue;
 
-    const hasMarker = fileHasAiMarker(source, rel) || isAiMarkerName(baseName);
+    const hasMarker =
+      fileHasAiMarker(source, rel, repoRoot) || isAiMarkerName(baseName, repoRoot);
 
     if (!hasMarker) continue;
 
@@ -106,7 +111,7 @@ export function scanForExplainabilityAffordances(repoRoot: string, files?: strin
     for (const name of names) {
       if (isExplainabilityAffordanceName(name)) {
         found.push(name);
-      } else if (isMarkerWithPopover(name, source)) {
+      } else if (isMarkerWithPopover(name, source, repoRoot)) {
         found.push(`${name}[popover]`);
       }
     }

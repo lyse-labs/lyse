@@ -19,6 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Localized AI-marker detection (Track 9.1).** The shared `isAiMarkerName`
+  predicate (gate for all 7 ai-governance rules) now also recognizes
+  identifiers combining a structural marker word (`label`, `badge`, `tag`,
+  `indicator`, `marker`, `avatar`, `chip`, `pill`) with an AI noun from any
+  active locale — e.g. `BadgeIA`, `IALabel`, `KIBadge`, `人工知能Badge` — so
+  non-English design systems open the AI-governance gate. Latin nouns are
+  boundary-delimited so `ai` never matches inside `Email`/`Detail`/`Caption`.
+- **`ai-governance/ai-marker-anti-patterns` is locale-aware (Track 9.1).**
+  The sparkle-only escape now accepts localized disclaimers and standalone
+  AI nouns (e.g. a sparkle paired with "Généré par IA" is no longer a false
+  positive), and the AI-as-CTA-label detector flags `IA`/`KI`/`人工知能`
+  button labels, not just English `AI`.
 - **MCP `audit_file` runs the full single-file rule set (Track 13.1).**
   Added a registry-driven `singleFileCapable` flag to the `Rule` interface;
   `audit_file` now filters `ruleObjects` by it instead of importing a

@@ -57,7 +57,7 @@ interface ComponentAnalysis {
   tokenRefs: string[];
 }
 
-function analyseComponent(source: string): ComponentAnalysis {
+function analyseComponent(source: string, repoRoot = ""): ComponentAnalysis {
   const tokenRefs: string[] = [];
 
   // 1. Detect reserved token usage via var(--...) references.
@@ -89,7 +89,7 @@ function analyseComponent(source: string): ComponentAnalysis {
   JSX_TAG_RE.lastIndex = 0;
   while ((m = JSX_TAG_RE.exec(source)) !== null) {
     const tag = m[1];
-    if (tag && isAiMarkerName(tag)) {
+    if (tag && isAiMarkerName(tag, repoRoot)) {
       markerViaJsx = true;
       break;
     }
@@ -165,7 +165,7 @@ const evaluate = async (
     const source = safeReadText(join(ctx.repoRoot, rel));
     if (source === null) continue;
 
-    const analysis = analyseComponent(source);
+    const analysis = analyseComponent(source, ctx.repoRoot);
     if (!analysis.usesReservedToken) continue;
 
     opportunities++;

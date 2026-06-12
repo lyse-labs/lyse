@@ -10,6 +10,7 @@ import type {
 } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { detectReservedAiTokens } from "../parsers/ai-tokens.js";
+import { aiNounAlternation } from "./_i18n-vocabulary.js";
 
 const RULE_ID = "ai-governance/ai-marker-component-present";
 const MAX_ALLOWLIST_FILE_BYTES = 1_000_000;
@@ -88,7 +89,47 @@ function isAllowlisted(repoRoot: string): boolean {
   return false;
 }
 
-export function isAiMarkerName(name: string): boolean {
+// Code-identifier vocabulary, not UI copy — devs keep these English even in
+// localized products, so the list is intentionally not locale-driven.
+const STRUCTURAL_MARKER_WORDS = [
+  "label",
+  "badge",
+  "tag",
+  "indicator",
+  "marker",
+  "avatar",
+  "chip",
+  "pill",
+] as const;
+
+// `\b` is unreliable adjacent to CJK (人工知能), and lowercasing erases the
+// camelCase boundary in e.g. `BadgeIA`. Structural words are replaced with a
+// separator first, then Latin nouns are matched with an explicit non-letter
+// boundary so "ai" never matches inside "email"/"detail"/"caption". CJK
+// neighbors are never [a-z], so the same boundary works for 人工知能.
+const localizedNounReCache = new Map<string, RegExp>();
+
+function localizedNounRe(repoRoot: string): RegExp {
+  let re = localizedNounReCache.get(repoRoot);
+  if (!re) {
+    re = new RegExp(
+      `(?:^|[^a-z])(?:${aiNounAlternation(repoRoot)})(?:[^a-z]|$)`,
+    );
+    localizedNounReCache.set(repoRoot, re);
+  }
+  return re;
+}
+
+function isLocalizedMarkerName(lower: string, repoRoot: string): boolean {
+  if (!STRUCTURAL_MARKER_WORDS.some((w) => lower.includes(w))) return false;
+  let residue = lower;
+  for (const w of STRUCTURAL_MARKER_WORDS) {
+    residue = residue.replaceAll(w, " ");
+  }
+  return localizedNounRe(repoRoot).test(residue);
+}
+
+export function isAiMarkerName(name: string, repoRoot = ""): boolean {
   const lower = name.toLowerCase();
   if (AI_MARKER_NAMES.has(lower)) return true;
   if (lower.startsWith(MAGIC_PREFIX)) return true;
@@ -96,7 +137,7 @@ export function isAiMarkerName(name: string): boolean {
   if (lower.includes("aimarker")) return true;
   if (lower.includes("aiavatar")) return true;
   if (lower.includes("aiindicator")) return true;
-  return false;
+  return isLocalizedMarkerName(lower, repoRoot);
 }
 
 export function safeReadText(absPath: string): string | null {
@@ -150,13 +191,17 @@ export function deriveComponentNameFromPath(relPath: string): string {
 
 // Shared per-file AI-marker check used by explainability, feedback-control,
 // human-control-affordances, and ai-loading-error-states rules.
-export function fileHasAiMarker(source: string, relPath: string): boolean {
+export function fileHasAiMarker(
+  source: string,
+  relPath: string,
+  repoRoot = "",
+): boolean {
   const names = relPath.endsWith(".vue")
     ? extractVueNames(source)
     : extractNamesFromSource(source);
-  if (names.some((n) => isAiMarkerName(n))) return true;
+  if (names.some((n) => isAiMarkerName(n, repoRoot))) return true;
   for (const m of source.matchAll(/<\s*([A-Za-z][\w.-]*)/g)) {
-    if (m[1] && isAiMarkerName(m[1])) return true;
+    if (m[1] && isAiMarkerName(m[1], repoRoot)) return true;
   }
   return false;
 }
@@ -192,7 +237,7 @@ export function scanForMarkerComponents(repoRoot: string): string[] {
     const source = safeReadText(abs);
     if (!source) continue;
     for (const name of extractNamesFromSource(source)) {
-      if (isAiMarkerName(name)) found.push(name);
+      if (isAiMarkerName(name, repoRoot)) found.push(name);
     }
   }
 
@@ -212,10 +257,7 @@ export function scanForMarkerComponents(repoRoot: string): string[] {
 
   for (const rel of componentFiles) {
     const baseName = deriveComponentNameFromPath(rel);
-    if (isAiMarkerName(baseName)) {
-      found.push(baseName);
-      continue;
-    }
+    if (isAiMarkerName(baseName, repoRoot)) found.push(baseName);
 
     const source = safeReadText(join(repoRoot, rel));
     if (!source) continue;
@@ -225,7 +267,7 @@ export function scanForMarkerComponents(repoRoot: string): string[] {
       : extractNamesFromSource(source);
 
     for (const name of names) {
-      if (isAiMarkerName(name)) found.push(name);
+      if (isAiMarkerName(name, repoRoot)) found.push(name);
     }
   }
 
@@ -294,7 +336,7 @@ export const rule: Rule = createLyseRule({
     defaultSeverity: "warning",
     shortDescription: "Detect AI-marker component in the DS export surface",
     fullDescription:
-      "Scans the design system's export surface (`src/index.ts`, `index.ts`, etc.) and component files (`**/*.{tsx,jsx,vue}`) for a dedicated AI-marker component — a label, badge, avatar, or indicator that visually marks AI-generated output. Recognised vocabularies: Carbon `AILabel`, generic `AIBadge` / `AITag` / `AIIndicator` / `AIAvatar`, `GenAI*` variants, `*AIMarker*`, and Polaris `magic-*` components. Emits `info` when a marker component is found; emits `warning` when reserved AI tokens exist (detected by the shared `detectReservedAiTokens` parser) but no marker component is present; emits nothing when the DS has no AI surface at all.",
+      "Scans the design system's export surface (`src/index.ts`, `index.ts`, etc.) and component files (`**/*.{tsx,jsx,vue}`) for a dedicated AI-marker component — a label, badge, avatar, or indicator that visually marks AI-generated output. Recognised vocabularies: Carbon `AILabel`, generic `AIBadge` / `AITag` / `AIIndicator` / `AIAvatar`, `GenAI*` variants, `*AIMarker*`, Polaris `magic-*` components, and localized markers combining a structural word (label/badge/tag/indicator/marker/avatar/chip/pill) with an AI noun from any active locale (`BadgeIA`, `IALabel`, `KIBadge`, `人工知能Badge`). Emits `info` when a marker component is found; emits `warning` when reserved AI tokens exist (detected by the shared `detectReservedAiTokens` parser) but no marker component is present; emits nothing when the DS has no AI surface at all.",
     helpUri:
       "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-ai-marker-component-present.md",
     rationale: `Why it matters

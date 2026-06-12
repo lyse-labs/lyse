@@ -173,7 +173,7 @@ const evaluate = async (
     const source = safeReadText(abs);
     if (!source) continue;
 
-    const hasMarker = fileHasAiMarker(source, rel);
+    const hasMarker = fileHasAiMarker(source, rel, ctx.repoRoot);
     if (hasMarker) {
       seenMarker = true;
       const hits = detectPerOutputControls(source);

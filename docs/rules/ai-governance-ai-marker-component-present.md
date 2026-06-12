@@ -32,6 +32,9 @@ Detection runs in two passes:
 | `GenAI*` prefix | `GenAIAvatar`, `GenAILabel` |
 | `*AIMarker*` substring | `MyAIMarkerBadge` |
 | `magic-*` prefix (Polaris) | `magic-icon`, `magic-sparkle` |
+| Structural word + locale AI noun (Track 9.1) | `BadgeIA`, `IALabel`, `KIBadge`, `人工知能Badge` |
+
+**Localized markers (Track 9.1).** An identifier also counts as an AI marker when it combines a structural marker word (`label`, `badge`, `tag`, `indicator`, `marker`, `avatar`, `chip`, `pill` — code-identifier vocabulary, kept in English even in localized products) with an AI noun from any active locale (`ai`, `ia`, `ki`, `人工知能`, plus `.lyse.yaml` `i18n.vocabulary.aiNouns`). Latin nouns are boundary-delimited so `ai` never matches inside `Email`, `Detail`, or `Caption`; a structural word alone (`Badge`) never matches.
 
 **Cross-condition warning.** If no marker component is found but `detectReservedAiTokens(repoRoot)` (shared parser from `packages/core/src/parsers/ai-tokens.ts`) returns a non-empty list, the rule emits a `warning`. This is the "tokens without a component" gap.
 

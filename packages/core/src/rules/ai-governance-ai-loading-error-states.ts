@@ -89,7 +89,7 @@ function hasAiSurface(files: string[], repoRoot: string): boolean {
     const names = namesFromFile(source, rel);
     const pathName = deriveComponentNameFromPath(rel);
     const allNames = [...names, pathName];
-    if (allNames.some((n) => isAiMarkerName(n))) return true;
+    if (allNames.some((n) => isAiMarkerName(n, repoRoot))) return true;
   }
   return false;
 }

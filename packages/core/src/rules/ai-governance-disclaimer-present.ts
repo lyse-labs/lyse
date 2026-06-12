@@ -87,9 +87,9 @@ export function detectDisclaimer(source: string): DisclaimerResult {
   return { found: false, isGitLabExact: false };
 }
 
-export function detectAiMarkerInSource(source: string): boolean {
+export function detectAiMarkerInSource(source: string, repoRoot = ""): boolean {
   for (const m of source.matchAll(/<\s*([A-Za-z][\w.-]*)/g)) {
-    if (m[1] && isAiMarkerName(m[1])) return true;
+    if (m[1] && isAiMarkerName(m[1], repoRoot)) return true;
   }
   return false;
 }
@@ -130,7 +130,7 @@ const evaluate = async (
     const source = safeReadText(abs);
     if (!source) continue;
 
-    const hasMarker = detectAiMarkerInSource(source);
+    const hasMarker = detectAiMarkerInSource(source, ctx.repoRoot);
     const disclaimer = detectDisclaimer(source);
 
     if (!hasMarker) continue;
