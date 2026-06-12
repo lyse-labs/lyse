@@ -27,6 +27,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of English-only regexes, so e.g. "Généré par l'IA, peut être inexact" no
   longer triggers a false warning. The GitLab Pajamas canonical-wording
   signal and the `*Disclaimer*` tag-name detector are unchanged.
+- **`ai-governance/human-control-affordances` is locale-aware (Track 9.1).**
+  Two new language-agnostic per-output signals: JSX handler props
+  (`onRegenerate`, `onRetry`, `onStop`, `onUndo`, `onAccept`, `onReject`,
+  `onDismiss`, `onReport`) and `data-action="regenerate|retry|stop|undo|
+  accept|reject|dismiss|report"` attributes. Button labels are now matched
+  against the locale-keyed `controlLabels` vocabulary (en/fr/de/ja/es), so
+  `Régénérer`, `Neu generieren`, or `再生成` earn the same credit as
+  `Regenerate`. Identifier-name detection (primary) is unchanged.
 - **Localized AI-marker detection (Track 9.1).** The shared `isAiMarkerName`
   predicate (gate for all 7 ai-governance rules) now also recognizes
   identifiers combining a structural marker word (`label`, `badge`, `tag`,

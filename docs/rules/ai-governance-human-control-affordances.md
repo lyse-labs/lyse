@@ -20,11 +20,21 @@ The rule globs `**/*.{tsx,jsx,vue}` (excluding `node_modules`, `dist`, `build`, 
 
 **Group 1 — per-output controls**
 
-Matches exported component names whose identifier (case-insensitive) contains one of:
-`regenerate`, `retry`, `stopgenerat`, `editresponse`, `editoutput`, `undo`, `confirm`, `dismiss`, `accept`, `reject`, `report`, `reverttoai`, `usesuggestion`.
+Language-agnostic signals are primary (code identifiers stay English even in
+localized products):
 
-Also matches button/anchor element text content (case-insensitive, exact) against:
-`Regenerate`, `Retry`, `Stop`, `Stop generating`, `Undo`, `Confirm`, `Dismiss`, `Accept`, `Reject`, `Report`, `Revert to AI`, `Use suggestion`.
+- Exported component names whose identifier (case-insensitive) contains one of:
+  `regenerate`, `retry`, `stopgenerat`, `editresponse`, `editoutput`, `undo`, `confirm`, `dismiss`, `accept`, `reject`, `report`, `reverttoai`, `usesuggestion`.
+- JSX handler props: `onRegenerate`, `onRetry`, `onStop`, `onUndo`, `onAccept`,
+  `onReject`, `onDismiss`, `onReport` (camelCase suffixes allowed, e.g.
+  `onRegenerateClick`).
+- A `data-action` attribute valued `regenerate`, `retry`, `stop`, `undo`,
+  `accept`, `reject`, `dismiss`, or `report`.
+
+Button/anchor element text content is matched (trimmed, case-insensitive,
+exact) against the locale-keyed `controlLabels` vocabulary — en/fr/de/ja/es
+built-in (`Regenerate`, `Régénérer`, `Neu generieren`, `再生成`,
+`Regenerar`, …), extensible via the `i18n` block in `.lyse.yaml`.
 
 **Group 2 — global AI toggle**
 

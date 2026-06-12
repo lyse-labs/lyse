@@ -153,6 +153,66 @@ describe("detectPerOutputControls — label-based", () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// Unit: detectPerOutputControls — i18n labels + agnostic signals (Track 9.1)
+// ────────────────────────────────────────────────────────────────────────────
+
+describe("detectPerOutputControls — i18n + agnostic", () => {
+  it("detects a FR button labeled Régénérer", () => {
+    expect(detectPerOutputControls(`<button>Régénérer</button>`)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ label: "Régénérer" })]),
+    );
+  });
+
+  it("detects a DE Button labeled 'Neu generieren'", () => {
+    expect(detectPerOutputControls(`<Button>Neu generieren</Button>`)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ label: "Neu generieren" })]),
+    );
+  });
+
+  it("detects a JA button labeled 再生成", () => {
+    expect(detectPerOutputControls(`<button>再生成</button>`)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ label: "再生成" })]),
+    );
+  });
+
+  it("detects an onRegenerate handler prop (language-agnostic)", () => {
+    expect(detectPerOutputControls(`<AIOutput onRegenerate={() => refetch()} />`)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "onRegenerate" })]),
+    );
+  });
+
+  it("detects an onRetry handler prop (language-agnostic)", () => {
+    expect(detectPerOutputControls(`<Result onRetry={handleRetry} />`)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "onRetry" })]),
+    );
+  });
+
+  it("detects a data-action=\"retry\" attribute (language-agnostic)", () => {
+    expect(detectPerOutputControls(`<button data-action="retry">Réessayer encore</button>`)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: 'data-action="retry"' })]),
+    );
+  });
+
+  it("detects a data-action=\"regenerate\" attribute", () => {
+    expect(detectPerOutputControls(`<button data-action="regenerate">もう一度</button>`)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: 'data-action="regenerate"' })]),
+    );
+  });
+
+  it("does NOT credit a generic FR button label (Enregistrer)", () => {
+    expect(detectPerOutputControls(`<button>Enregistrer</button>`)).toEqual([]);
+  });
+
+  it("does NOT credit a data-action with an unrelated value", () => {
+    expect(detectPerOutputControls(`<button data-action="save">Save</button>`)).toEqual([]);
+  });
+
+  it("does NOT credit an onClick handler prop", () => {
+    expect(detectPerOutputControls(`<button onClick={save}>Save</button>`)).toEqual([]);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 // Unit: detectPerOutputControls — negative cases
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -335,6 +395,53 @@ export default { name: 'AIWidget' };
     expect(result.findings).toHaveLength(1);
     expect(result.findings[0]?.severity).toBe("warning");
     expect(result.findings[0]?.message).toContain("HAX G8");
+  });
+
+  // Fixture 13: AI marker + FR Régénérer button → info (i18n label pack)
+  it("fixture 13: AI marker + FR <button>Régénérer</button> → info", async () => {
+    writeFileSync(
+      join(tmp, "SortieIA.tsx"),
+      `export function SortieIA() { return <div><AIBadge /><button>Régénérer</button></div>; }`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.severity).toBe("info");
+    expect(result.findings[0]?.message).toContain("Régénérer");
+  });
+
+  // Fixture 14: AI marker + onRetry handler prop → info (agnostic signal)
+  it("fixture 14: AI marker + onRetry handler prop → info", async () => {
+    writeFileSync(
+      join(tmp, "AIResult.tsx"),
+      `export function AIResult() { return <div><AIBadge /><Output onRetry={refetch} /></div>; }`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.severity).toBe("info");
+    expect(result.findings[0]?.message).toContain("onRetry");
+  });
+
+  // Fixture 15: AI marker + data-action="retry" → info (agnostic signal)
+  it("fixture 15: AI marker + data-action=\"retry\" → info", async () => {
+    writeFileSync(
+      join(tmp, "AIPanel.tsx"),
+      `export function AIPanel() { return <div><AIBadge /><button data-action="retry">もう一度試す</button></div>; }`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.severity).toBe("info");
+    expect(result.findings[0]?.message).toContain("data-action");
+  });
+
+  // Fixture 16: AI marker + only generic FR button → warning (no over-crediting)
+  it("fixture 16: AI marker + only <button>Enregistrer</button> → warning", async () => {
+    writeFileSync(
+      join(tmp, "CarteIA.tsx"),
+      `export function CarteIA() { return <div><AIBadge /><button>Enregistrer</button></div>; }`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.severity).toBe("warning");
   });
 
   // Fixture 12: AI marker + EditResponse (compound name) still earns credit via name patterns.
