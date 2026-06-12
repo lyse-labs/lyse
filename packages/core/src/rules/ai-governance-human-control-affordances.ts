@@ -46,6 +46,9 @@ const PER_OUTPUT_NAME_PATTERNS = [
   "dismiss",
   "accept",
   "reject",
+  "report",
+  "reverttoai",
+  "usesuggestion",
 ];
 
 const PER_OUTPUT_LABELS: ReadonlySet<string> = new Set([
@@ -58,6 +61,9 @@ const PER_OUTPUT_LABELS: ReadonlySet<string> = new Set([
   "dismiss",
   "accept",
   "reject",
+  "report",
+  "revert to ai",
+  "use suggestion",
 ]);
 
 export interface ControlHit {
