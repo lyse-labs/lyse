@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`ai-governance/disclaimer-present` is locale-aware (Track 9.1).**
+  Language-agnostic structural signals are now primary: a `role="note"`
+  element or a `data-ai-disclaimer` / `data-disclaimer` attribute inside an
+  AI-marker file counts as a disclaimer. Disclaimer copy is matched against
+  the locale-keyed `disclaimerPhrases` vocabulary (en/fr/de/ja/es) instead
+  of English-only regexes, so e.g. "Généré par l'IA, peut être inexact" no
+  longer triggers a false warning. The GitLab Pajamas canonical-wording
+  signal and the `*Disclaimer*` tag-name detector are unchanged.
 - **Localized AI-marker detection (Track 9.1).** The shared `isAiMarkerName`
   predicate (gate for all 7 ai-governance rules) now also recognizes
   identifiers combining a structural marker word (`label`, `badge`, `tag`,
