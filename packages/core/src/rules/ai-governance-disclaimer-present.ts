@@ -35,6 +35,9 @@ const DISCLAIMER_PHRASES: RegExp[] = [
   /\bmay\s+be\s+inaccurate\b/i,
   /\bcheck\s+important\s+info\b/i,
   /\bpowered\s+by\s+ai\b/i,
+  /\bai[- ]?assisted\b/i,
+  /\buses\s+ai\.\s*verify\s+results\b/i,
+  /\bverify\s+(?:results|before|the\s+output)\b/i,
 ];
 
 // WHY AI prefix check: generic legal/cookie/privacy disclaimers co-located
