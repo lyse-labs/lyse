@@ -7,11 +7,7 @@ import { parseCss } from "../../parsers/css.js";
 import { extractCssInJs } from "../../parsers/css-in-js.js";
 import { loadTokens } from "../../loaders/tokens.js";
 import { loadStories } from "../../loaders/stories.js";
-import { rule as r1 } from "../../rules/tokens-no-hardcoded-color.js";
-import { rule as r2 } from "../../rules/tokens-no-hardcoded-spacing.js";
-import { rule as r3 } from "../../rules/components-shadow-native.js";
-import { rule as r4 } from "../../rules/a11y-essentials.js";
-import { rule as r5 } from "../../rules/storybook-coverage.js";
+import { ruleObjects } from "../../rules/registry.js";
 import { runRules } from "../../rule-runner.js";
 import type { ParsedFiles, RuleContext } from "../../types.js";
 
@@ -145,7 +141,7 @@ export async function runAuditFile(input: AuditFileInput): Promise<AuditFileResu
     storyIndex,
     excludePaths: [],
   };
-  const rules = [r1, r2, r3, r4, r5];
+  const rules = ruleObjects.filter((r) => r.singleFileCapable === true);
   const runResult = await runRules(rules, ctx, parsed);
 
   // `loadTokens()` returns `TokenMap | null`. A null return ===

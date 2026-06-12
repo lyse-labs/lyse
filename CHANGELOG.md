@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **MCP `audit_file` runs the full single-file rule set (Track 13.1).**
+  Added a registry-driven `singleFileCapable` flag to the `Rule` interface;
+  `audit_file` now filters `ruleObjects` by it instead of importing a
+  hardcoded list. Six rules run in single-file mode —
+  `tokens/no-hardcoded-color`, `tokens/no-hardcoded-spacing`,
+  `components/no-native-shadows`, `a11y/essentials`,
+  `naming/component-pascalcase`, and `naming/hook-prefix` (the two naming
+  rules are new in this mode). Repo-wide rules (AI-governance, AI-surface,
+  `stories/coverage`) need the full project graph and remain
+  `lyse audit`-only; they will be exposed to agents via MCP resources in a
+  later track.
+
 ### Fixed
 
 - **CI:** the required `perf` check now runs on every PR and skip-succeeds
