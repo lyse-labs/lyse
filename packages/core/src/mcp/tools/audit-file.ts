@@ -7,6 +7,7 @@ import { parseCss } from "../../parsers/css.js";
 import { extractCssInJs } from "../../parsers/css-in-js.js";
 import { loadTokens } from "../../loaders/tokens.js";
 import { loadStories } from "../../loaders/stories.js";
+import { loadConfig } from "../../config/schema.js";
 import { ruleObjects } from "../../rules/registry.js";
 import { runRules } from "../../rule-runner.js";
 import type { ParsedFiles, RuleContext } from "../../types.js";
@@ -133,10 +134,13 @@ export async function runAuditFile(input: AuditFileInput): Promise<AuditFileResu
   // Load project context (tokens, stories, etc.) — same as full audit
   const tokens = await loadTokens(projectRoot);
   const storyIndex = await loadStories(projectRoot);
+  // degrade (not throw) on malformed config: a single-file audit must never
+  // fail because of an unrelated .lyse.yaml error.
+  const config = loadConfig(projectRoot, { onError: "degrade" });
   const ctx: RuleContext = {
     repoRoot: projectRoot,
     tokens,
-    componentsModule: null, // single-file mode: no inventory crosswalk
+    componentsModule: config.designSystem?.componentsModule ?? null,
     componentInventory: [],
     storyIndex,
     excludePaths: [],

@@ -161,4 +161,18 @@ describe("runAuditFile", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("runs components/no-native-shadows single-file when componentsModule is configured", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "lyse-mcp-af-shadow-"));
+    writeFileSync(join(dir, ".lyse.yaml"), "designSystem:\n  componentsModule: \"@acme/ui\"\n");
+    const result = await runAuditFile({
+      path: join(dir, "Toolbar.tsx"),
+      content: 'import { Card } from "@acme/ui";\nexport default () => <button>save</button>;',
+      project_root: dir,
+    });
+    const shadow = result.violations.filter((v) => v.rule_id === "components/no-native-shadows");
+    expect(shadow.length).toBeGreaterThan(0);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
 });
