@@ -34,16 +34,24 @@ When an AI surface is detected, the rule scans candidate locations for a value-g
 - `docs/**/ai-checklist.md`
 - `docs/ai/*.md`
 
-A doc is considered valid (gate language present) if it contains at least one of:
+A doc is considered valid (gate present) if it carries one of these
+language-agnostic structural signals:
 
-- "is AI needed"
+- a markdown checklist item — `- [ ]` or `- [x]` (the go/no-go form itself)
+- the YAML front-matter key `lyse-doc: value-gate` (explicit opt-in)
+
+…or gate phrasing from the locale-keyed `gatePhrases` vocabulary
+(en/fr/de/ja/es built-in, extensible via the `i18n` block in `.lyse.yaml`),
+e.g.:
+
+- "is AI needed" / "L'IA est-elle nécessaire" / "Ist KI notwendig" / "AIは必要か" / "es necesaria la IA"
 - "value gate" or "value-gate"
 - "go/no-go"
 - "should this (feature) be AI"
 - "is AI the right tool"
 - "ai-readiness" or "ai readiness"
 - "why AI?"
-- "deterministic rule ... instead of AI"
+- "deterministic rule instead of AI"
 
 ## Examples
 

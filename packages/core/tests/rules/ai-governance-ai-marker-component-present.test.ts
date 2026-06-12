@@ -6,6 +6,7 @@ import {
   rule,
   AI_MARKER_NAMES,
   isAiMarkerName,
+  fileHasAiMarker,
   scanForMarkerComponents,
   extractNamesFromSource,
 } from "../../src/rules/ai-governance-ai-marker-component-present.js";
@@ -64,6 +65,61 @@ describe("isAiMarkerName", () => {
     expect(isAiMarkerName("MainContent")).toBe(false);
     expect(isAiMarkerName("RailNav")).toBe(false);
     expect(isAiMarkerName("CaptionText")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Unit: isAiMarkerName — localized markers (Track 9.1)
+// ---------------------------------------------------------------------------
+describe("isAiMarkerName — localized markers (Track 9.1)", () => {
+  it("recognizes FR/DE markers combining a structural word and a locale AI noun", () => {
+    expect(isAiMarkerName("BadgeIA")).toBe(true);
+    expect(isAiMarkerName("IALabel")).toBe(true);
+    expect(isAiMarkerName("KIBadge")).toBe(true);
+  });
+
+  it("recognizes a CJK AI noun (人工知能) combined with a structural word", () => {
+    expect(isAiMarkerName("人工知能Badge")).toBe(true);
+  });
+
+  it("does NOT match a structural word without an AI noun", () => {
+    expect(isAiMarkerName("Badge")).toBe(false);
+    expect(isAiMarkerName("Label")).toBe(false);
+  });
+
+  it("does NOT match 'ai' embedded inside ordinary words", () => {
+    expect(isAiMarkerName("Email")).toBe(false);
+    expect(isAiMarkerName("Caption")).toBe(false);
+    expect(isAiMarkerName("Detail")).toBe(false);
+    expect(isAiMarkerName("EmailBadge")).toBe(false);
+    expect(isAiMarkerName("MainLabel")).toBe(false);
+    expect(isAiMarkerName("MediaLabel")).toBe(false);
+  });
+
+  it("keeps existing English / prefix matches working", () => {
+    expect(isAiMarkerName("AILabel")).toBe(true);
+    expect(isAiMarkerName("genai-foo")).toBe(true);
+    expect(isAiMarkerName("magic-card")).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Unit: fileHasAiMarker — localized gate (Track 9.1)
+// ---------------------------------------------------------------------------
+describe("fileHasAiMarker — localized gate (Track 9.1)", () => {
+  it("a file exporting BadgeIA opens the AI-surface gate", () => {
+    const src = "export function BadgeIA() { return <span>IA</span>; }";
+    expect(fileHasAiMarker(src, "BadgeIA.tsx")).toBe(true);
+  });
+
+  it("a file rendering a <BadgeIA/> tag opens the AI-surface gate", () => {
+    const src = "export function Out() { return <BadgeIA/>; }";
+    expect(fileHasAiMarker(src, "Out.tsx")).toBe(true);
+  });
+
+  it("a file exporting only Badge does not open the gate", () => {
+    const src = "export function Badge() { return <span>New</span>; }";
+    expect(fileHasAiMarker(src, "Badge.tsx")).toBe(false);
   });
 });
 

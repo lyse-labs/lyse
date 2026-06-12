@@ -17,6 +17,7 @@ import {
   fileHasAiMarker,
   makeAllowlistCheck,
 } from "./ai-governance-ai-marker-component-present.js";
+import { makeLocaleMatcher, type LocaleMatcher } from "./_i18n-vocabulary.js";
 
 const RULE_ID = "ai-governance/human-control-affordances";
 const DISABLE_DIRECTIVE = `lyse-disable ${RULE_ID}`;
@@ -51,20 +52,24 @@ const PER_OUTPUT_NAME_PATTERNS = [
   "usesuggestion",
 ];
 
-const PER_OUTPUT_LABELS: ReadonlySet<string> = new Set([
-  "regenerate",
-  "retry",
-  "stop",
-  "stop generating",
-  "undo",
-  "confirm",
-  "dismiss",
-  "accept",
-  "reject",
-  "report",
-  "revert to ai",
-  "use suggestion",
-]);
+// Language-agnostic per-output signals: JSX handler prop names stay English
+// even in localized products, and data-action values are a code-level contract.
+const HANDLER_PROP_RE =
+  /\bon(?:Regenerate|Retry|Stop|Undo|Accept|Reject|Dismiss|Report)[A-Za-z]*(?=\s*=)/g;
+
+const DATA_ACTION_RE =
+  /\bdata-action\s*=\s*["'](regenerate|retry|stop|undo|accept|reject|dismiss|report)["']/gi;
+
+const controlLabelMatcherCache = new Map<string, LocaleMatcher>();
+
+function controlLabelMatcher(repoRoot: string): LocaleMatcher {
+  let matcher = controlLabelMatcherCache.get(repoRoot);
+  if (!matcher) {
+    matcher = makeLocaleMatcher("controlLabels", repoRoot);
+    controlLabelMatcherCache.set(repoRoot, matcher);
+  }
+  return matcher;
+}
 
 export interface ControlHit {
   name?: string;
@@ -94,13 +99,20 @@ function extractButtonLabels(source: string): string[] {
   return labels;
 }
 
-export function detectPerOutputControls(source: string): ControlHit[] {
+export function detectPerOutputControls(source: string, repoRoot = ""): ControlHit[] {
   const hits: ControlHit[] = [];
   for (const name of extractNamesFromSource(source)) {
     if (isPerOutputName(name)) hits.push({ name });
   }
+  for (const m of source.matchAll(HANDLER_PROP_RE)) {
+    hits.push({ name: m[0] });
+  }
+  for (const m of source.matchAll(DATA_ACTION_RE)) {
+    if (m[1]) hits.push({ name: `data-action="${m[1].toLowerCase()}"` });
+  }
+  const labels = controlLabelMatcher(repoRoot);
   for (const label of extractButtonLabels(source)) {
-    if (PER_OUTPUT_LABELS.has(label.toLowerCase())) hits.push({ label });
+    if (labels.matchesLabel(label)) hits.push({ label });
   }
   return hits;
 }
@@ -173,10 +185,10 @@ const evaluate = async (
     const source = safeReadText(abs);
     if (!source) continue;
 
-    const hasMarker = fileHasAiMarker(source, rel);
+    const hasMarker = fileHasAiMarker(source, rel, ctx.repoRoot);
     if (hasMarker) {
       seenMarker = true;
-      const hits = detectPerOutputControls(source);
+      const hits = detectPerOutputControls(source, ctx.repoRoot);
       allControlHits.push(...hits);
     }
     if (detectGlobalAiToggle(source)) hasGlobalToggle = true;
@@ -231,8 +243,13 @@ export const rule: Rule = createLyseRule({
     shortDescription: "Detect human-control affordances over AI output",
     fullDescription:
       "Scans component files (`**/*.{tsx,jsx,vue}`) for two groups of human-control affordances. " +
-      "Group 1 — per-output controls: exported component names or button labels matching the correction/dismissal vocabulary " +
-      "(Regenerate, Retry, Stop, Edit, Undo, Confirm, Dismiss, Accept, Reject, Report, Revert to AI, Use suggestion). " +
+      "Group 1 — per-output controls, detected via language-agnostic signals first: exported component names matching the " +
+      "correction/dismissal vocabulary (Regenerate, Retry, Stop, Edit, Undo, Confirm, Dismiss, Accept, Reject, Report, " +
+      "Revert to AI, Use suggestion), JSX handler props (`onRegenerate`, `onRetry`, `onStop`, `onUndo`, `onAccept`, " +
+      "`onReject`, `onDismiss`, `onReport`), and `data-action=\"regenerate|retry|stop|undo|accept|reject|dismiss|report\"` " +
+      "attributes — these stay English even in localized products. Button labels are matched against the locale-keyed " +
+      "`controlLabels` vocabulary (en/fr/de/ja/es built-in, extensible via the `i18n` block in `.lyse.yaml`), so " +
+      "`Régénérer`, `Neu generieren`, or `再生成` earn the same credit as `Regenerate`. " +
       "Group 2 — global AI toggle: exported names or toggle labels indicating a settings surface that lets users disable AI " +
       "(AISettings, AiPreferences, DisableAI, or a label 'Disable AI' / 'AI features'). " +
       "Cross-condition: when an AI-marker component is present (per the shared `isAiMarkerName` predicate) but no per-output control is found, emits `warning`; " +

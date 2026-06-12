@@ -53,6 +53,40 @@ describe("detectGateLanguage", () => {
   });
 });
 
+describe("detectGateLanguage — i18n + agnostic structure (Track 9.1)", () => {
+  it("matches FR gate question 'L'IA est-elle nécessaire ?'", () => {
+    expect(detectGateLanguage("## L'IA est-elle nécessaire ?\nJustifiez avant de livrer.")).toBe(true);
+  });
+
+  it("matches DE gate question 'Ist KI notwendig?'", () => {
+    expect(detectGateLanguage("## Ist KI notwendig?\nVor dem Versand beantworten.")).toBe(true);
+  });
+
+  it("matches JA gate question 'AIは必要か'", () => {
+    expect(detectGateLanguage("## AIは必要か\n出荷前に回答すること。")).toBe(true);
+  });
+
+  it("matches a markdown checklist with unchecked items (language-agnostic)", () => {
+    expect(detectGateLanguage("# Liste de contrôle\n- [ ] Règle déterministe possible ?\n- [ ] Données disponibles ?")).toBe(true);
+  });
+
+  it("matches a markdown checklist with checked items (language-agnostic)", () => {
+    expect(detectGateLanguage("# チェックリスト\n- [x] 完了済み\n- [ ] 未完了")).toBe(true);
+  });
+
+  it("matches YAML front-matter key 'lyse-doc: value-gate' (language-agnostic)", () => {
+    expect(detectGateLanguage("---\nlyse-doc: value-gate\n---\n\n# Beliebiger Titel\nFreitext ohne Schlüsselwörter.")).toBe(true);
+  });
+
+  it("regression: still matches 'Should this feature be AI-powered?'", () => {
+    expect(detectGateLanguage("Should this feature be AI-powered? Justify below.")).toBe(true);
+  });
+
+  it("does NOT match generic FR prose with no gate language or structure", () => {
+    expect(detectGateLanguage("# Guide des composants\n\nUtilisez AILabel sur toutes les surfaces générées.")).toBe(false);
+  });
+});
+
 let tmp: string;
 beforeEach(() => {
   tmp = mkdtempSync(join(tmpdir(), "lyse-vg-"));
@@ -184,6 +218,53 @@ describe("rule.evaluate — integration", () => {
     writeFileSync(join(tmp, "src/AILabel.tsx"), "export function AILabel() {}");
     mkdirSync(join(tmp, "docs/ai"), { recursive: true });
     writeFileSync(join(tmp, "docs/ai/components.md"), "## Why AI-powered components?\nUse AILabel on all generated surfaces.");
+    const ctx = makeCtx(tmp);
+    const result = await rule.evaluate(ctx, emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.severity).toBe("warning");
+  });
+
+  it("emits info for a FR value-gate doc (i18n gate phrases)", async () => {
+    mkdirSync(join(tmp, "src"));
+    writeFileSync(join(tmp, "src/index.ts"), "export { AILabel } from './ai-label';");
+    writeFileSync(join(tmp, "src/AILabel.tsx"), "export function AILabel() {}");
+    writeFileSync(join(tmp, "AI_GOVERNANCE.md"), "# Gouvernance IA\nL'IA est-elle nécessaire ?");
+    const ctx = makeCtx(tmp);
+    const result = await rule.evaluate(ctx, emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.severity).toBe("info");
+  });
+
+  it("emits info for a gate doc that is only a markdown checklist (agnostic structure)", async () => {
+    mkdirSync(join(tmp, "src"));
+    writeFileSync(join(tmp, "src/index.ts"), "export { AILabel } from './ai-label';");
+    writeFileSync(join(tmp, "src/AILabel.tsx"), "export function AILabel() {}");
+    writeFileSync(
+      join(tmp, "AI_GOVERNANCE.md"),
+      "# Pré-lancement\n- [ ] Règle déterministe possible ?\n- [ ] Fallback défini ?",
+    );
+    const ctx = makeCtx(tmp);
+    const result = await rule.evaluate(ctx, emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.severity).toBe("info");
+  });
+
+  it("emits info for a gate doc opted in via 'lyse-doc: value-gate' front-matter", async () => {
+    mkdirSync(join(tmp, "src"));
+    writeFileSync(join(tmp, "src/index.ts"), "export { AILabel } from './ai-label';");
+    writeFileSync(join(tmp, "src/AILabel.tsx"), "export function AILabel() {}");
+    writeFileSync(join(tmp, "AI_GOVERNANCE.md"), "---\nlyse-doc: value-gate\n---\n\n# 任意の見出し\n自由記述。");
+    const ctx = makeCtx(tmp);
+    const result = await rule.evaluate(ctx, emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.severity).toBe("info");
+  });
+
+  it("regression: still warns when doc has no gate language, checklist, or front-matter key", async () => {
+    mkdirSync(join(tmp, "src"));
+    writeFileSync(join(tmp, "src/index.ts"), "export { AILabel } from './ai-label';");
+    writeFileSync(join(tmp, "src/AILabel.tsx"), "export function AILabel() {}");
+    writeFileSync(join(tmp, "AI_GOVERNANCE.md"), "# Gouvernance\nUtilisez AILabel partout.");
     const ctx = makeCtx(tmp);
     const result = await rule.evaluate(ctx, emptyParsed);
     expect(result.findings).toHaveLength(1);

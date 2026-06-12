@@ -65,13 +65,13 @@ const STREAMING_ATTR_RE = /\b(?:isStreaming|isGenerating)\b/;
 // JSX/Vue open-tag scanner.
 const JSX_OPEN_TAG_RE = /<\s*([A-Za-z][\w.]*)/g;
 
-export function detectAiOutputSurface(source: string): boolean {
+export function detectAiOutputSurface(source: string, repoRoot = ""): boolean {
   JSX_OPEN_TAG_RE.lastIndex = 0;
   let m: RegExpExecArray | null;
   while ((m = JSX_OPEN_TAG_RE.exec(source)) !== null) {
     const tag = m[1];
     if (!tag) continue;
-    if (isAiMarkerName(tag)) return true;
+    if (isAiMarkerName(tag, repoRoot)) return true;
     // Fix 3: segment-level match, not substring.
     if (hasAiResponseSegment(tag)) return true;
   }
@@ -122,7 +122,7 @@ function describeLiveRegion(source: string): string {
 const LIVE_REGION_OPEN_RE =
   /<[A-Za-z][\w.]*\b[^>]*?(?:aria-live\s*=\s*["'`](?:polite|assertive)["'`]|\brole\s*=\s*["'`](?:status|alert)["'`]|\bisLiveRegion\b)[^>]*?(?:\/?>)/gms;
 
-function isLiveRegionProximate(source: string): boolean {
+function isLiveRegionProximate(source: string, repoRoot = ""): boolean {
   // Collect positions of live-region open tags.
   const livePositions: number[] = [];
   LIVE_REGION_OPEN_RE.lastIndex = 0;
@@ -139,7 +139,7 @@ function isLiveRegionProximate(source: string): boolean {
   while ((am = JSX_OPEN_TAG_RE.exec(source)) !== null) {
     const tag = am[1];
     if (!tag) continue;
-    if (isAiMarkerName(tag) || hasAiResponseSegment(tag)) {
+    if (isAiMarkerName(tag, repoRoot) || hasAiResponseSegment(tag)) {
       aiPositions.push(am.index);
     }
   }
@@ -227,13 +227,13 @@ const evaluate = async (
     const source = safeReadText(abs);
     if (!source) continue;
 
-    if (!detectAiOutputSurface(source)) continue;
+    if (!detectAiOutputSurface(source, ctx.repoRoot)) continue;
 
     hasAiSurface = true;
 
     // Fix 1: require proximity — live region must wrap the AI output, not just
     // co-exist in the same file (e.g. a toast component in a different function).
-    if (isLiveRegionProximate(source)) {
+    if (isLiveRegionProximate(source, ctx.repoRoot)) {
       const mechanism = describeLiveRegion(source);
       findings.push({
         ruleId: RULE_ID,

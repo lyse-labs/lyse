@@ -7,8 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **i18n foundation (Track 9.1).** New optional `i18n` block in `.lyse.yaml`
+  (`locales` to pick built-in language packs, `vocabulary` to add custom
+  terms per domain) and a shared locale-keyed vocabulary module
+  (`vocabularyFor`, `makeLocaleMatcher`, `aiNounAlternation`) covering
+  en/fr/de/ja/es for AI nouns, disclaimer phrases, control labels, gate
+  phrases, and loading phrases. Consumed by the AI-marker gate and the
+  governance rules below.
+- **End-to-end i18n fixtures (Track 9.1).** New `fixtures/i18n-fr-ds`
+  (`BadgeIA` marker, FR disclaimer, `Régénérer` control, FR
+  `AI_GOVERNANCE.md`) and `fixtures/i18n-de-ds` (`KIBadge`, `KI-generiert`,
+  `Neu generieren`), audited through the CLI pipeline in
+  `tests/cli.i18n-ds.test.ts`: a non-English DS now activates the
+  AI-governance axis end-to-end, and narrowing `i18n.locales` to `["en"]`
+  drops the localized detection. `fixtures/full-ds` Health Score is
+  unchanged vs `main` (20, byte-identical findings).
+
 ### Changed
 
+- **`ai-governance/disclaimer-present` is locale-aware (Track 9.1).**
+  Language-agnostic structural signals are now primary: a `role="note"`
+  element or a `data-ai-disclaimer` / `data-disclaimer` attribute inside an
+  AI-marker file counts as a disclaimer. Disclaimer copy is matched against
+  the locale-keyed `disclaimerPhrases` vocabulary (en/fr/de/ja/es) instead
+  of English-only regexes, so e.g. "Généré par l'IA, peut être inexact" no
+  longer triggers a false warning. The GitLab Pajamas canonical-wording
+  signal and the `*Disclaimer*` tag-name detector are unchanged.
+- **`ai-governance/human-control-affordances` is locale-aware (Track 9.1).**
+  Two new language-agnostic per-output signals: JSX handler props
+  (`onRegenerate`, `onRetry`, `onStop`, `onUndo`, `onAccept`, `onReject`,
+  `onDismiss`, `onReport`) and `data-action="regenerate|retry|stop|undo|
+  accept|reject|dismiss|report"` attributes. Button labels are now matched
+  against the locale-keyed `controlLabels` vocabulary (en/fr/de/ja/es), so
+  `Régénérer`, `Neu generieren`, or `再生成` earn the same credit as
+  `Regenerate`. Identifier-name detection (primary) is unchanged.
+- **`ai-governance/value-gate-doc-present` is locale-aware (Track 9.1).**
+  Discovered gate docs are now validated by language-agnostic structure
+  first — a markdown checklist (`- [ ]` / `- [x]`) or the YAML front-matter
+  key `lyse-doc: value-gate` — and gate phrasing is matched against the
+  locale-keyed `gatePhrases` vocabulary (en/fr/de/ja/es) instead of
+  English-only regexes, so "L'IA est-elle nécessaire ?" counts. Filename
+  discovery is unchanged; a doc with neither structure nor gate language
+  still warns.
+- **Localized AI-marker detection (Track 9.1).** The shared `isAiMarkerName`
+  predicate (gate for all 7 ai-governance rules) now also recognizes
+  identifiers combining a structural marker word (`label`, `badge`, `tag`,
+  `indicator`, `marker`, `avatar`, `chip`, `pill`) with an AI noun from any
+  active locale — e.g. `BadgeIA`, `IALabel`, `KIBadge`, `人工知能Badge` — so
+  non-English design systems open the AI-governance gate. Latin nouns are
+  boundary-delimited so `ai` never matches inside `Email`/`Detail`/`Caption`.
+- **`ai-governance/ai-marker-anti-patterns` is locale-aware (Track 9.1).**
+  The sparkle-only escape now accepts localized disclaimers and standalone
+  AI nouns (e.g. a sparkle paired with "Généré par IA" is no longer a false
+  positive), and the AI-as-CTA-label detector flags `IA`/`KI`/`人工知能`
+  button labels, not just English `AI`.
 - **MCP `audit_file` runs the full single-file rule set (Track 13.1).**
   Added a registry-driven `singleFileCapable` flag to the `Rule` interface;
   `audit_file` now filters `ruleObjects` by it instead of importing a

@@ -146,6 +146,52 @@ describe("detectDisclaimer", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Unit: detectDisclaimer — i18n + agnostic structural signals (Track 9.1)
+// ---------------------------------------------------------------------------
+
+describe("detectDisclaimer — i18n + agnostic signals", () => {
+  it("detects FR disclaimer copy 'Généré par l'IA, peut être inexact'", () => {
+    expect(detectDisclaimer(`<p>Généré par l'IA, peut être inexact.</p>`).found).toBe(true);
+  });
+
+  it("detects FR 'Vérifiez les résultats'", () => {
+    expect(detectDisclaimer(`<p>Généré par IA. Vérifiez les résultats.</p>`).found).toBe(true);
+  });
+
+  it("detects DE 'KI-generiert. Kann ungenau sein.'", () => {
+    expect(detectDisclaimer(`<span>KI-generiert. Kann ungenau sein.</span>`).found).toBe(true);
+  });
+
+  it("detects JA 'AIによって生成されました'", () => {
+    expect(detectDisclaimer(`<p>AIによって生成されました。</p>`).found).toBe(true);
+  });
+
+  it("detects ES 'Generado por IA. Puede ser inexacto.'", () => {
+    expect(detectDisclaimer(`<p>Generado por IA. Puede ser inexacto.</p>`).found).toBe(true);
+  });
+
+  it("detects role=\"note\" element (language-agnostic structural signal)", () => {
+    expect(detectDisclaimer(`<div role="note">Contenu généré automatiquement</div>`).found).toBe(true);
+  });
+
+  it("detects data-ai-disclaimer attribute (language-agnostic structural signal)", () => {
+    expect(detectDisclaimer(`<p data-ai-disclaimer>テキスト</p>`).found).toBe(true);
+  });
+
+  it("detects data-disclaimer attribute (language-agnostic structural signal)", () => {
+    expect(detectDisclaimer(`<p data-disclaimer>Texto</p>`).found).toBe(true);
+  });
+
+  it("does NOT credit unrelated FR copy", () => {
+    expect(detectDisclaimer(`<p>Enregistrez vos modifications.</p>`).found).toBe(false);
+  });
+
+  it("does NOT credit role=\"alert\" (only role=\"note\" is a disclaimer signal)", () => {
+    expect(detectDisclaimer(`<div role="alert">Erreur</div>`).found).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Unit: detectAiMarkerInSource
 // ---------------------------------------------------------------------------
 
@@ -354,6 +400,36 @@ describe("rule.evaluate — integration", () => {
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
     expect(result.findings).toHaveLength(1);
     expect(result.findings[0]?.severity).toBe("warning");
+  });
+
+  it("emits info when AI marker + FR disclaimer text are co-located (i18n)", async () => {
+    writeFileSync(
+      join(tmp, "ResumeIA.tsx"),
+      `export function ResumeIA() { return <div><AILabel /><p>Généré par l'IA. Vérifiez les résultats.</p></div>; }`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.severity).toBe("info");
+  });
+
+  it("emits info when AI-marker file contains a role=\"note\" element (agnostic)", async () => {
+    writeFileSync(
+      join(tmp, "AIOutput.tsx"),
+      `export function AIOutput() { return <div><AIBadge /><div role="note">本文</div></div>; }`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.severity).toBe("info");
+  });
+
+  it("emits no finding for FR disclaimer text with no AI marker (no false AI-surface)", async () => {
+    writeFileSync(
+      join(tmp, "Mentions.tsx"),
+      `export function Mentions() { return <p>Généré par l'IA, peut être inexact.</p>; }`,
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(0);
+    expect(result.opportunities).toBe(0);
   });
 
   it("regression: AILabel + LegalDisclaimer co-located → warning (LegalDisclaimer does not count as AI disclaimer)", async () => {
