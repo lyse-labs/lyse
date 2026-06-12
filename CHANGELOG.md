@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   en/fr/de/ja/es for AI nouns, disclaimer phrases, control labels, gate
   phrases, and loading phrases. Rule detectors will consume it in follow-up
   changes; no rule behavior changes yet.
+- **End-to-end i18n fixtures (Track 9.1).** New `fixtures/i18n-fr-ds`
+  (`BadgeIA` marker, FR disclaimer, `Régénérer` control, FR
+  `AI_GOVERNANCE.md`) and `fixtures/i18n-de-ds` (`KIBadge`, `KI-generiert`,
+  `Neu generieren`), audited through the CLI pipeline in
+  `tests/cli.i18n-ds.test.ts`: a non-English DS now activates the
+  AI-governance axis end-to-end, and narrowing `i18n.locales` to `["en"]`
+  drops the localized detection. `fixtures/full-ds` Health Score is
+  unchanged vs `main` (20, byte-identical findings).
 
 ### Changed
 
