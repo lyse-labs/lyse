@@ -262,6 +262,10 @@ export interface Layer4Meta {
   staticOnly?: boolean;
   /** Non-fatal error that occurred during Layer 4 (audit continues with Layers 1+2 score). */
   error?: { kind: string; message: string };
+  /** True when the LLM precision filter (#115) ran (a real verdict was obtained). */
+  filterRan?: boolean;
+  /** Number of color/spacing findings dropped by the LLM precision filter. */
+  filteredCount?: number;
 }
 
 export interface CoverageMeta {

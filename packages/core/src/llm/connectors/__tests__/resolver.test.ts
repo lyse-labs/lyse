@@ -226,25 +226,38 @@ describe("resolveConnector", () => {
     });
 
     it("no provider + agentCliAvailable=true → auto-selects agent-cli", async () => {
-      const { AgentCliAdapter } = await import("../agent-cli-adapter.js");
-      vi.spyOn(AgentCliAdapter.prototype, "complete").mockImplementation(async () => ({
-        text: "auto-agent",
-        usdSpent: 0,
-        modelUsed: "claude-sonnet-4-6",
-        llmQuality: "higher" as const,
-        cacheHit: false,
-      }));
+      // Temporarily remove the LYSE_DISABLE_AGENT_AUTODETECT guard (set by global
+      // vitest setup) so this test can exercise the actual auto-detect path.
+      const prev = process.env["LYSE_DISABLE_AGENT_AUTODETECT"];
+      try {
+        delete process.env["LYSE_DISABLE_AGENT_AUTODETECT"];
 
-      const config: LyseConfig = {};
-      const client = resolveConnector(config, undefined, {
-        budgetStatePath: tmpBudgetPath(),
-        cacheDir: tmpCacheDir(),
-        agentCliAvailable: () => true,
-      });
-      const result = await client.complete([{ role: "user", content: "x" }]);
-      expect(result.text).toBe("auto-agent");
-      expect(result.llmQuality).toBe("higher");
-      vi.restoreAllMocks();
+        const { AgentCliAdapter } = await import("../agent-cli-adapter.js");
+        vi.spyOn(AgentCliAdapter.prototype, "complete").mockImplementation(async () => ({
+          text: "auto-agent",
+          usdSpent: 0,
+          modelUsed: "claude-sonnet-4-6",
+          llmQuality: "higher" as const,
+          cacheHit: false,
+        }));
+
+        const config: LyseConfig = {};
+        const client = resolveConnector(config, undefined, {
+          budgetStatePath: tmpBudgetPath(),
+          cacheDir: tmpCacheDir(),
+          agentCliAvailable: () => true,
+        });
+        const result = await client.complete([{ role: "user", content: "x" }]);
+        expect(result.text).toBe("auto-agent");
+        expect(result.llmQuality).toBe("higher");
+        vi.restoreAllMocks();
+      } finally {
+        if (prev !== undefined) {
+          process.env["LYSE_DISABLE_AGENT_AUTODETECT"] = prev;
+        } else {
+          process.env["LYSE_DISABLE_AGENT_AUTODETECT"] = "1";
+        }
+      }
     });
 
     it("no provider + agentCliAvailable=false → Noop", async () => {
@@ -279,6 +292,61 @@ describe("resolveConnector", () => {
       });
       const result = await client.complete([{ role: "user", content: "x" }]);
       expect(result.modelUsed).toBe("none");
+    });
+
+    describe("LYSE_DISABLE_AGENT_AUTODETECT env guard", () => {
+      it("returns NoopAdapter when LYSE_DISABLE_AGENT_AUTODETECT=1, even if agentCliAvailable=true", () => {
+        // The global setup file already sets this to "1", so we just verify it works
+        // with the env var explicitly set here too.
+        vi.stubEnv("LYSE_DISABLE_AGENT_AUTODETECT", "1");
+
+        const config: LyseConfig = {};
+        const client = resolveConnector(config, undefined, {
+          budgetStatePath: tmpBudgetPath(),
+          cacheDir: tmpCacheDir(),
+          agentCliAvailable: () => true, // CLI is available — but guard should suppress auto-detect
+        });
+
+        // NoopAdapter returns modelUsed: "none"
+        return client.complete([{ role: "user", content: "x" }]).then((r) => {
+          expect(r.modelUsed).toBe("none");
+          expect(r.text).toBe("");
+        });
+      });
+
+      it("auto-selects agent-cli when LYSE_DISABLE_AGENT_AUTODETECT is NOT '1' and agentCliAvailable=true", async () => {
+        // Delete the env var that the global setup sets, then restore it after
+        const prev = process.env["LYSE_DISABLE_AGENT_AUTODETECT"];
+        try {
+          delete process.env["LYSE_DISABLE_AGENT_AUTODETECT"];
+
+          const { AgentCliAdapter } = await import("../agent-cli-adapter.js");
+          vi.spyOn(AgentCliAdapter.prototype, "complete").mockResolvedValue({
+            text: "auto-agent-no-guard",
+            usdSpent: 0,
+            modelUsed: "claude-sonnet-4-6",
+            llmQuality: "higher" as const,
+            cacheHit: false,
+          });
+
+          const config: LyseConfig = {};
+          const client = resolveConnector(config, undefined, {
+            budgetStatePath: tmpBudgetPath(),
+            cacheDir: tmpCacheDir(),
+            agentCliAvailable: () => true,
+          });
+          const result = await client.complete([{ role: "user", content: "x" }]);
+          expect(result.text).toBe("auto-agent-no-guard");
+          vi.restoreAllMocks();
+        } finally {
+          if (prev !== undefined) {
+            process.env["LYSE_DISABLE_AGENT_AUTODETECT"] = prev;
+          } else {
+            // Restore to "1" as the global setup expects
+            process.env["LYSE_DISABLE_AGENT_AUTODETECT"] = "1";
+          }
+        }
+      });
     });
 
     it("explicit provider:anthropic wins over agent-cli auto-default", async () => {

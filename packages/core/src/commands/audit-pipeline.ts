@@ -26,6 +26,7 @@ import { scoreFromFindings } from "../scorer.js";
 import { VERSION } from "../index.js";
 import { RULES_VERSION } from "../rules/manifest.js";
 import { runLayer4Stage } from "../llm/layer4-stage.js";
+import { runFilterStage } from "../llm/filter-stage.js";
 import { isSuppressed } from "../suppression/inline.js";
 import { loadLyseIgnore } from "../suppression/lyseignore.js";
 import type {
@@ -319,6 +320,24 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     runResult.findingsByAxis[axis] = runResult.findings.filter((f) => f.axis === axis).length;
   }
 
+  // Layer-4 LLM precision filter — drops semantic FPs on color/spacing findings.
+  // Default-ON when a connector resolves (e.g. agent-cli auto-selected); degrades
+  // to a pure pass-through (Noop connector → empty text → bail) so the static
+  // floor is preserved byte-for-byte. See #115 / filter-stage.ts.
+  const filter = await runFilterStage({
+    repoRoot: absoluteRoot,
+    config,
+    flags,
+    findings: runResult.findings,
+    fileContents,
+  });
+  if (filter.meta.filteredCount > 0) {
+    runResult.findings = filter.findings;
+    for (const axis of Object.keys(runResult.findingsByAxis) as (keyof typeof runResult.findingsByAxis)[]) {
+      runResult.findingsByAxis[axis] = runResult.findings.filter((f) => f.axis === axis).length;
+    }
+  }
+
   // -----------------------------------------------------------------------
   // Layer 4: LLM augmentation (ADR-0015) — delegated to llm/layer4-stage.ts.
   // -----------------------------------------------------------------------
@@ -346,7 +365,12 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
       (a, b) => (severityOrder[a.severity] ?? 9) - (severityOrder[b.severity] ?? 9),
     );
   }
-  const layer4Meta: Layer4Meta = layer4.meta;
+  const layer4Meta: Layer4Meta = {
+    ...layer4.meta,
+    ...(filter.meta.filterRan
+      ? { filterRan: true, filteredCount: filter.meta.filteredCount }
+      : {}),
+  };
   // -----------------------------------------------------------------------
 
   // Phase 4.1 — v2 scorer: severity-weighted rate + log-scaled absolute cap.

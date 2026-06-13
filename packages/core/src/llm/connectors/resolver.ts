@@ -113,6 +113,7 @@ export function resolveConnector(
   if (provider === "none") return new NoopAdapter();
 
   if (!provider && !connector) {
+    if (process.env["LYSE_DISABLE_AGENT_AUTODETECT"] === "1") return new NoopAdapter();
     const checkAvailable = opts.agentCliAvailable ?? isAgentCliAvailable;
     if (checkAvailable()) {
       const agentModel = model ?? "claude-sonnet-4-6";
