@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { rule, detectInText, countCompliantColorUses } from "../../src/rules/tokens-no-hardcoded-color.js";
+import { isSchemaOrDataFile, isLowSignalValueFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile } from "../../src/rules/_skip-context.js";
 import type { RuleContext, ParsedFiles, TokenMap } from "../../src/types.js";
 
 const emptyTokens: TokenMap = {
@@ -571,5 +572,468 @@ describe("Tailwind color class compliance", () => {
     };
     const result = await rule.evaluate(ctx, parsed);
     expect(result.findings).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Guard A: Low-signal value files (test/spec/stories/fixtures)
+// ---------------------------------------------------------------------------
+describe("Guard A — isLowSignalValueFile path helper", () => {
+  it("identifies .test.tsx as low-signal", () => {
+    expect(isLowSignalValueFile("src/Button.test.tsx")).toBe(true);
+  });
+  it("identifies .spec.ts as low-signal", () => {
+    expect(isLowSignalValueFile("src/utils.spec.ts")).toBe(true);
+  });
+  it("identifies .stories.tsx as low-signal", () => {
+    expect(isLowSignalValueFile("src/Button.stories.tsx")).toBe(true);
+  });
+  it("identifies __tests__/ path as low-signal", () => {
+    expect(isLowSignalValueFile("src/__tests__/Button.ts")).toBe(true);
+  });
+  it("identifies __mocks__/ path as low-signal", () => {
+    expect(isLowSignalValueFile("src/__mocks__/api.ts")).toBe(true);
+  });
+  it("identifies fixtures/ path as low-signal", () => {
+    expect(isLowSignalValueFile("packages/core/fixtures/comp.tsx")).toBe(true);
+  });
+  it("identifies .fixture.ts as low-signal", () => {
+    expect(isLowSignalValueFile("src/comp.fixture.ts")).toBe(true);
+  });
+  it("does NOT mark a regular component as low-signal", () => {
+    expect(isLowSignalValueFile("src/Button.tsx")).toBe(false);
+  });
+  it("does NOT mark a regular CSS file as low-signal", () => {
+    expect(isLowSignalValueFile("src/tokens.css")).toBe(false);
+  });
+});
+
+describe("Guard A — rule: does NOT flag hardcoded color in test/story/fixture files", () => {
+  it("does NOT flag hex in a .test.tsx file", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/Button.test.tsx",
+        source: 'it("renders", () => { expect(el.style.color).toBe("#FF0000"); });',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag hex in a .stories.tsx file", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/Button.stories.tsx",
+        source: 'export const Primary = () => <Button style={{ color: "#2563eb" }} />;',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag hex in a fixtures/ file", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "tests/fixtures/Button.tsx",
+        source: 'export const comp = <div style={{ color: "#ff0000" }} />;',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("STILL flags hex in a real component Button.tsx (recall guard)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/Button.tsx",
+        source: 'export const Button = () => <div style={{ color: "#FF0000" }} />;',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(1);
+  });
+
+  it("STILL flags hex in a .css file (recall guard)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "src/theme.css", source: ".x { color: #fff; }", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Guard B: Schema/data/config/type-decl file roles
+// ---------------------------------------------------------------------------
+describe("Guard B — isSchemaOrDataFile path helper", () => {
+  it("identifies dto/ path", () => {
+    expect(isSchemaOrDataFile("src/dto/create-user.dto.ts")).toBe(true);
+  });
+  it("identifies schemas/ path", () => {
+    expect(isSchemaOrDataFile("src/schemas/user.schema.ts")).toBe(true);
+  });
+  it("identifies .input.ts suffix", () => {
+    expect(isSchemaOrDataFile("src/create-user.input.ts")).toBe(true);
+  });
+  it("identifies .dto.ts suffix", () => {
+    expect(isSchemaOrDataFile("src/create-user.dto.ts")).toBe(true);
+  });
+  it("identifies .schema.ts suffix", () => {
+    expect(isSchemaOrDataFile("src/user.schema.ts")).toBe(true);
+  });
+  it("identifies .entity.ts suffix", () => {
+    expect(isSchemaOrDataFile("src/user.entity.ts")).toBe(true);
+  });
+  it("identifies .config.ts suffix", () => {
+    expect(isSchemaOrDataFile("theme.config.ts")).toBe(true);
+  });
+  it("identifies .config.mjs suffix", () => {
+    expect(isSchemaOrDataFile("tailwind.config.mjs")).toBe(true);
+  });
+  it("identifies .d.ts suffix", () => {
+    expect(isSchemaOrDataFile("src/types.d.ts")).toBe(true);
+  });
+  it("does NOT mark a real component as schema/data", () => {
+    expect(isSchemaOrDataFile("src/Button.tsx")).toBe(false);
+  });
+  it("does NOT mark a .css file as schema/data", () => {
+    expect(isSchemaOrDataFile("src/tokens.css")).toBe(false);
+  });
+});
+
+describe("Guard B — rule: does NOT flag hardcoded color in schema/data/config files", () => {
+  it("does NOT flag hex in a NestJS @ApiProperty example DTO", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/dto/create-user.input.ts",
+        source: '@ApiProperty({ example: "#FFFFFF", description: "hex color" })\ncolor: string;',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag hex in a .config.ts file", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "theme.config.ts",
+        source: 'export const config = { primary: "#2563eb" };',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag hex in a .d.ts declaration file", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/types.d.ts",
+        source: 'declare const primary = "#2563eb";',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Guard C: example:/default: key values and JSDoc @example blocks
+// ---------------------------------------------------------------------------
+describe("Guard C — isInExampleOrSchemaValuePosition helper", () => {
+  it("returns true for value of `example:` key", () => {
+    const src = '{ example: "#FF0000" }';
+    const idx = src.indexOf("#FF0000");
+    expect(isInExampleOrSchemaValuePosition(src, idx)).toBe(true);
+  });
+  it("returns true for value of `default:` key", () => {
+    const src = '{ default: "#aabbcc" }';
+    const idx = src.indexOf("#aabbcc");
+    expect(isInExampleOrSchemaValuePosition(src, idx)).toBe(true);
+  });
+  it("returns true for value of `placeholder:` key", () => {
+    const src = '{ placeholder: "#ffffff" }';
+    const idx = src.indexOf("#ffffff");
+    expect(isInExampleOrSchemaValuePosition(src, idx)).toBe(true);
+  });
+  it("returns true for value of `sample:` key", () => {
+    const src = '{ sample: "#000000" }';
+    const idx = src.indexOf("#000000");
+    expect(isInExampleOrSchemaValuePosition(src, idx)).toBe(true);
+  });
+  it("returns true for value of `mock:` key", () => {
+    const src = '{ mock: "#ff00ff" }';
+    const idx = src.indexOf("#ff00ff");
+    expect(isInExampleOrSchemaValuePosition(src, idx)).toBe(true);
+  });
+  it("returns false for a real style property value", () => {
+    const src = '{ color: "#ff0000" }';
+    const idx = src.indexOf("#ff0000");
+    expect(isInExampleOrSchemaValuePosition(src, idx)).toBe(false);
+  });
+  it("returns true for hex inside a JSDoc @example block", () => {
+    const src = `/**\n * @example\n * color: #fff\n */`;
+    const idx = src.indexOf("#fff");
+    expect(isInExampleOrSchemaValuePosition(src, idx)).toBe(true);
+  });
+  it("returns false for hex in normal code (not JSDoc)", () => {
+    const src = `const x = "#ff0000";`;
+    const idx = src.indexOf("#ff0000");
+    expect(isInExampleOrSchemaValuePosition(src, idx)).toBe(false);
+  });
+});
+
+describe("Guard C — rule: does NOT flag example/default key values or JSDoc @example", () => {
+  it("does NOT flag `{ example: '#FF0000' }` in TS source", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/api.ts",
+        source: 'const schema = { example: "#FF0000", required: true };',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag `{ default: '#aabbcc' }` in TS source", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/schema.ts",
+        source: 'const field = { default: "#aabbcc", type: "string" };',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag hex inside a JSDoc @example block", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/ColorPicker.tsx",
+        source: "/**\n * @example\n * <ColorPicker color=\"#fff\" />\n */\nexport function ColorPicker() {}",
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("STILL flags hardcoded color in real component JSX (recall guard)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/Button.tsx",
+        source: 'export const Button = () => <div style={{ color: "#FF0000" }} />;',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Color token-definition file path guards
+// ---------------------------------------------------------------------------
+describe("isColorTokenDefFile — path helper unit tests", () => {
+  it("identifies colors.ts as a token-def file", () => {
+    expect(isColorTokenDefFile("src/colors.ts")).toBe(true);
+  });
+  it("identifies colors.css as a token-def file", () => {
+    expect(isColorTokenDefFile("src/colors.css")).toBe(true);
+  });
+  it("identifies palette.ts as a token-def file", () => {
+    expect(isColorTokenDefFile("src/palette.ts")).toBe(true);
+  });
+  it("identifies brand-colors.ts as a token-def file", () => {
+    expect(isColorTokenDefFile("src/brand-colors.ts")).toBe(true);
+  });
+  it("identifies _legacy-colors.ts as a token-def file", () => {
+    expect(isColorTokenDefFile("src/_legacy-colors.ts")).toBe(true);
+  });
+  it("identifies button.colors.ts as a token-def file", () => {
+    expect(isColorTokenDefFile("src/tokens/button.colors.ts")).toBe(true);
+  });
+  it("identifies button.colors.css as a token-def file", () => {
+    expect(isColorTokenDefFile("src/tokens/button.colors.css")).toBe(true);
+  });
+  it("identifies files under demos/ directory", () => {
+    expect(isColorTokenDefFile("src/demos/ColorSwatch.tsx")).toBe(true);
+  });
+  it("identifies *.demo.tsx files", () => {
+    expect(isColorTokenDefFile("src/Button.demo.tsx")).toBe(true);
+  });
+  it("identifies CSS files under stories/ directory", () => {
+    expect(isColorTokenDefFile("src/stories/button.module.css")).toBe(true);
+  });
+  it("does NOT identify a regular component", () => {
+    expect(isColorTokenDefFile("src/Button.tsx")).toBe(false);
+  });
+  it("does NOT identify theme.css (borderline — may be a stylesheet)", () => {
+    expect(isColorTokenDefFile("src/theme.css")).toBe(false);
+  });
+  it("does NOT identify constants.ts (too broad)", () => {
+    expect(isColorTokenDefFile("src/constants.ts")).toBe(false);
+  });
+  it("does NOT identify a regular CSS file", () => {
+    expect(isColorTokenDefFile("src/button.module.css")).toBe(false);
+  });
+});
+
+describe("Color token-def file path guards — rule integration", () => {
+  it("does NOT flag colors.ts (token definition source-of-truth)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/colors.ts",
+        source: 'export const colors = { primary: "#2563eb", secondary: "#7c3aed" };',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag palette.css (token definition source-of-truth)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/palette.css", source: ".palette { color: #2563eb; }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag brand-colors.ts", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/brand-colors.ts",
+        source: 'export const brandColors = { blue: "#2563eb" };',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag *.demo.tsx files", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/ColorDemo.demo.tsx",
+        source: '<div style={{ color: "#ff0000" }} />',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag CSS files under stories/ directory", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/stories/button.module.css", source: ".story { color: #ff0000; }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("STILL flags regular components (recall guard)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/Button.tsx",
+        source: '<div style={{ color: "#ff0000" }} />',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(1);
+  });
+
+  it("STILL flags regular CSS files", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/button.module.css", source: ".btn { color: #ff0000; }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CSS custom-property scope narrowing — recall regression fixes
+// ---------------------------------------------------------------------------
+describe("isCssCustomPropertyDeclaration — scope narrowing (recall regression)", () => {
+  it("does NOT flag --local-color in :root (token-def scope)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/tokens.css", source: ":root { --local-color: #ff0000; }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("DOES flag --local-color in a component selector (drift)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/widget.css", source: ".widget { --local-color: #ff0000; }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0].message).toContain("#ff0000");
+  });
+
+  it("does NOT flag --color in html selector (token-def scope)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/globals.css", source: "html { --color-primary: #2563eb; }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag --color in [data-theme] selector (token-def scope)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/globals.css", source: '[data-theme="dark"] { --color-primary: #1d4ed8; }', root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("DOES flag --accent in a .card component selector (component-scoped custom prop = drift)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/card.css", source: ".card { --accent: #ff0000; color: var(--accent); }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.some((f) => f.message.includes("#ff0000"))).toBe(true);
   });
 });

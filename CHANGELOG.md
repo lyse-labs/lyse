@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`tokens/no-hardcoded-color` — Track 9.11 second pass (static precision ceiling).** Builds on the first pass (test/story/fixture/schema/example guards). New guards: (D) color token-definition files (`colors.ts`, `*-colors.ts`, `_legacy-colors.ts`, `palette.ts`, `*.colors.ts/css`, etc.) are skipped — a hex there is the source of truth, not drift; (E) `demos/**` directories and `*.demo.*` files are skipped; (F) CSS/SCSS files under `stories/` directories are skipped (the previous guard only covered `*.stories.tsx`, not `stories/button.module.css`); (G) `isCssCustomPropertyDeclaration` narrowed to only skip in token-definition selector scopes (`:root`, `html`, `:host`, `*`, `[data-theme…]`, `@theme`, `@layer base`) — a `--local: #hex` inside a `.widget { }` component rule now correctly fires as drift. `fixtures/full-ds` Health Score: 20 (stable).
+- **`tokens/no-hardcoded-spacing` — Track 9.11 property-awareness (correctness bug).** The rule previously fired on ANY px/rem/em regardless of CSS property. Now property-aware: only fires when the value is in a CSS spacing property (`margin*`, `padding*`, `gap`, `row-gap`, `column-gap`, `top`, `right`, `bottom`, `left`, `inset*`) or a spacing Tailwind arbitrary-value prefix (`p-`, `px-`, `m-`, `mx-`, `gap-`, `space-x-`, `inset-`, `top-`, etc.). Non-spacing properties are skipped: `font-size`, `line-height`, `border-radius`, `width`, `height`, transform functions, `@media` queries, `useMediaQuery` / `matchMedia` calls, `w-[…]`, `h-[…]`, `text-[…]`, `leading-[…]`, `rounded-[…]`, `translate-[…]`. Additionally, `1px` is no longer globally allowlisted — it is now allowed only in non-spacing contexts (border-width); `padding: 1px` / `p-[1px]` correctly fire as drift. `fixtures/full-ds` Health Score: 20 (stable).
+
 ### Added
 
 - **i18n foundation (Track 9.1).** New optional `i18n` block in `.lyse.yaml`
