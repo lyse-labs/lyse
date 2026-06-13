@@ -182,13 +182,8 @@ describe("resolveConnector", () => {
 
   // agent-cli connector tests
   describe("agent-cli connector", () => {
-    function makeAgentSpawnFn(text = "agent result") {
-      return async (_input: unknown) => ({ text, usdSpent: 0.001 });
-    }
-
     it("provider:agent-cli resolves to the adapter and returns its result", async () => {
       const { AgentCliAdapter } = await import("../agent-cli-adapter.js");
-      const spawnFn = vi.fn().mockResolvedValue({ text: "agent ok", usdSpent: 0.0005 });
       vi.spyOn(AgentCliAdapter.prototype, "complete").mockImplementation(async () => ({
         text: "agent ok",
         usdSpent: 0.0005,
