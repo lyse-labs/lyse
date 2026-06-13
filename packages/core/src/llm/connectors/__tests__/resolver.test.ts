@@ -26,6 +26,12 @@ function tmpCacheDir() {
   return mkdtempSync(join(tmpdir(), "lyse-cache-"));
 }
 
+// Suppress agent-cli auto-default in tests that target the Noop path: most
+// dev machines have `claude` on PATH, which would flip these expectations.
+const noAgentCli: Pick<ResolveConnectorOptions, "agentCliAvailable"> = {
+  agentCliAvailable: () => false,
+};
+
 describe("resolveConnector", () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
@@ -39,6 +45,7 @@ describe("resolveConnector", () => {
     const client = resolveConnector(config, undefined, {
       budgetStatePath: tmpBudgetPath(),
       cacheDir: tmpCacheDir(),
+      ...noAgentCli,
     });
     const result = await client.complete([{ role: "user", content: "x" }]);
     expect(result.text).toBe("");
@@ -51,6 +58,7 @@ describe("resolveConnector", () => {
     const client = resolveConnector(config, { staticOnly: true }, {
       budgetStatePath: tmpBudgetPath(),
       cacheDir: tmpCacheDir(),
+      ...noAgentCli,
     });
     const result = await client.complete([{ role: "user", content: "x" }]);
     expect(result.modelUsed).toBe("none");
@@ -61,6 +69,7 @@ describe("resolveConnector", () => {
     const client = resolveConnector(config, undefined, {
       budgetStatePath: tmpBudgetPath(),
       cacheDir: tmpCacheDir(),
+      ...noAgentCli,
     });
     const result = await client.complete([{ role: "user", content: "x" }]);
     expect(result.modelUsed).toBe("none");
@@ -74,6 +83,7 @@ describe("resolveConnector", () => {
       budgetStatePath: budgetPath,
       cacheDir: tmpCacheDir(),
       fetchFn: fetch as unknown as typeof globalThis.fetch,
+      ...noAgentCli,
     };
     const config: LyseConfig = { llm: { provider: "openai", model: "gpt-4o-mini", costCapUsd: 1.0 } };
 
@@ -99,6 +109,7 @@ describe("resolveConnector", () => {
       budgetStatePath: tmpBudgetPath(),
       cacheDir,
       fetchFn: fetch as unknown as typeof globalThis.fetch,
+      ...noAgentCli,
     };
     const config: LyseConfig = {
       llm: { provider: "openai", model: "gpt-4o-mini", cacheMaxAgeDays: 7 },
@@ -124,6 +135,7 @@ describe("resolveConnector", () => {
     const client = resolveConnector(config, undefined, {
       budgetStatePath: tmpBudgetPath(),
       cacheDir: tmpCacheDir(),
+      ...noAgentCli,
     });
     await expect(
       client.complete([{ role: "user", content: "x" }]),
@@ -137,6 +149,7 @@ describe("resolveConnector", () => {
       budgetStatePath: tmpBudgetPath(),
       cacheDir: tmpCacheDir(),
       fetchFn: fetch as unknown as typeof globalThis.fetch,
+      ...noAgentCli,
     };
     const config: LyseConfig = {
       llm: { provider: "openai", model: "gpt-4o-mini", cacheMaxAgeDays: 7 },
@@ -160,9 +173,158 @@ describe("resolveConnector", () => {
     const client = resolveConnector(config, undefined, {
       budgetStatePath: tmpBudgetPath(),
       cacheDir: tmpCacheDir(),
+      ...noAgentCli,
     });
     await expect(
       client.complete([{ role: "user", content: "x" }]),
     ).rejects.toThrow("mcp");
+  });
+
+  // agent-cli connector tests
+  describe("agent-cli connector", () => {
+    it("provider:agent-cli resolves to the adapter and returns its result", async () => {
+      const { AgentCliAdapter } = await import("../agent-cli-adapter.js");
+      vi.spyOn(AgentCliAdapter.prototype, "complete").mockImplementation(async () => ({
+        text: "agent ok",
+        usdSpent: 0.0005,
+        modelUsed: "claude-sonnet-4-6",
+        llmQuality: "higher" as const,
+        cacheHit: false,
+      }));
+
+      const config: LyseConfig = { llm: { provider: "agent-cli", model: "claude-sonnet-4-6" } };
+      const client = resolveConnector(config, undefined, {
+        budgetStatePath: tmpBudgetPath(),
+        cacheDir: tmpCacheDir(),
+        ...noAgentCli,
+      });
+      const result = await client.complete([{ role: "user", content: "audit" }]);
+      expect(result.text).toBe("agent ok");
+      expect(result.llmQuality).toBe("higher");
+      vi.restoreAllMocks();
+    });
+
+    it("connector:agent-cli resolves to the adapter", async () => {
+      const { AgentCliAdapter } = await import("../agent-cli-adapter.js");
+      vi.spyOn(AgentCliAdapter.prototype, "complete").mockImplementation(async () => ({
+        text: "connector ok",
+        usdSpent: 0,
+        modelUsed: "claude-sonnet-4-6",
+        llmQuality: "higher" as const,
+        cacheHit: false,
+      }));
+
+      const config: LyseConfig = { llm: { connector: "agent-cli", model: "claude-sonnet-4-6" } };
+      const client = resolveConnector(config, undefined, {
+        budgetStatePath: tmpBudgetPath(),
+        cacheDir: tmpCacheDir(),
+        ...noAgentCli,
+      });
+      const result = await client.complete([{ role: "user", content: "x" }]);
+      expect(result.text).toBe("connector ok");
+      vi.restoreAllMocks();
+    });
+
+    it("no provider + agentCliAvailable=true → auto-selects agent-cli", async () => {
+      const { AgentCliAdapter } = await import("../agent-cli-adapter.js");
+      vi.spyOn(AgentCliAdapter.prototype, "complete").mockImplementation(async () => ({
+        text: "auto-agent",
+        usdSpent: 0,
+        modelUsed: "claude-sonnet-4-6",
+        llmQuality: "higher" as const,
+        cacheHit: false,
+      }));
+
+      const config: LyseConfig = {};
+      const client = resolveConnector(config, undefined, {
+        budgetStatePath: tmpBudgetPath(),
+        cacheDir: tmpCacheDir(),
+        agentCliAvailable: () => true,
+      });
+      const result = await client.complete([{ role: "user", content: "x" }]);
+      expect(result.text).toBe("auto-agent");
+      expect(result.llmQuality).toBe("higher");
+      vi.restoreAllMocks();
+    });
+
+    it("no provider + agentCliAvailable=false → Noop", async () => {
+      const config: LyseConfig = {};
+      const client = resolveConnector(config, undefined, {
+        budgetStatePath: tmpBudgetPath(),
+        cacheDir: tmpCacheDir(),
+        agentCliAvailable: () => false,
+      });
+      const result = await client.complete([{ role: "user", content: "x" }]);
+      expect(result.modelUsed).toBe("none");
+      expect(result.text).toBe("");
+    });
+
+    it("--static-only → Noop even when agentCliAvailable=true", async () => {
+      const config: LyseConfig = {};
+      const client = resolveConnector(config, { staticOnly: true }, {
+        budgetStatePath: tmpBudgetPath(),
+        cacheDir: tmpCacheDir(),
+        agentCliAvailable: () => true,
+      });
+      const result = await client.complete([{ role: "user", content: "x" }]);
+      expect(result.modelUsed).toBe("none");
+    });
+
+    it("provider:none → Noop even when agentCliAvailable=true", async () => {
+      const config: LyseConfig = { llm: { provider: "none" } };
+      const client = resolveConnector(config, undefined, {
+        budgetStatePath: tmpBudgetPath(),
+        cacheDir: tmpCacheDir(),
+        agentCliAvailable: () => true,
+      });
+      const result = await client.complete([{ role: "user", content: "x" }]);
+      expect(result.modelUsed).toBe("none");
+    });
+
+    it("explicit provider:anthropic wins over agent-cli auto-default", async () => {
+      vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
+      const fetchFn = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: "msg_test",
+          type: "message",
+          role: "assistant",
+          content: [{ type: "text", text: "anthropic response" }],
+          model: "claude-sonnet-4-6",
+          stop_reason: "end_turn",
+          usage: { input_tokens: 5, output_tokens: 5 },
+        }),
+      });
+      const config: LyseConfig = { llm: { provider: "anthropic", model: "claude-sonnet-4-6" } };
+      const client = resolveConnector(config, undefined, {
+        budgetStatePath: tmpBudgetPath(),
+        cacheDir: tmpCacheDir(),
+        agentCliAvailable: () => true,
+        fetchFn: fetchFn as unknown as typeof globalThis.fetch,
+      });
+      // The anthropic adapter is used — we just verify it doesn't use Noop
+      // (actual network call is not made since we mock fetch above; but the adapter
+      // itself uses the Anthropic SDK which doesn't use our fetchFn override the same
+      // way — so we check the path selection by confirming agent-cli wasn't used
+      // by checking llmQuality on a no-op check — instead mock AgentCliAdapter).
+      const { AgentCliAdapter } = await import("../agent-cli-adapter.js");
+      const agentSpy = vi.spyOn(AgentCliAdapter.prototype, "complete");
+      // We don't await the call as it'd hit Anthropic SDK; just check it resolved the right adapter
+      // by checking agentSpy was NOT called.
+      // Use a spy that resolves instead of the real Anthropic SDK:
+      const { AnthropicAdapter } = await import("../anthropic-adapter.js");
+      vi.spyOn(AnthropicAdapter.prototype, "complete").mockResolvedValue({
+        text: "anthropic",
+        usdSpent: 0.001,
+        modelUsed: "claude-sonnet-4-6",
+        llmQuality: "higher",
+        cacheHit: false,
+      });
+      const result = await client.complete([{ role: "user", content: "x" }]);
+      expect(result.text).toBe("anthropic");
+      expect(agentSpy).not.toHaveBeenCalled();
+      vi.restoreAllMocks();
+    });
   });
 });

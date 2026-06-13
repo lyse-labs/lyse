@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **agent-cli connector (Track #115 Lot 1).** Run the LLM layer on the user's Claude Code subscription — no API key required. The new `AgentCliAdapter` spawns `claude --print --model <m> --output-format json` with the user prompt on stdin, parses `.result` / `.total_cost_usd` / `.is_error` from JSON stdout, and implements `ConnectorClient`. `isAgentCliAvailable()` checks PATH via `claude --version`. Default-ON: when no provider is configured and `claude` is on PATH, `resolveConnector` automatically selects the agent-cli backend (gated behind `agentCliAvailable()` so CI without `claude` stays Noop). Explicit `provider: none`, `--static-only`, or any other explicit provider all win over the auto-default. Config: `llm.provider: agent-cli` or `llm.connector: agent-cli`; env overrides `LYSE_AGENT_CLI_TIMEOUT_MS` (default 180000) and `LYSE_AGENT_CLI_BINARY` (default `claude`). `spawnFn` is injectable for unit tests — no real CLI spawn in the test suite.
+
 - **Score regression gate (Track 8.10).** New CLI smoke test (`tests/cli.score-smoke.test.ts`) pins the First Trusted Score output of `lyse explain --score fixtures/full-ds`: Health Score band [90, 96], scoring path `scoring-v1`, and Counted findings band [2, 4]. Guards against `stableSubAxes` silently going empty (which would trivially return 100) and against silent scoring-path regressions.
 
 ### Added
