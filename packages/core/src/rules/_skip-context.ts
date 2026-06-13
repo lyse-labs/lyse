@@ -7,6 +7,95 @@
  * — that is V1 work.
  */
 
+// ---------------------------------------------------------------------------
+// Guard A: Low-signal value file detection
+// ---------------------------------------------------------------------------
+
+const LOW_SIGNAL_FILE_RE =
+  /(?:^|[\\/])(__tests__|__mocks__|fixtures)[\\/]|\.(?:test|spec|stories|fixture)\.[cm]?[jt]sx?$/;
+
+/**
+ * Returns true if the file path is a test, story, mock, or fixture file.
+ * Hardcoded values in these contexts are documentation/assertion artefacts,
+ * not real design-system drift.
+ */
+export function isLowSignalValueFile(filePath: string): boolean {
+  return LOW_SIGNAL_FILE_RE.test(filePath);
+}
+
+// ---------------------------------------------------------------------------
+// Guard B: Schema / data / config / type-declaration file detection
+// ---------------------------------------------------------------------------
+
+const SCHEMA_DATA_FILE_RE =
+  /(?:^|[\\/])(?:dto|schemas)[\\/]|\.(?:input|dto|schema|entity)\.(?:tsx?|jsx?)$|\.config\.(?:ts|js|mjs|cjs)$|\.d\.ts$/;
+
+/**
+ * Returns true if the file path is a NestJS DTO, JSON-schema, config, or
+ * TypeScript declaration file. Hardcoded values in these roles (e.g. an
+ * @ApiProperty example) are schema documentation, not DS drift.
+ */
+export function isSchemaOrDataFile(filePath: string): boolean {
+  return SCHEMA_DATA_FILE_RE.test(filePath);
+}
+
+// ---------------------------------------------------------------------------
+// Guard C: example:/default: key values and JSDoc @example block detection
+// ---------------------------------------------------------------------------
+
+const EXAMPLE_KEY_RE = /\b(example|default|placeholder|sample|mock)\s*:/;
+
+/**
+ * Returns true if the matched literal at `matchIndex` in `source` is:
+ *   (a) the value of an object key named example/default/placeholder/sample/mock, OR
+ *   (b) inside a JSDoc `@example` block (`/** … @example … *\/`).
+ *
+ * For (a): walks back from `matchIndex` to the nearest `:` at the same paren
+ * depth, then checks the key name — mirroring the isCssCustomPropertyDeclaration
+ * pattern.
+ * For (b): checks whether the line or any preceding line (within the same
+ * `/** … *\/` block) contains `@example`.
+ */
+export function isInExampleOrSchemaValuePosition(source: string, matchIndex: number): boolean {
+  // (b) JSDoc @example: find enclosing /** … */ block and check for @example tag.
+  const blockStart = source.lastIndexOf("/**", matchIndex);
+  if (blockStart !== -1) {
+    const blockEnd = source.indexOf("*/", blockStart);
+    if (blockEnd === -1 || blockEnd > matchIndex) {
+      // We're inside a /** … */ block — check if @example appears before our position
+      const blockContent = source.slice(blockStart, matchIndex);
+      if (blockContent.includes("@example")) return true;
+    }
+  }
+
+  // (a) Object key: walk back from matchIndex to find the nearest colon
+  // at depth 0 (respecting nested parens/brackets/braces), then read the key.
+  let depth = 0;
+  for (let i = matchIndex - 1; i >= 0; i--) {
+    const c = source[i];
+    if (c === ")" || c === "]" || c === "}") {
+      depth++;
+      continue;
+    }
+    if (c === "(" || c === "[" || c === "{") {
+      if (depth > 0) { depth--; continue; }
+      return false; // hit a block boundary without finding a key colon
+    }
+    if (depth > 0) continue;
+    if (c === ";" || c === "\n") return false; // statement boundary
+    if (c === ":") {
+      // Read the key name to the left of this colon
+      const before = source.slice(0, i).trimEnd();
+      // Strip trailing quote if the key is quoted
+      const unquoted = before.replace(/['"`]$/, "");
+      // Re-attach ":" so the regex anchored on `\s*:` can match
+      const keyMatch = EXAMPLE_KEY_RE.exec(unquoted.slice(-20) + ":");
+      return keyMatch !== null;
+    }
+  }
+  return false;
+}
+
 /**
  * Returns true if the byte offset `index` in `source` falls inside a
  * `<code>...</code>` or `<pre>...</pre>` block that opens AND closes on the

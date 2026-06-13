@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { rule, countCompliantSpacingUses } from "../../src/rules/tokens-no-hardcoded-spacing.js";
+import { isSchemaOrDataFile, isLowSignalValueFile, isInExampleOrSchemaValuePosition } from "../../src/rules/_skip-context.js";
 import type { RuleContext, ParsedFiles, TokenMap } from "../../src/types.js";
 
 const tokens: TokenMap = {
@@ -223,5 +224,193 @@ describe("Tailwind spacing class compliance", () => {
     const result = await rule.evaluate(ctx, parsed);
     expect(result.findings).toHaveLength(1);
     expect(result.findings[0].message).toContain("13px");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Guard A — spacing: Low-signal value files (test/spec/stories/fixtures)
+// ---------------------------------------------------------------------------
+describe("Guard A (spacing) — isLowSignalValueFile path helper", () => {
+  it("identifies .test.tsx as low-signal", () => {
+    expect(isLowSignalValueFile("src/Button.test.tsx")).toBe(true);
+  });
+  it("identifies .spec.ts as low-signal", () => {
+    expect(isLowSignalValueFile("src/utils.spec.ts")).toBe(true);
+  });
+  it("identifies .stories.tsx as low-signal", () => {
+    expect(isLowSignalValueFile("src/Button.stories.tsx")).toBe(true);
+  });
+  it("identifies __tests__/ path as low-signal", () => {
+    expect(isLowSignalValueFile("src/__tests__/Button.ts")).toBe(true);
+  });
+  it("does NOT mark a regular component as low-signal", () => {
+    expect(isLowSignalValueFile("src/Button.tsx")).toBe(false);
+  });
+});
+
+describe("Guard A (spacing) — rule: does NOT flag hardcoded spacing in test/story/fixture files", () => {
+  it("does NOT flag off-scale px in a .test.tsx file", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/Button.test.tsx",
+        source: 'expect(el.style.padding).toBe("13px");',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag off-scale px in a .stories.tsx file", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/Button.stories.tsx",
+        source: 'export const Primary = () => <Button style={{ padding: "13px" }} />;',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag off-scale px in a fixtures/ file", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "tests/fixtures/comp.tsx",
+        source: '<div style={{ padding: "13px" }} />',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("STILL flags off-scale spacing in a real component (recall guard)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/Button.tsx",
+        source: 'export const Button = () => <div style={{ padding: "13px" }} />;',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.some((f) => f.message.includes("13px"))).toBe(true);
+  });
+
+  it("STILL flags off-scale spacing in a .css file (recall guard)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "src/comp.css", source: ".x { padding: 13px; }", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Guard B (spacing): Schema/data/config/type-decl file roles
+// ---------------------------------------------------------------------------
+describe("Guard B (spacing) — isSchemaOrDataFile path helper", () => {
+  it("identifies .dto.ts suffix", () => {
+    expect(isSchemaOrDataFile("src/create-user.dto.ts")).toBe(true);
+  });
+  it("identifies .config.ts suffix", () => {
+    expect(isSchemaOrDataFile("theme.config.ts")).toBe(true);
+  });
+  it("does NOT mark a real component as schema/data", () => {
+    expect(isSchemaOrDataFile("src/Button.tsx")).toBe(false);
+  });
+});
+
+describe("Guard B (spacing) — rule: does NOT flag hardcoded spacing in schema/data/config files", () => {
+  it("does NOT flag off-scale px in a .dto.ts file", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/dto/layout.dto.ts",
+        source: 'const schema = { example: "13px", type: "string" };',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag off-scale px in a .config.ts file", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "tailwind.config.ts",
+        source: 'const config = { spacing: { custom: "13px" } };',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Guard C (spacing): example:/default: key values and JSDoc @example blocks
+// ---------------------------------------------------------------------------
+describe("Guard C (spacing) — isInExampleOrSchemaValuePosition helper (shared with color)", () => {
+  it("returns true for value of `example:` key", () => {
+    const src = '{ example: "13px" }';
+    const idx = src.indexOf("13px");
+    expect(isInExampleOrSchemaValuePosition(src, idx)).toBe(true);
+  });
+  it("returns false for a real style property value", () => {
+    const src = '{ padding: "13px" }';
+    const idx = src.indexOf("13px");
+    expect(isInExampleOrSchemaValuePosition(src, idx)).toBe(false);
+  });
+  it("returns true for spacing value inside a JSDoc @example block", () => {
+    const src = `/**\n * @example\n * padding: 13px\n */`;
+    const idx = src.indexOf("13px");
+    expect(isInExampleOrSchemaValuePosition(src, idx)).toBe(true);
+  });
+});
+
+describe("Guard C (spacing) — rule: does NOT flag example/default key values or JSDoc @example", () => {
+  it("does NOT flag `{ example: '13px' }` in TS source", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/api.ts",
+        source: 'const schema = { example: "13px", required: true };',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag spacing inside a JSDoc @example block", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/Spacer.tsx",
+        source: "/**\n * @example\n * <Spacer size=\"13px\" />\n */\nexport function Spacer() {}",
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("STILL flags off-scale spacing in real component JSX (recall guard)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/Button.tsx",
+        source: 'export const Button = () => <div style={{ padding: "13px" }} />;',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.some((f) => f.message.includes("13px"))).toBe(true);
   });
 });

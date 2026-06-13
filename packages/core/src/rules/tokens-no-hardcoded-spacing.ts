@@ -1,5 +1,5 @@
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, ClassifyContext, Confidence, CodemodContext, CodemodResult } from "../types.js";
-import { isInsideSkippedJsxAttr, isInsideCodeDisplay, isCssCustomPropertyDeclaration } from "./_skip-context.js";
+import { isInsideSkippedJsxAttr, isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition } from "./_skip-context.js";
 import { isPathExcluded } from "./_exclude.js";
 import { fixHardcodedSpacing } from "../codemods/tokens-spacing.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
@@ -100,6 +100,7 @@ const evaluate = async (
       // blocks (display-only examples). Multi-line blocks are V1 work.
       if (isInsideCodeDisplay(source, m.index)) continue;
       if (isCssCustomPropertyDeclaration(source, m.index)) continue;
+      if (isInExampleOrSchemaValuePosition(source, m.index)) continue;
       const loc = blockLine > 0 ? { line: blockLine, column: 1 } : locationFromIndex(source, m.index);
       const suggestion = suggestSpacing(ctx, raw);
       findings.push({
@@ -115,16 +116,24 @@ const evaluate = async (
 
   for (const f of files.ts) {
     if (isPathExcluded(f.path, ctx.excludePaths)) continue;
+    if (isLowSignalValueFile(f.path)) continue;
+    if (isSchemaOrDataFile(f.path)) continue;
     scan(f.path, f.source);
     // Also count Tailwind spacing utility classes as compliant opportunities
     const fileExt = f.path.match(/\.[^.]+$/)?.[0] ?? ".ts";
     opportunities += countCompliantSpacingUses(f.source, fileExt);
   }
   for (const c of files.css) {
-    if (!isPathExcluded(c.path, ctx.excludePaths)) scan(c.path, c.source);
+    if (isPathExcluded(c.path, ctx.excludePaths)) continue;
+    if (isLowSignalValueFile(c.path)) continue;
+    if (isSchemaOrDataFile(c.path)) continue;
+    scan(c.path, c.source);
   }
   for (const b of files.cssInJs) {
-    if (!isPathExcluded(b.path, ctx.excludePaths)) scan(b.path, b.content, b.line);
+    if (isPathExcluded(b.path, ctx.excludePaths)) continue;
+    if (isLowSignalValueFile(b.path)) continue;
+    if (isSchemaOrDataFile(b.path)) continue;
+    scan(b.path, b.content, b.line);
   }
 
   return { findings, opportunities };

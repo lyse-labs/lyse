@@ -1,6 +1,6 @@
 import { isAbsolute, join } from "node:path";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, ClassifyContext, Confidence, CodemodContext, CodemodResult } from "../types.js";
-import { isInsideCodeDisplay, isCssCustomPropertyDeclaration } from "./_skip-context.js";
+import { isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition } from "./_skip-context.js";
 import { isPathExcluded } from "./_exclude.js";
 import { fixHardcodedColor } from "../codemods/tokens-color.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
@@ -238,11 +238,14 @@ const evaluate = async (
 
   for (const f of files.ts) {
     if (isPathExcluded(f.path, ctx.excludePaths)) continue;
+    if (isLowSignalValueFile(f.path)) continue;
+    if (isSchemaOrDataFile(f.path)) continue;
     const fileExt = f.path.match(/\.[^.]+$/)?.[0] ?? ".ts";
-    const hits = detectInText(f.source);
+    const hits = detectInText(f.source, f.path);
     const compliantCount = countCompliantColorUses(f.source, fileExt);
     opportunities += hits.length + compliantCount;
     for (const h of hits) {
+      if (isInExampleOrSchemaValuePosition(f.source, h.index)) continue;
       const loc = locationFromIndex(f.source, h.index);
       const suggestion = suggestToken(ctx, h.match);
       const lineText = f.source.split("\n")[loc.line - 1]?.trim().slice(0, 120);
@@ -260,11 +263,14 @@ const evaluate = async (
 
   for (const c of files.css) {
     if (isPathExcluded(c.path, ctx.excludePaths)) continue;
+    if (isLowSignalValueFile(c.path)) continue;
+    if (isSchemaOrDataFile(c.path)) continue;
     const fileExt = c.path.match(/\.[^.]+$/)?.[0] ?? ".css";
-    const hits = detectInText(c.source);
+    const hits = detectInText(c.source, c.path);
     const compliantCount = countCompliantColorUses(c.source, fileExt);
     opportunities += hits.length + compliantCount;
     for (const h of hits) {
+      if (isInExampleOrSchemaValuePosition(c.source, h.index)) continue;
       const loc = locationFromIndex(c.source, h.index);
       const suggestion = suggestToken(ctx, h.match);
       findings.push({
@@ -280,11 +286,14 @@ const evaluate = async (
 
   for (const b of files.cssInJs) {
     if (isPathExcluded(b.path, ctx.excludePaths)) continue;
+    if (isLowSignalValueFile(b.path)) continue;
+    if (isSchemaOrDataFile(b.path)) continue;
     const fileExt = b.path.match(/\.[^.]+$/)?.[0] ?? ".tsx";
-    const hits = detectInText(b.content);
+    const hits = detectInText(b.content, b.path);
     const compliantCount = countCompliantColorUses(b.content, fileExt);
     opportunities += hits.length + compliantCount;
     for (const h of hits) {
+      if (isInExampleOrSchemaValuePosition(b.content, h.index)) continue;
       const suggestion = suggestToken(ctx, h.match);
       findings.push({
         ruleId: "tokens/no-hardcoded-color",
