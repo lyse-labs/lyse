@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`tokens/no-hardcoded-color` precision guards (Track 9.11).** Three new
+  context guards dramatically reduce false positives: (A) test/spec/story/fixture
+  files (`*.test.*`, `*.spec.*`, `*.stories.*`, `*.fixture.*`, `__tests__/**`,
+  `__mocks__/**`, `**/fixtures/**`) are skipped — color literals in these roles are
+  assertion artefacts, not drift; (B) schema/data/config/type-declaration files
+  (`*.dto.*`, `*.input.*`, `*.schema.*`, `*.entity.*`, `*.config.*`, `*.d.ts`,
+  `dto/**`, `schemas/**`) are skipped — e.g. NestJS `@ApiProperty({ example: "#FFFFFF" })`
+  is schema documentation; (C) color literals that are the value of an object key
+  named `example`, `default`, `placeholder`, `sample`, or `mock`, or that appear
+  inside a JSDoc `@example` block, are skipped. Recall on real component/CSS
+  violations is unchanged. `fixtures/full-ds` Health Score: 20 (stable).
+- **`tokens/no-hardcoded-spacing` precision guards (Track 9.11).** Same three
+  guards applied to the spacing rule: test/story/fixture files, schema/config
+  files, and `example:`/`default:`/JSDoc-`@example` value positions are all
+  suppressed. Recall on real component violations is unchanged. `fixtures/full-ds`
+  Health Score: 20 (stable).
+
 ### Added
 
 - **i18n foundation (Track 9.1).** New optional `i18n` block in `.lyse.yaml`

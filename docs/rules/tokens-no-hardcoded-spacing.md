@@ -70,6 +70,10 @@ const hairlineOffset = "1px";  // pixel-perfect alignment with image
 - Values `0`, `0px`, `auto`, `100%`, `100vw`, `100vh`, `min-content`, `max-content`, `fit-content`.
 - Border widths (`border: 1px solid`) — borders have their own scale, addressed in a future rule.
 - Font sizes (`font-size: 14px`) — typography has its own scale, see future `tokens/no-hardcoded-font-size`.
+- **Test / spec / story / fixture files** — `*.test.*`, `*.spec.*`, `*.stories.*`, `*.fixture.*`, `__tests__/**`, `__mocks__/**`, `**/fixtures/**`. Spacing literals in these roles are assertion artefacts or documentation, not UI drift.
+- **Schema / data / config / type-declaration files** — `*.dto.*`, `*.input.*`, `*.schema.*`, `*.entity.*`, `*.config.*`, `*.d.ts`, and files under `dto/` or `schemas/`. Spacing literals in config or schema files are not DS violations.
+- **`example:` / `default:` / `placeholder:` / `sample:` / `mock:` object key values** — spacing literals that are the value of one of these keys are documentation/mock data.
+- **JSDoc `@example` blocks** — spacing literals inside `/** … @example … */` comments are documentation.
 - **CSS custom-property declarations** — values on the RHS of `--token-name: <value>;` are token *definitions*, not drift. Applies inside `:root`, `@theme {}` (Tailwind v4), `[data-theme=...]`, `@layer base {}`, and any scoped selector that declares custom properties.
 
 ## Configuration
