@@ -109,4 +109,49 @@ describe("transformScssToCss", () => {
 
     expect(out).toContain(":root");
   });
+
+  // --- Line-number fidelity (regression: SCSS findings were off by the number
+  //     of stripped $var/@mixin lines above them; see #120 cross-tool finding) ---
+
+  it("preserves the total line count", () => {
+    const src = `$brand: blue;
+.card {
+  padding: 24px;
+  color: #ff0000;
+}`;
+    const out = transformScssToCss(src);
+    expect(out.split("\n").length).toBe(src.split("\n").length);
+  });
+
+  it("keeps each kept declaration on its ORIGINAL source line after a leading $var", () => {
+    const src = `$brand: blue;
+.card {
+  padding: 24px;
+  color: #ff0000;
+}`;
+    const lines = transformScssToCss(src).split("\n");
+    // padding was on source line 3 (1-based) → must stay on line 3
+    expect(lines[2]).toContain("padding: 24px");
+    // color was on source line 4 → must stay on line 4
+    expect(lines[3]).toContain("color: #ff0000");
+  });
+
+  it("keeps line numbers stable across multiple stripped @mixin / $var blocks", () => {
+    const src = `$prefix: bs;
+@mixin rtl {
+  margin-left: 60px;
+}
+.card {
+  color: #ff0000;
+}`;
+    const lines = transformScssToCss(src).split("\n");
+    expect(lines.length).toBe(src.split("\n").length);
+    // .card color is on source line 6 → must stay on line 6
+    expect(lines[5]).toContain("color: #ff0000");
+  });
+
+  it("does not mangle // inside url() when converting line comments", () => {
+    const out = transformScssToCss(`.a { background: url(http://example.com/x.png); }`);
+    expect(out).toContain("url(http://example.com/x.png)");
+  });
 });

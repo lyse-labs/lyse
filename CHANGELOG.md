@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **SCSS line-number attribution (correctness).** `transformScssToCss` used to remove `$variable` declarations and SCSS-only at-rules (`@mixin`, `@include`, `@if`, `@for`, `@use`, `@import`, …) from the postcss AST and re-stringify, which collapsed lines and shifted every finding below by the number of removed lines. On `.scss` sources, `tokens/no-hardcoded-color` / `tokens/no-hardcoded-spacing` therefore reported the wrong line (and could miss or mislabel declarations when offsets compounded) — corrupting `lyse fix` edit targets and SARIF locations. The transform is now **line-count preserving**: SCSS-only constructs are blanked in place, `//` comments are converted to block comments in place (URL-safe), and `#{$var}` interpolation is resolved without reflowing. Plain CSS was unaffected and remains so. Surfaced by the Track #120 cross-tool agreement experiment.
+
 ### Added
 
 - **`LYSE_SKIP_LAYER4_AUGMENTATION` env guard (Track #115 Lot 3b).** When set to `1`, Layer-4 LLM *augmentation* (the governance grader) is skipped while the precision *filter* still runs. Used by the filtered-precision calibration harness (one `claude` call per file instead of two) and available to CI/perf runs that want the filter without the slower grader. Does not affect `--static-only` (which skips both).
