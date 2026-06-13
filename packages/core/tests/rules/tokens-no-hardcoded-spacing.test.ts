@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { rule, countCompliantSpacingUses } from "../../src/rules/tokens-no-hardcoded-spacing.js";
-import { isSchemaOrDataFile, isLowSignalValueFile, isInExampleOrSchemaValuePosition } from "../../src/rules/_skip-context.js";
+import { isSchemaOrDataFile, isLowSignalValueFile, isInExampleOrSchemaValuePosition, isNotSpacingPropertyContext } from "../../src/rules/_skip-context.js";
 import type { RuleContext, ParsedFiles, TokenMap } from "../../src/types.js";
 
 const tokens: TokenMap = {
@@ -412,5 +412,317 @@ describe("Guard C (spacing) — rule: does NOT flag example/default key values o
     };
     const result = await rule.evaluate(ctx, parsed);
     expect(result.findings.some((f) => f.message.includes("13px"))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Property-awareness: isNotSpacingPropertyContext helper
+// ---------------------------------------------------------------------------
+describe("isNotSpacingPropertyContext — unit tests", () => {
+  it("returns false (do not skip) for padding: 13px", () => {
+    const src = ".x { padding: 13px; }";
+    const idx = src.indexOf("13px");
+    expect(isNotSpacingPropertyContext(src, idx)).toBe(false);
+  });
+
+  it("returns false (do not skip) for margin-top: 30px", () => {
+    const src = ".x { margin-top: 30px; }";
+    const idx = src.indexOf("30px");
+    expect(isNotSpacingPropertyContext(src, idx)).toBe(false);
+  });
+
+  it("returns false (do not skip) for gap: 7px", () => {
+    const src = ".x { gap: 7px; }";
+    const idx = src.indexOf("7px");
+    expect(isNotSpacingPropertyContext(src, idx)).toBe(false);
+  });
+
+  it("returns true (skip) for font-size: 28px", () => {
+    const src = ".x { font-size: 28px; }";
+    const idx = src.indexOf("28px");
+    expect(isNotSpacingPropertyContext(src, idx)).toBe(true);
+  });
+
+  it("returns true (skip) for line-height: 1rem", () => {
+    const src = ".x { line-height: 1rem; }";
+    const idx = src.indexOf("1rem");
+    expect(isNotSpacingPropertyContext(src, idx)).toBe(true);
+  });
+
+  it("returns true (skip) for border-radius: 10px", () => {
+    const src = ".x { border-radius: 10px; }";
+    const idx = src.indexOf("10px");
+    expect(isNotSpacingPropertyContext(src, idx)).toBe(true);
+  });
+
+  it("returns true (skip) for @media (max-width: 768px)", () => {
+    const src = "@media (max-width: 768px) { .x {} }";
+    const idx = src.indexOf("768px");
+    expect(isNotSpacingPropertyContext(src, idx)).toBe(true);
+  });
+
+  it("returns true (skip) for translateX(40px)", () => {
+    const src = ".x { transform: translateX(40px); }";
+    const idx = src.indexOf("40px");
+    expect(isNotSpacingPropertyContext(src, idx)).toBe(true);
+  });
+
+  it("returns true (skip) for translateY(8px)", () => {
+    const src = ".x { transform: translateY(8px); }";
+    const idx = src.indexOf("8px");
+    expect(isNotSpacingPropertyContext(src, idx)).toBe(true);
+  });
+
+  it("returns true (skip) for Tailwind text-[28px]", () => {
+    const src = 'className="text-[28px]"';
+    const idx = src.indexOf("28px");
+    expect(isNotSpacingPropertyContext(src, idx)).toBe(true);
+  });
+
+  it("returns true (skip) for Tailwind leading-[1.5rem]", () => {
+    const src = 'className="leading-[1.5rem]"';
+    const idx = src.indexOf("1.5rem");
+    expect(isNotSpacingPropertyContext(src, idx)).toBe(true);
+  });
+
+  it("returns true (skip) for Tailwind rounded-[10px]", () => {
+    const src = 'className="rounded-[10px]"';
+    const idx = src.indexOf("10px");
+    expect(isNotSpacingPropertyContext(src, idx)).toBe(true);
+  });
+
+  it("returns false (do not skip) for Tailwind p-[7px] (spacing prefix)", () => {
+    const src = 'className="p-[7px]"';
+    const idx = src.indexOf("7px");
+    expect(isNotSpacingPropertyContext(src, idx)).toBe(false);
+  });
+
+  it("returns false (do not skip) for Tailwind gap-[7px] (spacing prefix)", () => {
+    const src = 'className="gap-[7px]"';
+    const idx = src.indexOf("7px");
+    expect(isNotSpacingPropertyContext(src, idx)).toBe(false);
+  });
+
+  it("returns false (do not skip) for Tailwind mt-[30px] (spacing prefix)", () => {
+    const src = 'className="mt-[30px]"';
+    const idx = src.indexOf("30px");
+    expect(isNotSpacingPropertyContext(src, idx)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Property-awareness: rule-level integration tests
+// ---------------------------------------------------------------------------
+describe("Property-awareness (spacing) — FP classes that must NOT fire", () => {
+  it("does NOT flag font-size px in CSS (font-size is not spacing)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "a.css", source: ".x { font-size: 28px; }", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag line-height rem in CSS", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "a.css", source: ".x { line-height: 1.5rem; }", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag border-radius px in CSS", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "a.css", source: ".x { border-radius: 10px; }", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag @media (max-width: 768px) query value", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "a.css", source: "@media (max-width: 768px) { .x { display: none; } }", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag matchMedia max-width in TSX", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "a.tsx",
+        source: 'const isMobile = window.matchMedia("(max-width: 640px)").matches;',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag translateX(40px) transform", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "a.css", source: ".x { transform: translateX(40px); }", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag Tailwind text-[28px] (font-size prefix)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "a.tsx",
+        source: '<div className="text-[28px]" />',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag Tailwind text-[11px]", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "a.tsx",
+        source: '<div className="text-[11px]" />',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag Tailwind leading-[1.5rem] (line-height prefix)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "a.tsx",
+        source: '<div className="leading-[1.5rem]" />',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag Tailwind rounded-[10px] (border-radius prefix)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "a.tsx",
+        source: '<div className="rounded-[10px]" />',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag font-size: 1rem in CSS (font-size is not spacing)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "a.css", source: "p { font-size: 1rem; }", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+});
+
+describe("Property-awareness (spacing) — real spacing violations that MUST still fire", () => {
+  it("STILL flags padding: 13px in CSS", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "a.css", source: ".x { padding: 13px; }", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.some((f) => f.message.includes("13px"))).toBe(true);
+  });
+
+  it("STILL flags gap: 7px in CSS", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "a.css", source: ".x { gap: 7px; }", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.some((f) => f.message.includes("7px"))).toBe(true);
+  });
+
+  it("STILL flags margin-top: 30px in CSS", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "a.css", source: ".x { margin-top: 30px; }", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.some((f) => f.message.includes("30px"))).toBe(true);
+  });
+
+  it("STILL flags Tailwind gap-[7px] (spacing prefix)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "a.tsx",
+        source: '<div className="gap-[7px]" />',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.some((f) => f.message.includes("7px"))).toBe(true);
+  });
+
+  it("STILL flags Tailwind p-[13px] (padding prefix)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "a.tsx",
+        source: '<div className="p-[13px]" />',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.some((f) => f.message.includes("13px"))).toBe(true);
+  });
+
+  it("STILL flags inline style padding: 13px in TSX", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "a.tsx",
+        source: '<div style={{ padding: "13px" }} />',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.some((f) => f.message.includes("13px"))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 1px recall regression — must fire in spacing context
+// ---------------------------------------------------------------------------
+describe("1px recall regression — spacing context fires, border context does not", () => {
+  it("DOES flag p-[1px] in Tailwind (padding is spacing context)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "a.tsx",
+        source: '<div className="p-[1px]" />',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.some((f) => f.message.includes("1px"))).toBe(true);
+  });
+
+  it("DOES flag padding: 1px in CSS (spacing context)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "a.css", source: ".x { padding: 1px; }", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.some((f) => f.message.includes("1px"))).toBe(true);
+  });
+
+  it("does NOT flag border: 1px solid in CSS (border is not spacing)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "a.css", source: ".x { border: 1px solid #ccc; }", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.filter((f) => f.message.includes("1px"))).toHaveLength(0);
   });
 });

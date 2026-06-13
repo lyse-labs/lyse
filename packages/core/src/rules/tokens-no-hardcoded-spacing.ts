@@ -1,12 +1,14 @@
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, ClassifyContext, Confidence, CodemodContext, CodemodResult } from "../types.js";
-import { isInsideSkippedJsxAttr, isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition } from "./_skip-context.js";
+import { isInsideSkippedJsxAttr, isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isNotSpacingPropertyContext } from "./_skip-context.js";
 import { isPathExcluded } from "./_exclude.js";
 import { fixHardcodedSpacing } from "../codemods/tokens-spacing.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
 import { createLyseRule } from "./_rule-module.js";
 
 const PX_REM_EM = /\b(\d+(\.\d+)?)(px|rem|em)\b/g;
-const ALLOW_PX_VALUES = new Set(["0", "1", "100"]);
+// Only `0` and `100` are unconditionally allowed. `1` (i.e. 1px) is only
+// allowed in border-width context — NOT in padding/margin/gap (real drift).
+const ALLOW_PX_VALUES = new Set(["0", "100"]);
 const ALLOW_KEYWORDS = new Set(["auto", "100%", "100vh", "100vw", "0"]);
 
 // ---------------------------------------------------------------------------
@@ -101,6 +103,10 @@ const evaluate = async (
       if (isInsideCodeDisplay(source, m.index)) continue;
       if (isCssCustomPropertyDeclaration(source, m.index)) continue;
       if (isInExampleOrSchemaValuePosition(source, m.index)) continue;
+      // Property-awareness: skip values not in a spacing CSS property or
+      // spacing Tailwind arbitrary-value prefix. This suppresses font-size,
+      // line-height, border-radius, width, height, transform, @media, etc.
+      if (isNotSpacingPropertyContext(source, m.index)) continue;
       const loc = blockLine > 0 ? { line: blockLine, column: 1 } : locationFromIndex(source, m.index);
       const suggestion = suggestSpacing(ctx, raw);
       findings.push({

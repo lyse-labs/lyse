@@ -95,9 +95,16 @@ rules:
 - `transparent`, `currentColor`, `inherit`, `initial`, `unset` — these are intentional escape hatches.
 - **Test / spec / story / fixture files** — `*.test.*`, `*.spec.*`, `*.stories.*`, `*.fixture.*`, `__tests__/**`, `__mocks__/**`, `**/fixtures/**`. Color literals in these roles are assertion artefacts or documentation, not UI drift.
 - **Schema / data / config / type-declaration files** — `*.dto.*`, `*.input.*`, `*.schema.*`, `*.entity.*`, `*.config.*`, `*.d.ts`, and files under `dto/` or `schemas/`. For example, a NestJS `@ApiProperty({ example: "#FFFFFF" })` is schema documentation.
+- **Color token-definition files** — files whose job is to define the color palette are the source of truth, not drift:
+  - `colors.ts`, `colors.css`, `colors.scss` (top-level or nested)
+  - `*-colors.ts` / `*-colors.js` (e.g. `brand-colors.ts`, `legacy-colors.ts`)
+  - `_legacy-colors.ts` / `_legacy-colors.js`
+  - `palette.ts`, `palette.css`, `palette.scss`
+  - `*.colors.ts`, `*.colors.css`, `*.colors.scss` (e.g. `button.colors.ts`)
+- **Demo and story stylesheet files** — files under `demos/`, `*.demo.{ts,tsx,js,jsx}`, and CSS/SCSS files anywhere under `stories/` directories are for documentation/showcase.
 - **`example:` / `default:` / `placeholder:` / `sample:` / `mock:` object key values** — color literals that are the value of one of these keys are treated as documentation/mock data, not drift.
 - **JSDoc `@example` blocks** — color literals inside `/** … @example … */` comments are documentation.
-- **CSS custom-property declarations** — values on the RHS of `--token-name: <value>;` are token *definitions*, not drift. The guard is property-name-based, so it applies inside `:root`, `@theme {}` (Tailwind v4), `[data-theme="dark"] {}`, `@layer base {}`, and any scoped selector that declares custom properties.
+- **CSS custom-property declarations in token-def scopes** — values on the RHS of `--token-name: <value>;` inside `:root`, `html`, `:host`, `*`, `[data-theme…]`, `@theme {}`, or `@layer base {}` are token *definitions*, not drift. A custom property in a component selector (`.widget { --local-bg: #fff }`) still fires — that is drift.
 - Color literals inside `var()` fallback arguments (`var(--token, #fff)`) — the fallback is a safe defensive value, not drift.
 
 ## Related rules

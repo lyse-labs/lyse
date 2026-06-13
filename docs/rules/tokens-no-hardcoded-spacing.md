@@ -68,13 +68,20 @@ const hairlineOffset = "1px";  // pixel-perfect alignment with image
 ## What does NOT trigger this rule
 
 - Values `0`, `0px`, `auto`, `100%`, `100vw`, `100vh`, `min-content`, `max-content`, `fit-content`.
-- Border widths (`border: 1px solid`) — borders have their own scale, addressed in a future rule.
-- Font sizes (`font-size: 14px`) — typography has its own scale, see future `tokens/no-hardcoded-font-size`.
+- **Non-spacing CSS properties** — the rule is property-aware and only fires when the px/rem/em value is in a spacing context. The following properties are intentionally excluded:
+  - `font-size`, `line-height` — typography scale (separate future rule).
+  - `border-radius` — radius scale (separate future rule).
+  - `border-width` / shorthand `border: 1px solid` — border-width scale.
+  - `width`, `height`, `min-width`, `max-width`, `min-height`, `max-height` — layout/sizing.
+  - `transform: translateX()`, `translateY()` — animation/motion.
+  - `@media (max-width: …)`, `useMediaQuery("…")`, `matchMedia("…")` — breakpoints.
+- **Non-spacing Tailwind arbitrary prefixes** — `text-[28px]` (font-size), `leading-[…]` (line-height), `rounded-[10px]` (border-radius), `w-[…]`, `h-[…]`, `max-w-[…]`, `size-[…]`, `translate-[…]` do not fire. Only spacing prefixes fire: `p-`, `px-`, `py-`, `pt-`, `pr-`, `pb-`, `pl-`, `m-`, `mx-`, `my-`, `mt-`, `mr-`, `mb-`, `ml-`, `gap-`, `gap-x-`, `gap-y-`, `space-x-`, `space-y-`, `inset-`, `top-`, `right-`, `bottom-`, `left-`.
+- **`1px`** — allowed when it appears in a border-width context (`border: 1px solid`). In a spacing context (`padding: 1px`, `p-[1px]`) it still fires — 1px padding is drift.
 - **Test / spec / story / fixture files** — `*.test.*`, `*.spec.*`, `*.stories.*`, `*.fixture.*`, `__tests__/**`, `__mocks__/**`, `**/fixtures/**`. Spacing literals in these roles are assertion artefacts or documentation, not UI drift.
 - **Schema / data / config / type-declaration files** — `*.dto.*`, `*.input.*`, `*.schema.*`, `*.entity.*`, `*.config.*`, `*.d.ts`, and files under `dto/` or `schemas/`. Spacing literals in config or schema files are not DS violations.
 - **`example:` / `default:` / `placeholder:` / `sample:` / `mock:` object key values** — spacing literals that are the value of one of these keys are documentation/mock data.
 - **JSDoc `@example` blocks** — spacing literals inside `/** … @example … */` comments are documentation.
-- **CSS custom-property declarations** — values on the RHS of `--token-name: <value>;` are token *definitions*, not drift. Applies inside `:root`, `@theme {}` (Tailwind v4), `[data-theme=...]`, `@layer base {}`, and any scoped selector that declares custom properties.
+- **CSS custom-property declarations in token-def scopes** — values on the RHS of `--token-name: <value>;` inside `:root`, `html`, `:host`, `*`, `[data-theme…]`, `@theme {}`, or `@layer base {}` are token *definitions*, not drift. A custom property in a component selector (`.widget { --local: 7px }`) still fires — that is drift.
 
 ## Configuration
 

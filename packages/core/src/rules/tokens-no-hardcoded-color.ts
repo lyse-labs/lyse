@@ -1,6 +1,6 @@
 import { isAbsolute, join } from "node:path";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, ClassifyContext, Confidence, CodemodContext, CodemodResult } from "../types.js";
-import { isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition } from "./_skip-context.js";
+import { isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile } from "./_skip-context.js";
 import { isPathExcluded } from "./_exclude.js";
 import { fixHardcodedColor } from "../codemods/tokens-color.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
@@ -240,6 +240,7 @@ const evaluate = async (
     if (isPathExcluded(f.path, ctx.excludePaths)) continue;
     if (isLowSignalValueFile(f.path)) continue;
     if (isSchemaOrDataFile(f.path)) continue;
+    if (isColorTokenDefFile(f.path)) continue;
     const fileExt = f.path.match(/\.[^.]+$/)?.[0] ?? ".ts";
     const hits = detectInText(f.source, f.path);
     const compliantCount = countCompliantColorUses(f.source, fileExt);
@@ -265,6 +266,7 @@ const evaluate = async (
     if (isPathExcluded(c.path, ctx.excludePaths)) continue;
     if (isLowSignalValueFile(c.path)) continue;
     if (isSchemaOrDataFile(c.path)) continue;
+    if (isColorTokenDefFile(c.path)) continue;
     const fileExt = c.path.match(/\.[^.]+$/)?.[0] ?? ".css";
     const hits = detectInText(c.source, c.path);
     const compliantCount = countCompliantColorUses(c.source, fileExt);
@@ -288,6 +290,7 @@ const evaluate = async (
     if (isPathExcluded(b.path, ctx.excludePaths)) continue;
     if (isLowSignalValueFile(b.path)) continue;
     if (isSchemaOrDataFile(b.path)) continue;
+    if (isColorTokenDefFile(b.path)) continue;
     const fileExt = b.path.match(/\.[^.]+$/)?.[0] ?? ".tsx";
     const hits = detectInText(b.content, b.path);
     const compliantCount = countCompliantColorUses(b.content, fileExt);

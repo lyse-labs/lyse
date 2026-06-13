@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { rule, detectInText, countCompliantColorUses } from "../../src/rules/tokens-no-hardcoded-color.js";
-import { isSchemaOrDataFile, isLowSignalValueFile, isInExampleOrSchemaValuePosition } from "../../src/rules/_skip-context.js";
+import { isSchemaOrDataFile, isLowSignalValueFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile } from "../../src/rules/_skip-context.js";
 import type { RuleContext, ParsedFiles, TokenMap } from "../../src/types.js";
 
 const emptyTokens: TokenMap = {
@@ -847,5 +847,193 @@ describe("Guard C — rule: does NOT flag example/default key values or JSDoc @e
     };
     const result = await rule.evaluate(ctx, parsed);
     expect(result.findings).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Color token-definition file path guards
+// ---------------------------------------------------------------------------
+describe("isColorTokenDefFile — path helper unit tests", () => {
+  it("identifies colors.ts as a token-def file", () => {
+    expect(isColorTokenDefFile("src/colors.ts")).toBe(true);
+  });
+  it("identifies colors.css as a token-def file", () => {
+    expect(isColorTokenDefFile("src/colors.css")).toBe(true);
+  });
+  it("identifies palette.ts as a token-def file", () => {
+    expect(isColorTokenDefFile("src/palette.ts")).toBe(true);
+  });
+  it("identifies brand-colors.ts as a token-def file", () => {
+    expect(isColorTokenDefFile("src/brand-colors.ts")).toBe(true);
+  });
+  it("identifies _legacy-colors.ts as a token-def file", () => {
+    expect(isColorTokenDefFile("src/_legacy-colors.ts")).toBe(true);
+  });
+  it("identifies button.colors.ts as a token-def file", () => {
+    expect(isColorTokenDefFile("src/tokens/button.colors.ts")).toBe(true);
+  });
+  it("identifies button.colors.css as a token-def file", () => {
+    expect(isColorTokenDefFile("src/tokens/button.colors.css")).toBe(true);
+  });
+  it("identifies files under demos/ directory", () => {
+    expect(isColorTokenDefFile("src/demos/ColorSwatch.tsx")).toBe(true);
+  });
+  it("identifies *.demo.tsx files", () => {
+    expect(isColorTokenDefFile("src/Button.demo.tsx")).toBe(true);
+  });
+  it("identifies CSS files under stories/ directory", () => {
+    expect(isColorTokenDefFile("src/stories/button.module.css")).toBe(true);
+  });
+  it("does NOT identify a regular component", () => {
+    expect(isColorTokenDefFile("src/Button.tsx")).toBe(false);
+  });
+  it("does NOT identify theme.css (borderline — may be a stylesheet)", () => {
+    expect(isColorTokenDefFile("src/theme.css")).toBe(false);
+  });
+  it("does NOT identify constants.ts (too broad)", () => {
+    expect(isColorTokenDefFile("src/constants.ts")).toBe(false);
+  });
+  it("does NOT identify a regular CSS file", () => {
+    expect(isColorTokenDefFile("src/button.module.css")).toBe(false);
+  });
+});
+
+describe("Color token-def file path guards — rule integration", () => {
+  it("does NOT flag colors.ts (token definition source-of-truth)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/colors.ts",
+        source: 'export const colors = { primary: "#2563eb", secondary: "#7c3aed" };',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag palette.css (token definition source-of-truth)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/palette.css", source: ".palette { color: #2563eb; }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag brand-colors.ts", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/brand-colors.ts",
+        source: 'export const brandColors = { blue: "#2563eb" };',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag *.demo.tsx files", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/ColorDemo.demo.tsx",
+        source: '<div style={{ color: "#ff0000" }} />',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag CSS files under stories/ directory", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/stories/button.module.css", source: ".story { color: #ff0000; }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("STILL flags regular components (recall guard)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/Button.tsx",
+        source: '<div style={{ color: "#ff0000" }} />',
+        imports: [], ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(1);
+  });
+
+  it("STILL flags regular CSS files", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/button.module.css", source: ".btn { color: #ff0000; }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CSS custom-property scope narrowing — recall regression fixes
+// ---------------------------------------------------------------------------
+describe("isCssCustomPropertyDeclaration — scope narrowing (recall regression)", () => {
+  it("does NOT flag --local-color in :root (token-def scope)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/tokens.css", source: ":root { --local-color: #ff0000; }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("DOES flag --local-color in a component selector (drift)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/widget.css", source: ".widget { --local-color: #ff0000; }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0].message).toContain("#ff0000");
+  });
+
+  it("does NOT flag --color in html selector (token-def scope)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/globals.css", source: "html { --color-primary: #2563eb; }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag --color in [data-theme] selector (token-def scope)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/globals.css", source: '[data-theme="dark"] { --color-primary: #1d4ed8; }', root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("DOES flag --accent in a .card component selector (component-scoped custom prop = drift)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/card.css", source: ".card { --accent: #ff0000; color: var(--accent); }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.some((f) => f.message.includes("#ff0000"))).toBe(true);
   });
 });
