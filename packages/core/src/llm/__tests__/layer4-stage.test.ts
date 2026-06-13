@@ -76,6 +76,30 @@ describe("runLayer4Stage — static-only paths", () => {
     expect(result.meta.staticOnly).toBeUndefined();
     expect(result.augmentedFindings).toHaveLength(0);
   });
+
+  it("skips augmentation (no connector call) when LYSE_SKIP_LAYER4_AUGMENTATION=1", async () => {
+    const repoRoot = makeRepoRoot({ "src/Chat.tsx": "export function Chat() { return null; }" });
+    const completeSpy = vi.fn(async () => ({
+      text: JSON.stringify({ findings: [] }),
+      usdSpent: 0,
+      modelUsed: "fake",
+      llmQuality: "higher" as const,
+      cacheHit: false,
+    }));
+    const connector = { complete: completeSpy };
+    vi.stubEnv("LYSE_SKIP_LAYER4_AUGMENTATION", "1");
+    try {
+      const result = await runLayer4Stage(
+        { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
+        { connector, rubricDimensions: ONE_DIMENSION },
+      );
+      expect(completeSpy).not.toHaveBeenCalled();
+      expect(result.augmentedFindings).toHaveLength(0);
+      expect(result.meta.staticOnly).toBeUndefined();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });
 
 describe("runLayer4Stage — happy path", () => {

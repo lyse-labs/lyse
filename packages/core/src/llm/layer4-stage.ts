@@ -124,6 +124,13 @@ export async function runLayer4Stage(
     return { augmentedFindings: [], meta: { staticOnly: true } };
   }
 
+  // Opt out of LLM augmentation only (governance grader) while leaving the
+  // precision filter active — used by the filtered-precision calibration harness
+  // and available to CI/perf runs that want the filter without the slower grader.
+  if (process.env["LYSE_SKIP_LAYER4_AUGMENTATION"] === "1") {
+    return { augmentedFindings: [], meta: {} };
+  }
+
   const dimensions = opts.rubricDimensions ?? getRubricDimensions();
 
   if (dimensions.length === 0) {
