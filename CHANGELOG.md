@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Score regression gate (Track 8.10).** New CLI smoke test (`tests/cli.score-smoke.test.ts`) pins the First Trusted Score output of `lyse explain --score fixtures/full-ds`: Health Score band [90, 96], scoring path `scoring-v1`, and Counted findings band [2, 4]. Guards against `stableSubAxes` silently going empty (which would trivially return 100) and against silent scoring-path regressions.
+
+### Added
+
 - **First Trusted Score — Track 8.8 LOT B.** 5 deterministic validator sub-axes promoted to `status: "stable"` + `contributesToScore: true`, calibrated via the synthetic recall suite (Wilson 95 % lower bound ≥ 0.90 on both precision and recall): `tokens.dtcg-conformance` (`tokens/dtcg-conformance`), `ai-surface.component-manifest-json` (`ai-surface/component-manifest-json`), `ai-surface.llms-txt-structure` (`ai-surface/llms-txt-structure`), `ai-surface.mcp-config-present` (`ai-surface/mcp-config-present`), `ai-surface.shadcn-registry-valid` (`ai-surface/shadcn-registry-valid`). Findings from these rules now count in the `scoring-v1` Health Score path (`lyse explain --score`). The `deterministicValidator: true` field marks each as a pure file-presence / JSON-schema / grammar rule where synthetic precision is a valid calibration source. All heuristic rules (`tokens/no-hardcoded-color`, `tokens/no-hardcoded-spacing`, `ai-surface/agent-instruction-files`, etc.) remain experimental.
 
 ### Changed
