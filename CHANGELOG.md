@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **First Trusted Score — Track 8.8 LOT B.** 5 deterministic validator sub-axes promoted to `status: "stable"` + `contributesToScore: true`, calibrated via the synthetic recall suite (Wilson 95 % lower bound ≥ 0.90 on both precision and recall): `tokens.dtcg-conformance` (`tokens/dtcg-conformance`), `ai-surface.component-manifest-json` (`ai-surface/component-manifest-json`), `ai-surface.llms-txt-structure` (`ai-surface/llms-txt-structure`), `ai-surface.mcp-config-present` (`ai-surface/mcp-config-present`), `ai-surface.shadcn-registry-valid` (`ai-surface/shadcn-registry-valid`). Findings from these rules now count in the `scoring-v1` Health Score path (`lyse explain --score`). The `deterministicValidator: true` field marks each as a pure file-presence / JSON-schema / grammar rule where synthetic precision is a valid calibration source. All heuristic rules (`tokens/no-hardcoded-color`, `tokens/no-hardcoded-spacing`, `ai-surface/agent-instruction-files`, etc.) remain experimental.
+
 ### Changed
 
 - **`tokens/no-hardcoded-color` — Track 9.11 second pass (static precision ceiling).** Builds on the first pass (test/story/fixture/schema/example guards). New guards: (D) color token-definition files (`colors.ts`, `*-colors.ts`, `_legacy-colors.ts`, `palette.ts`, `*.colors.ts/css`, etc.) are skipped — a hex there is the source of truth, not drift; (E) `demos/**` directories and `*.demo.*` files are skipped; (F) CSS/SCSS files under `stories/` directories are skipped (the previous guard only covered `*.stories.tsx`, not `stories/button.module.css`); (G) `isCssCustomPropertyDeclaration` narrowed to only skip in token-definition selector scopes (`:root`, `html`, `:host`, `*`, `[data-theme…]`, `@theme`, `@layer base`) — a `--local: #hex` inside a `.widget { }` component rule now correctly fires as drift. `fixtures/full-ds` Health Score: 20 (stable).
