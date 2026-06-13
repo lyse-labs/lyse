@@ -346,11 +346,11 @@ export interface LyseConfig {
     };
   };
   llm?: {
-    provider?: 'anthropic' | 'openai' | 'openai-compatible' | 'mcp' | 'none' | 'auto';
+    provider?: 'anthropic' | 'openai' | 'openai-compatible' | 'mcp' | 'none' | 'auto' | 'agent-cli';
     model?: string;
     endpoint?: string;
     /** ADR-0015: ConnectorResolver fields (Task 2) */
-    connector?: 'auto' | 'mcp-host' | 'openrouter' | 'direct-api-key' | 'ollama';
+    connector?: 'auto' | 'mcp-host' | 'openrouter' | 'direct-api-key' | 'ollama' | 'agent-cli';
     costCapUsd?: number;
     cacheMaxAgeDays?: number;
     staticOnly?: boolean;

@@ -56,13 +56,13 @@ export const LyseConfigSchema = z.object({
   llm: z
     .object({
       provider: z
-        .enum(["anthropic", "openai", "openai-compatible", "mcp", "none", "auto"])
+        .enum(["anthropic", "openai", "openai-compatible", "mcp", "none", "auto", "agent-cli"])
         .optional(),
       model: z.string().optional(),
       endpoint: z.string().optional(),
       // ADR-0015: ConnectorResolver fields (Task 2)
       connector: z
-        .enum(["auto", "mcp-host", "openrouter", "direct-api-key", "ollama"])
+        .enum(["auto", "mcp-host", "openrouter", "direct-api-key", "ollama", "agent-cli"])
         .optional(),
       costCapUsd: z.number().positive().optional(),
       cacheMaxAgeDays: z.number().positive().optional(),

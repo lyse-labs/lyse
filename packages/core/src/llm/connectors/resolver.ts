@@ -3,6 +3,7 @@ import { DEFAULT_CACHE_DIR, ResponseCache } from "./cache.js";
 import { NoopAdapter } from "./noop-adapter.js";
 import { OpenAICompatibleAdapter } from "./openai-compatible-adapter.js";
 import { AnthropicAdapter } from "./anthropic-adapter.js";
+import { AgentCliAdapter, isAgentCliAvailable } from "./agent-cli-adapter.js";
 import { ConnectorNotImplementedError } from "./types.js";
 import type { ChatMessage, CompleteOptions, ConnectorClient, ConnectorResult } from "./types.js";
 import type { LyseConfig } from "../../types.js";
@@ -12,6 +13,12 @@ export interface ResolveConnectorOptions {
   budgetStatePath?: string;
   cacheDir?: string;
   fetchFn?: typeof globalThis.fetch;
+  /**
+   * Injectable availability check for the agent-cli binary.
+   * Defaults to isAgentCliAvailable() (i.e. `claude --version` on PATH).
+   * Override in tests to control auto-default behaviour without spawning a real process.
+   */
+  agentCliAvailable?: () => boolean;
 }
 
 class BudgetedCachedClient implements ConnectorClient {
@@ -90,14 +97,35 @@ export function resolveConnector(
 
   if (flags?.staticOnly === true) return new NoopAdapter();
   if (llm?.staticOnly === true) return new NoopAdapter();
-  if (!llm?.provider && !llm?.connector) return new NoopAdapter();
-
-  const budget = buildBudget(llm, flags, opts);
-  const cache = buildCache(llm, opts, flags);
 
   const provider = flags?.llmProvider ?? llm?.provider;
   const connector = llm?.connector;
   const model = flags?.llmModel ?? llm?.model;
+
+  // Precedence for "no explicit provider/connector" case:
+  // 1. --static-only (handled above) → Noop
+  // 2. explicit provider: "none" → Noop
+  // 3. explicit other provider/connector → handled below
+  // 4. no provider at all, but `claude` CLI is on PATH → auto-select agent-cli (default-ON)
+  //    This lets new users get free LLM augmentation without any API key config.
+  //    Gated behind agentCliAvailable() so CI machines without `claude` stay Noop.
+  // 5. no provider + CLI not available → Noop (original behaviour)
+  if (provider === "none") return new NoopAdapter();
+
+  if (!provider && !connector) {
+    const checkAvailable = opts.agentCliAvailable ?? isAgentCliAvailable;
+    if (checkAvailable()) {
+      const agentModel = model ?? "claude-sonnet-4-6";
+      const adapter = new AgentCliAdapter({ model: agentModel });
+      const budget = buildBudget(llm, flags, opts);
+      const cache = buildCache(llm, opts, flags);
+      return new BudgetedCachedClient(adapter, budget, cache, agentModel);
+    }
+    return new NoopAdapter();
+  }
+
+  const budget = buildBudget(llm, flags, opts);
+  const cache = buildCache(llm, opts, flags);
 
   if (connector === "mcp-host") {
     const mcpStub: ConnectorClient = {
@@ -106,6 +134,15 @@ export function resolveConnector(
       },
     };
     return mcpStub;
+  }
+
+  if (provider === "agent-cli" || connector === "agent-cli") {
+    const agentModel = model ?? "claude-sonnet-4-6";
+    const adapter = new AgentCliAdapter({
+      model: agentModel,
+      binary: process.env["LYSE_AGENT_CLI_BINARY"] ?? "claude",
+    });
+    return new BudgetedCachedClient(adapter, budget, cache, agentModel);
   }
 
   if (
