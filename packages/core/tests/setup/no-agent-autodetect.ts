@@ -1,0 +1,1 @@
+process.env["LYSE_DISABLE_AGENT_AUTODETECT"] = "1";
