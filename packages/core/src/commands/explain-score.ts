@@ -5,6 +5,7 @@ import { computeScoreV1 } from "../reliability/score/formula-v1.js";
 import { CURRENT_SCORING_VERSION } from "../reliability/score/version-pin.js";
 import { findingWeight } from "../reliability/score/weight.js";
 import { BUNDLED_MANIFEST } from "../reliability/confidence/bundled-manifest.js";
+import { resolveStableSubAxes } from "../reliability/score/stable-sub-axes.js";
 import type { Finding as ReliabilityFinding } from "../reliability/types.js";
 import type { Finding as LegacyFinding } from "../types.js";
 
@@ -164,9 +165,8 @@ export async function explainScore(opts: ExplainScoreOpts): Promise<ExplainScore
   );
   const findings = pipeline.result.findings.map(legacyToReliability);
 
-  const stableSubAxes = new Set(
-    SUB_AXES.filter((s) => s.status === "stable" && s.contributesToScore).map((s) => s.id),
-  );
+  const filterRan = pipeline.result.meta?.layer4?.filterRan === true;
+  const stableSubAxes = resolveStableSubAxes(SUB_AXES, { filterRan });
   const confidenceByAxis: Record<string, number> = {};
   for (const sa of SUB_AXES) {
     const manifestEntry = BUNDLED_MANIFEST.subAxes[sa.id];

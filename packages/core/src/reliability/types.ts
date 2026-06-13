@@ -29,6 +29,13 @@ export interface SubAxisRecord {
   // calibrate precision from the synthetic recall suite because their verdict is
   // structural, not context-dependent.
   deterministicValidator?: boolean;
+  /**
+   * Counts toward the trusted score ONLY when the LLM precision filter ran for
+   * this audit (meta.layer4.filterRan === true). For heuristic rules whose
+   * static precision is below the promotion gate but whose under-filter precision
+   * has been calibrated to LB ≥ 0.90. Inert when the filter did not run.
+   */
+  contributesToScoreWhenFiltered?: boolean;
 }
 
 export interface ConfidenceManifest {
