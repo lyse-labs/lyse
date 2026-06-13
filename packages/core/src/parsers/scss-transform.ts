@@ -10,52 +10,87 @@ const SCSS_ONLY_AT_RULES = new Set([
  * Transform a `.scss` source into CSS-equivalent text that the downstream
  * Lyse pipeline (token extraction, hardcoded-value rules) can consume.
  *
+ * CRITICAL invariant: the transform is **line-count preserving**. Output line N
+ * corresponds to source line N. Downstream rules report findings by line against
+ * this output, and those line numbers must match the original `.scss` source —
+ * otherwise findings (and `lyse fix` edits, SARIF locations) land on the wrong
+ * line. We therefore neutralize SCSS-only constructs *in place* (blanking their
+ * source lines) instead of removing AST nodes and re-stringifying, which would
+ * collapse lines and shift everything below.
+ *
  * The transform is deliberately lossy and minimal:
- * - `$variable: value;` declarations are collected into a symbol table and
- *   then dropped from the output (not valid CSS).
+ * - `$variable: value;` declarations feed a symbol table, then their source
+ *   lines are blanked (kept as empty lines).
  * - `#{$variable}` interpolation is resolved against the symbol table. An
- *   unresolved interpolation is left as-is so the downstream rules can still
- *   surface "unknown token" findings rather than silently swallowing it.
- * - SCSS-only at-rules (`@mixin`, `@include`, `@if`, `@for`, `@use`, etc.)
- *   are stripped entirely. `@import` is also stripped — Lyse's loaders walk
- *   the file system directly, they do not follow SCSS import graphs.
- * - Nested rules are kept as-is. They yield technically invalid CSS but the
- *   downstream rule engine scans the raw source text, so hardcoded-value
- *   findings still surface on the nested declarations.
+ *   unresolved interpolation is left as-is so downstream rules can still surface
+ *   "unknown token" findings rather than silently swallowing it.
+ * - SCSS-only at-rules (`@mixin`, `@include`, `@if`, `@for`, `@use`, `@import`,
+ *   etc.) have their full source line range blanked.
+ * - `//` line comments are converted to CSS block comments in place, so a
+ *   value inside a comment is not mistaken for a hardcoded-value violation.
+ * - Plain rules / nested rules / plain at-rules (`@media`, `@supports`,
+ *   `@keyframes`, `@theme`) are kept verbatim.
  *
  * Out of scope for v0.1:
  * - `.sass` indented syntax (postcss-scss does not parse it; the caller keeps
  *   `.sass` flagged as `skipped`).
- * - SCSS functions (`darken()`, `lighten()`, `map-get()`, etc.) — left
- *   unresolved in the output.
- * - Selector nesting flattening (post-launch follow-up).
+ * - SCSS functions (`darken()`, `map-get()`, …) — left unresolved.
+ * - Scanning `@mixin` bodies (their lines are blanked, so declarations inside a
+ *   mixin are not flagged — a recall follow-up, tracked separately).
  */
 export function transformScssToCss(source: string): string {
   const root = postcssScss.parse(source);
 
   const scssVars = new Map<string, string>();
   root.walkDecls((decl) => {
-    if (decl.prop.startsWith("$")) {
-      scssVars.set(decl.prop, decl.value);
-    }
+    if (decl.prop.startsWith("$")) scssVars.set(decl.prop, decl.value);
   });
 
-  const resolveInterpolation = (s: string): string =>
-    s.replace(/#\{\s*(\$[\w-]+)\s*\}/g, (_, v: string) => scssVars.get(v) ?? `#{${v}}`);
+  const lines = source.split("\n");
+  const blankLineRange = (startLine: number, endLine: number): void => {
+    for (let i = startLine; i <= endLine && i >= 1 && i <= lines.length; i++) {
+      lines[i - 1] = "";
+    }
+  };
 
+  // Blank SCSS-only at-rules (whole block) — line-preserving.
   root.walkAtRules((atrule) => {
-    if (SCSS_ONLY_AT_RULES.has(atrule.name)) {
-      atrule.remove();
+    const start = atrule.source?.start;
+    const end = atrule.source?.end;
+    if (SCSS_ONLY_AT_RULES.has(atrule.name) && start && end) {
+      blankLineRange(start.line, end.line);
     }
   });
 
+  // Blank `$var:` declarations — line-preserving.
   root.walkDecls((decl) => {
-    if (decl.prop.startsWith("$")) {
-      decl.remove();
-    } else {
-      decl.value = resolveInterpolation(decl.value);
+    const start = decl.source?.start;
+    const end = decl.source?.end;
+    if (decl.prop.startsWith("$") && start && end) {
+      blankLineRange(start.line, end.line);
     }
   });
 
-  return root.toString();
+  // Convert `//` line comments to block comments, in place, using the parsed
+  // comment positions (so `//` inside `url(http://…)` or a string is untouched).
+  root.walkComments((comment) => {
+    const inline = (comment as { inline?: boolean }).inline === true ||
+      (comment.raws as { inline?: boolean } | undefined)?.inline === true;
+    const start = comment.source?.start;
+    if (!inline || !start) return;
+    const lineIdx = start.line - 1;
+    const line = lines[lineIdx];
+    if (line === undefined || line === "") return;
+    const col = start.column - 1; // 1-based → 0-based; points at the first `/`
+    if (line.slice(col, col + 2) !== "//") return;
+    lines[lineIdx] = `${line.slice(0, col)}/*${line.slice(col + 2)} */`;
+  });
+
+  let out = lines.join("\n");
+
+  // Resolve `#{$var}` interpolation (within-line; the `#{ … }` syntax does not
+  // collide with URLs, so a plain global replace is safe).
+  out = out.replace(/#\{\s*(\$[\w-]+)\s*\}/g, (_, v: string) => scssVars.get(v) ?? `#{${v}}`);
+
+  return out;
 }
