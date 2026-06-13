@@ -16,6 +16,8 @@ export interface FilterStageResult {
   meta: {
     filterRan: boolean;
     filteredCount: number;
+    /** True when the stage stopped early after an empty (Noop/budget-exhausted) response — remaining files were not judged. */
+    bailed?: boolean;
     modelUsed?: string;
     usdSpent?: number;
   };
@@ -33,6 +35,8 @@ const DEFAULT_TIMEOUT_MS = 60_000;
 const MAX_FILE_CHARS = 60_000;
 const MAX_FINDINGS_PER_FILE = 50;
 
+// NOTE: extractJson + withTimeout are duplicated from layer4-stage.ts. Acceptable
+// for now; extract into a shared llm-utils.ts before a third LLM stage is added.
 function extractJson(text: string): unknown {
   const jsonFenced = text.match(/```json\s*([\s\S]*?)```/);
   if (jsonFenced && jsonFenced[1]) return JSON.parse(jsonFenced[1].trim());
@@ -135,7 +139,7 @@ export async function runFilterStage(
   for (const file of sortedFiles) {
     if (bailed) break;
 
-    const allFileFIndings = byFile.get(file)!;
+    const allFileFindings = byFile.get(file)!;
     const source = input.fileContents.get(file);
 
     // Missing source → keep all (fail-safe)
@@ -149,7 +153,7 @@ export async function runFilterStage(
     }
 
     // Cap findings per file; overflow is kept (only judge the first MAX_FINDINGS_PER_FILE)
-    const judgedFindings = allFileFIndings.slice(0, MAX_FINDINGS_PER_FILE);
+    const judgedFindings = allFileFindings.slice(0, MAX_FINDINGS_PER_FILE);
     // overflowFindings (index >= MAX_FINDINGS_PER_FILE) are implicitly kept (not in droppedKeys)
 
     const prompt = buildFilterPrompt(file, source, judgedFindings);
@@ -209,11 +213,14 @@ export async function runFilterStage(
   }
 
   const kept = input.findings.filter((f) => !droppedKeys.has(findingKey(f)));
-  const filteredCount = droppedKeys.size;
+  // Count from the actual list delta, not droppedKeys.size: two findings can
+  // share a ruleId|file|line|column key, so the Set would undercount.
+  const filteredCount = input.findings.length - kept.length;
 
   const meta: FilterStageResult["meta"] = {
     filterRan,
     filteredCount,
+    ...(bailed ? { bailed: true } : {}),
     ...(lastModelUsed !== undefined ? { modelUsed: lastModelUsed } : {}),
     ...(filterRan ? { usdSpent: totalUsdSpent } : {}),
   };

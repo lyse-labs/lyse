@@ -409,3 +409,69 @@ describe("runFilterStage — JSON in markdown fence", () => {
     expect(result.meta.filteredCount).toBe(1);
   });
 });
+
+describe("runFilterStage — oversized file", () => {
+  it("keeps all findings and does not call the connector for files over MAX_FILE_CHARS", async () => {
+    const f = makeColorFinding("src/Huge.tsx", 1);
+    const huge = "x".repeat(60_001);
+    const fileContents = new Map([["src/Huge.tsx", huge]]);
+    const completeSpy = vi.fn(async () => ({
+      text: verdictJson([{ index: 0, keep: false }]),
+      usdSpent: 0,
+      modelUsed: "fake",
+      llmQuality: "higher" as const,
+      cacheHit: false,
+    }));
+    const connector: ConnectorClient = { complete: completeSpy };
+
+    const result = await runFilterStage(
+      { repoRoot: "/repo", config: MIN_CONFIG, flags: undefined, findings: [f], fileContents },
+      { connector },
+    );
+
+    expect(completeSpy).not.toHaveBeenCalled();
+    expect(result.findings).toHaveLength(1);
+    expect(result.meta.filteredCount).toBe(0);
+    expect(result.meta.filterRan).toBe(false);
+  });
+});
+
+describe("runFilterStage — connector throws mid-run after a successful file", () => {
+  it("keeps the failing file's findings, preserves prior drops, and stays filterRan=true", async () => {
+    // File A drops its finding; File B's call throws. B's finding is kept (fail-safe).
+    // Files sort alphabetically: "src/A.tsx" < "src/B.tsx".
+    const a = makeColorFinding("src/A.tsx", 1);
+    const b = makeColorFinding("src/B.tsx", 1);
+    const fileContents = new Map([
+      ["src/A.tsx", "const c = '#ff0000';"],
+      ["src/B.tsx", "const c = '#00ff00';"],
+    ]);
+    let call = 0;
+    const completeSpy = vi.fn(async () => {
+      call++;
+      if (call === 1) {
+        return {
+          text: verdictJson([{ index: 0, keep: false }]),
+          usdSpent: 0,
+          modelUsed: "fake",
+          llmQuality: "higher" as const,
+          cacheHit: false,
+        };
+      }
+      throw new Error("connector boom");
+    });
+    const connector: ConnectorClient = { complete: completeSpy };
+
+    const result = await runFilterStage(
+      { repoRoot: "/repo", config: MIN_CONFIG, flags: undefined, findings: [a, b], fileContents },
+      { connector },
+    );
+
+    expect(completeSpy).toHaveBeenCalledTimes(2);
+    expect(result.meta.filterRan).toBe(true);
+    expect(result.meta.filteredCount).toBe(1);
+    // A dropped, B kept
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.location.file).toBe("src/B.tsx");
+  });
+});
