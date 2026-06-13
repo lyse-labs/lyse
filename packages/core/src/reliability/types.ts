@@ -25,6 +25,10 @@ export interface SubAxisRecord {
   contributesToScore: boolean;
   ruleIds: string[];
   llmDriven: boolean;
+  // Deterministic validators (file-presence / JSON-schema / grammar rules) may
+  // calibrate precision from the synthetic recall suite because their verdict is
+  // structural, not context-dependent.
+  deterministicValidator?: boolean;
 }
 
 export interface ConfidenceManifest {
