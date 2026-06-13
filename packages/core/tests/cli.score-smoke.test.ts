@@ -8,6 +8,13 @@
  *   - Health Score:       N ∈ [90, 96]  (±3 around 93)
  *   - Counted findings:   M ∈ [2,  4]   (guards against stableSubAxes going empty → trivial 100)
  *   - Scoring path:       "scoring-v1"  (trusted-score path is active)
+ *
+ * NOTE: `--static-only` is passed explicitly so the score is deterministic
+ * regardless of whether `claude` is on PATH. The LLM precision filter (#115)
+ * is default-ON when a connector resolves (e.g. agent-cli auto-selected on
+ * dev machines), which would non-deterministically vary the finding count and
+ * therefore the score. `--static-only` makes the filter a no-op, keeping the
+ * static floor byte-for-byte identical in CI and on local dev machines.
  */
 import { describe, it, expect } from "vitest";
 import { spawnSync } from "node:child_process";
@@ -32,7 +39,7 @@ describe("cli explain --score smoke (Track 8.10)", () => {
       );
     }
 
-    const r = spawnSync("node", [LYSE_CLI_PATH, "explain", "--score", fixture], {
+    const r = spawnSync("node", [LYSE_CLI_PATH, "explain", "--score", "--static-only", fixture], {
       encoding: "utf8",
     });
 
