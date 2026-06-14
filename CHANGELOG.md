@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **SARIF `partialFingerprints` for GitHub code-scanning deduplication (Track #142).** Every SARIF result now carries `partialFingerprints["primaryLocationLineHash/v1"]` — a full SHA-256 (hex) of `${ruleId} ${relativeFilePath} ${startLine} ${message}`. GitHub Advanced Security uses this key to match findings across runs, preventing every CI run from creating duplicate alerts in the Security tab. The fingerprint is deterministic (no timestamps, no run-specific data), order-independent, and distinct for findings that differ in rule, file, or line.
+
 ### Added
 
 - **Two more deterministic validators promoted to the trusted score (Phase A).** `ai-surface/ds-index-exported` (DS package exports a discoverable index ≥3 named exports) and `ai-surface/agent-instruction-files` (ships Cursor rules / Claude skills with valid frontmatter) are now `stable` + `contributesToScore`. Both are pure file-presence / schema checks — the same `deterministicValidator` bar as the existing 5 — so their synthetic-suite precision (Wilson LB 0.90) is a valid calibration source (no real-world context gap). The `scoring-v1` trusted path now counts **7** sub-axes (was 5); `fixtures/full-ds` Health Score 91 (within the pinned [90,96] band). The remaining experimental ai-surface / ai-governance rules stay reported-only pending real-repo recall validation (name-pattern detection) or the LLM judgement layer (semantic).
