@@ -6,6 +6,13 @@ export interface ScoreInput {
   findings: Finding[];
   stableSubAxes: Set<string>;
   confidenceByAxis: Record<string, number>;
+  /**
+   * Conformal-gated sub-axes (Phase D): subAxisId → confidence threshold θ. A
+   * finding in one of these counts toward the score only if its
+   * `llmJudgement.confidence` is ≥ θ; otherwise it is reported-only. Omitting
+   * the map (or an empty map) is inert — scoring is unchanged.
+   */
+  conformalSubAxes?: ReadonlyMap<string, number>;
 }
 
 export interface ScoreOutput {
@@ -20,12 +27,23 @@ export function computeScoreV1(input: ScoreInput): ScoreOutput {
   let counted = 0;
   let reportedOnly = 0;
   for (const f of input.findings) {
-    if (!input.stableSubAxes.has(f.subAxisId)) {
+    let countsTowardScore = input.stableSubAxes.has(f.subAxisId);
+
+    if (!countsTowardScore) {
+      // Conformal gate: a graded sub-axis counts only when the finding's
+      // confidence clears the calibrated threshold θ.
+      const theta = input.conformalSubAxes?.get(f.subAxisId);
+      const conf = f.llmJudgement?.confidence;
+      if (theta !== undefined && typeof conf === "number" && conf >= theta) {
+        countsTowardScore = true;
+      }
+    }
+
+    if (!countsTowardScore) {
       reportedOnly++;
       continue;
     }
-    const conf = input.confidenceByAxis[f.subAxisId] ?? 0;
-    penalty += findingWeight(f.severity, conf);
+    penalty += findingWeight(f.severity, input.confidenceByAxis[f.subAxisId] ?? 0);
     counted++;
   }
   const score = Math.max(0, Math.min(100, Math.round(100 - penalty * 1.5)));

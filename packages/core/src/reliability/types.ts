@@ -1,3 +1,5 @@
+import type { LlmJudgement } from "../types.js";
+
 export type ScoringVersion = `scoring-v${number}`;
 
 export type SubAxisStatus = "stable" | "experimental" | "disabled";
@@ -55,4 +57,6 @@ export interface Finding {
   file: string;
   line: number | null;
   column: number | null;
+  /** LLM precision-filter / grader judgement, used by the conformal scoring gate (Phase D). */
+  llmJudgement?: LlmJudgement;
 }
