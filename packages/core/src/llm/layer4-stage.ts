@@ -98,9 +98,10 @@ function buildPrompt(dimensions: RubricDimension[], staticFindings: Finding[]): 
     "",
     "## Output format",
     "Return ONLY valid JSON (no markdown, no explanation) matching:",
-    '{ "findings": [ { "ruleId": string, "axis": string, "severity": "error"|"warning"|"info", "file": string, "line": number, "column": number, "snippet": string, "message": string } ] }',
+    '{ "findings": [ { "ruleId": string, "axis": string, "severity": "error"|"warning"|"info", "file": string, "line": number, "column": number, "snippet": string, "message": string, "confidence": number } ] }',
     "",
     "CRITICAL: Every finding MUST cite a real file path and an exact code snippet (at least 20 chars) from that file.",
+    "`confidence` is your certainty that this is a genuine governance violation, in [0,1]. Be calibrated; reserve >0.9 for clear-cut cases.",
     'If you have no findings, return: { "findings": [] }',
   ].join("\n");
 }

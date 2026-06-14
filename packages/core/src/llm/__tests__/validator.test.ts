@@ -41,6 +41,69 @@ describe("validateProposedFindings", () => {
     expect(result.droppedHallucinations).toBe(0);
   });
 
+  it("attaches llmJudgement (verdict 'violation' + clamped confidence) when confidence is provided", async () => {
+    const repoRoot = makeRepoRoot();
+    const srcDir = join(repoRoot, "src");
+    mkdirSync(srcDir);
+    writeFileSync(join(srcDir, "Card.tsx"), "export function Card() { return null; }");
+
+    const proposed: ProposedFinding[] = [
+      {
+        ruleId: "ai-governance/disclaimer-present",
+        axis: "ai-governance",
+        severity: "warning",
+        file: "src/Card.tsx",
+        line: 1,
+        column: 1,
+        snippet: "export function Card()",
+        message: "AI content without disclaimer",
+        confidence: 0.83,
+      },
+      {
+        ruleId: "ai-governance/disclaimer-present",
+        axis: "ai-governance",
+        severity: "warning",
+        file: "src/Card.tsx",
+        line: 1,
+        column: 1,
+        snippet: "export function Card()",
+        message: "Over-confident",
+        confidence: 1.4,
+      },
+    ];
+
+    const result = await validateProposedFindings(proposed, repoRoot);
+    expect(result.findings).toHaveLength(2);
+    const byMsg = Object.fromEntries(result.findings.map((f) => [f.message, f]));
+    expect(byMsg["AI content without disclaimer"]!.llmJudgement).toEqual({
+      verdict: "violation",
+      confidence: 0.83,
+    });
+    expect(byMsg["Over-confident"]!.llmJudgement!.confidence).toBe(1); // clamped
+  });
+
+  it("omits llmJudgement when no confidence is provided", async () => {
+    const repoRoot = makeRepoRoot();
+    const srcDir = join(repoRoot, "src");
+    mkdirSync(srcDir);
+    writeFileSync(join(srcDir, "X.tsx"), "export const X = 1; // long enough snippet");
+
+    const proposed: ProposedFinding[] = [{
+      ruleId: "ai-governance/disclaimer-present",
+      axis: "ai-governance",
+      severity: "warning",
+      file: "src/X.tsx",
+      line: 1,
+      column: 1,
+      snippet: "export const X = 1;",
+      message: "no confidence given",
+    }];
+
+    const result = await validateProposedFindings(proposed, repoRoot);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.llmJudgement).toBeUndefined();
+  });
+
   it("drops finding when file does not exist", async () => {
     const repoRoot = makeRepoRoot();
     const proposed: ProposedFinding[] = [{
