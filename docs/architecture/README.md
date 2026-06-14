@@ -70,6 +70,7 @@ How Lyse fits together. For external contributors who want to understand or exte
 | Parser strategy (SWC, PostCSS, Babel) | [`parsers.md`](./parsers.md) |
 | Rules engine, rule contract | [`rules-engine.md`](./rules-engine.md) |
 | Scorer (formula, renormalization) | [`scoring.md`](./scoring.md) |
+| LLM judgement layer (Phase D design) | [`llm-judgement-layer.md`](./llm-judgement-layer.md) — semantic scoring, router → specialists → conformal abstention |
 | MCP server design | [`mcp-server.md`](./mcp-server.md) |
 | Cloudflare Worker (private) | Receives opt-in telemetry events, serves the daily bucket salt, exposes public bench aggregates. See [`PRIVACY.md`](../../PRIVACY.md). |
 
