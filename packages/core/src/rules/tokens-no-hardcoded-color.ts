@@ -1,6 +1,6 @@
 import { isAbsolute, join } from "node:path";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, ClassifyContext, Confidence, CodemodContext, CodemodResult } from "../types.js";
-import { isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile } from "./_skip-context.js";
+import { isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile, isInCommentOrUrl } from "./_skip-context.js";
 import { isPathExcluded } from "./_exclude.js";
 import { fixHardcodedColor } from "../codemods/tokens-color.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
@@ -71,37 +71,6 @@ function isInsideVarCall(source: string, hitStart: number): boolean {
       depth--;
     }
   }
-  return false;
-}
-
-/**
- * Returns true if the hit at `hitStart` is on a comment line or inside a URL
- * fragment, which means the "color" is not a real CSS value.
- *
- * Detects:
- *   // comment with #issue-ref
- *   /* block comment with #hex *\/
- *    * doc-comment line with #hex
- *   https://example.com#fragment or similar URL fragment
- */
-function isInCommentOrUrl(source: string, hitStart: number): boolean {
-  // Find the start of the current line
-  const lineStart = source.lastIndexOf("\n", hitStart - 1) + 1;
-  const linePrefix = source.slice(lineStart, hitStart).trimStart();
-
-  // // single-line comment
-  if (linePrefix.startsWith("//")) return true;
-  // /* block comment or * continuation line
-  if (linePrefix.startsWith("/*") || linePrefix.startsWith("*")) return true;
-
-  // URL fragment: look back ~60 chars for "://" then check we're after a "#"
-  // that follows something that looks like a URL (no whitespace between)
-  const lookback = source.slice(Math.max(0, hitStart - 60), hitStart);
-  // If there's "://" in the lookback and no whitespace between it and our position
-  if (lookback.includes("://") && !/\s/.test(lookback.split("://").pop() ?? "")) {
-    return true;
-  }
-
   return false;
 }
 

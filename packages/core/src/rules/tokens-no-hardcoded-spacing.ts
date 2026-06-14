@@ -1,5 +1,5 @@
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, ClassifyContext, Confidence, CodemodContext, CodemodResult } from "../types.js";
-import { isInsideSkippedJsxAttr, isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isNotSpacingPropertyContext } from "./_skip-context.js";
+import { isInsideSkippedJsxAttr, isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isNotSpacingPropertyContext, isInCommentOrUrl } from "./_skip-context.js";
 import { isPathExcluded } from "./_exclude.js";
 import { fixHardcodedSpacing } from "../codemods/tokens-spacing.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
@@ -101,6 +101,7 @@ const evaluate = async (
       // Skip values inside same-line <code>...</code> or <pre>...</pre>
       // blocks (display-only examples). Multi-line blocks are V1 work.
       if (isInsideCodeDisplay(source, m.index)) continue;
+      if (isInCommentOrUrl(source, m.index)) continue;
       if (isCssCustomPropertyDeclaration(source, m.index)) continue;
       if (isInExampleOrSchemaValuePosition(source, m.index)) continue;
       // Property-awareness: skip values not in a spacing CSS property or

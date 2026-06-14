@@ -250,6 +250,27 @@ export function isCssCustomPropertyDeclaration(source: string, index: number): b
   return propName.startsWith("--");
 }
 
+/**
+ * Returns true if the offset `hitStart` falls inside a line comment, a block
+ * comment, or a URL fragment — positions where a hex/px literal is not a real
+ * declaration value. The SCSS transform converts `.scss` `//` comments into
+ * block comments, so this also catches a value inside a former line comment.
+ */
+export function isInCommentOrUrl(source: string, hitStart: number): boolean {
+  const lineStart = source.lastIndexOf("\n", hitStart - 1) + 1;
+  const linePrefix = source.slice(lineStart, hitStart).trimStart();
+
+  if (linePrefix.startsWith("//")) return true;
+  if (linePrefix.startsWith("/*") || linePrefix.startsWith("*")) return true;
+
+  const lookback = source.slice(Math.max(0, hitStart - 60), hitStart);
+  if (lookback.includes("://") && !/\s/.test(lookback.split("://").pop() ?? "")) {
+    return true;
+  }
+
+  return false;
+}
+
 // ---------------------------------------------------------------------------
 // Spacing property-awareness
 // ---------------------------------------------------------------------------
@@ -335,8 +356,11 @@ export function isNotSpacingPropertyContext(source: string, matchIndex: number):
     if (c === ")") { cd++; continue; }
     if (c === "(") { if (cd > 0) cd--; continue; }
     if (cd > 0) continue;
+    // A CSS declaration ends at ; { }, NOT at a newline — values (box-shadow,
+    // grid templates, multi-value margins) span lines. Walking across newlines
+    // lets a continuation line resolve its real property (e.g. `box-shadow`,
+    // non-spacing) instead of defaulting to "fires".
     if (c === ";" || c === "{" || c === "}") break;
-    if (c === "\n") break;
     if (c === ":") { colonPos = i; break; }
   }
 
