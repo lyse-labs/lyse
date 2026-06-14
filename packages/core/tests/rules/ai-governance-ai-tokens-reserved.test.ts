@@ -179,6 +179,36 @@ describe("detectReservedAiTokens (shared parser)", () => {
     expect(found).not.toContain("--ai-primary");
   });
 
+  it("detects distinctive AI token in a .scss file (Carbon CDS pattern)", () => {
+    writeFileSync(
+      join(tmp, "ai-tokens.scss"),
+      ":root { --cds-ai-aura-start: #abc; }",
+    );
+    const found = detectReservedAiTokens(tmp);
+    expect(found).toContain("--cds-ai-aura-start");
+  });
+
+  it("Mantine-style .scss: --ai-bg/--ai-size are NOT detected (precision preserved through SCSS path)", () => {
+    writeFileSync(
+      join(tmp, "mantine.module.scss"),
+      ".actionIcon { --ai-bg: #fff; --ai-size: 16px; }",
+    );
+    expect(detectReservedAiTokens(tmp)).toEqual([]);
+  });
+
+  it("SCSS constructs around a distinctive token do not prevent extraction", () => {
+    writeFileSync(
+      join(tmp, "carbon-ai.scss"),
+      `$x: 1px;
+@mixin ai-theme {
+  color: red;
+}
+:root { --ai-gradient-1: red; }`,
+    );
+    const found = detectReservedAiTokens(tmp);
+    expect(found).toContain("--ai-gradient-1");
+  });
+
   it("ignores node_modules, dist, .git, build", () => {
     mkdirSync(join(tmp, "node_modules"), { recursive: true });
     writeFileSync(
