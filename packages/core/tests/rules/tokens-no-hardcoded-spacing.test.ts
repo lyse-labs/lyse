@@ -725,4 +725,39 @@ describe("1px recall regression — spacing context fires, border context does n
     const result = await rule.evaluate(ctx, parsed);
     expect(result.findings.filter((f) => f.message.includes("1px"))).toHaveLength(0);
   });
+
+  // #120 precision: values inside comments are not declaration values.
+  it("does NOT flag a px value inside a block comment", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "a.css", source: "/* breakpoint at 13px */\n.x { color: red; }", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.filter((f) => f.message.includes("13px"))).toHaveLength(0);
+  });
+
+  it("does NOT flag a px value on a doc-comment continuation line", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "a.css", source: "/*\n * note: 13px base\n */\n.x { color: red; }", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.filter((f) => f.message.includes("13px"))).toHaveLength(0);
+  });
+
+  // #120 precision: multi-line declaration continuations keep their property
+  // context — a box-shadow offset on a continuation line is not spacing.
+  it("does NOT flag a px offset on a box-shadow continuation line", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "a.css", source: ".x {\n  box-shadow: 0 0 0 1px,\n    13px -13px 0 red;\n}", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.filter((f) => f.message.includes("13px"))).toHaveLength(0);
+  });
+
+  it("STILL flags a multi-line margin continuation (real spacing)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "a.css", source: ".x {\n  margin: 0\n    13px;\n}", root: null }], cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.some((f) => f.message.includes("13px"))).toBe(true);
+  });
 });
