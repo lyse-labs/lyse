@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { AuditResult, Finding, Severity } from "../types.js";
 import { RULE_METADATA, RULES_VERSION } from "../rules/manifest.js";
 
@@ -32,7 +33,15 @@ function ruleDefinitionFromMeta(meta: (typeof RULE_METADATA)[number]) {
   };
 }
 
+function fingerprintFor(finding: Finding): string {
+  const startLine = Math.max(1, finding.location.line);
+  const canonical = `${finding.ruleId} ${finding.location.file} ${startLine} ${finding.message}`;
+  return createHash("sha256").update(canonical, "utf8").digest("hex");
+}
+
 function findingToResult(finding: Finding) {
+  const startLine = Math.max(1, finding.location.line);
+  const startColumn = Math.max(1, finding.location.column);
   const result: Record<string, unknown> = {
     ruleId: finding.ruleId,
     level: severityToSarifLevel(finding.severity),
@@ -45,12 +54,15 @@ function findingToResult(finding: Finding) {
             uriBaseId: "%SRCROOT%",
           },
           region: {
-            startLine: Math.max(1, finding.location.line),
-            startColumn: Math.max(1, finding.location.column),
+            startLine,
+            startColumn,
           },
         },
       },
     ],
+    partialFingerprints: {
+      "primaryLocationLineHash/v1": fingerprintFor(finding),
+    },
   };
   if (finding.suggestion) {
     result["fixes"] = [

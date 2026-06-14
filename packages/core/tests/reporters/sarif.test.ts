@@ -124,4 +124,76 @@ describe("renderSarif", () => {
     expect(sarif.runs[0].results[0].locations[0].physicalLocation.artifactLocation.uri).toBe("z.tsx");
     expect(sarif.runs[0].results[1].locations[0].physicalLocation.artifactLocation.uri).toBe("a.tsx");
   });
+
+  describe("partialFingerprints", () => {
+    it("every result has a non-empty hex primaryLocationLineHash/v1", () => {
+      const sarif = JSON.parse(renderSarif(sample));
+      const result = sarif.runs[0].results[0];
+      expect(result.partialFingerprints).toBeDefined();
+      const fp: string = result.partialFingerprints["primaryLocationLineHash/v1"];
+      expect(fp).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it("same AuditResult rendered twice produces identical fingerprints (determinism)", () => {
+      const sarif1 = JSON.parse(renderSarif(sample));
+      const sarif2 = JSON.parse(renderSarif(sample));
+      const fp1: string = sarif1.runs[0].results[0].partialFingerprints["primaryLocationLineHash/v1"];
+      const fp2: string = sarif2.runs[0].results[0].partialFingerprints["primaryLocationLineHash/v1"];
+      expect(fp1).toBe(fp2);
+    });
+
+    it("two findings differing only in ruleId produce different fingerprints", () => {
+      const r: AuditResult = {
+        ...sample,
+        findings: [
+          { ...sample.findings[0]!, ruleId: "tokens/no-hardcoded-color" },
+          { ...sample.findings[0]!, ruleId: "tokens/dtcg-conformance" },
+        ],
+      };
+      const sarif = JSON.parse(renderSarif(r));
+      const fp1: string = sarif.runs[0].results[0].partialFingerprints["primaryLocationLineHash/v1"];
+      const fp2: string = sarif.runs[0].results[1].partialFingerprints["primaryLocationLineHash/v1"];
+      expect(fp1).not.toBe(fp2);
+    });
+
+    it("two findings differing only in file produce different fingerprints", () => {
+      const r: AuditResult = {
+        ...sample,
+        findings: [
+          { ...sample.findings[0]!, location: { file: "src/A.tsx", line: 42, column: 1 } },
+          { ...sample.findings[0]!, location: { file: "src/B.tsx", line: 42, column: 1 } },
+        ],
+      };
+      const sarif = JSON.parse(renderSarif(r));
+      const fp1: string = sarif.runs[0].results[0].partialFingerprints["primaryLocationLineHash/v1"];
+      const fp2: string = sarif.runs[0].results[1].partialFingerprints["primaryLocationLineHash/v1"];
+      expect(fp1).not.toBe(fp2);
+    });
+
+    it("two findings differing only in startLine produce different fingerprints", () => {
+      const r: AuditResult = {
+        ...sample,
+        findings: [
+          { ...sample.findings[0]!, location: { file: "src/Page.tsx", line: 10, column: 1 } },
+          { ...sample.findings[0]!, location: { file: "src/Page.tsx", line: 20, column: 1 } },
+        ],
+      };
+      const sarif = JSON.parse(renderSarif(r));
+      const fp1: string = sarif.runs[0].results[0].partialFingerprints["primaryLocationLineHash/v1"];
+      const fp2: string = sarif.runs[0].results[1].partialFingerprints["primaryLocationLineHash/v1"];
+      expect(fp1).not.toBe(fp2);
+    });
+
+    it("fingerprint is identical regardless of the finding's position in the array (order-independence)", () => {
+      const findingA = { ...sample.findings[0]!, location: { file: "src/A.tsx", line: 5, column: 1 } };
+      const findingB = { ...sample.findings[0]!, ruleId: "tokens/dtcg-conformance", location: { file: "src/B.tsx", line: 10, column: 1 } };
+      const r1: AuditResult = { ...sample, findings: [findingA, findingB] };
+      const r2: AuditResult = { ...sample, findings: [findingB, findingA] };
+      const sarif1 = JSON.parse(renderSarif(r1));
+      const sarif2 = JSON.parse(renderSarif(r2));
+      const fpA_pos0: string = sarif1.runs[0].results[0].partialFingerprints["primaryLocationLineHash/v1"];
+      const fpA_pos1: string = sarif2.runs[0].results[1].partialFingerprints["primaryLocationLineHash/v1"];
+      expect(fpA_pos0).toBe(fpA_pos1);
+    });
+  });
 });
