@@ -6,6 +6,7 @@ import type { RubricDimension } from "./rubric.js";
 import { getRubricDimensions } from "./rubric.js";
 import type { ProposedFinding } from "./validator.js";
 import { validateProposedFindings } from "./validator.js";
+import { extractJson, withTimeout } from "./llm-utils.js";
 
 export interface Layer4StageInput {
   repoRoot: string;
@@ -40,14 +41,6 @@ const VALID_AXES = new Set<AxisName>([
 ]);
 const DEFAULT_TIMEOUT_MS = 60_000;
 const MAX_LLM_FINDINGS = 100;
-
-function extractJson(text: string): unknown {
-  const jsonFenced = text.match(/```json\s*([\s\S]*?)```/);
-  if (jsonFenced && jsonFenced[1]) return JSON.parse(jsonFenced[1].trim());
-  const anyFenced = text.match(/```\s*([\s\S]*?)```/);
-  if (anyFenced && anyFenced[1]) return JSON.parse(anyFenced[1].trim());
-  return JSON.parse(text);
-}
 
 function isProposedFinding(v: unknown): v is ProposedFinding {
   if (typeof v !== "object" || v === null) return false;
@@ -104,14 +97,6 @@ function buildPrompt(dimensions: RubricDimension[], staticFindings: Finding[]): 
     "`confidence` is your certainty that this is a genuine governance violation, in [0,1]. Be calibrated; reserve >0.9 for clear-cut cases.",
     'If you have no findings, return: { "findings": [] }',
   ].join("\n");
-}
-
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  let timer: ReturnType<typeof setTimeout>;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`LLM connector timeout after ${ms}ms`)), ms);
-  });
-  return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
 }
 
 export async function runLayer4Stage(
