@@ -42,6 +42,83 @@ describe("rule tokens/no-hardcoded-spacing", () => {
   });
 });
 
+describe("FP triage Phase B — zero with explicit units", () => {
+  it("does NOT flag 0rem / 0em / 0.0rem (zero is zero regardless of unit)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "a.css", source: ".x { margin-top: 0rem; padding: 0em; gap: 0.0rem; }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag a 0rem fallback inside var()", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "a.css", source: ".x { top: var(--app-shell-header-offset, 0rem); }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+});
+
+describe("FP triage Phase B — var() fallback is tokenized usage, not drift", () => {
+  it("does NOT flag a hardcoded value in the var() fallback position", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "a.css", source: ".x { padding: var(--base-size-16, 7px); gap: var(--base-size-8, 13px); }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("still flags a hardcoded value OUTSIDE the var() (real drift alongside a token)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "a.css", source: ".x { padding: 7px var(--gap, 4px); }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.map((f) => f.message)).toContain("Off-scale spacing: 7px");
+    expect(result.findings.find((f) => f.message.includes("4px"))).toBeUndefined();
+  });
+
+  it("handles nested var() fallbacks", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "a.css", source: ".x { margin: var(--a, var(--b, 7px)); }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+});
+
+describe("FP triage Phase B — @container breakpoints and multi-line comments", () => {
+  it("does NOT flag a dimension in an @container query prelude (breakpoint, not spacing)", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "a.css", source: "@container (width <= 400px) {\n  .x { color: red; }\n}", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.find((f) => f.message.includes("400px"))).toBeUndefined();
+  });
+
+  it("does NOT flag a value inside a multi-line block comment", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "a.css", source: ".x {\n  /* nudge\n     (-0.5px) to align with the border line. */\n  color: red;\n}", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+});
+
 describe("FP triage W4-1 — JSX sizes/srcSet skip", () => {
   it("does NOT flag px values inside sizes= attribute", async () => {
     const parsed: ParsedFiles = {

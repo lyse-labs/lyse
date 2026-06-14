@@ -251,6 +251,49 @@ export function isCssCustomPropertyDeclaration(source: string, index: number): b
 }
 
 /**
+ * Returns true if the literal at `index` sits in the *fallback* position of a
+ * `var(--token, <fallback>)` call. Such a declaration is tokenized usage — the
+ * `var()` reference is the real value; the literal only applies if the token is
+ * undefined (dead code in a well-formed design system). Flagging it as drift is
+ * a false positive. Handles nesting (`var(--a, var(--b, 8px))`). A literal in
+ * any non-`var` function (e.g. `calc(50% - 1px)`) returns false.
+ */
+export function isInVarFallback(source: string, index: number): boolean {
+  let depth = 0;
+  let sawCommaAtLevel = false;
+  for (let i = index - 1; i >= 0; i--) {
+    const c = source[i];
+    if (c === ")") {
+      depth++;
+      continue;
+    }
+    if (c === "(") {
+      if (depth > 0) {
+        depth--;
+        continue;
+      }
+      // Enclosing open paren at our level — identify the function name.
+      let start = i;
+      while (start > 0 && /[a-zA-Z0-9_-]/.test(source[start - 1] ?? "")) start--;
+      const fn = source.slice(start, i).toLowerCase();
+      if (fn.endsWith("var")) {
+        if (sawCommaAtLevel) return true;
+        // First arg of var() (the token name) — not a fallback; keep climbing
+        // in case of nesting like the outer var() of var(--a, var(--b, 8px)).
+        sawCommaAtLevel = false;
+        continue;
+      }
+      return false;
+    }
+    if (depth === 0) {
+      if (c === ",") sawCommaAtLevel = true;
+      else if (c === ";" || c === "{" || c === "}") return false;
+    }
+  }
+  return false;
+}
+
+/**
  * Returns true if the offset `hitStart` falls inside a line comment, a block
  * comment, or a URL fragment — positions where a hex/px literal is not a real
  * declaration value. The SCSS transform converts `.scss` `//` comments into
@@ -262,6 +305,15 @@ export function isInCommentOrUrl(source: string, hitStart: number): boolean {
 
   if (linePrefix.startsWith("//")) return true;
   if (linePrefix.startsWith("/*") || linePrefix.startsWith("*")) return true;
+
+  // Multi-line block comment: inside `/* … */` if the nearest preceding `/*`
+  // comes after the nearest preceding `*/` (covers continuation lines that do
+  // not start with `*`, e.g. `   (-0.5px) to align. */`).
+  const lastOpen = source.lastIndexOf("/*", hitStart);
+  if (lastOpen !== -1) {
+    const lastClose = source.lastIndexOf("*/", hitStart);
+    if (lastClose < lastOpen) return true;
+  }
 
   const lookback = source.slice(Math.max(0, hitStart - 60), hitStart);
   if (lookback.includes("://") && !/\s/.test(lookback.split("://").pop() ?? "")) {
@@ -293,9 +345,10 @@ const CSS_SPACING_PROPS = new Set([
 const TW_SPACING_PREFIX_RE =
   /\b(?:p[xytblr]?|m[xytblr]?|gap(?:-[xy])?|space-[xy]|inset(?:-[xy])?|top|right|bottom|left)-\[/;
 
-// Contexts that are NOT spacing: @media queries, JS media-query calls, transform functions.
+// Contexts that are NOT spacing: @media / @container queries (the dimension is
+// a breakpoint, not a spacing token), JS media-query calls, transform functions.
 const SKIP_CONTEXT_RE =
-  /@media\s*\(|useMediaQuery\s*\(["']|matchMedia\s*\(["']|translate[XYZ]?\s*\(|translateX\s*\(|translateY\s*\(|translateZ\s*\(/;
+  /@media\s*\(|@container[^{]*\(|useMediaQuery\s*\(["']|matchMedia\s*\(["']|translate[XYZ]?\s*\(|translateX\s*\(|translateY\s*\(|translateZ\s*\(/;
 
 /**
  * Returns true if the px/rem/em hit at `matchIndex` is in a CSS or JS source
