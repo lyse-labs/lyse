@@ -7,6 +7,7 @@
 import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import fg from "fast-glob";
+import { transformScssToCss } from "./scss-transform.js";
 
 const JSON_TOKEN_PATTERNS = [
   "tokens.json",
@@ -18,6 +19,7 @@ const JSON_TOKEN_PATTERNS = [
 ];
 
 const CSS_PATTERNS = ["**/*.css"];
+const SCSS_PATTERNS = ["**/*.scss"];
 
 const IGNORE = [
   "**/node_modules/**",
@@ -153,6 +155,21 @@ export function detectReservedAiTokens(repoRoot: string): string[] {
     const text = safeReadText(join(repoRoot, rel));
     if (text === null) continue;
     for (const name of extractCssCustomPropertyNames(text)) {
+      if (isReservedTokenName(name)) found.add(name);
+    }
+  }
+
+  const scssFiles = discoverFiles(repoRoot, SCSS_PATTERNS);
+  for (const rel of scssFiles) {
+    const text = safeReadText(join(repoRoot, rel));
+    if (text === null) continue;
+    let cssText: string;
+    try {
+      cssText = transformScssToCss(text);
+    } catch {
+      continue;
+    }
+    for (const name of extractCssCustomPropertyNames(cssText)) {
       if (isReservedTokenName(name)) found.add(name);
     }
   }
