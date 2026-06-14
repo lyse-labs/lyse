@@ -14,6 +14,8 @@ export interface ProposedFinding {
   snippet: string;
   message: string;
   suggestion?: string;
+  /** Grader's self-reported certainty in [0,1] (Phase D). Attached as llmJudgement. */
+  confidence?: number;
 }
 
 export interface ValidationResult {
@@ -86,6 +88,7 @@ export async function validateProposedFindings(
       continue;
     }
 
+    const hasConfidence = typeof p.confidence === "number" && Number.isFinite(p.confidence);
     const finding: Finding = {
       ruleId: p.ruleId,
       axis: p.axis,
@@ -93,6 +96,11 @@ export async function validateProposedFindings(
       location: { file: p.file, line: p.line, column: p.column },
       message: p.message,
       ...(p.suggestion !== undefined && { suggestion: p.suggestion }),
+      // Grader output is always a proposed violation; attach its confidence so
+      // the conformal scoring gate (Phase D) can score only the confident ones.
+      ...(hasConfidence && {
+        llmJudgement: { verdict: "violation" as const, confidence: Math.min(1, Math.max(0, p.confidence!)) },
+      }),
     };
     findings.push(finding);
   }

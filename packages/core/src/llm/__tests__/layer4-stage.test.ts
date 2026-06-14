@@ -133,6 +133,32 @@ describe("runLayer4Stage — happy path", () => {
     expect(result.meta.llmQuality).toBe("higher");
   });
 
+  it("attaches llmJudgement when the grader returns a confidence (Phase D, D-gov-1)", async () => {
+    const repoRoot = makeRepoRoot({ "src/Chat.tsx": "export function Chat() { return null; }" });
+    const responseJson = JSON.stringify({
+      findings: [{
+        ruleId: "ai-governance/ai-loading-error-states",
+        axis: "ai-governance",
+        severity: "warning",
+        file: "src/Chat.tsx",
+        line: 1,
+        column: 1,
+        snippet: "export function Chat()",
+        message: "Missing AI error state",
+        confidence: 0.77,
+      }],
+    });
+    const connector = mockConnector(responseJson);
+
+    const result = await runLayer4Stage(
+      { repoRoot, config: MIN_CONFIG, flags: undefined, staticFindings: [] },
+      { connector, rubricDimensions: ONE_DIMENSION },
+    );
+
+    expect(result.augmentedFindings).toHaveLength(1);
+    expect(result.augmentedFindings[0]!.llmJudgement).toEqual({ verdict: "violation", confidence: 0.77 });
+  });
+
   it("sets cacheHit in meta when connector returns cacheHit:true", async () => {
     const repoRoot = makeRepoRoot({ "Foo.tsx": "const x = 1;" });
     const responseJson = JSON.stringify({ findings: [] });
