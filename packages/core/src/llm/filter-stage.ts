@@ -1,4 +1,4 @@
-import type { Finding, LyseConfig } from "../types.js";
+import type { Finding, LyseConfig, LlmJudgement, LlmVerdict } from "../types.js";
 import type { AuditFlags } from "../commands/audit-flags.js";
 import type { ConnectorClient } from "./connectors/types.js";
 import { resolveConnector } from "./connectors/resolver.js";
@@ -58,7 +58,15 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 
 interface Verdict {
   index: number;
-  keep: boolean;
+  // Phase D: three-way verdict + self-reported confidence.
+  verdict?: string;
+  confidence?: number;
+  // Legacy (pre-D1) binary form — still accepted for robustness.
+  keep?: boolean;
+}
+
+function clamp01(n: number): number {
+  return Math.min(1, Math.max(0, n));
 }
 
 interface VerdictsResponse {
@@ -84,7 +92,13 @@ function buildFilterPrompt(relativePath: string, source: string, findings: Findi
   });
 
   return [
-    'You are a design-system lint auditor. Below is a source file and a list of candidate "hardcoded value" findings (raw hex colors / px spacing that may be design-system violations). Some are FALSE POSITIVES: values that are NOT design-system violations — e.g. chart/data-viz palette colors, icon SVG fills, third-party embed theme config, canvas/PDF rendering, test fixtures, values inside comments, or values already coming from a token. For EACH finding decide keep (real violation worth flagging) or drop (false positive).',
+    'You are a design-system lint auditor. Below is a source file and a list of candidate "hardcoded value" findings (raw hex colors / px spacing that may be design-system violations). Some are FALSE POSITIVES: values that are NOT design-system violations — e.g. chart/data-viz palette colors, icon SVG fills, third-party embed theme config, canvas/PDF rendering, test fixtures, values inside comments, or values already coming from a token.',
+    "",
+    "For EACH finding return a verdict and your confidence in it:",
+    '  - "violation" — a real design-system violation worth flagging.',
+    '  - "fp" — a false positive that should be dropped.',
+    '  - "uncertain" — genuinely ambiguous; you cannot confidently decide.',
+    "  - confidence — a number in [0,1]: your certainty in that verdict. Be calibrated; reserve >0.9 for clear-cut cases.",
     "",
     `FILE: ${relativePath}`,
     "```",
@@ -94,7 +108,7 @@ function buildFilterPrompt(relativePath: string, source: string, findings: Findi
     "FINDINGS (index — line:col — ruleId — message — snippet):",
     ...findingLines,
     "",
-    'Return ONLY JSON, no prose: { "verdicts": [ { "index": <n>, "keep": <bool> } ] }',
+    'Return ONLY JSON, no prose: { "verdicts": [ { "index": <n>, "verdict": "violation"|"fp"|"uncertain", "confidence": <0..1> } ] }',
     "Include every index exactly once.",
   ].join("\n");
 }
@@ -131,6 +145,7 @@ export async function runFilterStage(
   const sortedFiles = [...byFile.keys()].sort();
 
   const droppedKeys = new Set<string>();
+  const judgementByKey = new Map<string, LlmJudgement>();
   let filterRan = false;
   let totalUsdSpent = 0;
   let lastModelUsed: string | undefined;
@@ -193,7 +208,10 @@ export async function runFilterStage(
       continue; // keep all for this file
     }
 
-    // Apply verdicts: drop only explicit keep=false; out-of-range/missing → keep
+    // Apply verdicts. A finding is dropped iff it's an explicit false positive
+    // (verdict "fp" or legacy keep=false). "violation"/"uncertain" are kept; a
+    // valid verdict + numeric confidence is attached as llmJudgement for the
+    // conformal scoring gate (D2). Out-of-range/missing → keep, no judgement.
     for (const verdict of parsed.verdicts) {
       if (
         typeof verdict.index !== "number" ||
@@ -203,16 +221,35 @@ export async function runFilterStage(
       ) {
         continue; // out-of-range → ignore (keep)
       }
-      if (verdict.keep === false) {
-        const finding = judgedFindings[verdict.index];
-        if (finding !== undefined) {
-          droppedKeys.add(findingKey(finding));
-        }
+      const finding = judgedFindings[verdict.index];
+      if (finding === undefined) continue;
+
+      const isFp = verdict.verdict === "fp" || verdict.keep === false;
+      if (isFp) {
+        droppedKeys.add(findingKey(finding));
+        continue;
+      }
+
+      const v = verdict.verdict;
+      if (
+        (v === "violation" || v === "uncertain") &&
+        typeof verdict.confidence === "number" &&
+        Number.isFinite(verdict.confidence)
+      ) {
+        judgementByKey.set(findingKey(finding), {
+          verdict: v as LlmVerdict,
+          confidence: clamp01(verdict.confidence),
+        });
       }
     }
   }
 
-  const kept = input.findings.filter((f) => !droppedKeys.has(findingKey(f)));
+  const kept = input.findings
+    .filter((f) => !droppedKeys.has(findingKey(f)))
+    .map((f) => {
+      const j = judgementByKey.get(findingKey(f));
+      return j !== undefined ? { ...f, llmJudgement: j } : f;
+    });
   // Count from the actual list delta, not droppedKeys.size: two findings can
   // share a ruleId|file|line|column key, so the Set would undercount.
   const filteredCount = input.findings.length - kept.length;

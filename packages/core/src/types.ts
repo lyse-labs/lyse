@@ -51,6 +51,20 @@ export interface SourceLocation {
   column: number;   // 1-based
 }
 
+/** Three-way verdict from the LLM precision filter (Phase D). */
+export type LlmVerdict = "violation" | "fp" | "uncertain";
+
+/**
+ * LLM precision-filter judgement attached to a kept finding. `confidence` is the
+ * model's self-reported certainty in `verdict`, in [0, 1]. Consumed by the
+ * conformal scoring gate (Phase D): only findings whose judgement clears the
+ * calibrated threshold contribute to the score; the rest stay reported-only.
+ */
+export interface LlmJudgement {
+  verdict: LlmVerdict;
+  confidence: number;
+}
+
 export interface Finding {
   ruleId: RuleId;
   axis: AxisName;
@@ -60,6 +74,7 @@ export interface Finding {
   suggestion?: string;
   context?: string; // ≤ 120 chars of code, no secrets
   confidence?: Confidence;
+  llmJudgement?: LlmJudgement;
 }
 
 export interface RuleContext {

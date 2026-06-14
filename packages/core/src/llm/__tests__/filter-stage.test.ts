@@ -475,3 +475,90 @@ describe("runFilterStage — connector throws mid-run after a successful file", 
     expect(result.findings[0]!.location.file).toBe("src/B.tsx");
   });
 });
+
+describe("runFilterStage — 3-way verdict + confidence (Phase D, D1)", () => {
+  const fileContents = new Map([["a.css", ".x { color: #ff0000; padding: 16px; }"]]);
+
+  it("drops verdict:'fp' and keeps verdict:'violation' with llmJudgement attached", async () => {
+    const a = makeColorFinding("a.css", 1, 1);
+    const b = makeSpacingFinding("a.css", 1, 20);
+    const connector = mockConnector(
+      JSON.stringify({
+        verdicts: [
+          { index: 0, verdict: "fp", confidence: 0.92 },
+          { index: 1, verdict: "violation", confidence: 0.81 },
+        ],
+      }),
+    );
+    const result = await runFilterStage(
+      { repoRoot: "/repo", config: MIN_CONFIG, flags: undefined, findings: [a, b], fileContents },
+      { connector },
+    );
+    expect(result.findings).toHaveLength(1);
+    const kept = result.findings[0]!;
+    expect(kept.ruleId).toBe("tokens/no-hardcoded-spacing");
+    expect(kept.llmJudgement).toEqual({ verdict: "violation", confidence: 0.81 });
+  });
+
+  it("keeps verdict:'uncertain' and attaches the judgement (for the conformal gate)", async () => {
+    const a = makeColorFinding("a.css", 1, 1);
+    const connector = mockConnector(
+      JSON.stringify({ verdicts: [{ index: 0, verdict: "uncertain", confidence: 0.5 }] }),
+    );
+    const result = await runFilterStage(
+      { repoRoot: "/repo", config: MIN_CONFIG, flags: undefined, findings: [a], fileContents },
+      { connector },
+    );
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.llmJudgement).toEqual({ verdict: "uncertain", confidence: 0.5 });
+  });
+
+  it("clamps out-of-range confidence into [0,1]", async () => {
+    const a = makeColorFinding("a.css", 1, 1);
+    const b = makeSpacingFinding("a.css", 1, 20);
+    const connector = mockConnector(
+      JSON.stringify({
+        verdicts: [
+          { index: 0, verdict: "violation", confidence: 1.5 },
+          { index: 1, verdict: "uncertain", confidence: -0.3 },
+        ],
+      }),
+    );
+    const result = await runFilterStage(
+      { repoRoot: "/repo", config: MIN_CONFIG, flags: undefined, findings: [a, b], fileContents },
+      { connector },
+    );
+    const byCol = Object.fromEntries(result.findings.map((f) => [f.location.column, f]));
+    expect(byCol[1]!.llmJudgement!.confidence).toBe(1);
+    expect(byCol[20]!.llmJudgement!.confidence).toBe(0);
+  });
+
+  it("remains backward-compatible with the legacy {index, keep} format", async () => {
+    const a = makeColorFinding("a.css", 1, 1);
+    const b = makeSpacingFinding("a.css", 1, 20);
+    const connector = mockConnector(
+      JSON.stringify({ verdicts: [{ index: 0, keep: false }, { index: 1, keep: true }] }),
+    );
+    const result = await runFilterStage(
+      { repoRoot: "/repo", config: MIN_CONFIG, flags: undefined, findings: [a, b], fileContents },
+      { connector },
+    );
+    // A dropped, B kept (legacy keep semantics preserved); no llmJudgement when no confidence given
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.ruleId).toBe("tokens/no-hardcoded-spacing");
+    expect(result.findings[0]!.llmJudgement).toBeUndefined();
+  });
+
+  it("treats a verdict with no usable confidence as kept without a judgement", async () => {
+    const a = makeColorFinding("a.css", 1, 1);
+    const connector = mockConnector(
+      JSON.stringify({ verdicts: [{ index: 0, verdict: "violation" }] }),
+    );
+    const result = await runFilterStage(
+      { repoRoot: "/repo", config: MIN_CONFIG, flags: undefined, findings: [a], fileContents },
+      { connector },
+    );
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.llmJudgement).toBeUndefined();
+  });
+});
