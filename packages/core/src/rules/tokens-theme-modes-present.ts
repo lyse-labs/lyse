@@ -19,7 +19,11 @@ const README_CANDIDATES = ["README.md", "README", "readme.md", "README.mdx"];
 // CSS/SCSS signal patterns
 const RE_PREFERS_COLOR_SCHEME = /@media\s*\(\s*prefers-color-scheme\s*:/i;
 const RE_DATA_THEME = /\[data-(?:theme|mode|color-mode)/i;
-const RE_CLASS_MODE = /(?:^|[^a-z_-])(?:\.dark|\.light|:root\.dark|:root\.light)\b/m;
+// Matches a `.dark` / `.light` class selector, including compound element
+// selectors (`body.dark`, `html.light`, `:root.dark`). The trailing `\b`
+// keeps `.darker` / `.lightbox` from counting; CSS values never contain a
+// literal `.dark`/`.light` token, so a leading guard is unnecessary.
+const RE_CLASS_MODE = /\.(?:dark|light)\b/m;
 const RE_TAILWIND_VARIANT = /@variant\s+dark\b|(?:^|\s)dark:/m;
 
 function readFileIfSmall(absPath: string): string | null {

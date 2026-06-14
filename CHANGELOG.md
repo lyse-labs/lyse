@@ -9,9 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`tokens.theme-modes` promoted to the trusted score — 8th scored sub-axis (Track #127).** After fixing compound-selector detection (above), the recall-suite calibration cleared the promotion gate on both axes (recall Wilson LB **0.9036**, synthetic-precision Wilson LB **0.9011**, n=36 violation + 35 compliant fixtures), so `tokens/theme-modes-present` is now `stable` + `contributesToScore`. The `scoring-v1` trusted path now counts **8** sub-axes (was 7). `fixtures/full-ds` Health Score moved **91 → 88** — the fixture declares no light/dark mode signal, so the now-trusted rule fires; the smoke band was recentered to `[85, 91]` / counted-findings `[4, 6]` accordingly.
+
 - **Deterministic finding order + parallel rule execution (Track #147).** `runRules` now runs every rule concurrently (`Promise.all`) — rules are stateless and receive read-only context, and `Promise.all` preserves input order so aggregation stays deterministic. Findings are sorted by a stable multi-key comparator (`severity → file → line → column`) instead of severity alone, so output order no longer depends on rule registration order — a prerequisite for clean output diffs, SARIF fingerprint stability, and per-rule snapshot tests.
 
 ### Fixed
+
+- **`tokens/theme-modes-present` now detects compound element class selectors (Track #127).** The `.dark`/`.light` class-convention signal required a non-letter before the dot, so common real-world conventions like `body.dark`, `html.light`, and `html.dark` (Tailwind v3 default) went undetected — under-counting theme-mode support on those design systems. The detector now matches `.dark`/`.light` as a class token anywhere (trailing `\b` still excludes `.darker` / `.lightbox`; CSS values never contain a literal `.dark`/`.light` token, so no leading guard is needed). This closes the gap that blocked the sub-axis's calibration precision.
 
 - **SARIF `partialFingerprints` for GitHub code-scanning deduplication (Track #142).** Every SARIF result now carries `partialFingerprints["primaryLocationLineHash/v1"]` — a full SHA-256 (hex) of `${ruleId} ${relativeFilePath} ${startLine} ${message}`. GitHub Advanced Security uses this key to match findings across runs, preventing every CI run from creating duplicate alerts in the Security tab. The fingerprint is deterministic (no timestamps, no run-specific data), order-independent, and distinct for findings that differ in rule, file, or line.
 

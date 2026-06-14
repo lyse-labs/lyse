@@ -184,6 +184,30 @@ describe("rule tokens/theme-modes-present", () => {
       expect(result.findings).toHaveLength(0);
     });
 
+    it("emits no findings for body.dark compound element selector", async () => {
+      const css = makeParsed([
+        { path: "theme.css", source: ":root { --bg: #fff; }\nbody.dark { --bg: #111; }" },
+      ]);
+      const result = await rule.evaluate(makeCtx(tmp), css);
+      expect(result.findings).toHaveLength(0);
+    });
+
+    it("emits no findings for html.light compound element selector", async () => {
+      const css = makeParsed([
+        { path: "theme.css", source: "html.light { --bg: #fafafa; }" },
+      ]);
+      const result = await rule.evaluate(makeCtx(tmp), css);
+      expect(result.findings).toHaveLength(0);
+    });
+
+    it("still emits a warning for a .darker utility class (not a mode signal)", async () => {
+      const css = makeParsed([
+        { path: "vars.css", source: ":root { --bg: #fff; }\n.darker { filter: brightness(0.8); }" },
+      ]);
+      const result = await rule.evaluate(makeCtx(tmp), css);
+      expect(result.findings).toHaveLength(1);
+    });
+
     it("emits no findings for Tailwind v4 @variant dark", async () => {
       const css = makeParsed([
         { path: "tailwind.css", source: "@variant dark (&:where(.dark, .dark *)) {}" },
@@ -247,5 +271,15 @@ describe("_internal helpers", () => {
       { path: "a.sass", source: "@media (prefers-color-scheme: dark) {}", skipped: true as const },
     ];
     expect(_internal.hasModeInCssSources(files)).toBe(false);
+  });
+
+  it("hasModeInCssSources detects compound element class selectors", () => {
+    expect(_internal.hasModeInCssSources([{ path: "a.css", source: "body.dark {}" }])).toBe(true);
+    expect(_internal.hasModeInCssSources([{ path: "a.css", source: "html.light {}" }])).toBe(true);
+  });
+
+  it("hasModeInCssSources does not treat .darker / .lightbox as a mode signal", () => {
+    expect(_internal.hasModeInCssSources([{ path: "a.css", source: ".darker {}" }])).toBe(false);
+    expect(_internal.hasModeInCssSources([{ path: "a.css", source: ".lightbox {}" }])).toBe(false);
   });
 });
