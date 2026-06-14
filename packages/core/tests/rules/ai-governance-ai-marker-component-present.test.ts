@@ -270,7 +270,7 @@ describe("rule ai-governance/ai-marker-component-present", () => {
   it("emits warning when reserved AI tokens exist but no marker component is detected", async () => {
     writeFileSync(
       join(tmp, "tokens.json"),
-      JSON.stringify({ color: { ai: { primary: "#0875e1" } } }),
+      JSON.stringify({ gradient: { "dragon-fruit": { value: "#0875e1" } } }),
     );
     mkdirSync(join(tmp, "src"), { recursive: true });
     writeFileSync(
