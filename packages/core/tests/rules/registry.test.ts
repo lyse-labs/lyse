@@ -6,6 +6,7 @@ const EXPECTED_IDS = [
   "tokens/no-hardcoded-spacing",
   "tokens/dtcg-conformance",
   "tokens/description-coverage",
+  "tokens/theme-modes-present",
   "components/no-native-shadows",
   "components/contracts-strictness",
   "naming/component-pascalcase",

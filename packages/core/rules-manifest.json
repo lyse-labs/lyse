@@ -109,6 +109,29 @@
       ]
     },
     {
+      "id": "tokens/theme-modes-present",
+      "axis": "tokens",
+      "defaultSeverity": "warning",
+      "shortDescription": "Design system should define light/dark theme modes",
+      "fullDescription": "Checks whether the repository defines theme modes (light/dark) via any of: a `prefers-color-scheme` media query in CSS/SCSS; a `[data-theme]`, `[data-mode]`, or `[data-color-mode]` attribute selector; a `.dark`/`.light` class convention; a DTCG/token JSON file with a `dark` or `light` group or `$extensions` mode split; or a Tailwind v4 `@variant dark` / `dark:` usage indicator. Emits one warning at repo level when no signal is found. Emits nothing when any signal is present.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-theme-modes-present.md",
+      "rationale": "Why it matters\n\nDesign systems without explicit theme-mode declarations leave consumers to implement their own ad-hoc dark-mode strategies, leading to inconsistent behaviour across products. A repo-level signal — however simple — proves the design system has taken a position on color-scheme support.\n\nThe check is intentionally broad: any of the five detection signals (media query, data attribute, class convention, DTCG group, Tailwind v4 variant) counts as \"present\". The rule is experimental and does not contribute to the health score until calibration data is available.",
+      "examples": [
+        {
+          "good": ":root { --color-bg: #fff; } [data-theme=\"dark\"] { --color-bg: #111; }",
+          "bad": ":root { --color-bg: #fff; }"
+        },
+        {
+          "good": "@media (prefers-color-scheme: dark) { :root { --color-bg: #111; } }",
+          "bad": "/* no color-scheme awareness */"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable tokens/theme-modes-present` in a README — rule is N/A",
+        "token files larger than 1 MB — skipped to avoid pathological cases"
+      ]
+    },
+    {
       "id": "components/no-native-shadows",
       "axis": "components",
       "defaultSeverity": "warning",
