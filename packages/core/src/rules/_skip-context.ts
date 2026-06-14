@@ -196,17 +196,21 @@ export function isInsideSkippedJsxAttr(source: string, index: number): boolean {
 
 /**
  * Returns true if the byte offset `index` falls on the right-hand side of a
- * CSS custom-property declaration that is in a token-definition scope.
+ * CSS custom-property declaration (`--x: <value>`), in any selector scope.
  *
- * Narrows vs the old "any --property" guard: only skips when the declaration
- * appears within a `:root`, `html`, `:host`, `*`, or `[data-theme...]` selector
- * — the canonical token-definition selectors. A `--local: #hex` inside a
- * `.widget { ... }` component selector is drift, not a token definition.
+ * A value on the RHS of a custom property is, structurally, a *token
+ * definition* — not drift via a hardcoded value in a real CSS property. This
+ * holds whether the declaration sits in `:root` or in a component-scoped
+ * `.widget { --local: 16px }` (a common pattern: define a local var, then use
+ * it via `var(--local)`). The cross-tool calibration (#120) showed the prior
+ * selector-scoped narrowing (Track 9.11) produced hundreds of false positives
+ * on real design systems (e.g. `--heatmap-level-1: rgba(...)` in a chart
+ * module), dominating the disagreement with stylelint, which never flags
+ * custom-property values either.
  *
- * Conservative heuristic: after finding the enclosing `{`, walks back (up to
- * 300 chars) looking for a token-def selector prefix. Falls back to false
- * (= allow the finding) when selector context is unclear, trading a few FNs
- * for correct TP recall on component-scoped custom properties.
+ * The remaining semantic case — "this `--x: #hex` should reference an existing
+ * token rather than hardcode" — needs the token catalogue and is left to the
+ * LLM filter layer, not this static guard.
  */
 export function isCssCustomPropertyDeclaration(source: string, index: number): boolean {
   let colonIdx = -1;
@@ -243,36 +247,7 @@ export function isCssCustomPropertyDeclaration(source: string, index: number): b
     start--;
   }
   const propName = source.slice(start, end);
-  if (!propName.startsWith("--")) return false;
-
-  // Find the opening brace of the enclosing rule, then read back to its selector.
-  // Walk backwards from colonIdx looking for `{` at brace depth 0.
-  let braceIdx = -1;
-  let bd = 0;
-  for (let i = colonIdx - 1; i >= 0; i--) {
-    const c = source[i];
-    if (c === "}") { bd++; continue; }
-    if (c === "{") {
-      if (bd === 0) { braceIdx = i; break; }
-      bd--;
-    }
-  }
-  if (braceIdx < 0) {
-    // No enclosing brace found — treat as global scope (token def).
-    return true;
-  }
-
-  // Read up to 300 chars before the `{` to find the selector.
-  const selectorSlice = source.slice(Math.max(0, braceIdx - 300), braceIdx).trimEnd();
-  // Grab the last "token" of the selector (everything after the last ; } or newline block).
-  const selectorText = selectorSlice.split(/[;{}]/).pop()?.trim() ?? "";
-
-  // Token-definition scopes: :root, html, :host, *, [data-theme...], @theme, @layer base
-  const TOKEN_DEF_SELECTOR = /(?:^|,\s*)(?::root|html|:host(?:\([^)]*\))?|\*|\[data-theme[^\]]*\]|@theme|@layer\s+base)[\s,{]*/;
-  // Also allow @theme { } (Tailwind v4) which has no traditional selector
-  if (/@(?:theme|layer\s+base)\b/.test(selectorText)) return true;
-
-  return TOKEN_DEF_SELECTOR.test(selectorText);
+  return propName.startsWith("--");
 }
 
 // ---------------------------------------------------------------------------

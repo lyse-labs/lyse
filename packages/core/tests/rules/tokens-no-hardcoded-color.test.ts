@@ -985,8 +985,14 @@ describe("Color token-def file path guards — rule integration", () => {
 // ---------------------------------------------------------------------------
 // CSS custom-property scope narrowing — recall regression fixes
 // ---------------------------------------------------------------------------
-describe("isCssCustomPropertyDeclaration — scope narrowing (recall regression)", () => {
-  it("does NOT flag --local-color in :root (token-def scope)", async () => {
+// A value on the RHS of a `--x:` custom-property declaration is a token
+// definition in ANY selector scope, not drift. The earlier Track 9.11
+// selector-scoped narrowing was reversed after the #120 cross-tool calibration
+// showed it produced hundreds of false positives on real design systems (the
+// dominant disagreement with stylelint). The "should this --x reference an
+// existing token" case is semantic → LLM filter, not this static guard.
+describe("isCssCustomPropertyDeclaration — custom-property definitions are not drift (#120)", () => {
+  it("does NOT flag --local-color in :root", async () => {
     const parsed: ParsedFiles = {
       ts: [],
       css: [{ path: "src/tokens.css", source: ":root { --local-color: #ff0000; }", root: null }],
@@ -996,18 +1002,17 @@ describe("isCssCustomPropertyDeclaration — scope narrowing (recall regression)
     expect(result.findings).toHaveLength(0);
   });
 
-  it("DOES flag --local-color in a component selector (drift)", async () => {
+  it("does NOT flag --local-color in a component selector (definition, not drift)", async () => {
     const parsed: ParsedFiles = {
       ts: [],
       css: [{ path: "src/widget.css", source: ".widget { --local-color: #ff0000; }", root: null }],
       cssInJs: [],
     };
     const result = await rule.evaluate(ctx, parsed);
-    expect(result.findings).toHaveLength(1);
-    expect(result.findings[0].message).toContain("#ff0000");
+    expect(result.findings).toHaveLength(0);
   });
 
-  it("does NOT flag --color in html selector (token-def scope)", async () => {
+  it("does NOT flag --color in html selector", async () => {
     const parsed: ParsedFiles = {
       ts: [],
       css: [{ path: "src/globals.css", source: "html { --color-primary: #2563eb; }", root: null }],
@@ -1017,7 +1022,7 @@ describe("isCssCustomPropertyDeclaration — scope narrowing (recall regression)
     expect(result.findings).toHaveLength(0);
   });
 
-  it("does NOT flag --color in [data-theme] selector (token-def scope)", async () => {
+  it("does NOT flag --color in [data-theme] selector", async () => {
     const parsed: ParsedFiles = {
       ts: [],
       css: [{ path: "src/globals.css", source: '[data-theme="dark"] { --color-primary: #1d4ed8; }', root: null }],
@@ -1027,10 +1032,20 @@ describe("isCssCustomPropertyDeclaration — scope narrowing (recall regression)
     expect(result.findings).toHaveLength(0);
   });
 
-  it("DOES flag --accent in a .card component selector (component-scoped custom prop = drift)", async () => {
+  it("does NOT flag --accent definition in a .card component selector", async () => {
     const parsed: ParsedFiles = {
       ts: [],
       css: [{ path: "src/card.css", source: ".card { --accent: #ff0000; color: var(--accent); }", root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("STILL flags a hardcoded value in a real property (drift), not a custom prop", async () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/card.css", source: ".card { color: #ff0000; }", root: null }],
       cssInJs: [],
     };
     const result = await rule.evaluate(ctx, parsed);
