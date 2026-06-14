@@ -79,12 +79,12 @@ describe("detectReservedAiTokens (shared parser)", () => {
     expect(found.some((n) => n.includes("dragon-fruit"))).toBe(true);
   });
 
-  it("detects Carbon-style `*-color-*-ai-*` segment tokens", () => {
+  it("detects Carbon-style `*-color-*-ai-*` segment tokens with distinctive descriptor", () => {
     writeFileSync(
       join(tmp, "tokens.json"),
       JSON.stringify({
         background: {
-          color: { ai: { primary: { value: "#abc" } } },
+          color: { ai: { aura: { primary: { value: "#abc" } } } },
         },
       }),
     );
@@ -107,7 +107,7 @@ describe("detectReservedAiTokens (shared parser)", () => {
     expect(found.every((n) => n.startsWith("--p-color"))).toBe(true);
   });
 
-  it("detects Workday Canvas `*-ai-*` color segment tokens", () => {
+  it("Workday Canvas plain `color.ai.*` is NOT detected (precision trade, #139)", () => {
     writeFileSync(
       join(tmp, "canvas.tokens.json"),
       JSON.stringify({
@@ -120,45 +120,63 @@ describe("detectReservedAiTokens (shared parser)", () => {
       }),
     );
     const found = detectReservedAiTokens(tmp);
-    expect(found.length).toBeGreaterThanOrEqual(2);
+    expect(found).toEqual([]);
   });
 
-  it("detects generic leading-`ai` segment in CSS custom properties", () => {
+  it("detects leading-`ai` segment in CSS when paired with AI-distinctive descriptor", () => {
     writeFileSync(
       join(tmp, "ai-tokens.css"),
-      ":root { --ai-primary: #abc; --ai-accent: #def; }",
+      ":root { --ai-gradient-start: #abc; --ai-glow: #def; }",
     );
     const found = detectReservedAiTokens(tmp);
-    expect(found).toContain("--ai-primary");
-    expect(found).toContain("--ai-accent");
+    expect(found).toContain("--ai-gradient-start");
+    expect(found).toContain("--ai-glow");
   });
 
-  it("detects mixed vocabularies (Carbon + Polaris + Workday + generic) and returns sorted+deduped", () => {
+  it("detects mixed vocabularies (Carbon + Polaris + genai + distinctive-ai) and returns sorted+deduped", () => {
     mkdirSync(join(tmp, "tokens"), { recursive: true });
     writeFileSync(
       join(tmp, "tokens", "carbon.json"),
       JSON.stringify({ gradient: { "dragon-fruit": "#a40" } }),
     );
     writeFileSync(
-      join(tmp, "tokens", "workday.json"),
-      JSON.stringify({ color: { ai: { primary: "#abc" } } }),
+      join(tmp, "tokens", "genai.json"),
+      JSON.stringify({ color: { genai: { primary: "#abc" } } }),
     );
     writeFileSync(
       join(tmp, "polaris.css"),
       ":root { --p-color-bg-magic: #aaa; --p-color-text-magic: #bbb; }",
     );
-    writeFileSync(join(tmp, "generic.css"), ":root { --ai-accent: #ccc; }");
+    writeFileSync(join(tmp, "ai-glow.css"), ":root { --ai-glow: #ccc; }");
     // duplicate the same token across two CSS files — must dedupe
-    writeFileSync(join(tmp, "extra.css"), ":root { --ai-accent: #ccc; }");
+    writeFileSync(join(tmp, "extra.css"), ":root { --ai-glow: #ccc; }");
 
     const found = detectReservedAiTokens(tmp);
     // Sorted
     const sorted = [...found].sort();
     expect(found).toEqual(sorted);
-    // Deduped (--ai-accent should appear once)
-    expect(found.filter((n) => n === "--ai-accent")).toHaveLength(1);
+    // Deduped (--ai-glow should appear once)
+    expect(found.filter((n) => n === "--ai-glow")).toHaveLength(1);
     // Multiple vocabularies present
     expect(found.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("Mantine negative: --ai-bg/--ai-size/--ai-color/--ai-hover-color are NOT detected (ActionIcon FP fixed, #139)", () => {
+    writeFileSync(
+      join(tmp, "mantine.module.css"),
+      ":root { --ai-size-xs: 16px; --ai-bg: #fff; --ai-color: #000; --ai-hover-color: #111; }",
+    );
+    expect(detectReservedAiTokens(tmp)).toEqual([]);
+  });
+
+  it("recall trade: --ai-gradient-start is detected, --ai-primary is not", () => {
+    writeFileSync(
+      join(tmp, "mixed-recall.css"),
+      ":root { --ai-gradient-start: #f0f; --ai-primary: #abc; }",
+    );
+    const found = detectReservedAiTokens(tmp);
+    expect(found).toContain("--ai-gradient-start");
+    expect(found).not.toContain("--ai-primary");
   });
 
   it("ignores node_modules, dist, .git, build", () => {
@@ -186,9 +204,9 @@ describe("rule ai-governance/ai-tokens-reserved", () => {
   it("emits a single info finding listing matched names when present", async () => {
     writeFileSync(
       join(tmp, "tokens.json"),
-      JSON.stringify({ color: { ai: { primary: "#abc" } } }),
+      JSON.stringify({ gradient: { "dragon-fruit": { value: "linear-gradient(...)" } } }),
     );
-    writeFileSync(join(tmp, "ai.css"), ":root { --ai-accent: #def; }");
+    writeFileSync(join(tmp, "ai.css"), ":root { --ai-gradient-start: #def; }");
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
     expect(result.findings).toHaveLength(1);
     const finding = result.findings[0]!;
@@ -199,9 +217,9 @@ describe("rule ai-governance/ai-tokens-reserved", () => {
   });
 
   it("truncates the listed names to a maximum of 20 in the message", async () => {
-    const tokens: Record<string, string> = {};
-    for (let i = 0; i < 30; i++) tokens[`ai-token-${i}`] = "#abc";
-    writeFileSync(join(tmp, "tokens.json"), JSON.stringify({ color: { ai: tokens } }));
+    const lines: string[] = [];
+    for (let i = 0; i < 30; i++) lines.push(`--ai-gradient-${i}: #abc;`);
+    writeFileSync(join(tmp, "ai-many.css"), `:root { ${lines.join(" ")} }`);
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
     expect(result.findings).toHaveLength(1);
     const msg = result.findings[0]!.message;
@@ -212,7 +230,7 @@ describe("rule ai-governance/ai-tokens-reserved", () => {
   it("is suppressed by an adjacent README `lyse-disable ai-governance/ai-tokens-reserved`", async () => {
     writeFileSync(
       join(tmp, "tokens.json"),
-      JSON.stringify({ color: { ai: { primary: "#abc" } } }),
+      JSON.stringify({ gradient: { "dragon-fruit": { value: "linear-gradient(...)" } } }),
     );
     writeFileSync(
       join(tmp, "README.md"),
@@ -225,7 +243,7 @@ describe("rule ai-governance/ai-tokens-reserved", () => {
   it("is suppressed by `.lyse.yaml` containing the disable directive", async () => {
     writeFileSync(
       join(tmp, "tokens.json"),
-      JSON.stringify({ color: { ai: { primary: "#abc" } } }),
+      JSON.stringify({ gradient: { "dragon-fruit": { value: "linear-gradient(...)" } } }),
     );
     writeFileSync(
       join(tmp, ".lyse.yaml"),

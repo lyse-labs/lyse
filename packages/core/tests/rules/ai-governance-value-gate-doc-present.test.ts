@@ -160,7 +160,7 @@ describe("rule.evaluate — integration", () => {
   });
 
   it("warns when DS has reserved AI tokens but no value-gate doc", async () => {
-    writeFileSync(join(tmp, "tokens.json"), JSON.stringify({ color: { "ai": { primary: "#fff" } } }));
+    writeFileSync(join(tmp, "tokens.json"), JSON.stringify({ gradient: { "dragon-fruit": { value: "#fff" } } }));
     const ctx = makeCtx(tmp);
     const result = await rule.evaluate(ctx, emptyParsed);
     expect(result.findings).toHaveLength(1);

@@ -123,7 +123,7 @@ describe("analyseComponent", () => {
   it("dot-path token reference only → low confidence (suppressed by default)", () => {
     const src = `
       import tokens from './tokens';
-      const val = tokens.color.ai.primary;
+      const val = tokens.genai.primary;
       const Card = () => <div>{val}</div>;
     `;
     const result = analyseComponent(src);
@@ -136,7 +136,7 @@ describe("analyseComponent", () => {
   it("recognises AIBadge nested inside conditional render", () => {
     const src = `
       const AIResult = ({ showBadge }) => (
-        <div style={{ background: 'var(--ai-surface)' }}>
+        <div style={{ background: 'var(--ai-gradient)' }}>
           {showBadge && <AIBadge />}
           {content}
         </div>
@@ -152,8 +152,8 @@ describe("analyseComponent", () => {
     const src = `
       const AIPanel = () => (
         <div style={{
-          background: 'var(--ai-surface)',
-          border: '1px solid var(--ai-accent)',
+          background: 'var(--ai-gradient)',
+          border: '1px solid var(--ai-aura-start)',
         }}>
           {content}
         </div>
@@ -182,14 +182,14 @@ describe("analyseComponent", () => {
   });
 
   // Fixture 9 (ARIA regression): aria-label="AI result" is NOT a valid marker.
-  // A file with var(--ai-surface), no marker component, and aria-label mentioning
+  // A file with var(--ai-gradient), no marker component, and aria-label mentioning
   // "AI" MUST still produce confidence=high and hasAiMarker=false.
   it("aria-label containing 'ai' is NOT a valid marker — confidence stays high", () => {
     const src = `
       const Result = () => (
         <div
           aria-label="AI result"
-          style={{ background: 'var(--ai-surface)' }}
+          style={{ background: 'var(--ai-gradient)' }}
         >
           {content}
         </div>
@@ -210,7 +210,7 @@ describe("rule ai-governance/ai-token-requires-marker", () => {
   it("emits no finding when component uses AI token and renders AILabel", async () => {
     writeFileSync(
       join(tmp, "tokens.json"),
-      JSON.stringify({ color: { ai: { primary: "#0875e1" } } }),
+      JSON.stringify({ gradient: { "dragon-fruit": { value: "#0875e1" } } }),
     );
     mkdirSync(join(tmp, "src"), { recursive: true });
     writeFileSync(
@@ -231,13 +231,13 @@ const AICard = () => (
   it("emits error when component uses AI token with no AI-marker", async () => {
     writeFileSync(
       join(tmp, "tokens.json"),
-      JSON.stringify({ color: { ai: { primary: "#0875e1" } } }),
+      JSON.stringify({ gradient: { "dragon-fruit": { value: "#0875e1" } } }),
     );
     mkdirSync(join(tmp, "src"), { recursive: true });
     writeFileSync(
       join(tmp, "src", "AICard.tsx"),
       `const AICard = () => (
-  <div style={{ background: 'var(--ai-surface)' }}>
+  <div style={{ background: 'var(--ai-gradient)' }}>
     {content}
   </div>
 );`,
@@ -248,7 +248,7 @@ const AICard = () => (
     expect(f.severity).toBe("error");
     expect(f.ruleId).toBe("ai-governance/ai-token-requires-marker");
     expect(f.axis).toBe("ai-governance");
-    expect(f.message).toContain("--ai-surface");
+    expect(f.message).toContain("--ai-gradient");
   });
 
   // Fixture 3: no reserved tokens in repo → fast-exit, no findings
@@ -271,7 +271,7 @@ const AICard = () => (
   it("emits no finding when data-ai is present alongside AI token", async () => {
     writeFileSync(
       join(tmp, "tokens.json"),
-      JSON.stringify({ color: { ai: { primary: "#abc" } } }),
+      JSON.stringify({ gradient: { "dragon-fruit": { value: "#abc" } } }),
     );
     mkdirSync(join(tmp, "src"), { recursive: true });
     writeFileSync(
@@ -290,13 +290,13 @@ const AICard = () => (
   it("suppresses dot-path-only token references (low confidence)", async () => {
     writeFileSync(
       join(tmp, "tokens.json"),
-      JSON.stringify({ color: { ai: { primary: "#abc" } } }),
+      JSON.stringify({ gradient: { "dragon-fruit": { value: "#abc" } } }),
     );
     mkdirSync(join(tmp, "src"), { recursive: true });
     writeFileSync(
       join(tmp, "src", "AmbiguousCard.tsx"),
       `import tokens from '../tokens.json';
-const val = tokens.color.ai.primary;
+const val = tokens.genai.primary;
 const Card = () => <div>{val}</div>;`,
     );
     const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
@@ -307,13 +307,13 @@ const Card = () => <div>{val}</div>;`,
   it("passes when AI-marker is nested inside conditional render", async () => {
     writeFileSync(
       join(tmp, "tokens.json"),
-      JSON.stringify({ color: { ai: { surface: "#f0f4ff" } } }),
+      JSON.stringify({ gradient: { "dragon-fruit": { value: "#abc" } } }),
     );
     mkdirSync(join(tmp, "src"), { recursive: true });
     writeFileSync(
       join(tmp, "src", "AIResult.tsx"),
       `const AIResult = ({ showBadge }) => (
-  <div style={{ background: 'var(--ai-surface)' }}>
+  <div style={{ background: 'var(--ai-gradient)' }}>
     {showBadge && <AIBadge />}
     {content}
   </div>
@@ -327,14 +327,14 @@ const Card = () => <div>{val}</div>;`,
   it("flags only the violating component when multiple files exist", async () => {
     writeFileSync(
       join(tmp, "tokens.json"),
-      JSON.stringify({ color: { ai: { surface: "#f0f4ff" } } }),
+      JSON.stringify({ gradient: { "dragon-fruit": { value: "#abc" } } }),
     );
     mkdirSync(join(tmp, "src"), { recursive: true });
     // Clean component — has AI token + AILabel
     writeFileSync(
       join(tmp, "src", "CleanAICard.tsx"),
       `const CleanAICard = () => (
-  <div style={{ background: 'var(--ai-surface)' }}>
+  <div style={{ background: 'var(--ai-gradient)' }}>
     <AILabel>AI</AILabel>
   </div>
 );`,
@@ -343,7 +343,7 @@ const Card = () => <div>{val}</div>;`,
     writeFileSync(
       join(tmp, "src", "BadAICard.tsx"),
       `const BadAICard = () => (
-  <div style={{ background: 'var(--ai-surface)' }}>
+  <div style={{ background: 'var(--ai-gradient)' }}>
     {content}
   </div>
 );`,
@@ -371,13 +371,13 @@ const Card = () => <div>{val}</div>;`,
   it("detects violation in a Vue SFC using AI token without marker", async () => {
     writeFileSync(
       join(tmp, "tokens.json"),
-      JSON.stringify({ color: { ai: { primary: "#abc" } } }),
+      JSON.stringify({ gradient: { "dragon-fruit": { value: "#abc" } } }),
     );
     mkdirSync(join(tmp, "src", "components"), { recursive: true });
     writeFileSync(
       join(tmp, "src", "components", "AIAnswer.vue"),
       `<template>
-  <div :style="{ background: 'var(--ai-surface)' }">
+  <div :style="{ background: 'var(--ai-gradient)' }">
     {{ answer }}
   </div>
 </template>`,
@@ -395,13 +395,13 @@ const Card = () => <div>{val}</div>;`,
     );
     writeFileSync(
       join(tmp, "tokens.json"),
-      JSON.stringify({ color: { ai: { primary: "#abc" } } }),
+      JSON.stringify({ gradient: { "dragon-fruit": { value: "#abc" } } }),
     );
     mkdirSync(join(tmp, "src"), { recursive: true });
     writeFileSync(
       join(tmp, "src", "AICard.tsx"),
       `const AICard = () => (
-  <div style={{ background: 'var(--ai-surface)' }}>
+  <div style={{ background: 'var(--ai-gradient)' }}>
     {content}
   </div>
 );`,
@@ -412,11 +412,11 @@ const Card = () => <div>{val}</div>;`,
   });
 
   // Fixture 11 (Fix 2 — ARIA regression): aria-label="AI result" is NOT a marker.
-  // var(--ai-surface) with no JSX marker or data-ai MUST emit an error at high confidence.
-  it("emits error when component has var(--ai-surface), no marker, and aria-label with 'ai'", async () => {
+  // var(--ai-gradient) with no JSX marker or data-ai MUST emit an error at high confidence.
+  it("emits error when component has var(--ai-gradient), no marker, and aria-label with 'ai'", async () => {
     writeFileSync(
       join(tmp, "tokens.json"),
-      JSON.stringify({ color: { ai: { surface: "#f0f4ff" } } }),
+      JSON.stringify({ gradient: { "dragon-fruit": { value: "#abc" } } }),
     );
     mkdirSync(join(tmp, "src"), { recursive: true });
     writeFileSync(
@@ -424,7 +424,7 @@ const Card = () => <div>{val}</div>;`,
       `const Result = () => (
   <div
     aria-label="AI result"
-    style={{ background: 'var(--ai-surface)' }}
+    style={{ background: 'var(--ai-gradient)' }}
   >
     {content}
   </div>

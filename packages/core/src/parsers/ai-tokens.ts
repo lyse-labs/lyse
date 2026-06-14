@@ -37,16 +37,26 @@ const MAX_FILE_BYTES = 2_000_000;
 // captain, detail) does NOT match.
 const SEGMENT_SPLIT = /[-_./\s]+/;
 
+// A bare `ai` segment is irreducibly ambiguous by name: real AI tokens (Workday
+// `color.ai.*`) and component shorthands (Mantine's `--ai-bg`/`--ai-size`, where
+// `ai` = ActionIcon) are indistinguishable. The Track #71 real-DS validation
+// found the old bare-`ai` match false-firing across Mantine, poisoning four
+// governance rules. We therefore favour precision: `ai` only counts when
+// corroborated by an AI-distinctive descriptor or an unambiguous vendor
+// signature. The trade is recall on generically-named `--ai-*` AI tokens
+// (under-count) — the safe direction vs. penalising a non-AI DS (#139).
+const AI_DISTINCTIVE = ["aura", "gradient", "sparkle", "glow", "generative", "generated"];
+
 export function isReservedTokenName(rawName: string): boolean {
   const lower = rawName.toLowerCase();
-  if (lower.includes("dragon-fruit") || lower.includes("dragonfruit")) {
-    return true;
-  }
+  // Unambiguous vendor signatures.
+  if (lower.includes("dragon-fruit") || lower.includes("dragonfruit")) return true;
+  if (lower.includes("genai") || lower.includes("gen-ai")) return true; // Cloudscape (camelCase GenAi)
   const segments = lower.split(SEGMENT_SPLIT).filter((s) => s.length > 0);
-  for (const seg of segments) {
-    if (seg === "ai") return true;
-    if (seg.startsWith("magic")) return true;
-  }
+  if (segments.some((s) => s.startsWith("magic"))) return true; // Polaris
+  // Ambiguous bare `ai` segment: require an AI-distinctive descriptor in the name
+  // (Carbon `ai-aura-*` / `ai-gradient-*`; excludes Mantine `--ai-bg`/`--ai-size`).
+  if (segments.includes("ai") && AI_DISTINCTIVE.some((d) => lower.includes(d))) return true;
   return false;
 }
 
