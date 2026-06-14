@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`tokens/theme-modes-present` now detects compound element class selectors (Track #127).** The `.dark`/`.light` class-convention signal required a non-letter before the dot, so common real-world conventions like `body.dark`, `html.light`, and `html.dark` (Tailwind v3 default) went undetected — under-counting theme-mode support on those design systems. The detector now matches `.dark`/`.light` as a class token anywhere (trailing `\b` still excludes `.darker` / `.lightbox`; CSS values never contain a literal `.dark`/`.light` token, so no leading guard is needed). This closes the gap that blocked the sub-axis's calibration precision.
+
 - **SARIF `partialFingerprints` for GitHub code-scanning deduplication (Track #142).** Every SARIF result now carries `partialFingerprints["primaryLocationLineHash/v1"]` — a full SHA-256 (hex) of `${ruleId} ${relativeFilePath} ${startLine} ${message}`. GitHub Advanced Security uses this key to match findings across runs, preventing every CI run from creating duplicate alerts in the Security tab. The fingerprint is deterministic (no timestamps, no run-specific data), order-independent, and distinct for findings that differ in rule, file, or line.
 
 ### Added
