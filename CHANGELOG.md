@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Deterministic finding order + parallel rule execution (Track #147).** `runRules` now runs every rule concurrently (`Promise.all`) — rules are stateless and receive read-only context, and `Promise.all` preserves input order so aggregation stays deterministic. Findings are sorted by a stable multi-key comparator (`severity → file → line → column`) instead of severity alone, so output order no longer depends on rule registration order — a prerequisite for clean output diffs, SARIF fingerprint stability, and per-rule snapshot tests.
+
 ### Fixed
 
 - **SARIF `partialFingerprints` for GitHub code-scanning deduplication (Track #142).** Every SARIF result now carries `partialFingerprints["primaryLocationLineHash/v1"]` — a full SHA-256 (hex) of `${ruleId} ${relativeFilePath} ${startLine} ${message}`. GitHub Advanced Security uses this key to match findings across runs, preventing every CI run from creating duplicate alerts in the Security tab. The fingerprint is deterministic (no timestamps, no run-specific data), order-independent, and distinct for findings that differ in rule, file, or line.

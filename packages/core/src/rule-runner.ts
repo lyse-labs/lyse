@@ -15,17 +15,25 @@ export async function runRules(rules: Rule[], ctx: RuleContext, parsed: ParsedFi
   const findingsByAxis: Record<AxisName, number> = { ...ZERO };
   const parseErrors: ParseError[] = [];
 
-  for (const rule of rules) {
-    const r = await rule.evaluate(ctx, parsed);
+  // Rules are stateless and receive read-only context, so they run concurrently.
+  // Promise.all preserves input order → aggregation stays deterministic.
+  const results = await Promise.all(rules.map((rule) => rule.evaluate(ctx, parsed)));
+  for (let i = 0; i < rules.length; i++) {
+    const rule = rules[i]!;
+    const r = results[i]!;
     findings.push(...r.findings);
     opportunitiesByAxis[rule.axis] += r.opportunities;
     findingsByAxis[rule.axis] += r.findings.length;
     if (r.parseErrors) parseErrors.push(...r.parseErrors);
   }
 
+  // Fully deterministic order regardless of rule registration/scheduling.
+  const order = { error: 0, warning: 1, info: 2 } as const;
   findings.sort((a, b) => {
-    const order = { error: 0, warning: 1, info: 2 } as const;
-    return order[a.severity] - order[b.severity];
+    if (order[a.severity] !== order[b.severity]) return order[a.severity] - order[b.severity];
+    if (a.location.file !== b.location.file) return a.location.file < b.location.file ? -1 : 1;
+    if (a.location.line !== b.location.line) return a.location.line - b.location.line;
+    return (a.location.column ?? 0) - (b.location.column ?? 0);
   });
 
   parseErrors.sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0));
