@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Two more deterministic validators promoted to the trusted score (Phase A).** `ai-surface/ds-index-exported` (DS package exports a discoverable index ≥3 named exports) and `ai-surface/agent-instruction-files` (ships Cursor rules / Claude skills with valid frontmatter) are now `stable` + `contributesToScore`. Both are pure file-presence / schema checks — the same `deterministicValidator` bar as the existing 5 — so their synthetic-suite precision (Wilson LB 0.90) is a valid calibration source (no real-world context gap). The `scoring-v1` trusted path now counts **7** sub-axes (was 5); `fixtures/full-ds` Health Score 91 (within the pinned [90,96] band). The remaining experimental ai-surface / ai-governance rules stay reported-only pending real-repo recall validation (name-pattern detection) or the LLM judgement layer (semantic).
+
 ### Fixed
 
 - **Spacing precision: comments + multi-line declarations.** `tokens/no-hardcoded-spacing` did not skip values inside comments (the comment guard was color-only) and lost CSS property context on continuation lines (a `box-shadow` offset like `13px -13px` on a wrapped line was flagged as spacing). Now: the shared `isInCommentOrUrl` guard is applied to spacing too, and `isNotSpacingPropertyContext` walks the property lookup across newlines (stopping only at `; { }`), so a continuation line resolves its real declaration property. Together with the custom-property fix, this took agreement-with-stylelint precision on the primer-css spacing corpus to **0.90** (from 0.29), recall preserved. (#120)
