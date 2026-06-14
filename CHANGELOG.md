@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **New rule `tokens/theme-modes-present` (experimental, Track #127).** Detects whether a design system defines light/dark theme modes by scanning for any of: a `prefers-color-scheme` media query, a `[data-theme]`/`[data-mode]`/`[data-color-mode]` attribute selector, a `.dark`/`.light` class convention, a DTCG token file with a `dark`/`light` group or `$extensions` mode split, or a Tailwind v4 `@variant dark` / `dark:` indicator. Emits one `warning` at repo level when no signal is found; emits nothing when present. Registered as `contributesToScore: false` + `deterministicValidator: true` — will promote to the trusted score after calibration.
+
 - **Two more deterministic validators promoted to the trusted score (Phase A).** `ai-surface/ds-index-exported` (DS package exports a discoverable index ≥3 named exports) and `ai-surface/agent-instruction-files` (ships Cursor rules / Claude skills with valid frontmatter) are now `stable` + `contributesToScore`. Both are pure file-presence / schema checks — the same `deterministicValidator` bar as the existing 5 — so their synthetic-suite precision (Wilson LB 0.90) is a valid calibration source (no real-world context gap). The `scoring-v1` trusted path now counts **7** sub-axes (was 5); `fixtures/full-ds` Health Score 91 (within the pinned [90,96] band). The remaining experimental ai-surface / ai-governance rules stay reported-only pending real-repo recall validation (name-pattern detection) or the LLM judgement layer (semantic).
 
 ### Fixed
