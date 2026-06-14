@@ -1,5 +1,5 @@
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, ClassifyContext, Confidence, CodemodContext, CodemodResult } from "../types.js";
-import { isInsideSkippedJsxAttr, isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isNotSpacingPropertyContext, isInCommentOrUrl } from "./_skip-context.js";
+import { isInsideSkippedJsxAttr, isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isNotSpacingPropertyContext, isInCommentOrUrl, isInVarFallback } from "./_skip-context.js";
 import { isPathExcluded } from "./_exclude.js";
 import { fixHardcodedSpacing } from "../codemods/tokens-spacing.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
@@ -91,6 +91,8 @@ const evaluate = async (
       const num = m[1]!;
       const unit = m[3]!;
       opportunities++;
+      // Zero is zero regardless of unit (0, 0px, 0rem, 0em, 0.0rem) — never drift.
+      if (parseFloat(num) === 0) continue;
       if (unit === "px" && ALLOW_PX_VALUES.has(num)) continue;
       if (isOnScale(ctx, parseFloat(num))) continue;
       // Skip px/rem/em values inside JSX attributes that carry media-query
@@ -103,6 +105,9 @@ const evaluate = async (
       if (isInsideCodeDisplay(source, m.index)) continue;
       if (isInCommentOrUrl(source, m.index)) continue;
       if (isCssCustomPropertyDeclaration(source, m.index)) continue;
+      // A literal in a `var(--token, <fallback>)` fallback is tokenized usage,
+      // not drift — the var() reference is the real value.
+      if (isInVarFallback(source, m.index)) continue;
       if (isInExampleOrSchemaValuePosition(source, m.index)) continue;
       // Property-awareness: skip values not in a spacing CSS property or
       // spacing Tailwind arbitrary-value prefix. This suppresses font-size,
