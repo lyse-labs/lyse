@@ -31,6 +31,7 @@ export type BuiltInRuleId =
   | "ai-surface/llms-txt-structure"
   | "ai-surface/shadcn-registry-valid"
   | "ai-surface/agent-instruction-files"
+  | "versioning/changelog-present"
   | "ai-governance/ai-content-live-region"
   | "ai-governance/ai-loading-error-states"
   | "ai-governance/ai-marker-anti-patterns"
