@@ -94,6 +94,12 @@ If nothing happens:
 
 ## Tools exposed
 
+Both tools declare an MCP **`outputSchema`** and return **`structuredContent`** (the
+typed result object) alongside the human-readable text. MCP clients that support
+structured output get a validated, typed payload — no re-parsing a text blob — and
+the server validates its own output against the schema before sending. The `content`
+text mirror is kept for older clients.
+
 ### `audit_file(path, content?)`
 
 Audit a single file. The optional `content` lets the agent pass an unsaved buffer.
@@ -105,20 +111,18 @@ Audit a single file. The optional `content` lets the agent pass an unsaved buffe
 | `path` | string | yes | Absolute or relative path to the file. |
 | `content` | string | no | If provided, audit this content instead of reading the file from disk. |
 
-**Returns:**
+**Returns** (also delivered as `structuredContent`, validated against the tool's `outputSchema`):
 
 ```json
 {
-  "score": 73,
-  "findings": [
+  "schema_version": "1.0.0",
+  "violations": [
     {
       "rule_id": "tokens/no-hardcoded-color",
-      "rule_version": "v1",
-      "line": 17,
-      "column": 24,
-      "snippet": "background: \"#3B82F6\"",
       "severity": "warning",
-      "help_uri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-no-hardcoded-color.md"
+      "range": { "line": 17, "column": 24 },
+      "message": "Hardcoded color #3B82F6 — use a color token",
+      "suggestion_available": true
     }
   ]
 }

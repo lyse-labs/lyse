@@ -34,6 +34,25 @@ export const suggestFixTool: Tool = {
     },
     required: ["path", "rule_id", "line"],
   },
+  outputSchema: {
+    type: "object",
+    properties: {
+      patch: { type: ["string", "null"], description: "Unified-diff patch, or null when no fix is available." },
+      confidence: { type: "number", description: "0–1 (1 = deterministic single-candidate replacement)." },
+      alternatives: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: { patch: { type: "string" }, rationale: { type: "string" } },
+          required: ["patch", "rationale"],
+        },
+      },
+      rationale: { type: ["string", "null"], description: "When patch is null, why no fix is available." },
+      rule_id: { type: "string" },
+      schema_version: { type: "string", const: "1.0.0" },
+    },
+    required: ["patch", "confidence", "alternatives", "rationale", "rule_id", "schema_version"],
+  },
 };
 
 interface SuggestFixInput {
