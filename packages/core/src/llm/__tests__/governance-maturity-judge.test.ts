@@ -17,62 +17,103 @@ function mockConnector(text: string, extra?: Partial<ConnectorResult>): Connecto
 
 const input = { repoName: "cloudscape", aiContext: "awsui-gen-ai-label, role=status live region" };
 
-function ok(over: Record<string, unknown> = {}): string {
-  return JSON.stringify({
-    hasReservedAiTokens: true,
-    hasMarkerComponent: true,
-    hasInteractionAffordance: false,
-    hasGovernanceAffordance: false,
-    confidence: 0.78,
-    evidence: "awsui-gen-ai-label",
-    ...over,
-  });
-}
-
-describe("judgeGovernanceMaturity", () => {
-  it("returns the four signals + confidence + evidence on a valid response", async () => {
-    const r = await judgeGovernanceMaturity(input, mockConnector(ok()));
-    expect(r).toEqual({
-      signals: {
+describe("judgeGovernanceMaturity (grounded per-signal evidence)", () => {
+  it("keeps a true signal that has concrete per-signal evidence", async () => {
+    const c = mockConnector(
+      JSON.stringify({
         hasReservedAiTokens: true,
         hasMarkerComponent: true,
         hasInteractionAffordance: false,
         hasGovernanceAffordance: false,
-      },
-      confidence: 0.78,
-      evidence: "awsui-gen-ai-label",
+        confidence: 0.8,
+        evidence: { hasReservedAiTokens: "color-text-label-gen-ai", hasMarkerComponent: "awsui-gen-ai-label" },
+      }),
+    );
+    const r = await judgeGovernanceMaturity(input, c);
+    expect(r?.signals).toEqual({
+      hasReservedAiTokens: true,
+      hasMarkerComponent: true,
+      hasInteractionAffordance: false,
+      hasGovernanceAffordance: false,
     });
   });
 
-  it("clamps confidence into [0,1]", async () => {
-    const r = await judgeGovernanceMaturity(input, mockConnector(ok({ confidence: 1.3 })));
-    expect(r?.confidence).toBe(1);
+  it("DOWNGRADES a true signal that lacks per-signal evidence (kills over-detection)", async () => {
+    const c = mockConnector(
+      JSON.stringify({
+        hasReservedAiTokens: true,
+        hasMarkerComponent: true,
+        hasInteractionAffordance: true,
+        hasGovernanceAffordance: true, // claimed but no evidence → must drop
+        confidence: 0.9,
+        evidence: {
+          hasReservedAiTokens: "color-text-label-gen-ai",
+          hasMarkerComponent: "awsui-gen-ai-label",
+          hasInteractionAffordance: "aria-live on AiAnswer",
+          // hasGovernanceAffordance has NO evidence
+        },
+      }),
+    );
+    const r = await judgeGovernanceMaturity(input, c);
+    expect(r?.signals.hasGovernanceAffordance).toBe(false);
+    expect(r?.signals.hasInteractionAffordance).toBe(true);
+    expect(r?.evidence["hasGovernanceAffordance"]).toBeUndefined();
   });
 
-  it("parses a fenced ```json block", async () => {
-    const r = await judgeGovernanceMaturity(input, mockConnector("```json\n" + ok() + "\n```"));
-    expect(r?.signals.hasMarkerComponent).toBe(true);
+  it("treats empty-string evidence as no evidence (downgrades)", async () => {
+    const c = mockConnector(
+      JSON.stringify({
+        hasReservedAiTokens: true,
+        hasMarkerComponent: false,
+        hasInteractionAffordance: false,
+        hasGovernanceAffordance: false,
+        confidence: 0.7,
+        evidence: { hasReservedAiTokens: "   " },
+      }),
+    );
+    const r = await judgeGovernanceMaturity(input, c);
+    expect(r?.signals.hasReservedAiTokens).toBe(false);
+  });
+
+  it("returns an all-false judgement when nothing is grounded (valid, not null)", async () => {
+    const c = mockConnector(
+      JSON.stringify({
+        hasReservedAiTokens: false,
+        hasMarkerComponent: false,
+        hasInteractionAffordance: false,
+        hasGovernanceAffordance: false,
+        confidence: 0.6,
+        evidence: {},
+      }),
+    );
+    const r = await judgeGovernanceMaturity(input, c);
+    expect(r).not.toBeNull();
+    expect(Object.values(r!.signals).every((v) => v === false)).toBe(true);
+  });
+
+  it("clamps confidence into [0,1]", async () => {
+    const c = mockConnector(
+      JSON.stringify({
+        hasReservedAiTokens: false,
+        hasMarkerComponent: false,
+        hasInteractionAffordance: false,
+        hasGovernanceAffordance: false,
+        confidence: 1.4,
+        evidence: {},
+      }),
+    );
+    expect((await judgeGovernanceMaturity(input, c))?.confidence).toBe(1);
   });
 
   it("returns null when a signal boolean is missing/non-boolean", async () => {
-    const r = await judgeGovernanceMaturity(input, mockConnector(ok({ hasMarkerComponent: "yes" })));
-    expect(r).toBeNull();
-  });
-
-  it("returns null when evidence is empty (anti-hallucination floor)", async () => {
-    expect(await judgeGovernanceMaturity(input, mockConnector(ok({ evidence: "" })))).toBeNull();
-  });
-
-  it("returns null on an empty connector response (budget/noop)", async () => {
-    expect(await judgeGovernanceMaturity(input, mockConnector(""))).toBeNull();
-  });
-
-  it("returns null on unparseable output", async () => {
-    expect(await judgeGovernanceMaturity(input, mockConnector("not json"))).toBeNull();
-  });
-
-  it("returns null when the connector throws", async () => {
-    const c: ConnectorClient = { complete: async () => { throw new Error("network"); } };
+    const c = mockConnector(JSON.stringify({ hasMarkerComponent: "yes", confidence: 0.5, evidence: {} }));
     expect(await judgeGovernanceMaturity(input, c)).toBeNull();
+  });
+
+  it("returns null on empty / unparseable / throwing connector", async () => {
+    expect(await judgeGovernanceMaturity(input, mockConnector(""))).toBeNull();
+    expect(await judgeGovernanceMaturity(input, mockConnector("not json"))).toBeNull();
+    const t: ConnectorClient = { complete: async () => { throw new Error("net"); } };
+    expect(await judgeGovernanceMaturity(input, t)).toBeNull();
   });
 });
