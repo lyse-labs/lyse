@@ -426,6 +426,25 @@
       ]
     },
     {
+      "id": "versioning/changelog-present",
+      "axis": "ai-surface",
+      "defaultSeverity": "warning",
+      "shortDescription": "Design system should ship a structured CHANGELOG",
+      "fullDescription": "Checks whether the repository ships a version-structured changelog (`CHANGELOG.md`, `HISTORY.md`, `CHANGES.md`, …) with semver-style entry headings (`## [1.2.3]` / `## v1.2.3` / `## 1.2.3`). Emits one warning at repo level when no structured changelog is found; emits nothing when present. Part of the AI-consumable contract (Face A): an AI agent editing code against the design system needs the changelog to track what changed and what broke.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/versioning-changelog-present.md",
+      "rationale": "Why it matters\n\nA design system without a structured changelog forces every consumer — human or AI agent — to reverse-engineer what changed from the git log or release tags. For AI-readiness specifically, an agent updating an app against a new DS version needs machine-readable change/breaking-change information to avoid silently breaking the app.\n\nThe check is intentionally lenient on format (any Keep-a-Changelog-style or `v`-prefixed version heading counts) and on filename (CHANGELOG / HISTORY / CHANGES). It is a deterministic presence/structure check, so synthetic precision equals real precision.",
+      "examples": [
+        {
+          "good": "// CHANGELOG.md\n## [1.2.0] - 2026-01-01\n### Added\n- New Button variant",
+          "bad": "// no CHANGELOG, or a CHANGELOG with only prose and no version headings"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable versioning/changelog-present` in a README — rule is N/A",
+        "changelog files larger than 2 MB — skipped to avoid pathological cases"
+      ]
+    },
+    {
       "id": "ai-governance/ai-tokens-reserved",
       "axis": "ai-governance",
       "defaultSeverity": "info",
