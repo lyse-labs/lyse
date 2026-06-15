@@ -17,6 +17,7 @@ import { rule as rLlmsTxtStructure } from "./ai-surface-llms-txt-structure.js";
 import { rule as rShadcnRegistryValid } from "./ai-surface-shadcn-registry-valid.js";
 import { rule as rAgentInstructionFiles } from "./ai-surface-agent-instruction-files.js";
 import { rule as rChangelogPresent } from "./versioning-changelog-present.js";
+import { rule as rSemverVersioning } from "./versioning-semver-versioning.js";
 import { rule as rAiTokensReserved } from "./ai-governance-ai-tokens-reserved.js";
 import { rule as rAiMarkerComponentPresent } from "./ai-governance-ai-marker-component-present.js";
 import { rule as rExplainabilityAffordance } from "./ai-governance-explainability-affordance.js";
@@ -50,6 +51,7 @@ export const ruleObjects: Rule[] = [
   rShadcnRegistryValid,
   rAgentInstructionFiles,
   rChangelogPresent,
+  rSemverVersioning,
   rAiTokensReserved,
   rAiMarkerComponentPresent,
   rExplainabilityAffordance,
