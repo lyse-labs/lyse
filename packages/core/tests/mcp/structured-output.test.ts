@@ -93,5 +93,15 @@ describe("MCP structured output (audit-audit P1 #6 / #95)", () => {
     expect(call.result?.isError).toBeFalsy();
     expect(call.result?.structuredContent?.schema_version).toBe("1.0.0");
     expect(Array.isArray(call.result?.structuredContent?.violations)).toBe(true);
+
+    // Resources capability (#95): list + read the rule contract over MCP.
+    const rl = await rpc.request(4, "resources/list", {});
+    const uris: string[] = rl.result.resources.map((r: { uri: string }) => r.uri);
+    expect(uris).toContain("lyse://rules");
+    expect(uris).toContain("lyse://rule/tokens/no-hardcoded-color");
+
+    const rr = await rpc.request(5, "resources/read", { uri: "lyse://rule/tokens/no-hardcoded-color" });
+    const meta = JSON.parse(rr.result.contents[0].text);
+    expect(meta.id).toBe("tokens/no-hardcoded-color");
   }, 20_000);
 });

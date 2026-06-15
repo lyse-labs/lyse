@@ -172,6 +172,21 @@ Request an auto-fix for a specific finding.
 
 For non-auto-fixable rules, `suggest_fix` returns a structured error explaining why.
 
+## Resources exposed
+
+The server also exposes the **rule contract** as MCP resources (read-only), so an
+agent can *read* the design-system rules — not just call the audit tools. All
+content is the in-memory rule manifest (no filesystem access).
+
+| URI | Contents |
+|---|---|
+| `lyse://rules` | The full rules manifest — every rule's axis, severity, descriptions, rationale, and examples (`application/json`). |
+| `lyse://rule/<ruleId>` | One rule's metadata, e.g. `lyse://rule/tokens/no-hardcoded-color` (`application/json`). |
+
+**Use case:** before generating UI, an agent reads `lyse://rules` to learn the
+design-system constraints up front, then writes code that already complies —
+rather than discovering violations only after calling `audit_file`.
+
 ## How agents should use these tools
 
 ### Default pattern

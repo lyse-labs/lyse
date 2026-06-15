@@ -3,11 +3,14 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { VERSION } from "../index.js";
 import { auditFileTool, runAuditFile } from "./tools/audit-file.js";
 import { suggestFixTool, runSuggestFix } from "./tools/suggest-fix.js";
+import { listResources, readResource } from "./resources.js";
 
 const TOOL_DEFINITIONS: Tool[] = [auditFileTool, suggestFixTool];
 
@@ -20,6 +23,7 @@ export async function startMcpServer(): Promise<void> {
     {
       capabilities: {
         tools: {},
+        resources: {},
       },
     },
   );
@@ -27,6 +31,20 @@ export async function startMcpServer(): Promise<void> {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: TOOL_DEFINITIONS,
   }));
+
+  // Resources expose the rule contract (read-only) so an agent can read the
+  // design-system rules, not just call the audit tools. See ./resources.ts.
+  server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+    resources: listResources(),
+  }));
+
+  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    const contents = readResource(request.params.uri);
+    if (contents === null) {
+      throw new Error(`Unknown resource: ${request.params.uri}`);
+    }
+    return { contents };
+  });
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
