@@ -599,8 +599,8 @@ const versionCommand = defineCommand({
 const explainCommand = defineCommand({
   meta: { name: "explain", description: "Show rationale for a rule, or the score breakdown (--score)" },
   args: {
-    ruleId: { type: "positional", required: false, description: "rule id, e.g. tokens/no-hardcoded-color (omit with --score)" },
-    score: { type: "boolean", default: false, description: "Show a Lighthouse-style score breakdown of the current repo's Health Score" },
+    ruleId: { type: "positional", required: false, description: "rule id (e.g. tokens/no-hardcoded-color), or a repo path with --score (default: cwd)" },
+    score: { type: "boolean", default: false, description: "Show a Lighthouse-style score breakdown of the target repo's Health Score" },
     "static-only": { type: "boolean", default: false, description: "(with --score) skip the LLM augmentation step" },
     format: { type: "string", default: "text", description: "text | md (default: text)" },
     ...GLOBAL_FLAGS,
@@ -608,8 +608,11 @@ const explainCommand = defineCommand({
   async run({ args }) {
     applyGlobalFlags(args);
     if (args.score === true) {
+      // With --score the positional is a repo PATH (not a ruleId); default to cwd.
+      const target =
+        typeof args.ruleId === "string" && args.ruleId.length > 0 ? args.ruleId : process.cwd();
       await runExplainScore({
-        cwd: process.cwd(),
+        cwd: target,
         ...(args["static-only"] === true ? { staticOnly: true } : {}),
       });
       return;
