@@ -445,6 +445,25 @@
       ]
     },
     {
+      "id": "versioning/semver-versioning",
+      "axis": "ai-surface",
+      "defaultSeverity": "warning",
+      "shortDescription": "Design system should declare a valid semver version",
+      "fullDescription": "Checks whether the repository declares a valid semver `version` in `package.json` (root, or any workspace manifest in a monorepo). Accepts pre-release and build metadata; `0.x` is valid. Emits one warning at repo level when no manifest carries a valid-semver version; emits nothing when present. Part of the AI-consumable contract (Face A): an AI agent editing code against the design system needs a stable, machine-readable version to pin against.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/versioning-semver-versioning.md",
+      "rationale": "Why it matters\n\nA design system without a valid semver version gives consumers — human or AI agent — nothing stable to pin against. An agent updating an app against the design system needs a machine-readable version to reason about compatibility and breaking changes.\n\nThe check is intentionally lenient: any semver-valid version passes, including pre-1.0 (`0.x`) versions, which are common for legitimately-maintained design systems. It is a deterministic presence/structure check, so synthetic precision equals real precision.",
+      "examples": [
+        {
+          "good": "// package.json\n{ \"version\": \"1.2.0\" }",
+          "bad": "// no version field, or a non-semver value like \"latest\" / \"1.0\" / a date"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable versioning/semver-versioning` in a README — rule is N/A",
+        "package.json files larger than 1 MB — skipped to avoid pathological cases"
+      ]
+    },
+    {
       "id": "ai-governance/ai-tokens-reserved",
       "axis": "ai-governance",
       "defaultSeverity": "info",
