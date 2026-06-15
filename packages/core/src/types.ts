@@ -33,6 +33,7 @@ export type BuiltInRuleId =
   | "ai-surface/agent-instruction-files"
   | "versioning/changelog-present"
   | "versioning/semver-versioning"
+  | "versioning/migration-guide-present"
   | "ai-governance/ai-content-live-region"
   | "ai-governance/ai-loading-error-states"
   | "ai-governance/ai-marker-anti-patterns"

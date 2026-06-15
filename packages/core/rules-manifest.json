@@ -464,6 +464,25 @@
       ]
     },
     {
+      "id": "versioning/migration-guide-present",
+      "axis": "ai-surface",
+      "defaultSeverity": "warning",
+      "shortDescription": "Design system should ship a migration/upgrade guide",
+      "fullDescription": "Checks whether the repository ships migration/upgrade guidance — a `MIGRATION.md` / `UPGRADING.md` file (at root or under `docs/`), or a `## Migration` / `## Upgrading` heading inside the CHANGELOG or README. Emits one warning at repo level when none is found; emits nothing when present. Part of the AI-consumable contract (Face A): an agent upgrading an app across a breaking design-system version needs a documented migration path.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/versioning-migration-guide-present.md",
+      "rationale": "Why it matters\n\nA design system without any migration/upgrade guidance forces every consumer — human or AI agent — to reverse-engineer how to move across a breaking version from diffs and release notes. For AI-readiness specifically, an agent upgrading an app needs a documented migration path to apply breaking-change codemods safely.\n\nThe check is lenient on both filename (MIGRATION / MIGRATING / UPGRADING / UPGRADE, with or without extension) and location (repo root, `docs/`, or a migration/upgrade heading inside the CHANGELOG/README). It is a deterministic presence/structure check, so synthetic precision equals real precision.",
+      "examples": [
+        {
+          "good": "// MIGRATION.md, or UPGRADING.md, or a `## Migrating to v2` section in CHANGELOG.md",
+          "bad": "// no migration/upgrade guide anywhere — consumers must reverse-engineer breaking changes"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable versioning/migration-guide-present` in a README — rule is N/A",
+        "guide files larger than 2 MB — skipped to avoid pathological cases"
+      ]
+    },
+    {
       "id": "ai-governance/ai-tokens-reserved",
       "axis": "ai-governance",
       "defaultSeverity": "info",
