@@ -6,8 +6,29 @@ import { CURRENT_SCORING_VERSION } from "../reliability/score/version-pin.js";
 import { findingWeight } from "../reliability/score/weight.js";
 import { BUNDLED_MANIFEST } from "../reliability/confidence/bundled-manifest.js";
 import { resolveStableSubAxes } from "../reliability/score/stable-sub-axes.js";
+import { computeGovernanceMaturityLevel } from "../reliability/governance-maturity.js";
+import type { GovernanceSignals } from "../reliability/governance-maturity.js";
+import { extractGovernanceSignals } from "../reliability/governance-signals.js";
 import type { Finding as ReliabilityFinding } from "../reliability/types.js";
 import type { Finding as LegacyFinding } from "../types.js";
+
+const MATURITY_LABELS = [
+  "no AI layer",
+  "AI as decoration",
+  "AI as a component",
+  "AI as an interaction pattern",
+  "AI as a governance layer",
+  "AI as system infrastructure",
+] as const;
+
+function maturityDetail(s: GovernanceSignals): string {
+  const present: string[] = [];
+  if (s.hasReservedAiTokens) present.push("AI tokens");
+  if (s.hasMarkerComponent) present.push("marker component");
+  if (s.hasInteractionAffordance) present.push("interaction affordances");
+  if (s.hasGovernanceAffordance) present.push("governance affordances");
+  return present.length > 0 ? ` (${present.join(", ")})` : "";
+}
 
 export interface ExplainScoreOpts {
   cwd: string;
@@ -58,12 +79,15 @@ export interface ExplainScoreResult {
   reportedOnlyTotal: number;
   buckets: AxisBucket[];
   rawText: string;
+  maturityLevel?: number;
 }
 
 export interface FormatExplainScoreArgs {
   findings: ReliabilityFinding[];
   stableSubAxes: Set<string>;
   confidenceByAxis: Record<string, number>;
+  /** AI-Governance Maturity Level (Track #72/#155) — reported alongside the score. */
+  maturity?: { level: number; signals: GovernanceSignals };
 }
 
 export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreResult {
@@ -106,6 +130,11 @@ export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreRe
   lines.push("");
   lines.push(`  Health Score: ${scoring.score} / 100  ·  ${CURRENT_SCORING_VERSION}`);
   lines.push(`  Counted findings: ${scoring.findingsCountedInScore}  ·  experimental (reported only): ${scoring.findingsReportedOnly}`);
+  if (args.maturity) {
+    const m = args.maturity;
+    const label = MATURITY_LABELS[m.level] ?? "unknown";
+    lines.push(`  AI-Governance Maturity: L${m.level} — ${label}${maturityDetail(m.signals)}`);
+  }
   lines.push("");
   lines.push("  Formula:  score = clamp(100 - penalty × 1.5, 0, 100)");
   lines.push("            penalty per finding = severity_weight × axis_confidence");
@@ -150,6 +179,7 @@ export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreRe
     reportedOnlyTotal: scoring.findingsReportedOnly,
     buckets,
     rawText: lines.join("\n"),
+    ...(args.maturity ? { maturityLevel: args.maturity.level } : {}),
   };
 }
 
@@ -175,7 +205,13 @@ export async function explainScore(opts: ExplainScoreOpts): Promise<ExplainScore
     else confidenceByAxis[sa.id] = 1.0;
   }
 
-  return formatExplainScore({ findings, stableSubAxes, confidenceByAxis });
+  // Deterministic AI-Governance Maturity Level (L0–L3), reported alongside the
+  // score. The semantic LLM tier (L4–L5) is opt-in elsewhere; explain --score
+  // stays deterministic/byte-stable.
+  const signals = extractGovernanceSignals(repoRoot);
+  const maturity = { level: computeGovernanceMaturityLevel(signals), signals };
+
+  return formatExplainScore({ findings, stableSubAxes, confidenceByAxis, maturity });
 }
 
 export async function runExplainScore(opts: ExplainScoreOpts): Promise<void> {

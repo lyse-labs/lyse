@@ -23,6 +23,49 @@ describe("formatExplainScore", () => {
     expect(r.rawText).toContain("No findings");
   });
 
+  it("renders the AI-Governance Maturity line with detail when maturity is provided", () => {
+    const r = formatExplainScore({
+      findings: [],
+      stableSubAxes: new Set(),
+      confidenceByAxis: {},
+      maturity: {
+        level: 2,
+        signals: {
+          hasReservedAiTokens: true,
+          hasMarkerComponent: true,
+          hasInteractionAffordance: false,
+          hasGovernanceAffordance: false,
+        },
+      },
+    });
+    expect(r.maturityLevel).toBe(2);
+    expect(r.rawText).toContain("AI-Governance Maturity: L2 — AI as a component (AI tokens, marker component)");
+  });
+
+  it("renders L0 'no AI layer' with no detail", () => {
+    const r = formatExplainScore({
+      findings: [],
+      stableSubAxes: new Set(),
+      confidenceByAxis: {},
+      maturity: {
+        level: 0,
+        signals: {
+          hasReservedAiTokens: false,
+          hasMarkerComponent: false,
+          hasInteractionAffordance: false,
+          hasGovernanceAffordance: false,
+        },
+      },
+    });
+    expect(r.rawText).toContain("AI-Governance Maturity: L0 — no AI layer");
+  });
+
+  it("omits the maturity line when no maturity is provided (back-compat)", () => {
+    const r = formatExplainScore({ findings: [], stableSubAxes: new Set(), confidenceByAxis: {} });
+    expect(r.rawText).not.toContain("AI-Governance Maturity");
+    expect(r.maturityLevel).toBeUndefined();
+  });
+
   it("includes the pinned scoring-v1 version string", () => {
     const r = formatExplainScore({ findings: [], stableSubAxes: new Set(), confidenceByAxis: {} });
     expect(r.rawText).toContain("scoring-v1");
