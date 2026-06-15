@@ -49,6 +49,26 @@ function clamp01(n: number): number {
   return Math.min(1, Math.max(0, n));
 }
 
+// JSON Schema for structured output (#145) — SDK adapters force this shape.
+const FILTER_RESPONSE_SCHEMA: Record<string, unknown> = {
+  type: "object",
+  properties: {
+    verdicts: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          index: { type: "number" },
+          verdict: { type: "string", enum: ["violation", "fp", "uncertain"] },
+          confidence: { type: "number" },
+        },
+        required: ["index", "verdict"],
+      },
+    },
+  },
+  required: ["verdicts"],
+};
+
 interface VerdictsResponse {
   verdicts: Verdict[];
 }
@@ -156,7 +176,7 @@ export async function runFilterStage(
     let result;
     try {
       result = await withTimeout(
-        connector.complete([{ role: "user", content: prompt }]),
+        connector.complete([{ role: "user", content: prompt }], { responseSchema: FILTER_RESPONSE_SCHEMA }),
         timeoutMs,
       );
     } catch {
