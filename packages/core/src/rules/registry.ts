@@ -19,6 +19,7 @@ import { rule as rAgentInstructionFiles } from "./ai-surface-agent-instruction-f
 import { rule as rChangelogPresent } from "./versioning-changelog-present.js";
 import { rule as rSemverVersioning } from "./versioning-semver-versioning.js";
 import { rule as rMigrationGuidePresent } from "./versioning-migration-guide-present.js";
+import { rule as rDeprecatedTokenUsage } from "./tokens-deprecated-token-usage.js";
 import { rule as rAiTokensReserved } from "./ai-governance-ai-tokens-reserved.js";
 import { rule as rAiMarkerComponentPresent } from "./ai-governance-ai-marker-component-present.js";
 import { rule as rExplainabilityAffordance } from "./ai-governance-explainability-affordance.js";
@@ -54,6 +55,7 @@ export const ruleObjects: Rule[] = [
   rChangelogPresent,
   rSemverVersioning,
   rMigrationGuidePresent,
+  rDeprecatedTokenUsage,
   rAiTokensReserved,
   rAiMarkerComponentPresent,
   rExplainabilityAffordance,
