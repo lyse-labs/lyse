@@ -43,6 +43,45 @@ export function extractGovernanceSignals(repoRoot: string): GovernanceSignals {
   };
 }
 
+// Lines worth feeding the semantic maturity judge — AI markers, generative-AI
+// tokens, interaction/live-region attributes, governance vocabulary.
+const AI_CONTEXT_RE =
+  /generative ai|gen-ai|genai|copilot|ai-label|ailabel|aibadge|aria-live|role\s*=\s*["'`](status|alert)|streaming|isGenerating|disclaimer|explainab|responsible ai/i;
+
+/**
+ * Gather a bounded, deterministic slice of AI-relevant source lines for the LLM
+ * maturity judge (Track #155). Sorted files + deduped lines + a hard cap keep it
+ * stable and small. Returns "" when the repo has no AI-relevant content.
+ */
+export function gatherAiContext(repoRoot: string, maxLines = 200): string {
+  let files: string[] = [];
+  try {
+    files = fg.sync(["**/*.{tsx,jsx,vue,css,scss,json,md,mdx}"], {
+      cwd: repoRoot,
+      absolute: false,
+      dot: false,
+      ignore: SCAN_IGNORE,
+      onlyFiles: true,
+      unique: true,
+    });
+  } catch {
+    return "";
+  }
+
+  const lines = new Set<string>();
+  for (const rel of files.sort()) {
+    if (lines.size >= maxLines) break;
+    const src = safeReadText(join(repoRoot, rel));
+    if (!src) continue;
+    for (const raw of src.split("\n")) {
+      if (!AI_CONTEXT_RE.test(raw)) continue;
+      lines.add(raw.trim().slice(0, 200));
+      if (lines.size >= maxLines) break;
+    }
+  }
+  return [...lines].join("\n");
+}
+
 function detectInteractionAffordance(repoRoot: string): boolean {
   // Feedback controls (repo-level, already AI-co-located by the rule).
   if (scanForFeedbackControls(repoRoot).names.length > 0) return true;

@@ -8,7 +8,10 @@ import { BUNDLED_MANIFEST } from "../reliability/confidence/bundled-manifest.js"
 import { resolveStableSubAxes } from "../reliability/score/stable-sub-axes.js";
 import { computeGovernanceMaturityLevel } from "../reliability/governance-maturity.js";
 import type { GovernanceSignals } from "../reliability/governance-maturity.js";
-import { extractGovernanceSignals } from "../reliability/governance-signals.js";
+import { extractGovernanceSignals, gatherAiContext } from "../reliability/governance-signals.js";
+import { judgeGovernanceMaturity } from "../llm/governance-maturity-judge.js";
+import { resolveConnector } from "../llm/connectors/resolver.js";
+import { loadConfig } from "../config/schema.js";
 import type { Finding as ReliabilityFinding } from "../reliability/types.js";
 import type { Finding as LegacyFinding } from "../types.js";
 
@@ -33,7 +36,12 @@ function maturityDetail(s: GovernanceSignals): string {
 export interface ExplainScoreOpts {
   cwd: string;
   staticOnly?: boolean;
+  /** Injected for tests — defaults to the resolved connector. */
+  maturityConnector?: import("../llm/connectors/types.js").ConnectorClient;
+  maturityTimeoutMs?: number;
 }
+
+const MATURITY_CONF_THRESHOLD = 0.7;
 
 interface AxisBucket {
   subAxisId: string;
@@ -87,7 +95,7 @@ export interface FormatExplainScoreArgs {
   stableSubAxes: Set<string>;
   confidenceByAxis: Record<string, number>;
   /** AI-Governance Maturity Level (Track #72/#155) — reported alongside the score. */
-  maturity?: { level: number; signals: GovernanceSignals };
+  maturity?: { level: number; signals: GovernanceSignals; llmDerived?: boolean };
 }
 
 export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreResult {
@@ -133,7 +141,8 @@ export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreRe
   if (args.maturity) {
     const m = args.maturity;
     const label = MATURITY_LABELS[m.level] ?? "unknown";
-    lines.push(`  AI-Governance Maturity: L${m.level} — ${label}${maturityDetail(m.signals)}`);
+    const tier = m.llmDerived ? "  ·  LLM-derived" : "";
+    lines.push(`  AI-Governance Maturity: L${m.level} — ${label}${maturityDetail(m.signals)}${tier}`);
   }
   lines.push("");
   lines.push("  Formula:  score = clamp(100 - penalty × 1.5, 0, 100)");
@@ -205,11 +214,39 @@ export async function explainScore(opts: ExplainScoreOpts): Promise<ExplainScore
     else confidenceByAxis[sa.id] = 1.0;
   }
 
-  // Deterministic AI-Governance Maturity Level (L0–L3), reported alongside the
-  // score. The semantic LLM tier (L4–L5) is opt-in elsewhere; explain --score
-  // stays deterministic/byte-stable.
-  const signals = extractGovernanceSignals(repoRoot);
-  const maturity = { level: computeGovernanceMaturityLevel(signals), signals };
+  // AI-Governance Maturity Level. Deterministic (L0–L3) by default — byte-stable.
+  // The semantic LLM tier runs only on the non-static path (like the precision
+  // filter): it can ADD evidence-grounded signals the deterministic pass missed,
+  // gated by the conformal confidence threshold. Lyse's mapping always computes
+  // the level (the judge supplies signals, not a level).
+  let signals = extractGovernanceSignals(repoRoot);
+  let llmDerived = false;
+  if (opts.staticOnly !== true) {
+    const aiContext = gatherAiContext(repoRoot);
+    if (aiContext.trim() !== "") {
+      const connector =
+        opts.maturityConnector ?? resolveConnector(loadConfig(repoRoot, { onError: "degrade" }), undefined);
+      const j = await judgeGovernanceMaturity(
+        { repoName: repoRoot.split("/").pop() ?? repoRoot, aiContext },
+        connector,
+        opts.maturityTimeoutMs !== undefined ? { timeoutMs: opts.maturityTimeoutMs } : {},
+      );
+      if (j !== null && j.confidence >= MATURITY_CONF_THRESHOLD) {
+        const merged: GovernanceSignals = {
+          hasReservedAiTokens: signals.hasReservedAiTokens || j.signals.hasReservedAiTokens,
+          hasMarkerComponent: signals.hasMarkerComponent || j.signals.hasMarkerComponent,
+          hasInteractionAffordance: signals.hasInteractionAffordance || j.signals.hasInteractionAffordance,
+          hasGovernanceAffordance: signals.hasGovernanceAffordance || j.signals.hasGovernanceAffordance,
+        };
+        // Only mark llmDerived when the judge actually changed the picture.
+        if (JSON.stringify(merged) !== JSON.stringify(signals)) {
+          signals = merged;
+          llmDerived = true;
+        }
+      }
+    }
+  }
+  const maturity = { level: computeGovernanceMaturityLevel(signals), signals, llmDerived };
 
   return formatExplainScore({ findings, stableSubAxes, confidenceByAxis, maturity });
 }

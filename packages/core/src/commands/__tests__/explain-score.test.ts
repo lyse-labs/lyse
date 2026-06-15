@@ -42,6 +42,26 @@ describe("formatExplainScore", () => {
     expect(r.rawText).toContain("AI-Governance Maturity: L2 — AI as a component (AI tokens, marker component)");
   });
 
+  it("marks the maturity line LLM-derived when the LLM tier lifted it", () => {
+    const r = formatExplainScore({
+      findings: [],
+      stableSubAxes: new Set(),
+      confidenceByAxis: {},
+      maturity: {
+        level: 3,
+        signals: {
+          hasReservedAiTokens: true,
+          hasMarkerComponent: true,
+          hasInteractionAffordance: true,
+          hasGovernanceAffordance: false,
+        },
+        llmDerived: true,
+      },
+    });
+    expect(r.rawText).toContain("AI-Governance Maturity: L3");
+    expect(r.rawText).toContain("·  LLM-derived");
+  });
+
   it("renders L0 'no AI layer' with no detail", () => {
     const r = formatExplainScore({
       findings: [],
