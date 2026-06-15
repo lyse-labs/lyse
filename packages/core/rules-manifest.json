@@ -483,6 +483,25 @@
       ]
     },
     {
+      "id": "tokens/deprecated-token-usage",
+      "axis": "tokens",
+      "defaultSeverity": "warning",
+      "shortDescription": "Tokens should not alias a deprecated token",
+      "fullDescription": "Walks the design system's DTCG token files and flags any token whose `$value` is an alias resolving to a token marked `$deprecated`. Aliasing a deprecated token silently propagates a deprecated value to every consumer of the aliasing token — including AI agents that resolve tokens. Deterministic structural check: synthetic precision equals real precision. Emits nothing when no token is deprecated, or when no token aliases a deprecated one.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-deprecated-token-usage.md",
+      "rationale": "Why it matters\n\nDTCG supports `$deprecated` (boolean or a string reason) to mark a token as on the way out. The contract is that consumers stop referencing it. When another token *aliases* a deprecated token, the deprecation is defeated: every consumer of the aliasing token transitively depends on the deprecated value, and an AI agent resolving the alias has no signal that it landed on deprecated state.\n\nThe check resolves aliases across all token files in one address space, so a cross-file alias to a deprecated token is caught. It only fires when a deprecated token exists AND is aliased, so a system with no deprecations (or clean deprecations) produces no findings.",
+      "examples": [
+        {
+          "good": "// tokens.json — alias points at a live token\n{ \"color\": { \"old\": { \"$value\": \"#000\", \"$deprecated\": \"use color.ink\" }, \"ink\": { \"$value\": \"#111\" }, \"text\": { \"$value\": \"{color.ink}\" } } }",
+          "bad": "// text aliases the deprecated token\n{ \"color\": { \"old\": { \"$value\": \"#000\", \"$deprecated\": true }, \"text\": { \"$value\": \"{color.old}\" } } }"
+        }
+      ],
+      "allowlist": [
+        "token files matched by `excludePaths` in `.lyse.yaml`",
+        "token files larger than 2 MB — skipped to avoid pathological cases"
+      ]
+    },
+    {
       "id": "ai-governance/ai-tokens-reserved",
       "axis": "ai-governance",
       "defaultSeverity": "info",

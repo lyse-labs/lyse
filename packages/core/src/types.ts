@@ -16,6 +16,7 @@ export type BuiltInRuleId =
   | "tokens/no-hardcoded-border-width"
   | "tokens/dtcg-conformance"
   | "tokens/description-coverage"
+  | "tokens/deprecated-token-usage"
   | "components/no-native-shadows"
   | "components/contracts-strictness"
   | "naming/component-pascalcase"
