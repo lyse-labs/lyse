@@ -24,8 +24,12 @@ const SCSS_ONLY_AT_RULES = new Set([
  * - `#{$variable}` interpolation is resolved against the symbol table. An
  *   unresolved interpolation is left as-is so downstream rules can still surface
  *   "unknown token" findings rather than silently swallowing it.
- * - SCSS-only at-rules (`@mixin`, `@include`, `@if`, `@for`, `@use`, `@import`,
- *   etc.) have their full source line range blanked.
+ * - SCSS-only at-rules (`@include`, `@if`, `@for`, `@function`, `@use`,
+ *   `@import`, etc.) have their full source line range blanked.
+ * - `@mixin` is special-cased: only its header line (`@mixin name(args) {`) and
+ *   closing brace are blanked, so CSS-like declarations in the body (a real
+ *   hardcoded-value drift surface) are still scanned. Single-line mixins
+ *   collapse to one blanked line as before.
  * - `//` line comments are converted to CSS block comments in place, so a
  *   value inside a comment is not mistaken for a hardcoded-value violation.
  * - Plain rules / nested rules / plain at-rules (`@media`, `@supports`,
@@ -35,8 +39,8 @@ const SCSS_ONLY_AT_RULES = new Set([
  * - `.sass` indented syntax (postcss-scss does not parse it; the caller keeps
  *   `.sass` flagged as `skipped`).
  * - SCSS functions (`darken()`, `map-get()`, …) — left unresolved.
- * - Scanning `@mixin` bodies (their lines are blanked, so declarations inside a
- *   mixin are not flagged — a recall follow-up, tracked separately).
+ * - `@function` / `@include`-content bodies (SCSS logic, not CSS declarations) —
+ *   still fully blanked.
  */
 export function transformScssToCss(source: string): string {
   const root = postcssScss.parse(source);
@@ -53,11 +57,19 @@ export function transformScssToCss(source: string): string {
     }
   };
 
-  // Blank SCSS-only at-rules (whole block) — line-preserving.
+  // Blank SCSS-only at-rules (whole block) — line-preserving. `@mixin` is
+  // special: keep the body (CSS-like declarations are a real drift surface),
+  // blank only the header line and the closing brace.
   root.walkAtRules((atrule) => {
     const start = atrule.source?.start;
     const end = atrule.source?.end;
-    if (SCSS_ONLY_AT_RULES.has(atrule.name) && start && end) {
+    if (!start || !end) return;
+    if (atrule.name === "mixin") {
+      blankLineRange(start.line, start.line);
+      blankLineRange(end.line, end.line);
+      return;
+    }
+    if (SCSS_ONLY_AT_RULES.has(atrule.name)) {
       blankLineRange(start.line, end.line);
     }
   });
