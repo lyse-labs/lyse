@@ -150,6 +150,38 @@ describe("transformScssToCss", () => {
     expect(lines[5]).toContain("color: #ff0000");
   });
 
+  it("keeps @mixin BODY declarations (recall) while blanking the header + closing brace", () => {
+    const src = `@mixin card {
+  color: #ff0000;
+  padding: 24px;
+}
+.x { margin: 8px; }`;
+    const out = transformScssToCss(src);
+    const lines = out.split("\n");
+    // header + closing brace blanked → no @mixin token leaks
+    expect(out).not.toMatch(/@mixin/);
+    expect(lines[3]).not.toContain("}"); // line 4 (closing brace) blanked
+    // body declarations preserved on their original lines (drift surface)
+    expect(lines[1]).toContain("#ff0000"); // source line 2
+    expect(lines[2]).toContain("24px"); // source line 3
+    // line count preserved
+    expect(lines.length).toBe(src.split("\n").length);
+  });
+
+  it("still fully blanks single-line @mixin (header === closing line)", () => {
+    const out = transformScssToCss(`@mixin b($bg) { background: $bg; }\n.k { color: red; }`);
+    expect(out).not.toMatch(/@mixin/);
+    expect(out).not.toContain("background");
+    expect(out).toContain(".k { color: red");
+  });
+
+  it("still fully blanks @function bodies (SCSS logic, not CSS)", () => {
+    const out = transformScssToCss(`@function double($n) {\n  @return $n * 2;\n}\n.k { width: 10px; }`);
+    expect(out).not.toMatch(/@function/);
+    expect(out).not.toContain("@return");
+    expect(out).toContain("width: 10px");
+  });
+
   it("does not mangle // inside url() when converting line comments", () => {
     const out = transformScssToCss(`.a { background: url(http://example.com/x.png); }`);
     expect(out).toContain("url(http://example.com/x.png)");
