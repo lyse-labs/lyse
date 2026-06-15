@@ -18,6 +18,7 @@ import { rule as rShadcnRegistryValid } from "./ai-surface-shadcn-registry-valid
 import { rule as rAgentInstructionFiles } from "./ai-surface-agent-instruction-files.js";
 import { rule as rChangelogPresent } from "./versioning-changelog-present.js";
 import { rule as rSemverVersioning } from "./versioning-semver-versioning.js";
+import { rule as rMigrationGuidePresent } from "./versioning-migration-guide-present.js";
 import { rule as rAiTokensReserved } from "./ai-governance-ai-tokens-reserved.js";
 import { rule as rAiMarkerComponentPresent } from "./ai-governance-ai-marker-component-present.js";
 import { rule as rExplainabilityAffordance } from "./ai-governance-explainability-affordance.js";
@@ -52,6 +53,7 @@ export const ruleObjects: Rule[] = [
   rAgentInstructionFiles,
   rChangelogPresent,
   rSemverVersioning,
+  rMigrationGuidePresent,
   rAiTokensReserved,
   rAiMarkerComponentPresent,
   rExplainabilityAffordance,
