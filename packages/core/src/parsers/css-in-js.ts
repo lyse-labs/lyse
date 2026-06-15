@@ -12,11 +12,25 @@ const traverse = (
   (_traverse as unknown as TraverseFn)
 );
 
-const STYLED_PACKAGE = "styled-components";
+// Packages whose DEFAULT export is a `styled` factory (`styled.div`...``,
+// `styled(Component)`...``). Emotion's `@emotion/styled` is API-identical to
+// styled-components, so the same matcher covers both.
+const STYLED_DEFAULT_PACKAGES = new Set(["styled-components", "@emotion/styled"]);
+// Packages that export a `css` tagged-template helper (`css`...``). Named `css`
+// for styled-components / @emotion/react; default or named for @emotion/css.
+const CSS_HELPER_PACKAGES = new Set([
+  "styled-components",
+  "@emotion/react",
+  "@emotion/css",
+  "@emotion/core",
+]);
 
 export function extractCssInJs(path: string, source: string): ExtractedCssInJsBlock[] {
   const blocks: ExtractedCssInJsBlock[] = [];
-  let stylesImported: string | null = null;
+  // Local identifiers bound to a `styled` factory and to a `css` helper,
+  // respectively — across styled-components and Emotion entry points.
+  const styledNames = new Set<string>();
+  const cssNames = new Set<string>();
   let ast;
   try {
     ast = parse(source, {
@@ -31,26 +45,39 @@ export function extractCssInJs(path: string, source: string): ExtractedCssInJsBl
   try {
     traverse(ast, {
       ImportDeclaration(p) {
-        if (p.node.source.value === STYLED_PACKAGE) {
-          for (const spec of p.node.specifiers) {
-            if (spec.type === "ImportDefaultSpecifier") {
-              stylesImported = spec.local.name;
-            }
+        const pkg = p.node.source.value;
+        const isStyledPkg = STYLED_DEFAULT_PACKAGES.has(pkg);
+        const isCssPkg = CSS_HELPER_PACKAGES.has(pkg);
+        if (!isStyledPkg && !isCssPkg) return;
+        for (const spec of p.node.specifiers) {
+          if (spec.type === "ImportDefaultSpecifier") {
+            if (isStyledPkg) styledNames.add(spec.local.name);
+            // `import css from "@emotion/css"` — default is the css helper.
+            if (pkg === "@emotion/css") cssNames.add(spec.local.name);
+          } else if (spec.type === "ImportSpecifier") {
+            const imported =
+              spec.imported.type === "Identifier" ? spec.imported.name : spec.imported.value;
+            // `import { css } from ...` / `import { css as x } from ...`
+            if (imported === "css" && isCssPkg) cssNames.add(spec.local.name);
+            // `import { styled } from "@emotion/react"` (named styled variant)
+            if (imported === "styled") styledNames.add(spec.local.name);
           }
         }
       },
       TaggedTemplateExpression(p) {
-        if (!stylesImported) return;
+        if (styledNames.size === 0 && cssNames.size === 0) return;
         const tag = p.node.tag;
         const matches =
           // styled.div`...`
           (tag.type === "MemberExpression" &&
             tag.object.type === "Identifier" &&
-            (tag.object as t.Identifier).name === stylesImported) ||
+            styledNames.has((tag.object as t.Identifier).name)) ||
           // styled(Component)`...`
           (tag.type === "CallExpression" &&
             tag.callee.type === "Identifier" &&
-            (tag.callee as t.Identifier).name === stylesImported);
+            styledNames.has((tag.callee as t.Identifier).name)) ||
+          // css`...`
+          (tag.type === "Identifier" && cssNames.has((tag as t.Identifier).name));
         if (!matches) return;
 
         const quasi = p.node.quasi;
