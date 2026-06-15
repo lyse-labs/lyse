@@ -30,16 +30,22 @@ export async function startMcpServer(): Promise<void> {
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
+    // Each tool declares an `outputSchema`, so the result carries both
+    // `structuredContent` (the typed object, validated against the schema by
+    // the SDK) and a `content` text mirror for clients that don't yet read
+    // structured output. Per MCP spec the two must be consistent.
     if (name === "audit_file") {
       const result = await runAuditFile(args ?? {});
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        structuredContent: result,
       };
     }
     if (name === "suggest_fix") {
       const result = await runSuggestFix(args ?? {});
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        structuredContent: result,
       };
     }
     return {

@@ -36,6 +36,45 @@ export const auditFileTool: Tool = {
     },
     required: ["path"],
   },
+  outputSchema: {
+    type: "object",
+    properties: {
+      schema_version: { type: "string", const: "1.0.0" },
+      violations: {
+        type: "array",
+        description: "One entry per rule violation found in the file.",
+        items: {
+          type: "object",
+          properties: {
+            rule_id: { type: "string" },
+            severity: { type: "string", enum: ["error", "warning", "info"] },
+            range: {
+              type: "object",
+              properties: {
+                line: { type: "integer" },
+                column: { type: "integer" },
+              },
+              required: ["line", "column"],
+            },
+            message: { type: "string" },
+            suggestion_available: { type: "boolean" },
+            suggestion: { type: "string" },
+            reason: {
+              type: "string",
+              enum: [
+                "no_token_registry",
+                "rule_not_auto_fixable",
+                "unsupported_stack",
+                "internal_error",
+              ],
+            },
+          },
+          required: ["rule_id", "severity", "range", "message", "suggestion_available"],
+        },
+      },
+    },
+    required: ["schema_version", "violations"],
+  },
 };
 
 interface AuditFileInput {
