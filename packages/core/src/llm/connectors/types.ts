@@ -5,6 +5,13 @@ export interface ChatMessage {
 
 export interface CompleteOptions {
   estimateUsd?: number;
+  /**
+   * JSON Schema for the response (Track #145). On SDK adapters this forces a
+   * tool call whose input matches the schema → the returned `text` is always
+   * valid JSON (no regex extraction / parse-error fallback). Ignored by the
+   * stateless agent-cli / noop adapters.
+   */
+  responseSchema?: Record<string, unknown>;
 }
 
 export interface ConnectorResult {
