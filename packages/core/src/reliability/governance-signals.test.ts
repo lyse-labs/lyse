@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { extractGovernanceSignals } from "./governance-signals.js";
+import { extractGovernanceSignals, gatherAiContext } from "./governance-signals.js";
 
 function repo(files: Record<string, string>): string {
   const dir = mkdtempSync(join(tmpdir(), "lyse-gov-signals-"));
@@ -51,5 +51,30 @@ describe("extractGovernanceSignals", () => {
       "src/Toast.tsx": 'export function Toast() { return <div role="status">saved</div>; }',
     });
     expect(extractGovernanceSignals(dir).hasInteractionAffordance).toBe(false);
+  });
+});
+
+describe("gatherAiContext", () => {
+  it("returns AI-relevant lines, deterministically and deduped", () => {
+    const dir = repo({
+      "tokens.json": '{ "color-text-label-gen-ai": { "$description": "produced by generative AI" } }',
+      "src/Chat.tsx": 'export function Chat() { return <div aria-live="polite">x</div>; }',
+      "src/Button.tsx": "export function Button() { return null; }",
+    });
+    const ctx = gatherAiContext(dir);
+    expect(ctx).toMatch(/gen-ai|generative AI/i);
+    expect(ctx).toMatch(/aria-live/);
+    expect(gatherAiContext(dir)).toBe(ctx); // deterministic
+  });
+
+  it("returns empty for a repo with no AI-relevant content", () => {
+    const dir = repo({ "src/Button.tsx": "export function Button() { return null; }" });
+    expect(gatherAiContext(dir)).toBe("");
+  });
+
+  it("caps the number of lines", () => {
+    const many = Array.from({ length: 500 }, (_, i) => `--gen-ai-token-${i}: 0;`).join("\n");
+    const dir = repo({ "tokens.css": `:root {\n${many}\n}` });
+    expect(gatherAiContext(dir, 50).split("\n").length).toBeLessThanOrEqual(50);
   });
 });
