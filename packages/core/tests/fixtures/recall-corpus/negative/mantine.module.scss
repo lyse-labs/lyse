@@ -1,0 +1,13 @@
+//
+// Precision control — Mantine ActionIcon CSS vars where `ai` = ActionIcon, NOT
+// artificial intelligence (the #69 false-positive class), plus a non-AI Sass
+// spacing var. None of these must be detected as reserved AI tokens.
+//
+.actionIcon {
+  --ai-bg: #ffffff;
+  --ai-size: 16px;
+  --ai-hover-color: #111111;
+}
+
+$spacing-05: 1rem;
+$main-color: #333333;

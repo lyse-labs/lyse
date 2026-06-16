@@ -1,0 +1,8 @@
+//
+// Vendored slice of AWS Cloudscape — @cloudscape-design/design-tokens index.scss
+// Source: https://github.com/cloudscape-design/design-tokens (Apache-2.0)
+// gen-ai tokens are authored as literal Sass vars whose value embeds the
+// compiled custom-property name + fallback — the "easy" literal recall case.
+//
+$color-text-label-gen-ai: var(--color-text-label-gen-ai-a2n3od, #7300e5);
+$color-background-avatar-gen-ai: var(--color-background-avatar-gen-ai-oxp2v6, #4d1a91);

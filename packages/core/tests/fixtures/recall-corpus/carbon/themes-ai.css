@@ -1,0 +1,12 @@
+/*
+ * Vendored slice of IBM Carbon — @carbon/styles compiled themes.css
+ * Source: https://github.com/carbon-design-system/carbon (Apache-2.0)
+ * AI-governance tokens appear ONLY in COMPILED CSS as literal --cds-ai-* values
+ * (in source they exist as theme.$ai-* Sass — see _ai-gradient.scss).
+ */
+:root {
+  --cds-ai-aura-start: rgba(69, 137, 255, 0.1);
+  --cds-ai-aura-end: transparent;
+  --cds-ai-border-strong: #4589ff;
+  --cds-ai-popover-background: #ffffff;
+}
