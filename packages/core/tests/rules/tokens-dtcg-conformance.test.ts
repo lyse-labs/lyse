@@ -163,6 +163,31 @@ describe("rule tokens/dtcg-conformance", () => {
     expect(result.opportunities).toBe(0);
   });
 
+  it("does not flag a $ref JSON-Pointer alias that resolves", async () => {
+    writeFileSync(
+      join(tmp, "ref.tokens.json"),
+      JSON.stringify({
+        color: { brand: { $value: "#2563eb", $type: "color" } },
+        semantic: { primary: { $value: { $ref: "#/color/brand" }, $type: "color" } },
+      }),
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("flags a broken $ref JSON-Pointer alias with the pointer in the message", async () => {
+    writeFileSync(
+      join(tmp, "ref-broken.tokens.json"),
+      JSON.stringify({
+        color: { accent: { $value: { $ref: "#/color/missing" }, $type: "color" } },
+      }),
+    );
+    const result = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    const broken = result.findings.filter((f) => f.message.includes("unresolved alias"));
+    expect(broken).toHaveLength(1);
+    expect(broken[0]?.message).toContain("#/color/missing");
+  });
+
   // ----- Strict type-specific validation fixtures (one per primary $type) -----
 
   it("color: flags a $type=color token whose $value is not a CSS color (error)", async () => {

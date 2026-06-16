@@ -34,6 +34,18 @@ describe("rule tokens/deprecated-token-usage", () => {
     expect(r.findings[0]!.message).toContain("color.old");
   });
 
+  it("warns when a token aliases a deprecated token via a $ref JSON-Pointer", async () => {
+    writeTokens(tmp, "design.tokens.json", {
+      color: {
+        old: { $value: "#000000", $deprecated: true },
+        text: { $value: { $ref: "#/color/old" } },
+      },
+    });
+    const r = await rule.evaluate(makeCtx(tmp), emptyParsed);
+    expect(r.findings).toHaveLength(1);
+    expect(r.findings[0]!.message).toContain("color.old");
+  });
+
   it("supports a string $deprecated reason", async () => {
     writeTokens(tmp, "design.tokens.json", {
       color: {

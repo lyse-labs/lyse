@@ -12,11 +12,14 @@ import type {
 import { isPathExcluded } from "./_exclude.js";
 import { createLyseRule } from "./_rule-module.js";
 import {
+  formatAlias,
   isDtcgAlias,
   isDtcgGroup,
   isDtcgToken,
   parseAliasPath,
+  type DtcgAlias,
   type DtcgDocument,
+  type DtcgRef,
   type DtcgToken,
   type DtcgType,
 } from "../tokens/dtcg-model.js";
@@ -379,7 +382,7 @@ function validateTypedValue(type: DtcgType, value: unknown): ValueShape | null {
   }
 }
 
-function aliasResolves(doc: DtcgDocument, alias: string): boolean {
+function aliasResolves(doc: DtcgDocument, alias: DtcgAlias | DtcgRef): boolean {
   const segments = parseAliasPath(alias);
   if (segments.length === 0) return false;
   let cur: unknown = doc;
@@ -464,11 +467,11 @@ function walkDocument(doc: DtcgDocument): WalkOutcome {
 
       // --- alias resolution ---
       if (isDtcgAlias(value)) {
-        if (!aliasResolves(doc, value as string)) {
+        if (!aliasResolves(doc, value)) {
           result.issues.push({
             path: tokenPath,
             severity: "error",
-            message: `Token "${tokenPath}" references unresolved alias ${value as string}`,
+            message: `Token "${tokenPath}" references unresolved alias ${formatAlias(value)}`,
           });
         }
       } else if (effectiveType !== undefined) {

@@ -21,8 +21,9 @@ The most common drift modes:
 
 - Tokens with `$value` but no `$type` — Style Dictionary cannot pick the
   right transform; the token round-trips as a raw string.
-- Aliases (`{color.brand}`) that point at renamed or deleted paths after a
-  refactor — silently produces a CSS `undefined` at build time.
+- Aliases (`{color.brand}`, or the JSON-Pointer form `{ "$ref": "#/color/brand" }`)
+  that point at renamed or deleted paths after a refactor — silently produces a
+  CSS `undefined` at build time.
 - `$type` claims `color` but `$value` is a typo (`"blu"`).
 - `$type` claims `dimension` but `$value` is unit-less (`"16"`), which
   some tools coerce to `px` and others reject outright.
@@ -38,7 +39,7 @@ each leaf token it emits up to one finding per check:
 | Sub-check | Severity | Trigger |
 |---|---|---|
 | Missing `$type` | warning | Token has `$value` but no `$type` and inherits none from a group. |
-| Broken alias | error | `$value: "{group.name}"` does not resolve in the same document. |
+| Broken alias | error | `$value: "{group.name}"` (or `$value: { "$ref": "#/group/name" }`) does not resolve in the same document. |
 | `color` value invalid | error | `$type: "color"` but `$value` is not a hex / `rgb()` / `hsl()` / `oklch()` / named color. |
 | `dimension` value invalid | error | `$type: "dimension"` but `$value` lacks a CSS unit. |
 | `fontFamily` value invalid | error | `$type: "fontFamily"` but `$value` is not a non-empty string or array of strings. |

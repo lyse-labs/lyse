@@ -16,6 +16,16 @@ export type DtcgType =
 
 export type DtcgAlias = string;
 
+/**
+ * DTCG aliasing also appears as a JSON-Pointer `$ref` object
+ * (`{ "$ref": "#/color/brand/primary" }`) in tooling that follows the
+ * JSON-Schema reference convention. Treated as equivalent to the
+ * curly-brace `{color.brand.primary}` form.
+ */
+export interface DtcgRef {
+  $ref: string;
+}
+
 export interface DtcgTokenBase {
   $type?: DtcgType;
   $description?: string;
@@ -89,11 +99,38 @@ export function isDtcgGroup(entry: unknown): entry is DtcgGroup {
 
 const ALIAS_RE = /^\{[^{}]+\}$/;
 
-export function isDtcgAlias(value: unknown): value is DtcgAlias {
-  return typeof value === "string" && ALIAS_RE.test(value.trim());
+export function isDtcgRef(value: unknown): value is DtcgRef {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    typeof (value as Record<string, unknown>)["$ref"] === "string"
+  );
 }
 
-export function parseAliasPath(alias: DtcgAlias): string[] {
+export function isDtcgAlias(value: unknown): value is DtcgAlias | DtcgRef {
+  if (typeof value === "string") return ALIAS_RE.test(value.trim());
+  return isDtcgRef(value);
+}
+
+// RFC 6901: decode `~1` → `/` and `~0` → `~` (in that order).
+function decodePointerSegment(seg: string): string {
+  return seg.replace(/~1/g, "/").replace(/~0/g, "~");
+}
+
+export function parseAliasPath(alias: DtcgAlias | DtcgRef): string[] {
+  if (isDtcgRef(alias)) {
+    let p = alias.$ref.trim();
+    if (p.startsWith("#")) p = p.slice(1);
+    if (p.startsWith("/")) p = p.slice(1);
+    if (p.length === 0) return [];
+    return p.split("/").map(decodePointerSegment);
+  }
   const inner = alias.trim().slice(1, -1);
   return inner.split(".").map((s) => s.trim()).filter((s) => s.length > 0);
+}
+
+/** Human-readable rendering of an alias for diagnostics. */
+export function formatAlias(alias: DtcgAlias | DtcgRef): string {
+  return isDtcgRef(alias) ? alias.$ref : alias;
 }
