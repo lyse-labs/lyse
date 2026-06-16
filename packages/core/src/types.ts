@@ -358,12 +358,27 @@ export function isValidConfidence(v: unknown): v is Confidence {
   return v === "high" || v === "medium" || v === "low";
 }
 
+export interface RuleConfigEntry {
+  severity?: "error" | "warning" | "info" | "off";
+  tolerance?: number;
+  disable?: string[];
+}
+
 export interface LyseConfig {
   designSystem?: {
     componentsModule?: string;
     elements?: Record<string, string>;
     excludePaths?: string[];
   };
+  /**
+   * Per-rule configuration keyed by rule id. `"off"` (or `{ severity: "off" }`)
+   * disables the rule. Rule ids are validated against the registry at audit
+   * start — an unknown id is a hard error (CLI) / warning (MCP), not a silent
+   * no-op. `severity` overrides (to a real level) and per-rule options
+   * (`tolerance`, `disable`) are validated but not yet applied — tracked
+   * separately.
+   */
+  rules?: Record<string, "off" | RuleConfigEntry>;
   i18n?: {
     locales?: string[];
     vocabulary?: {
