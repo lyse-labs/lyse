@@ -1,4 +1,4 @@
-// 42 sub-axes, 1:1 mapped to the 42 shipped rules.
+// 43 sub-axes, 1:1 mapped to the 43 shipped rules.
 // Each sub-axis declares the scoring axis it reports under (6 total per
 // AxisName in packages/core/src/types.ts: tokens, a11y, components, stories,
 // ai-surface, ai-governance). Naming rules report under the components axis.
@@ -16,6 +16,7 @@ export const SUB_AXES: SubAxisRecord[] = [
   { id: "tokens.opacity", axis: "tokens", name: "Opacity token scale", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["tokens/no-hardcoded-opacity"], llmDriven: false },
   { id: "tokens.border-radius", axis: "tokens", name: "Radii token scale", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["tokens/no-hardcoded-border-radius"], llmDriven: false },
   { id: "tokens.border-width", axis: "tokens", name: "Border-width token scale", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["tokens/no-hardcoded-border-width"], llmDriven: false },
+  { id: "tokens.motion", axis: "tokens", name: "Motion token scale (duration/easing)", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["tokens/no-hardcoded-motion"], llmDriven: false },
   { id: "a11y.essentials", axis: "a11y", name: "jsx-a11y essentials", status: "experimental", precisionMeasured: null, recallMeasured: 1, precisionWilsonLowerBound: null, recallWilsonLowerBound: 0.9035813714055363, lastCalibrated: "2026-06-15T16:54:07.177Z", contributesToScore: false, ruleIds: ["a11y/essentials"], llmDriven: false },
   { id: "a11y.prefers-reduced-motion", axis: "a11y", name: "prefers-reduced-motion compliance", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["a11y/prefers-reduced-motion"], llmDriven: false },
   { id: "a11y.focus-visible", axis: "a11y", name: "focus-visible adoption", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["a11y/focus-visible"], llmDriven: false },

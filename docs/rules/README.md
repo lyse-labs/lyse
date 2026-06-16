@@ -20,6 +20,7 @@ Rule output appears in:
 | `tokens/no-hardcoded-opacity` | Tokens | warning | No | [→](./tokens-no-hardcoded-opacity.md) |
 | `tokens/no-hardcoded-border-radius` | Tokens | warning | No | [→](./tokens-no-hardcoded-border-radius.md) |
 | `tokens/no-hardcoded-border-width` | Tokens | warning | No | [→](./tokens-no-hardcoded-border-width.md) |
+| `tokens/no-hardcoded-motion` | Tokens | warning | No | [→](./tokens-no-hardcoded-motion.md) |
 | `a11y/essentials` | A11y | error | No | [→](./a11y-essentials.md) |
 | `a11y/prefers-reduced-motion` | A11y | warning | No | [→](./a11y-prefers-reduced-motion.md) |
 | `a11y/focus-visible` | A11y | warning | No | [→](./a11y-focus-visible.md) |

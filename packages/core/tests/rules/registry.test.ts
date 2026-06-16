@@ -12,6 +12,7 @@ const EXPECTED_IDS = [
   "tokens/no-hardcoded-opacity",
   "tokens/no-hardcoded-border-radius",
   "tokens/no-hardcoded-border-width",
+  "tokens/no-hardcoded-motion",
   "components/no-native-shadows",
   "components/no-icon-fonts",
   "components/contracts-strictness",
