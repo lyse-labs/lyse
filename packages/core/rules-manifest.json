@@ -250,6 +250,25 @@
       ]
     },
     {
+      "id": "a11y/prefers-reduced-motion",
+      "axis": "a11y",
+      "defaultSeverity": "warning",
+      "shortDescription": "Animated design systems should honor `prefers-reduced-motion`",
+      "fullDescription": "Checks, at repo level, whether a design system that uses CSS transitions, animations, or `@keyframes` also ships a `prefers-reduced-motion` guard — either a `@media (prefers-reduced-motion: …)` block in CSS / CSS-in-JS, or a `matchMedia('(prefers-reduced-motion: …)')` call in JS/TS. Emits one warning when motion is present but no guard is found anywhere. Emits nothing when a guard exists or when the design system uses no motion (N/A). Motion is detected only from CSS sources (CSS files + extracted CSS-in-JS), not from TS, to avoid mistaking a framer-motion `transition` prop for a CSS animation.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/a11y-prefers-reduced-motion.md",
+      "rationale": "Why it matters\n\nVestibular and motion-sensitivity disorders make large or fast animations actively harmful — they can trigger nausea, dizziness, and migraines. The `prefers-reduced-motion` media feature lets users opt out at the OS level; a design system that animates without honoring it ignores that signal for every product built on it.\n\nThe check is repo-level and broad: a single guard anywhere (CSS media query or JS `matchMedia`) is enough to clear it. The rule is experimental and does not contribute to the health score until calibration data is available.",
+      "examples": [
+        {
+          "good": ".btn { transition: transform .2s; }\n@media (prefers-reduced-motion: reduce) { .btn { transition: none; } }",
+          "bad": ".btn { transition: transform .2s; }"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable a11y/prefers-reduced-motion` in a README — rule is N/A",
+        "design systems that use no CSS motion at all — the check does not apply (N/A)"
+      ]
+    },
+    {
       "id": "stories/coverage",
       "axis": "stories",
       "defaultSeverity": "warning",
