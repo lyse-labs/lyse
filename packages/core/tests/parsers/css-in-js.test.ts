@@ -96,6 +96,66 @@ export const x = css\`color: #fff;\`;
     expect(extractCssInJs("x.ts", source)).toEqual([]);
   });
 
+  describe("vanilla-extract object styles", () => {
+    it("extracts hardcoded values from style({...})", () => {
+      const source = `
+import { style } from "@vanilla-extract/css";
+export const button = style({
+  backgroundColor: "#2563eb",
+  padding: "13px",
+});
+`.trim();
+      const blocks = extractCssInJs("button.css.ts", source);
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0].content).toContain("#2563eb");
+      expect(blocks[0].content).toContain("13px");
+    });
+
+    it("serializes camelCase properties to kebab-case", () => {
+      const source = `
+import { style } from "@vanilla-extract/css";
+export const x = style({ backgroundColor: "#2563eb" });
+`.trim();
+      const blocks = extractCssInJs("x.css.ts", source);
+      expect(blocks[0].content).toContain("background-color");
+    });
+
+    it("extracts values from styleVariants({...})", () => {
+      const source = `
+import { styleVariants } from "@vanilla-extract/css";
+export const v = styleVariants({ primary: { color: "#ff0000" } });
+`.trim();
+      const blocks = extractCssInJs("v.css.ts", source);
+      expect(blocks.some((b) => b.content.includes("#ff0000"))).toBe(true);
+    });
+
+    it("extracts values from globalStyle(selector, {...})", () => {
+      const source = `
+import { globalStyle } from "@vanilla-extract/css";
+globalStyle("body", { margin: "10px" });
+`.trim();
+      const blocks = extractCssInJs("g.css.ts", source);
+      expect(blocks.some((b) => b.content.includes("10px"))).toBe(true);
+    });
+
+    it("recurses into nested selectors / pseudo-states", () => {
+      const source = `
+import { style } from "@vanilla-extract/css";
+export const x = style({ ":hover": { color: "#abcdef" } });
+`.trim();
+      const blocks = extractCssInJs("x.css.ts", source);
+      expect(blocks.some((b) => b.content.includes("#abcdef"))).toBe(true);
+    });
+
+    it("does not extract style({...}) when @vanilla-extract is not imported", () => {
+      const source = `
+const style = (o) => o;
+export const x = style({ color: "#fff" });
+`.trim();
+      expect(extractCssInJs("x.ts", source)).toEqual([]);
+    });
+  });
+
   describe("extractCssInJs defensive guard", () => {
     it("does NOT throw on babel traverse errors (duplicate decl, etc.)", () => {
       // Intentional duplicate declaration — causes @babel/traverse to throw
