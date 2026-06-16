@@ -19,6 +19,7 @@ Rule output appears in:
 | `a11y/essentials` | A11y | error | No | [→](./a11y-essentials.md) |
 | `a11y/prefers-reduced-motion` | A11y | warning | No | [→](./a11y-prefers-reduced-motion.md) |
 | `a11y/focus-visible` | A11y | warning | No | [→](./a11y-focus-visible.md) |
+| `a11y/inclusive-language` | A11y | info | No | [→](./a11y-inclusive-language.md) |
 | `components/no-native-shadows` | Components | warning | Yes | [→](./components-shadow-native.md) |
 | `components/no-icon-fonts` | Components | warning | No | [→](./components-no-icon-fonts.md) |
 | `components/contracts-strictness` | Components | warning | No | [→](./components-contracts-strictness.md) |
