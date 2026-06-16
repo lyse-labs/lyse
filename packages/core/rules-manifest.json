@@ -673,6 +673,25 @@
       ]
     },
     {
+      "id": "tokens/no-hardcoded-motion",
+      "axis": "tokens",
+      "defaultSeverity": "warning",
+      "shortDescription": "Motion durations and easings should come from a token scale",
+      "fullDescription": "Flags hardcoded motion values in CSS / CSS-in-JS: transition/animation **durations** (`<n>s` / `<n>ms`, from the longhand or the `transition`/`animation` shorthand) and custom **`cubic-bezier()` easing curves**, when they aren't drawn from a motion token scale. Zero durations, `var(...)` references, and standard easing keywords (`ease`, `linear`, `ease-in-out`, …) are exempt. When a motion token scale is loaded (`ctx.tokens.motion`, keys prefixed `duration/` / `easing/`), on-scale values are compliant (whitespace-insensitive); off-scale values are flagged.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-no-hardcoded-motion.md",
+      "rationale": "Why it matters\n\nInconsistent durations (180ms here, 240ms there) and ad-hoc bezier curves make a system's motion feel incoherent and untunable. A small motion scale (`--duration-fast/base/slow`, `--easing-standard/emphasized`) makes timing a deliberate, shared decision. Value-drift rule: experimental, does not contribute to the score until calibrated.",
+      "examples": [
+        {
+          "good": ":root { --duration-base: 200ms; }\n.x { transition-duration: var(--duration-base); }",
+          "bad": ".x { transition: all 0.24s cubic-bezier(0.1, 0.2, 0.3, 0.4); }"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable tokens/no-hardcoded-motion` in a README — rule is N/A",
+        "zero durations and standard easing keywords (`ease`, `linear`, …) — never flagged"
+      ]
+    },
+    {
       "id": "ai-governance/ai-tokens-reserved",
       "axis": "ai-governance",
       "defaultSeverity": "info",
