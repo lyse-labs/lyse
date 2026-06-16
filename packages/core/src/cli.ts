@@ -97,7 +97,7 @@ function renderEslintStyleAudit(result: AuditResult, limit: number | null | unde
     CURRENT_SCORING_VERSION,
     counted,
     experimental,
-    { toolVersion: result.toolVersion },
+    { toolVersion: result.toolVersion, ...(result.grade ? { grade: result.grade } : {}) },
   );
   sections.push(gauge);
   if (result.meta?.coverage) {
