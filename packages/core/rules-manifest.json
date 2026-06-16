@@ -597,6 +597,25 @@
       ]
     },
     {
+      "id": "tokens/no-hardcoded-z-index",
+      "axis": "tokens",
+      "defaultSeverity": "warning",
+      "shortDescription": "Stacking order should come from a z-index token scale",
+      "fullDescription": "Flags hardcoded `z-index` integer literals in CSS and CSS-in-JS that are not drawn from a z-index token scale. Trivial local stacking values (`-1`, `0`, `1`) and tokenized references (`var(--z-*)`) are exempt. When a z-index token scale is loaded (`ctx.tokens.zIndex`), values on the scale are treated as compliant; off-scale values are flagged. This catches the classic 'z-index war' anti-pattern where arbitrary magic numbers (`9999`, `99999`) accrete across a codebase with no shared ordering.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-no-hardcoded-z-index.md",
+      "rationale": "Why it matters\n\nZ-index without a shared scale is one of the most common sources of UI bugs in a design system: each component picks an arbitrary large number to \"win\", and overlays, dropdowns, tooltips and modals end up fighting unpredictably. A small, named z-index scale (`--z-dropdown`, `--z-modal`, `--z-toast`) makes stacking order an explicit, reviewable decision.\n\nThis is a value-drift rule; like the other hardcoded-value detectors it is experimental and does not contribute to the health score until calibration data is available.",
+      "examples": [
+        {
+          "good": ":root { --z-modal: 400; }\n.modal { z-index: var(--z-modal); }",
+          "bad": ".modal { z-index: 9999; }"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable tokens/no-hardcoded-z-index` in a README — rule is N/A",
+        "trivial local stacking values `-1`, `0`, `1` — never flagged"
+      ]
+    },
+    {
       "id": "ai-governance/ai-tokens-reserved",
       "axis": "ai-governance",
       "defaultSeverity": "info",
