@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **New experimental rule `a11y/focus-visible` (Track #130).** Repo-level a11y check: a design system that removes the focus outline (`outline: none` / `outline: 0`, in CSS or CSS-in-JS) should adopt `:focus-visible` — the pseudo-class, or the `focus-visible` polyfill (npm import / `.js-focus-visible` / `[data-focus-visible-added]`), scanned across CSS, CSS-in-JS, and TS. Emits one warning when an outline is suppressed but no `:focus-visible` adoption is found anywhere; N/A when no outline is removed. The modern `:focus:not(:focus-visible) { outline: none }` pattern clears the check. Registered `experimental` + `contributesToScore: false` — reported-only until calibration. (First of the #130 a11y-depth sub-checks; touch-target / semantic-html / live-regions deferred.)
+
 - **New experimental rule `a11y/prefers-reduced-motion` (Track #129).** Repo-level a11y check: a design system that uses CSS motion (a real `transition` / `animation` declaration or `@keyframes`) should honor `prefers-reduced-motion`. Motion is detected from CSS + extracted CSS-in-JS (not TS, so a framer-motion `transition` prop doesn't over-fire); the guard — a `@media (prefers-reduced-motion: …)` block or a JS `matchMedia('(prefers-reduced-motion: …)')` call — is honored from CSS, CSS-in-JS, or TS. Emits one warning when motion is present but no guard is found anywhere; N/A when there is no motion. Registered `experimental` + `contributesToScore: false` — reported-only until calibration. (Motion-token drift, the other half of #129, overlaps #93 and is deferred.)
 
 ### Changed

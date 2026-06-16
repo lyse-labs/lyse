@@ -9,6 +9,7 @@ import { rule as rNamingPascalCase } from "./naming-component-pascalcase.js";
 import { rule as rNamingHookPrefix } from "./naming-hook-prefix.js";
 import { rule as rA11y } from "./a11y-essentials.js";
 import { rule as rReducedMotion } from "./a11y-prefers-reduced-motion.js";
+import { rule as rFocusVisible } from "./a11y-focus-visible.js";
 import { rule as rStorybook } from "./storybook-coverage.js";
 import { rule as rAgentsMdQuality } from "./ai-surface-agents-md-quality.js";
 import { rule as rComponentManifestJson } from "./ai-surface-component-manifest-json.js";
@@ -46,6 +47,7 @@ export const ruleObjects: Rule[] = [
   rNamingHookPrefix,
   rA11y,
   rReducedMotion,
+  rFocusVisible,
   rStorybook,
   rAgentsMdQuality,
   rComponentManifestJson,

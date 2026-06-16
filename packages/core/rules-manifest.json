@@ -269,6 +269,25 @@
       ]
     },
     {
+      "id": "a11y/focus-visible",
+      "axis": "a11y",
+      "defaultSeverity": "warning",
+      "shortDescription": "Removing the focus outline requires `:focus-visible` adoption",
+      "fullDescription": "Checks, at repo level, whether a design system that suppresses the focus outline (`outline: none` / `outline: 0`, in CSS or CSS-in-JS) also adopts `:focus-visible` somewhere — the CSS pseudo-class, or the `focus-visible` polyfill (npm import, `.js-focus-visible` class, or `[data-focus-visible-added]`). Emits one warning when an outline is removed but no `:focus-visible` adoption is found anywhere. Emits nothing when `:focus-visible` is adopted or when no outline is suppressed (N/A). The modern `:focus:not(:focus-visible) { outline: none }` pattern is correct and clears the check because `:focus-visible` is present.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/a11y-focus-visible.md",
+      "rationale": "Why it matters\n\nA visible focus indicator is how keyboard and switch users know where they are. Blanket `outline: none` resets — extremely common in design-system base styles — silently delete that indicator for every product downstream. `:focus-visible` is the modern fix: it lets you remove the outline for mouse users while keeping it for keyboard users.\n\nThe check is repo-level and conservative: it only fires when an outline is explicitly removed AND no `:focus-visible` adoption exists anywhere. The rule is experimental and does not contribute to the health score until calibration data is available.",
+      "examples": [
+        {
+          "good": "button:focus:not(:focus-visible) { outline: none; }\nbutton:focus-visible { outline: 2px solid; }",
+          "bad": "button:focus { outline: none; }"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable a11y/focus-visible` in a README — rule is N/A",
+        "design systems that never remove the focus outline — the check does not apply (N/A)"
+      ]
+    },
+    {
       "id": "stories/coverage",
       "axis": "stories",
       "defaultSeverity": "warning",
