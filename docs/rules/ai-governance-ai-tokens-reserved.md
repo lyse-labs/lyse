@@ -31,6 +31,7 @@ const reserved: string[] = detectReservedAiTokens(repoRoot);
 
 - JSON token files: `tokens.json`, `tokens/**/*.json`, `*.tokens.json` (incl. nested monorepo paths).
 - CSS files: `**/*.css` — every `--token-name:` declaration.
+- SCSS files: `**/*.scss` — both the post-transform `--*` custom properties **and** the raw `$variable` identifiers (declarations like `$ai-aura-end: …` and namespaced usages like `theme.$ai-aura-start-sm`). This matters because SCSS-authored design systems compile their AI tokens away from source: IBM Carbon authors `theme.$ai-*` (the `--cds-ai-*` names exist only in compiled CSS), and AWS Cloudscape ships `$*-gen-ai`. Without scanning the raw `$variable` source these would be invisible to a source scan (#139).
 
 `node_modules`, `dist`, `build`, `.git`, `.next`, `out`, `coverage` are excluded. Token-name matching is **segment-anchored**: each name is split on `-`, `_`, `.`, `/`, whitespace, and the segments are compared against the reserved set. This is why `rain`, `paint`, `mainColor`, `captain`, `detail` do not match — `ai` only triggers when it is a whole segment, not a substring of a larger word.
 

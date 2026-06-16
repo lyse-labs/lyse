@@ -112,6 +112,24 @@ function extractCssCustomPropertyNames(source: string): string[] {
   return out;
 }
 
+// SCSS `$variable` identifiers — declarations (`$ai-aura-end: …`) AND namespaced
+// usages (`theme.$ai-aura-start-sm`). `transformScssToCss` blanks `$var`
+// declaration lines, so these never survive to the custom-property pass; design
+// systems that author AI tokens in Sass (IBM Carbon's `theme.$ai-*`, AWS
+// Cloudscape's `$*-gen-ai`) are invisible to a source scan without this (#139).
+// The leading `$` is dropped; the precision-gated `isReservedTokenName` decides.
+const SCSS_VARIABLE = /\$([a-zA-Z_][a-zA-Z0-9_-]*)/g;
+
+function extractScssVariableNames(source: string): string[] {
+  SCSS_VARIABLE.lastIndex = 0;
+  const out: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = SCSS_VARIABLE.exec(source)) !== null) {
+    if (m[1]) out.push(m[1]);
+  }
+  return out;
+}
+
 function discoverFiles(repoRoot: string, patterns: string[]): string[] {
   try {
     return fg.sync(patterns, {
@@ -163,6 +181,10 @@ export function detectReservedAiTokens(repoRoot: string): string[] {
   for (const rel of scssFiles) {
     const text = safeReadText(join(repoRoot, rel));
     if (text === null) continue;
+    // Raw-source `$variable` scan first — the transform blanks these lines.
+    for (const name of extractScssVariableNames(text)) {
+      if (isReservedTokenName(name)) found.add(`$${name}`);
+    }
     let cssText: string;
     try {
       cssText = transformScssToCss(text);
@@ -181,4 +203,5 @@ export const _internal = {
   isReservedTokenName,
   collectJsonLeafPaths,
   extractCssCustomPropertyNames,
+  extractScssVariableNames,
 };
