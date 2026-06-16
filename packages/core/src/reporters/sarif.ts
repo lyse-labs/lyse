@@ -137,6 +137,8 @@ export function renderSarif(result: AuditResult, options: SarifRenderOptions = {
         properties: {
           lyse: {
             health_score: result.finalScore,
+            grade: result.grade?.grade ?? null,
+            grade_auto_failed: result.grade?.autoFailed ?? false,
             axes: result.axes,
             stack: result.stack,
             rules_version: RULES_VERSION,

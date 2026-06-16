@@ -409,7 +409,8 @@ function buildComment({ main, pr, threshold, diff }) {
       const mn = isFiniteScore(m) ? m : null;
       const pn = isFiniteScore(p) ? p : null;
       const d = mn !== null && pn !== null ? pn - mn : null;
-      return \`| \\\`\${mdEscape(name)}\\\` | \${fmtScore(mn)} | \${fmtScore(pn)} | \${fmtDelta(d)} |\`;
+      const mark = d === null ? "" : d < -threshold ? " ❌" : d < 0 ? " ⚠️" : "";
+      return \`| \\\`\${mdEscape(name)}\\\` | \${fmtScore(mn)} | \${fmtScore(pn)} | \${fmtDelta(d)}\${mark} |\`;
     })
     .join("\\n");
 
@@ -417,6 +418,16 @@ function buildComment({ main, pr, threshold, diff }) {
   const header = regressed
     ? \`## \${e} Lyse audit — regression detected\\n\\nThis PR drops the Health Score from **\${fmtScore(mainScore)}** to **\${fmtScore(prScore)}** (delta **\${fmtDelta(delta)}**, threshold **−\${threshold}**).\`
     : \`## \${e} Lyse audit — no regression\\n\\nHealth Score: **\${fmtScore(mainScore)}** → **\${fmtScore(prScore)}** (delta **\${fmtDelta(delta)}**, threshold **−\${threshold}**).\`;
+
+  const mainGrade = main.grade && main.grade.grade ? main.grade.grade : null;
+  const prGrade = pr.grade && pr.grade.grade ? pr.grade.grade : null;
+  const gradeLine = prGrade
+    ? \`**Grade:** \${mainGrade ?? "—"} → **\${prGrade}**\${pr.grade && pr.grade.autoFailed ? " ⛔ auto-fail" : ""}\`
+    : "";
+  const autoFailNote =
+    pr.grade && pr.grade.autoFailed && Array.isArray(pr.grade.reasons) && pr.grade.reasons.length
+      ? \`> ⛔ **Automatic fail:** \${pr.grade.reasons.map((r) => mdEscape(String(r))).join("; ")}\`
+      : "";
 
   const introducedSection = diff.introduced.length
     ? \`### New findings (\${diff.introduced.length})\\n\\n\${diff.introduced.slice(0, 20).map(fmtFinding).join("\\n")}\${diff.introduced.length > 20 ? \`\\n\\n_…and \${diff.introduced.length - 20} more — see the uploaded artifact._\` : ""}\`
@@ -433,7 +444,7 @@ function buildComment({ main, pr, threshold, diff }) {
 
   const footer = \`\\n---\\n_Posted by \\\`lyse-gate.mjs\\\` · threshold \\\`\${threshold}\\\` · scoring \\\`\${mdEscape(String(pr.scoringVersion ?? "?"))}\\\`_\`;
 
-  return [header, scoringWarn, "", "| Axis | main | PR | delta |", "|---|---|---|---|", axesTable, "", introducedSection, fixedSection, footer]
+  return [header, gradeLine, autoFailNote, scoringWarn, "", "| Axis | main | PR | delta |", "|---|---|---|---|", axesTable, "", introducedSection, fixedSection, footer]
     .filter((s) => s !== "")
     .join("\\n");
 }
