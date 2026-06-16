@@ -23,6 +23,39 @@ describe("formatExplainScore", () => {
     expect(r.rawText).toContain("No findings");
   });
 
+  it("renders a gap report: score gap (points recoverable) + maturity next-rung", () => {
+    const finding = {
+      ruleId: "tokens/dtcg-conformance",
+      subAxisId: "tokens.dtcg-conformance",
+      severity: "error" as const,
+      confidence: "high" as const,
+      message: "x",
+      file: "a.json",
+      line: 1,
+      column: 1,
+    };
+    const r = formatExplainScore({
+      findings: [finding],
+      stableSubAxes: new Set(["tokens.dtcg-conformance"]),
+      confidenceByAxis: { "tokens.dtcg-conformance": 1 },
+      maturity: {
+        level: 2,
+        signals: {
+          hasReservedAiTokens: true,
+          hasMarkerComponent: true,
+          hasInteractionAffordance: false,
+          hasGovernanceAffordance: false,
+        },
+      },
+    });
+    expect(r.rawText).toContain("How to improve:");
+    expect(r.gapReport.scoreGaps[0]!.subAxisId).toBe("tokens.dtcg-conformance");
+    expect(r.gapReport.scoreGaps[0]!.pointsRecoverable).toBe(6); // round(error_weight 4 × conf 1 × 1.5)
+    expect(r.gapReport.maturityGap!.nextLevel).toBe(3);
+    expect(r.rawText).toContain("L2 → L3");
+    expect(r.rawText).toContain("HAX / PAIR");
+  });
+
   it("renders the AI-Governance Maturity line with detail when maturity is provided", () => {
     const r = formatExplainScore({
       findings: [],

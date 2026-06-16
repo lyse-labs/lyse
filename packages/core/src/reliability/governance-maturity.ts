@@ -21,6 +21,16 @@ export interface GovernanceSignals {
   hasGovernanceAffordance: boolean;
 }
 
+/** Kavcic-aligned maturity ladder labels, indexed by level (L0–L5). */
+export const MATURITY_LABELS = [
+  "no AI layer",
+  "AI as decoration",
+  "AI as a component",
+  "AI as an interaction pattern",
+  "AI as a governance layer",
+  "AI as system infrastructure",
+] as const;
+
 /** Kavcic-aligned maturity level 0–4 (L5 not statically detectable). */
 export function computeGovernanceMaturityLevel(s: GovernanceSignals): number {
   // L0 — no visible AI layer.
