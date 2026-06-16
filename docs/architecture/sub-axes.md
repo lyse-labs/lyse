@@ -4,7 +4,7 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**43 sub-axes total** — stable: 12 · experimental: 31 · disabled: 0
+**44 sub-axes total** — stable: 12 · experimental: 32 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
@@ -19,6 +19,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `tokens.motion` | `tokens` | Motion token scale (duration/easing) | **experimental** | — | — | — |
 | `tokens.opacity` | `tokens` | Opacity token scale | **experimental** | — | — | — |
 | `tokens.responsive-breakpoints` | `tokens` | Responsive breakpoint scale | **experimental** | — | — | — |
+| `tokens.shadow` | `tokens` | Shadow / elevation token scale | **experimental** | — | — | — |
 | `tokens.spacing` | `tokens` | Spacing tokens | **experimental** | 0.163 | 0.904 | — |
 | `tokens.theme-modes` | `tokens` | Theme modes (light/dark) | **stable** | 0.901 | 0.904 | ✅ |
 | `tokens.z-index` | `tokens` | Z-index token scale | **experimental** | — | — | — |

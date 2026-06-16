@@ -30,6 +30,7 @@ import { rule as rNoHardcodedOpacity } from "./tokens-no-hardcoded-opacity.js";
 import { rule as rNoHardcodedBorderRadius } from "./tokens-no-hardcoded-border-radius.js";
 import { rule as rNoHardcodedBorderWidth } from "./tokens-no-hardcoded-border-width.js";
 import { rule as rNoHardcodedMotion } from "./tokens-no-hardcoded-motion.js";
+import { rule as rNoHardcodedShadow } from "./tokens-no-hardcoded-shadow.js";
 import { rule as rAiTokensReserved } from "./ai-governance-ai-tokens-reserved.js";
 import { rule as rAiMarkerComponentPresent } from "./ai-governance-ai-marker-component-present.js";
 import { rule as rExplainabilityAffordance } from "./ai-governance-explainability-affordance.js";
@@ -76,6 +77,7 @@ export const ruleObjects: Rule[] = [
   rNoHardcodedBorderRadius,
   rNoHardcodedBorderWidth,
   rNoHardcodedMotion,
+  rNoHardcodedShadow,
   rAiTokensReserved,
   rAiMarkerComponentPresent,
   rExplainabilityAffordance,
