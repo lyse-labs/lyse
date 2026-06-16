@@ -52,4 +52,36 @@ describe("dtcg-model type guards", () => {
   it("parseAliasPath handles whitespace around segments", () => {
     expect(parseAliasPath("{ color . brand }")).toEqual(["color", "brand"]);
   });
+
+  describe("$ref JSON-Pointer aliases", () => {
+    it("isDtcgAlias matches a { $ref } JSON-Pointer object", () => {
+      expect(isDtcgAlias({ $ref: "#/color/brand/primary" })).toBe(true);
+    });
+
+    it("isDtcgAlias rejects objects without a string $ref", () => {
+      expect(isDtcgAlias({ $ref: 123 })).toBe(false);
+      expect(isDtcgAlias({ ref: "#/a/b" })).toBe(false);
+      expect(isDtcgAlias({})).toBe(false);
+      expect(isDtcgAlias([])).toBe(false);
+    });
+
+    it("parseAliasPath parses a JSON-Pointer $ref into segments", () => {
+      expect(parseAliasPath({ $ref: "#/color/brand/primary" })).toEqual([
+        "color",
+        "brand",
+        "primary",
+      ]);
+    });
+
+    it("parseAliasPath tolerates a $ref without the leading '#'", () => {
+      expect(parseAliasPath({ $ref: "/color/brand" })).toEqual(["color", "brand"]);
+    });
+
+    it("parseAliasPath unescapes RFC 6901 tokens (~1 → /, ~0 → ~)", () => {
+      expect(parseAliasPath({ $ref: "#/spacing/~1weird~0name" })).toEqual([
+        "spacing",
+        "/weird~name",
+      ]);
+    });
+  });
 });
