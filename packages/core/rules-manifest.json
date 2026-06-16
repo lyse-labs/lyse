@@ -692,6 +692,25 @@
       ]
     },
     {
+      "id": "tokens/no-hardcoded-shadow",
+      "axis": "tokens",
+      "defaultSeverity": "warning",
+      "shortDescription": "Elevation should come from a shadow token scale",
+      "fullDescription": "Flags hardcoded `box-shadow` values in CSS / CSS-in-JS that aren't drawn from a shadow token scale. Keyword values (`none`, `inherit`, …) and tokenized references (`var(--shadow-*)`) are exempt. When a shadow token scale is loaded (`ctx.tokens.shadows`), values matching a token (whitespace-insensitive) are compliant; everything else is flagged. The full declaration value is treated as one unit (a shadow is a composite token, not per-length drift).",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-no-hardcoded-shadow.md",
+      "rationale": "Why it matters\n\nElevation is a system-level language: a handful of named shadows (`--shadow-sm/md/lg`) communicate depth consistently. Hand-rolled `box-shadow` values per component drift into a dozen near-identical-but-not blurs and opacities. Value-drift rule: experimental, does not contribute to the score until calibrated.",
+      "examples": [
+        {
+          "good": ":root { --shadow-sm: 0 1px 3px rgba(0,0,0,0.1); }\n.card { box-shadow: var(--shadow-sm); }",
+          "bad": ".card { box-shadow: 0 2px 8px rgba(0,0,0,0.2); }"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable tokens/no-hardcoded-shadow` in a README — rule is N/A",
+        "`none` / keyword values — never flagged"
+      ]
+    },
+    {
       "id": "ai-governance/ai-tokens-reserved",
       "axis": "ai-governance",
       "defaultSeverity": "info",
