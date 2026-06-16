@@ -51,5 +51,5 @@ Experimental and **reported-only**: it does not contribute to the Health Score u
 
 ## See also
 
-- [WCAG / icon-font accessibility issues](https://www.tpgi.com/icon-fonts-versus-svg-icons/)
+- [MDN: `<svg>` accessibility](https://developer.mozilla.org/en-US/docs/Web/SVG/Element/svg)
 - [Health Score](../guide/health-score.md) — how rules combine into the final score.
