@@ -616,6 +616,63 @@
       ]
     },
     {
+      "id": "tokens/no-hardcoded-opacity",
+      "axis": "tokens",
+      "defaultSeverity": "warning",
+      "shortDescription": "Opacity should come from a token scale",
+      "fullDescription": "Flags hardcoded fractional `opacity` values in CSS / CSS-in-JS that are not drawn from an opacity token scale. The semantic extremes `0` and `1` and tokenized references (`var(--opacity-*)`) are exempt. When an opacity token scale is loaded (`ctx.tokens.opacity`), on-scale values are compliant; off-scale values are flagged.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-no-hardcoded-opacity.md",
+      "rationale": "Why it matters\n\nAd-hoc opacity values (`0.65`, `0.38`, `0.87`) scattered across a system produce subtly inconsistent muted/disabled/overlay states. A small named opacity scale keeps those states coherent. Value-drift rule: experimental, does not contribute to the score until calibrated.",
+      "examples": [
+        {
+          "good": ":root { --opacity-muted: 0.6; }\n.muted { opacity: var(--opacity-muted); }",
+          "bad": ".muted { opacity: 0.65; }"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable tokens/no-hardcoded-opacity` in a README — rule is N/A",
+        "the extremes `0` and `1` — never flagged"
+      ]
+    },
+    {
+      "id": "tokens/no-hardcoded-border-radius",
+      "axis": "tokens",
+      "defaultSeverity": "warning",
+      "shortDescription": "Corner radius should come from a radii token scale",
+      "fullDescription": "Flags hardcoded `border-radius` length literals (px/rem/em) in CSS / CSS-in-JS that are not drawn from a radii token scale. `0`, percentages, the fully-rounded pill idiom (≥ 999px), and tokenized references (`var(--radius-*)`) are exempt. When a radii token scale is loaded (`ctx.tokens.radii`), on-scale values are compliant; off-scale values are flagged.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-no-hardcoded-border-radius.md",
+      "rationale": "Why it matters\n\nInconsistent corner radii (4px here, 6px there, 8px elsewhere) make a system feel unpolished. A small named radii scale keeps roundedness consistent across components. Value-drift rule: experimental, does not contribute to the score until calibrated.",
+      "examples": [
+        {
+          "good": ":root { --radius-md: 8px; }\n.card { border-radius: var(--radius-md); }",
+          "bad": ".card { border-radius: 6px; }"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable tokens/no-hardcoded-border-radius` in a README — rule is N/A",
+        "`0`, percentages, and the pill idiom (≥ 999px) — never flagged"
+      ]
+    },
+    {
+      "id": "tokens/no-hardcoded-border-width",
+      "axis": "tokens",
+      "defaultSeverity": "warning",
+      "shortDescription": "Border thickness should come from a token scale",
+      "fullDescription": "Flags hardcoded border-width length literals (px/rem/em) in CSS / CSS-in-JS — both the `border-width` / `border-<side>-width` longhands and the first length inside a `border` / `border-<side>` shorthand — that are not drawn from a border-width token scale. `0`, the ubiquitous `1px` hairline, and tokenized references (`var(--border-width-*)`) are exempt. When a border-width scale is loaded (`ctx.tokens.borderWidth`), on-scale values are compliant; off-scale values are flagged.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-no-hardcoded-border-width.md",
+      "rationale": "Why it matters\n\nBorder thicknesses beyond the default hairline (`2px`, `3px`, `0.5px`) should be deliberate, named choices, not magic numbers sprinkled per component. A small border-width scale keeps emphasis borders consistent. Value-drift rule: experimental, does not contribute to the score until calibrated.",
+      "examples": [
+        {
+          "good": ":root { --border-width-thick: 2px; }\n.active { border: var(--border-width-thick) solid; }",
+          "bad": ".active { border: 3px solid; }"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable tokens/no-hardcoded-border-width` in a README — rule is N/A",
+        "`0` and the `1px` hairline — never flagged"
+      ]
+    },
+    {
       "id": "ai-governance/ai-tokens-reserved",
       "axis": "ai-governance",
       "defaultSeverity": "info",

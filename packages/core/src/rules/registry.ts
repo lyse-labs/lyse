@@ -26,6 +26,9 @@ import { rule as rSemverVersioning } from "./versioning-semver-versioning.js";
 import { rule as rMigrationGuidePresent } from "./versioning-migration-guide-present.js";
 import { rule as rDeprecatedTokenUsage } from "./tokens-deprecated-token-usage.js";
 import { rule as rNoHardcodedZIndex } from "./tokens-no-hardcoded-z-index.js";
+import { rule as rNoHardcodedOpacity } from "./tokens-no-hardcoded-opacity.js";
+import { rule as rNoHardcodedBorderRadius } from "./tokens-no-hardcoded-border-radius.js";
+import { rule as rNoHardcodedBorderWidth } from "./tokens-no-hardcoded-border-width.js";
 import { rule as rAiTokensReserved } from "./ai-governance-ai-tokens-reserved.js";
 import { rule as rAiMarkerComponentPresent } from "./ai-governance-ai-marker-component-present.js";
 import { rule as rExplainabilityAffordance } from "./ai-governance-explainability-affordance.js";
@@ -68,6 +71,9 @@ export const ruleObjects: Rule[] = [
   rMigrationGuidePresent,
   rDeprecatedTokenUsage,
   rNoHardcodedZIndex,
+  rNoHardcodedOpacity,
+  rNoHardcodedBorderRadius,
+  rNoHardcodedBorderWidth,
   rAiTokensReserved,
   rAiMarkerComponentPresent,
   rExplainabilityAffordance,
