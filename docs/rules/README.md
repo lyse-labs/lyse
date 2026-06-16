@@ -18,6 +18,7 @@ Rule output appears in:
 | `tokens/responsive-breakpoints` | Tokens | warning | No | [→](./tokens-responsive-breakpoints.md) |
 | `tokens/no-hardcoded-z-index` | Tokens | warning | No | [→](./tokens-no-hardcoded-z-index.md) |
 | `tokens/no-hardcoded-shadow` | Tokens | warning | No | [→](./tokens-no-hardcoded-shadow.md) |
+| `tokens/no-hardcoded-typography` | Tokens | warning | No | [→](./tokens-no-hardcoded-typography.md) |
 | `tokens/no-hardcoded-opacity` | Tokens | warning | No | [→](./tokens-no-hardcoded-opacity.md) |
 | `tokens/no-hardcoded-border-radius` | Tokens | warning | No | [→](./tokens-no-hardcoded-border-radius.md) |
 | `tokens/no-hardcoded-border-width` | Tokens | warning | No | [→](./tokens-no-hardcoded-border-width.md) |
