@@ -320,6 +320,12 @@ export interface AuditResult {
   tier: string;
   axes: AxisScore[];
   findings: Finding[];      // all findings, ordered by severity desc
+  /**
+   * Findings dropped by inline `lyse-disable` directives. Excluded from the
+   * score (never counted), but surfaced in SARIF as in-source suppressions so
+   * code-scanning consumers keep dedup/trend data. Omitted when none.
+   */
+  suppressedFindings?: Finding[];
   /** ADR-0015: Layer 4 LLM augmentation metadata + #156 audit-perimeter signals. */
   meta?: {
     layer4?: Layer4Meta;

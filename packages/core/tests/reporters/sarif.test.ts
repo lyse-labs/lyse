@@ -125,6 +125,51 @@ describe("renderSarif", () => {
     expect(sarif.runs[0].results[1].locations[0].physicalLocation.artifactLocation.uri).toBe("a.tsx");
   });
 
+  describe("properties.precision", () => {
+    it("stamps measured precision on calibrated rules", () => {
+      const sarif = JSON.parse(renderSarif(sample));
+      const rules: { id: string; properties: { precision?: number } }[] =
+        sarif.runs[0].tool.driver.rules;
+      const dtcg = rules.find((r) => r.id === "tokens/dtcg-conformance");
+      expect(dtcg?.properties.precision).toBe(1);
+    });
+
+    it("omits precision for rules with no measured value", () => {
+      const sarif = JSON.parse(renderSarif(sample));
+      const rules: { id: string; properties: { precision?: number } }[] =
+        sarif.runs[0].tool.driver.rules;
+      const a11y = rules.find((r) => r.id === "a11y/essentials");
+      expect(a11y).toBeDefined();
+      expect(a11y?.properties).not.toHaveProperty("precision");
+    });
+  });
+
+  describe("suppressions", () => {
+    it("emits suppressedFindings in results[] with an in-source suppression", () => {
+      const r: AuditResult = {
+        ...sample,
+        suppressedFindings: [
+          { ...sample.findings[0]!, location: { file: "src/Ok.tsx", line: 7, column: 3 } },
+        ],
+      };
+      const sarif = JSON.parse(renderSarif(r));
+      expect(sarif.runs[0].results).toHaveLength(2);
+      const suppressed = sarif.runs[0].results[1];
+      expect(suppressed.suppressions).toEqual([{ kind: "inSource", status: "accepted" }]);
+      expect(suppressed.locations[0].physicalLocation.artifactLocation.uri).toBe("src/Ok.tsx");
+    });
+
+    it("does not add a suppressions array to normal findings", () => {
+      const sarif = JSON.parse(renderSarif(sample));
+      expect(sarif.runs[0].results[0]).not.toHaveProperty("suppressions");
+    });
+
+    it("emits no extra results when suppressedFindings is absent", () => {
+      const sarif = JSON.parse(renderSarif(sample));
+      expect(sarif.runs[0].results).toHaveLength(1);
+    });
+  });
+
   describe("partialFingerprints", () => {
     it("every result has a non-empty hex primaryLocationLineHash/v1", () => {
       const sarif = JSON.parse(renderSarif(sample));
