@@ -428,6 +428,6 @@ See [`packages/core/README.md`](../../packages/core/README.md) for the full libr
 ## Known limitations
 
 - Vue / Svelte / Solid / Angular: not yet supported. React (TSX/JSX) only.
-- styled-components / Emotion / Stitches: partial support; CSS-in-JS via template literals is parsed with Babel.
+- styled-components / Emotion / Stitches: partial support; CSS-in-JS via template literals is parsed with Babel. vanilla-extract object styles (`style`, `styleVariants`, `globalStyle`, `recipe` from `@vanilla-extract/css`) are also extracted — the declaration object is serialized to CSS so the same hardcoded-value detectors run over `*.css.ts` files.
 - **Tailwind utility classes** (e.g. `bg-blue-500`, `p-4`) are recognized as compliant token references when they reference the project's `tailwind.config` scale. Arbitrary values (e.g. `bg-[#1e293b]`) remain flagged as drift since they bypass the configured scale.
 - No HTML report. `lyse audit --format=sarif` emits a SARIF 2.1.0 file you can wire into any SARIF-aware viewer (e.g. by uploading it to GitHub's Security tab via `github/codeql-action/upload-sarif`). Each result carries a stable `partialFingerprints.primaryLocationLineHash/v1` so GitHub deduplicates findings across runs instead of re-creating them; each rule definition carries its measured `properties.precision` when calibrated; and findings dismissed by an inline `lyse-disable` directive are still emitted with an in-source `suppressions[]` entry (kept for trend data rather than dropped).
