@@ -6,23 +6,16 @@ import { CURRENT_SCORING_VERSION } from "../reliability/score/version-pin.js";
 import { findingWeight } from "../reliability/score/weight.js";
 import { BUNDLED_MANIFEST } from "../reliability/confidence/bundled-manifest.js";
 import { resolveStableSubAxes } from "../reliability/score/stable-sub-axes.js";
-import { computeGovernanceMaturityLevel } from "../reliability/governance-maturity.js";
+import { computeGovernanceMaturityLevel, MATURITY_LABELS } from "../reliability/governance-maturity.js";
 import type { GovernanceSignals } from "../reliability/governance-maturity.js";
+import { generateGapReport } from "../reliability/gap-report.js";
+import type { GapReport } from "../reliability/gap-report.js";
 import { extractGovernanceSignals, gatherAiContext } from "../reliability/governance-signals.js";
 import { judgeGovernanceMaturity } from "../llm/governance-maturity-judge.js";
 import { resolveConnector } from "../llm/connectors/resolver.js";
 import { loadConfig } from "../config/schema.js";
 import type { Finding as ReliabilityFinding } from "../reliability/types.js";
 import type { Finding as LegacyFinding } from "../types.js";
-
-const MATURITY_LABELS = [
-  "no AI layer",
-  "AI as decoration",
-  "AI as a component",
-  "AI as an interaction pattern",
-  "AI as a governance layer",
-  "AI as system infrastructure",
-] as const;
 
 function maturityDetail(s: GovernanceSignals): string {
   const present: string[] = [];
@@ -88,6 +81,7 @@ export interface ExplainScoreResult {
   buckets: AxisBucket[];
   rawText: string;
   maturityLevel?: number;
+  gapReport: GapReport;
 }
 
 export interface FormatExplainScoreArgs {
@@ -181,6 +175,28 @@ export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreRe
     }
   }
 
+  const gapReport = generateGapReport(buckets, args.maturity);
+
+  lines.push("  How to improve:");
+  if (gapReport.scoreGaps.length === 0) {
+    lines.push("    • Score: no counted findings — nothing to recover from the trusted score.");
+  } else {
+    lines.push("    • Score — fix these counted sub-axes first (most points back):");
+    for (const g of gapReport.scoreGaps) {
+      lines.push(`        ${g.subAxisId}: ${g.findings} findings → ~+${g.pointsRecoverable} pts`);
+    }
+  }
+  if (gapReport.maturityGap) {
+    const mg = gapReport.maturityGap;
+    if (mg.nextLevel === null) {
+      lines.push(`    • Maturity: at L${mg.currentLevel} (${mg.currentLabel}) — the statically-detectable ceiling.`);
+    } else {
+      lines.push(`    • Maturity: L${mg.currentLevel} → L${mg.nextLevel} (${mg.nextLabel}) needs ${mg.missing.join("; ")}`);
+    }
+  }
+  lines.push("    (Kavcic maturity is one lens; HAX / PAIR remain the ground-truth anchors.)");
+  lines.push("");
+
   return {
     score: scoring.score,
     version: scoring.version,
@@ -188,6 +204,7 @@ export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreRe
     reportedOnlyTotal: scoring.findingsReportedOnly,
     buckets,
     rawText: lines.join("\n"),
+    gapReport,
     ...(args.maturity ? { maturityLevel: args.maturity.level } : {}),
   };
 }

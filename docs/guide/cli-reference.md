@@ -257,6 +257,23 @@ Output includes:
 
 This is also available via `npm view lyse@latest` metadata, but `lyse explain` works fully offline once installed.
 
+## `lyse explain --score`
+
+Print a Lighthouse-style breakdown of the Health Score for the current repo: the
+score + scoring version, counted vs reported-only findings, the per-sub-axis
+penalty breakdown, the AI-Governance Maturity level (L0–L5, Kavcic-aligned), and
+a **gap report** ("How to improve"):
+
+- **Score** — the counted (stable) sub-axes ranked by penalty, each with the
+  approximate Health-Score points recovered if cleared (`~+N pts`). Only counted
+  sub-axes appear, so fixing them genuinely moves the score.
+- **Maturity** — the concrete affordances needed to climb one Kavcic rung
+  (e.g. `L2 → L3 needs an AI interaction affordance — …`), or a note when at the
+  statically-detectable ceiling (L4).
+
+Kavcic maturity is reported as **one lens**; HAX / PAIR remain the ground-truth
+anchors. The output is deterministic (same repo → same report).
+
 ## `lyse agents`
 
 Generate an `AGENTS.md` file that summarizes your design system rules for AI coding agents.
