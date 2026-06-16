@@ -174,6 +174,25 @@
       ]
     },
     {
+      "id": "components/no-icon-fonts",
+      "axis": "components",
+      "defaultSeverity": "warning",
+      "shortDescription": "Deliver icons as SVG, not as an icon font",
+      "fullDescription": "Checks, at repo level, whether a design system delivers its icons via an icon webfont rather than SVG. Detects (1) an icon-font dependency in package.json (`font-awesome`, `@fortawesome/fontawesome-free`, `material-icons`, `material-symbols`, `@mdi/font`, `glyphicons`, …); (2) an `@font-face` / `font-family` declaring a known icon-font family; or (3) icon-font ligature classes (`material-icons`, `glyphicon`, `fa fa-*`). Emits one warning at repo level when any signal is found. SVG-component libraries (`lucide-react`, `@fortawesome/react-fontawesome`, etc.) are not flagged.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/components-no-icon-fonts.md",
+      "rationale": "Why it matters\n\nIcon fonts map glyphs to private-use Unicode code points. Screen readers announce those code points as meaningless characters, the icons disappear under Windows High Contrast / forced-colors mode, they can't be multi-colored, and they flash-of-unstyled-content until the font loads. SVG icons avoid every one of these: they carry an accessible name (or `aria-hidden`), respect forced-colors, and render instantly.\n\nThe check is repo-level and broad: any icon-font signal anywhere (dependency, `@font-face`, or ligature class) trips it. The rule is experimental and does not contribute to the health score until calibration data is available.",
+      "examples": [
+        {
+          "good": "import { Home } from \"lucide-react\";\n<Home aria-hidden />",
+          "bad": "<span className=\"material-icons\">home</span>"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable components/no-icon-fonts` in a README — rule is N/A",
+        "SVG-component icon libraries (`lucide-react`, `@fortawesome/react-fontawesome`, …) — not icon fonts, never flagged"
+      ]
+    },
+    {
       "id": "components/contracts-strictness",
       "axis": "components",
       "defaultSeverity": "warning",
