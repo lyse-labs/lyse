@@ -1,0 +1,15 @@
+//
+// Vendored slice of IBM Carbon — @carbon/styles scss/utilities/_ai-gradient.scss
+// Source: https://github.com/carbon-design-system/carbon (Apache-2.0)
+// AI tokens are authored as `theme.$ai-*` Sass and compiled to --cds-ai-*.
+// A source scanner must read the raw `$ai-*` identifiers (the SCSS transform
+// blanks `$variable` lines) — this is the #139 hard case.
+//
+@use '../theme';
+
+@mixin ai-gradient {
+  background: theme.$ai-aura-start-sm;
+  border-color: theme.$ai-border-strong;
+}
+
+$ai-aura-end: rgba(69, 137, 255, 0);

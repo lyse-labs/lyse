@@ -1,0 +1,7 @@
+{
+  "color": {
+    "fg": { "default": { "value": "#1f2328" } },
+    "accent": { "fg": { "value": "#0969da" } }
+  },
+  "border": { "radius": { "medium": { "value": "6px" } } }
+}
