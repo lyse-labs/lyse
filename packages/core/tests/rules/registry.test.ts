@@ -10,6 +10,7 @@ const EXPECTED_IDS = [
   "tokens/responsive-breakpoints",
   "tokens/no-hardcoded-z-index",
   "tokens/no-hardcoded-shadow",
+  "tokens/no-hardcoded-typography",
   "tokens/no-hardcoded-opacity",
   "tokens/no-hardcoded-border-radius",
   "tokens/no-hardcoded-border-width",

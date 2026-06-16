@@ -711,6 +711,25 @@
       ]
     },
     {
+      "id": "tokens/no-hardcoded-typography",
+      "axis": "tokens",
+      "defaultSeverity": "warning",
+      "shortDescription": "Typography should come from a type token scale",
+      "fullDescription": "Flags hardcoded `font-size`, `font-weight`, and `letter-spacing` values in CSS / CSS-in-JS that aren't drawn from a typography token scale (`ctx.tokens.typography`, with `weight/` and `letter-spacing/` prefixed keys). Exemptions keep precision high: `font-size` only flags px/rem/em (percentages and keywords are exempt); `font-weight` exempts the canonical `400`/`700` and all keywords; `letter-spacing` exempts `0` and `normal`; `var(...)` is always exempt. `line-height` is intentionally out of scope — unitless line-heights are pervasive and rarely tokenized, so flagging them is noise.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-no-hardcoded-typography.md",
+      "rationale": "Why it matters\n\nA type scale (`--font-size-sm/md/lg`, `--font-weight-regular/semibold`) is the backbone of a design system's voice. Ad-hoc `font-size: 13px` / `font-weight: 650` scattered per component erode that scale into dozens of near-duplicates. Value-drift rule: experimental, does not contribute to the score until calibrated.",
+      "examples": [
+        {
+          "good": ":root { --font-size-sm: 13px; }\n.label { font-size: var(--font-size-sm); }",
+          "bad": ".label { font-size: 13px; font-weight: 650; }"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable tokens/no-hardcoded-typography` in a README — rule is N/A",
+        "`font-weight: 400`/`700`, percentage/keyword font-sizes, `letter-spacing: 0`, and `line-height` (out of scope) — never flagged"
+      ]
+    },
+    {
       "id": "ai-governance/ai-tokens-reserved",
       "axis": "ai-governance",
       "defaultSeverity": "info",
