@@ -9,6 +9,7 @@ const EXPECTED_IDS = [
   "tokens/theme-modes-present",
   "tokens/responsive-breakpoints",
   "components/no-native-shadows",
+  "components/no-icon-fonts",
   "components/contracts-strictness",
   "naming/component-pascalcase",
   "naming/hook-prefix",

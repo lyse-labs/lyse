@@ -20,6 +20,7 @@ Rule output appears in:
 | `a11y/prefers-reduced-motion` | A11y | warning | No | [→](./a11y-prefers-reduced-motion.md) |
 | `a11y/focus-visible` | A11y | warning | No | [→](./a11y-focus-visible.md) |
 | `components/no-native-shadows` | Components | warning | Yes | [→](./components-shadow-native.md) |
+| `components/no-icon-fonts` | Components | warning | No | [→](./components-no-icon-fonts.md) |
 | `components/contracts-strictness` | Components | warning | No | [→](./components-contracts-strictness.md) |
 | `naming/component-pascalcase` | Components | warning | Yes | [→](./naming-component-pascalcase.md) |
 | `naming/hook-prefix` | Components | warning | Yes | [→](./naming-hook-prefix.md) |
