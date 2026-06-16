@@ -31,6 +31,7 @@ import { isSuppressed } from "../suppression/inline.js";
 import { loadLyseIgnore } from "../suppression/lyseignore.js";
 import type {
   AuditResult,
+  Finding,
   Layer4Meta,
   RuleContext,
   ParsedFiles,
@@ -305,12 +306,12 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   // and `/* lyse-disable <ruleId> */` — to drop findings the user has
   // explicitly approved. Filter happens AFTER the rule engine so rules don't
   // need to be suppression-aware. Per `packages/core/src/suppression/inline.ts`.
-  const suppressedCount = { value: 0 };
+  const suppressedFindings: Finding[] = [];
   runResult.findings = runResult.findings.filter((f) => {
     const source = fileContents.get(f.location.file);
     if (!source) return true;
     if (isSuppressed(source, f.ruleId, f.location.line)) {
-      suppressedCount.value++;
+      suppressedFindings.push(f);
       return false;
     }
     return true;
@@ -396,6 +397,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     tier: scoring.tier,
     axes: scoring.axes,
     findings: runResult.findings,
+    ...(suppressedFindings.length > 0 ? { suppressedFindings } : {}),
     meta: {
       ...(layer4Meta ? { layer4: layer4Meta } : {}),
       coverage: {
