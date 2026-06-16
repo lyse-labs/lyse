@@ -112,6 +112,27 @@ describe("renderSarif", () => {
     expect(sarif.runs[0].properties.lyse.scoring_version).toBe("scoring-v1");
   });
 
+  describe("grade in run.properties.lyse", () => {
+    it("stamps the letter grade + auto-fail flag when present", () => {
+      const r: AuditResult = { ...sample, grade: { grade: "B", autoFailed: false, reasons: [] } };
+      const sarif = JSON.parse(renderSarif(r));
+      expect(sarif.runs[0].properties.lyse.grade).toBe("B");
+      expect(sarif.runs[0].properties.lyse.grade_auto_failed).toBe(false);
+    });
+
+    it("reflects an auto-fail", () => {
+      const r: AuditResult = { ...sample, grade: { grade: "Fail", autoFailed: true, reasons: ["2 axes scored 0: a11y, components"] } };
+      const sarif = JSON.parse(renderSarif(r));
+      expect(sarif.runs[0].properties.lyse.grade).toBe("Fail");
+      expect(sarif.runs[0].properties.lyse.grade_auto_failed).toBe(true);
+    });
+
+    it("emits null grade when absent (back-compat)", () => {
+      const sarif = JSON.parse(renderSarif(sample));
+      expect(sarif.runs[0].properties.lyse.grade).toBeNull();
+    });
+  });
+
   it("emits results in the same order as input findings (no implicit reorder)", () => {
     const r: AuditResult = {
       ...sample,

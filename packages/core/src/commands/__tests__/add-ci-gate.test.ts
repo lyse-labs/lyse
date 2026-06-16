@@ -39,6 +39,16 @@ describe("runAddCiGate", () => {
     expect(wf).toContain('GATE_THRESHOLD: "5"');
   });
 
+  it("gate script surfaces the grade, auto-fail callout, and per-axis regression markers (v2)", () => {
+    runAddCiGate({ cwd: tmp });
+    const gate = readFileSync(join(tmp, ".github/scripts/lyse-gate.mjs"), "utf8");
+    expect(gate).toContain("**Grade:**");
+    expect(gate).toContain("Automatic fail");
+    expect(gate).toContain("pr.grade");
+    // per-axis regression markers in the axes table
+    expect(gate).toContain("d < -threshold ?");
+  });
+
   it("workflow uses defaults when no options passed", () => {
     runAddCiGate({ cwd: tmp });
     const wf = readFileSync(join(tmp, ".github/workflows/lyse.yml"), "utf8");
