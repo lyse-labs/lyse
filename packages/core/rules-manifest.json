@@ -132,6 +132,25 @@
       ]
     },
     {
+      "id": "tokens/responsive-breakpoints",
+      "axis": "tokens",
+      "defaultSeverity": "warning",
+      "shortDescription": "Responsive design systems should tokenize their breakpoints",
+      "fullDescription": "Checks, at repo level, whether a design system that uses width-based `@media` queries (in CSS, SCSS, or CSS-in-JS) also defines a tokenized breakpoint scale — loaded breakpoint tokens (Tailwind `screens`, DTCG, CSS vars), SCSS / CSS breakpoint variables (`$breakpoint-*`, `--bp-*`), or a JS/TS `breakpoints` / `screens` object. Emits one warning when the system is responsive but no breakpoint scale is found anywhere; emits nothing when a scale exists or when there are no width media queries (N/A). The per-occurrence detection of hardcoded media-query values overlaps the hardcoded-value rule family and is intentionally not done here.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-responsive-breakpoints.md",
+      "rationale": "Why it matters\n\nWhen breakpoints live as bare literals scattered across stylesheets (`600px` here, `640px` there, `768px` elsewhere), the design system has no single source of truth for its responsive grid. Layouts break at inconsistent widths and consumers can't reason about the system's breakpoints. A tokenized scale — however expressed — makes the breakpoints explicit and shared.\n\nThe check is repo-level and broad: any breakpoint-scale signal anywhere clears it. The rule is experimental and does not contribute to the health score until calibration data is available.",
+      "examples": [
+        {
+          "good": "$breakpoint-md: 768px;\n@media (min-width: $breakpoint-md) { .grid { … } }",
+          "bad": "@media (min-width: 768px) { .grid { … } }  /* no breakpoint scale anywhere */"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable tokens/responsive-breakpoints` in a README — rule is N/A",
+        "design systems that use no width media queries — the check does not apply (N/A)"
+      ]
+    },
+    {
       "id": "components/no-native-shadows",
       "axis": "components",
       "defaultSeverity": "warning",
