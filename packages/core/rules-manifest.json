@@ -326,6 +326,25 @@
       ]
     },
     {
+      "id": "a11y/inclusive-language",
+      "axis": "a11y",
+      "defaultSeverity": "info",
+      "shortDescription": "Prefer inclusive terminology in code and docs",
+      "fullDescription": "Flags a small, high-confidence set of non-inclusive terms in TS/JS, CSS, and CSS-in-JS sources — `whitelist` (→ allowlist), `blacklist` (→ denylist), `sanity check` (→ quick check), `grandfathered` (→ legacy/exempt), and `slave` (→ replica/secondary). Each match is one `info` finding with a suggested replacement. Ambiguous terms (`master`, `dummy`) are deliberately NOT flagged to keep precision high. The block is repo-disablable via a README directive.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/a11y-inclusive-language.md",
+      "rationale": "Why it matters\n\nA design system's vocabulary propagates into every product and every developer who consumes it. Terms like `whitelist`/`blacklist` and `master`/`slave` carry exclusionary connotations and have established, clearer replacements (`allowlist`/`denylist`, `primary`/`replica`). Fixing them in the source of truth fixes them everywhere downstream.\n\nThe blocklist is intentionally narrow and unambiguous to avoid false positives; the rule is experimental and does not contribute to the health score.",
+      "examples": [
+        {
+          "good": "const allowlist: string[] = [];\nconst denylist: string[] = [];",
+          "bad": "const whitelist: string[] = [];\nconst blacklist: string[] = [];"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable a11y/inclusive-language` in a README — rule is N/A",
+        "`master` / `dummy` are never flagged (excluded to avoid false positives)"
+      ]
+    },
+    {
       "id": "stories/coverage",
       "axis": "stories",
       "defaultSeverity": "warning",

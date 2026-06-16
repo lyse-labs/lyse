@@ -4,7 +4,7 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**37 sub-axes total** — stable: 12 · experimental: 25 · disabled: 0
+**38 sub-axes total** — stable: 12 · experimental: 26 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
@@ -19,6 +19,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `tokens.theme-modes` | `tokens` | Theme modes (light/dark) | **stable** | 0.901 | 0.904 | ✅ |
 | `a11y.essentials` | `a11y` | jsx-a11y essentials | **experimental** | — | 0.904 | — |
 | `a11y.focus-visible` | `a11y` | focus-visible adoption | **experimental** | — | — | — |
+| `a11y.inclusive-language` | `a11y` | Inclusive language | **experimental** | — | — | — |
 | `a11y.prefers-reduced-motion` | `a11y` | prefers-reduced-motion compliance | **experimental** | — | — | — |
 | `components.contracts-strictness` | `components` | Component prop contract strictness | **experimental** | — | — | — |
 | `components.naming-component-pascalcase` | `components` | Component PascalCase | **experimental** | — | 0.904 | — |
