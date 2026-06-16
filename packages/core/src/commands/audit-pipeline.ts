@@ -10,6 +10,7 @@ import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { loadConfig, resolveConfigPath } from "../config/schema.js";
+import { findUnknownRuleIds, disabledRuleIds } from "../config/rules-config.js";
 import { hashDeps } from "../util/hash-deps.js";
 import { detectFromPackageJson } from "../detection/from-package-json.js";
 import { walk, DEFAULT_EXCLUDE_PATHS } from "../walker.js";
@@ -299,8 +300,23 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   const generated = loadGeneratedPack(absoluteRoot);
   for (const w of generated.warnings) process.stderr.write(`[lyse] ${w}\n`);
   const allRules = [...ruleObjects, ...generated.rules];
-  flags?.progress?.update(`Running ${allRules.length} rules…`);
-  const runResult = await runRules(allRules, ctx, parsed);
+
+  // Validate + apply the `rules:` config block against the actual registry
+  // (built-ins + generated). An unknown rule id is a hard error here — a typo'd
+  // or renamed id must never silently no-op. Disabled rules are dropped before
+  // running so they contribute no findings and no opportunities.
+  const unknownRuleIds = findUnknownRuleIds(config, new Set(allRules.map((r) => r.id)));
+  if (unknownRuleIds.length > 0) {
+    throw new Error(
+      `Unknown rule id(s) in .lyse.yaml \`rules:\`: ${unknownRuleIds.join(", ")}. ` +
+        `Run \`lyse rules\` to list valid rule ids.`,
+    );
+  }
+  const disabled = disabledRuleIds(config);
+  const activeRules = disabled.size > 0 ? allRules.filter((r) => !disabled.has(r.id)) : allRules;
+
+  flags?.progress?.update(`Running ${activeRules.length} rules…`);
+  const runResult = await runRules(activeRules, ctx, parsed);
 
   // Apply inline suppression directives — `// lyse-disable-next-line <ruleId>`
   // and `/* lyse-disable <ruleId> */` — to drop findings the user has

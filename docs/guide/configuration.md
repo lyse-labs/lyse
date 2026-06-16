@@ -127,9 +127,15 @@ If unset, Lyse scans all files except those in `excludePaths` and the default ex
 ```yaml
 rules:
   stories/coverage: off
+  tokens/no-hardcoded-color:
+    severity: off     # equivalent to the `off` literal above
 ```
 
-Disabled rules contribute zero findings. Their axis is marked N/A and weights renormalize.
+A disabled rule does not run: it contributes no findings and no opportunities.
+
+Rule ids in the `rules:` block are validated against the registry when the
+audit starts. An unknown id (typo, renamed rule) is a **hard error**, not a
+silent no-op — run `lyse rules` to list valid ids.
 
 ### Changing severity
 
@@ -139,14 +145,15 @@ rules:
     severity: error   # default: warning
 ```
 
-Severities: `error`, `warning`, `info`, `off`.
-
-Severity affects:
-- Color in the terminal output.
-- SARIF level (`error` / `warning` / `note`).
-- `--threshold` interaction: at this time, severity doesn't change the score, but a future version may weight `error` findings more heavily.
+Severities: `error`, `warning`, `info`, `off`. Only `off` is applied today
+(it disables the rule). Overriding to another level — `error` / `warning` /
+`info` — is **validated but not yet applied**; it is tracked as a follow-up.
 
 ### Per-rule options
+
+> **Note:** per-rule options (`tolerance`, `disable`, etc.) below are validated
+> at load but **not yet applied** by the built-in rules — tracked as a
+> follow-up. Only rule disabling (`off`) is wired today.
 
 Some rules accept rule-specific options. See each rule's documentation page in [`./rules/`](../rules/) for the available options.
 
@@ -185,7 +192,11 @@ Allowlisted findings still appear in JSON output with `severity: "off"` for tran
 
 ## Per-file overrides via comment frontmatter
 
-Rare but supported: pin per-file rule severities via a frontmatter block at the top of a TSX/JSX file:
+> **Not yet implemented.** This `@lyse-overrides` frontmatter block is planned
+> but not wired today. Use inline `lyse-disable` directives (above) or the
+> `rules:` block for now.
+
+Planned: pin per-file rule severities via a frontmatter block at the top of a TSX/JSX file:
 
 ```tsx
 /**
