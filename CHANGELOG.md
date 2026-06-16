@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **AI-token detection now sees SCSS-authored tokens (`$ai-*` / `theme.$ai-*`) — recall unblock for the moat (Track #139).** `detectReservedAiTokens` previously scanned `.scss` only through `transformScssToCss`, which **blanks `$variable` declarations** — so design systems that author AI tokens in Sass and compile them away were invisible to a source scan. It now also scans the **raw SCSS `$variable` source** (declarations and namespaced `theme.$ai-*` usages) through the same precision-gated `isReservedTokenName`. Verified against real OSS sources: **IBM Carbon** (`theme.$ai-aura-start-sm`, `$ai-aura-end` — the `--cds-ai-*` names exist only in compiled CSS) and **AWS Cloudscape** (`$color-text-label-gen-ai`) are now detected at source; precision is preserved (Mantine's `$ai-size`/`--ai-bg` ActionIcon vars and `$spacing-05` still don't match). This is the recall-validation unblock #71 was waiting on — governance presence can now be measured against SCSS-compiled corpora.
+
 ### Added
 
 - **New experimental rule `tokens/no-hardcoded-typography` (Track #93).** Flags hardcoded `font-size`, `font-weight`, and `letter-spacing` in CSS / CSS-in-JS that aren't drawn from a typography token scale (`ctx.tokens.typography`, `weight/` + `letter-spacing/` prefixed keys). Precision-tuned exemptions: `font-size` only flags px/rem/em (percentages/keywords exempt); `font-weight` exempts `400`/`700` + keywords; `letter-spacing` exempts `0`/`normal`; `var(...)` always exempt. **`line-height` is intentionally out of scope** (unitless line-heights are pervasive and rarely tokenized → noise). Registered `experimental` + `contributesToScore: false` (reported-only). With this, the #93 token-drift family is complete bar `gradient` (no `TokenMap` field — needs a new token category).

@@ -209,6 +209,42 @@ describe("detectReservedAiTokens (shared parser)", () => {
     expect(found).toContain("--ai-gradient-1");
   });
 
+  it("detects Carbon's real SCSS `theme.$ai-*` usages (compiled-only --cds-ai-*, #139)", () => {
+    // Carbon authors AI tokens as theme constants consumed in SCSS as
+    // `theme.$ai-*`; the `--cds-ai-*` names exist only in compiled CSS. The
+    // SCSS-source scanner must catch the `$ai-aura-*` usages/declarations.
+    writeFileSync(
+      join(tmp, "_ai-gradient.scss"),
+      `@use '../theme';
+@mixin ai-gradient {
+  background: theme.$ai-aura-start-sm;
+  border-color: theme.$ai-border-strong;
+}
+$ai-aura-end: rgba(69, 137, 255, 0);`,
+    );
+    const found = detectReservedAiTokens(tmp);
+    expect(found).toContain("$ai-aura-start-sm");
+    expect(found).toContain("$ai-aura-end");
+  });
+
+  it("detects Cloudscape's real SCSS `$*-gen-ai` declaration (#139)", () => {
+    writeFileSync(
+      join(tmp, "index.scss"),
+      "$color-text-label-gen-ai: var(--color-text-label-gen-ai-a2n3od, #7300e5);",
+    );
+    expect(detectReservedAiTokens(tmp)).toContain("$color-text-label-gen-ai");
+  });
+
+  it("SCSS `$variable` precision: non-AI vars and ambiguous `$ai-size` are NOT detected", () => {
+    writeFileSync(
+      join(tmp, "vars.scss"),
+      `@use 'theme';
+$main-color: #333;
+.x { padding: theme.$spacing-05; --ai-size: 16px; width: $ai-bg; }`,
+    );
+    expect(detectReservedAiTokens(tmp)).toEqual([]);
+  });
+
   it("ignores node_modules, dist, .git, build", () => {
     mkdirSync(join(tmp, "node_modules"), { recursive: true });
     writeFileSync(
