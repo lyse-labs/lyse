@@ -16,6 +16,7 @@ Rule output appears in:
 | `tokens/dtcg-conformance` | Tokens | warning | No | [→](./tokens-dtcg-conformance.md) |
 | `tokens/description-coverage` | Tokens | info | No | — |
 | `a11y/essentials` | A11y | error | No | [→](./a11y-essentials.md) |
+| `a11y/prefers-reduced-motion` | A11y | warning | No | [→](./a11y-prefers-reduced-motion.md) |
 | `components/no-native-shadows` | Components | warning | Yes | [→](./components-shadow-native.md) |
 | `components/contracts-strictness` | Components | warning | No | [→](./components-contracts-strictness.md) |
 | `naming/component-pascalcase` | Components | warning | Yes | [→](./naming-component-pascalcase.md) |

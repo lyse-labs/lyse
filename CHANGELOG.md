@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **New experimental rule `a11y/prefers-reduced-motion` (Track #129).** Repo-level a11y check: a design system that uses CSS motion (a real `transition` / `animation` declaration or `@keyframes`) should honor `prefers-reduced-motion`. Motion is detected from CSS + extracted CSS-in-JS (not TS, so a framer-motion `transition` prop doesn't over-fire); the guard — a `@media (prefers-reduced-motion: …)` block or a JS `matchMedia('(prefers-reduced-motion: …)')` call — is honored from CSS, CSS-in-JS, or TS. Emits one warning when motion is present but no guard is found anywhere; N/A when there is no motion. Registered `experimental` + `contributesToScore: false` — reported-only until calibration. (Motion-token drift, the other half of #129, overlaps #93 and is deferred.)
+
 ### Changed
 
 - **CSS-in-JS: extract vanilla-extract object styles.** The CSS-in-JS extractor handled tagged templates (styled-components, Emotion); it now also handles vanilla-extract's object syntax — `style`, `styleVariants`, `globalStyle`, and `recipe` from `@vanilla-extract/css`. The declaration object is serialized back to CSS-ish text (camelCase → kebab-case, recursing into nested selectors / pseudo-states / media / recipe variants) so the existing hardcoded-value detectors (`tokens/no-hardcoded-color`, `tokens/no-hardcoded-spacing`) run over `*.css.ts` files. Import-gated (only when a factory is imported from `@vanilla-extract/css`). Recall-only — no new rule, no scoring change.

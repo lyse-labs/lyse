@@ -12,6 +12,7 @@ const EXPECTED_IDS = [
   "naming/component-pascalcase",
   "naming/hook-prefix",
   "a11y/essentials",
+  "a11y/prefers-reduced-motion",
   "stories/coverage",
   "ai-surface/agents-md-quality",
   "ai-surface/component-manifest-json",
