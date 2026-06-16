@@ -15,6 +15,7 @@ Rule output appears in:
 | `tokens/no-hardcoded-spacing` | Tokens | warning | Yes | [→](./tokens-no-hardcoded-spacing.md) |
 | `tokens/dtcg-conformance` | Tokens | warning | No | [→](./tokens-dtcg-conformance.md) |
 | `tokens/description-coverage` | Tokens | info | No | — |
+| `tokens/responsive-breakpoints` | Tokens | warning | No | [→](./tokens-responsive-breakpoints.md) |
 | `a11y/essentials` | A11y | error | No | [→](./a11y-essentials.md) |
 | `a11y/prefers-reduced-motion` | A11y | warning | No | [→](./a11y-prefers-reduced-motion.md) |
 | `a11y/focus-visible` | A11y | warning | No | [→](./a11y-focus-visible.md) |
