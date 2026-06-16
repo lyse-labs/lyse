@@ -17,6 +17,7 @@ Rule output appears in:
 | `tokens/description-coverage` | Tokens | info | No | — |
 | `a11y/essentials` | A11y | error | No | [→](./a11y-essentials.md) |
 | `a11y/prefers-reduced-motion` | A11y | warning | No | [→](./a11y-prefers-reduced-motion.md) |
+| `a11y/focus-visible` | A11y | warning | No | [→](./a11y-focus-visible.md) |
 | `components/no-native-shadows` | Components | warning | Yes | [→](./components-shadow-native.md) |
 | `components/contracts-strictness` | Components | warning | No | [→](./components-contracts-strictness.md) |
 | `naming/component-pascalcase` | Components | warning | Yes | [→](./naming-component-pascalcase.md) |
