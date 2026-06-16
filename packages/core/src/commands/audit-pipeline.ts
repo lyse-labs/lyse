@@ -24,6 +24,7 @@ import { ruleObjects } from "../rules/registry.js";
 import { loadGeneratedPack } from "../rules/pack-loader.js";
 import { runRules } from "../rule-runner.js";
 import { scoreFromFindings } from "../scorer.js";
+import { computeGrade } from "../reliability/grade.js";
 import { VERSION } from "../index.js";
 import { RULES_VERSION } from "../rules/manifest.js";
 import { runLayer4Stage } from "../llm/layer4-stage.js";
@@ -395,6 +396,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   // the adapter aggregates into per-axis severity buckets internally.
   flags?.progress?.update("Scoring…");
   const scoring = scoreFromFindings(runResult.findings, runResult.opportunitiesByAxis);
+  const grade = computeGrade(scoring.finalScore, scoring.axes);
 
   const result: AuditResult = {
     schemaVersion: 2,
@@ -411,6 +413,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     stack: detectStack(absoluteRoot),
     finalScore: scoring.finalScore,
     tier: scoring.tier,
+    grade,
     axes: scoring.axes,
     findings: runResult.findings,
     ...(suppressedFindings.length > 0 ? { suppressedFindings } : {}),

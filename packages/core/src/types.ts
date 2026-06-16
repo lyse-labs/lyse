@@ -302,6 +302,15 @@ export interface CoverageMeta {
   parseErrors?: ParseError[];
 }
 
+export type Grade = "A" | "B" | "C" | "Fail";
+
+export interface GradeResult {
+  grade: Grade | "N/A";
+  autoFailed: boolean;
+  /** Human-readable auto-fail reasons; empty unless `autoFailed`. */
+  reasons: string[];
+}
+
 export interface AuditResult {
   schemaVersion: 2;
   rulesVersion: string;
@@ -318,6 +327,8 @@ export interface AuditResult {
   stack: string[];          // ["react", "tailwind", "storybook", ...]
   finalScore: number | "N/A";
   tier: string;
+  /** A/B/C/Fail letter grade + auto-fail conditions (Track #87). */
+  grade?: GradeResult;
   axes: AxisScore[];
   findings: Finding[];      // all findings, ordered by severity desc
   /**

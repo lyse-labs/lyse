@@ -32,7 +32,10 @@ function scoreLine(result: AuditResult, opts: TerminalOpts, deltaSuffix?: string
   const num = score === "N/A" ? "N/A" : `${score} / 100`;
   const colored = score === "N/A" ? dim(num, opts) : bold(thresholdColor(score, opts)(num), opts);
   const suffix = deltaSuffix ? ` ${dim(deltaSuffix, opts)}` : "";
-  return `  ${dot}  ${colored}${suffix}   ${dim("Health Score", opts)} · ${dim(result.scoringVersion, opts)}`;
+  const gradeText = result.grade && result.grade.grade !== "N/A"
+    ? `  ${bold(`Grade ${result.grade.grade}`, opts)}${result.grade.autoFailed ? dim(" (auto-fail)", opts) : ""}`
+    : "";
+  return `  ${dot}  ${colored}${suffix}${gradeText}   ${dim("Health Score", opts)} · ${dim(result.scoringVersion, opts)}`;
 }
 
 function axisLine(a: AxisScore, opts: TerminalOpts): string {

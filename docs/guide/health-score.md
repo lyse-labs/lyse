@@ -1,6 +1,6 @@
 # Health Score
 
-A single number (0–100) plus a CMMI-style maturity tier that summarize how closely your codebase follows its own design system — and how prepared that codebase is for coding agents (Claude, Cursor, Copilot) to ship coherent UI without re-deriving the design system from scratch.
+A single number (0–100), a CMMI-style maturity tier, and an A/B/C/Fail letter grade that summarize how closely your codebase follows its own design system — and how prepared that codebase is for coding agents (Claude, Cursor, Copilot) to ship coherent UI without re-deriving the design system from scratch.
 
 ## The formula (`scoring-v1`)
 
@@ -19,6 +19,9 @@ tier       = scoreToTier(finalScore)
              // 40–59  Defined
              // 60–79  Quantitative
              // 80–100 Autonomous
+grade      = computeGrade(finalScore, axes)
+             // A ≥ 80 · B ≥ 60 · C ≥ 40 · Fail < 40
+             // auto-fail (→ Fail regardless of score): ≥ 2 axes scored 0
 ```
 
 `K` is calibrated against a public 8-repo corpus. Current calibrated value: **K = 0** (rounded from 0.048); LOO MAE = **10.36 pts**. The cap slot is preserved structurally so future re-fits can drop in without a migration.
