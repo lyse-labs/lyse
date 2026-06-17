@@ -29,8 +29,9 @@ describe("v1 promotion of the 3 AI-governance affordance rules (#134)", () => {
     }
   });
 
-  it("the trusted stable set is now 25 sub-axes (22 + 3 affordance rules)", () => {
+  it("all 3 affordance rules are in the trusted stable set (≥ 25 — later cohorts add more)", () => {
     const v1 = resolveStableSubAxes(SUB_AXES, { filterRan: false });
-    expect(v1.size).toBe(25);
+    for (const id of PROMOTED) expect(v1.has(id)).toBe(true);
+    expect(v1.size).toBeGreaterThanOrEqual(25);
   });
 });
