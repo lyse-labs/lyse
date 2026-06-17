@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`lyse fix --scaffold` — generate missing AI-readiness files (Track 12.1).** The detect→fix leap: where the `ai-surface` / `ai-governance` rules flag *absent* artifacts, `--scaffold` now generates rule-passing templates for the missing ones — `llms.txt` (H1 + blockquote + linked sections), `AGENTS.md` (runnable setup block + exit-code + toolchain refs), and a value-gate governance doc (`AI_GOVERNANCE.md`, go/no-go checklist). Idempotent (skips any target whose known search paths already exist, including `.github/`/`docs/` variants), behind the existing 6 safety guards (clean tree, own branch, dedicated commit), and dry-run reports the paths without writing. `llms.txt` is titled from `package.json`'s name.
+
 ### Changed
 
 - **Batch promotion: 6 deterministic rules into the trusted v1 score (28 → 34 stable).** Already-shipped `experimental` rules that had no recall-suite generators (so were never measured and stayed reported-only) got synthetic generators and were measured — all cleared **both** gates (2026-06-17 run): `a11y/prefers-reduced-motion`, `a11y/focus-visible`, `a11y/inclusive-language`, `tokens/responsive-breakpoints`, `components/no-icon-fonts` (recall LB 0.901, precision LB 0.904), plus **`a11y/essentials`** — the core jsx-a11y rule — whose precision was a clean zero-false-positives but whose compliant generator had only 34 cases (Wilson LB 0.898); expanding it past N=36 lifted the LB to **0.908**. This scores three previously-unscored areas (a11y depth, responsive, assets) without writing new rules — the **first a11y sub-axes to count toward the Health Score**.
