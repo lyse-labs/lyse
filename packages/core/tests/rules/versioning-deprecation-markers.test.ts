@@ -47,6 +47,17 @@ describe("scanDeprecationMarkers", () => {
     expect(markers[0]!.hasGuidance).toBe(true);
   });
 
+  it("does NOT treat a trailing sibling JSDoc tag as guidance", () => {
+    const markers = scanDeprecationMarkers("/** @deprecated @internal */\nexport const Old = 1;");
+    expect(markers).toHaveLength(1);
+    expect(markers[0]!.hasGuidance).toBe(false);
+  });
+
+  it("still treats a real inline description containing an @scope token as guidance", () => {
+    const markers = scanDeprecationMarkers("/** @deprecated Use @acme/ui Button instead. */\nexport const Old = 1;");
+    expect(markers[0]!.hasGuidance).toBe(true);
+  });
+
   it("does NOT count @deprecated mentioned in prose mid-sentence", () => {
     const markers = scanDeprecationMarkers("/** This replaces the @deprecated legacy helper. */\nexport const X = 1;");
     expect(markers).toHaveLength(0);

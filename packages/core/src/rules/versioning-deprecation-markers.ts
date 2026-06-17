@@ -60,7 +60,10 @@ export function scanDeprecationMarkers(source: string): DeprecationMarker[] {
       const s = stripped[i]!;
       if (!isDeprecatedTag(s)) continue;
 
-      const inlineRest = s.slice(DEPRECATED_TAG.length).trim();
+      // Text after `@deprecated` on the same line — but a trailing sibling tag
+      // (`@deprecated @internal`) is not a description, so `@`-led rest is empty.
+      const afterTag = s.slice(DEPRECATED_TAG.length).trim();
+      const inlineRest = afterTag.startsWith("@") ? "" : afterTag;
       let wrapped = false;
       for (let j = i + 1; j < stripped.length; j++) {
         const next = stripped[j]!;
