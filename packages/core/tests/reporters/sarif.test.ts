@@ -159,9 +159,9 @@ describe("renderSarif", () => {
       const sarif = JSON.parse(renderSarif(sample));
       const rules: { id: string; properties: { precision?: number } }[] =
         sarif.runs[0].tool.driver.rules;
-      const a11y = rules.find((r) => r.id === "a11y/essentials");
-      expect(a11y).toBeDefined();
-      expect(a11y?.properties).not.toHaveProperty("precision");
+      const noPrecision = rules.find((r) => r.id === "tokens/no-hardcoded-z-index");
+      expect(noPrecision).toBeDefined();
+      expect(noPrecision?.properties).not.toHaveProperty("precision");
     });
   });
 

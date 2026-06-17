@@ -4,7 +4,7 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**51 sub-axes total** — stable: 33 · experimental: 18 · disabled: 0
+**51 sub-axes total** — stable: 34 · experimental: 17 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
@@ -24,7 +24,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `tokens.theme-modes` | `tokens` | Theme modes (light/dark) | **stable** | 0.901 | 0.904 | ✅ |
 | `tokens.typography` | `tokens` | Typography token scale (size/weight/letter-spacing) | **experimental** | — | — | — |
 | `tokens.z-index` | `tokens` | Z-index token scale | **experimental** | — | — | — |
-| `a11y.essentials` | `a11y` | jsx-a11y essentials | **experimental** | — | 0.904 | — |
+| `a11y.essentials` | `a11y` | jsx-a11y essentials | **stable** | 0.908 | 0.904 | ✅ |
 | `a11y.focus-visible` | `a11y` | focus-visible adoption | **stable** | 0.904 | 0.901 | ✅ |
 | `a11y.inclusive-language` | `a11y` | Inclusive language | **stable** | 0.904 | 0.901 | ✅ |
 | `a11y.prefers-reduced-motion` | `a11y` | prefers-reduced-motion compliance | **stable** | 0.904 | 0.901 | ✅ |
