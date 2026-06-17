@@ -24,6 +24,7 @@ import { rule as rAgentInstructionFiles } from "./ai-surface-agent-instruction-f
 import { rule as rChangelogPresent } from "./versioning-changelog-present.js";
 import { rule as rSemverVersioning } from "./versioning-semver-versioning.js";
 import { rule as rMigrationGuidePresent } from "./versioning-migration-guide-present.js";
+import { rule as rDeprecationMarkers } from "./versioning-deprecation-markers.js";
 import { rule as rDeprecatedTokenUsage } from "./tokens-deprecated-token-usage.js";
 import { rule as rNoHardcodedZIndex } from "./tokens-no-hardcoded-z-index.js";
 import { rule as rNoHardcodedOpacity } from "./tokens-no-hardcoded-opacity.js";
@@ -78,6 +79,7 @@ export const ruleObjects: Rule[] = [
   rChangelogPresent,
   rSemverVersioning,
   rMigrationGuidePresent,
+  rDeprecationMarkers,
   rDeprecatedTokenUsage,
   rNoHardcodedZIndex,
   rNoHardcodedOpacity,
