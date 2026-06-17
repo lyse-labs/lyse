@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Token ingestion: Style Dictionary, Tokens Studio, Figma Variables (Track #103).** `loadTokens` now discovers token maps from the formats teams actually use, not just Tailwind + DTCG. A new `value`/`type` loader normalizes **Style Dictionary** (`{ "value": "#fff", "type": "color" }`) and **Tokens Studio** (`$metadata`/`$themes` wrappers + TS type names like `borderRadius`, `fontWeights`, `boxShadow`) into the existing token-map model, with **explicit type→bucket routing** (more precise than DTCG's path heuristic) and alias (`{token.path}`) skipping. **Figma Variables** are ingested via their committed DTCG / Tokens-Studio export (the de-facto Figma→code path). `TokenMap.source` gains `style-dictionary` / `tokens-studio` / `figma-variables`. The loader chain now falls through empty maps so a non-token `tokens.json` doesn't shadow a real source. This widens where `lyse fix`'s token-map discovery (guard 3) works.
+
 ### Changed
 
 - **Recall-validation corpus for AI-token detection (Track #139).** Added a vendored, attributed (Apache-2.0) corpus of real OSS design-system token slices — IBM Carbon (`theme.$ai-*` source + compiled `--cds-ai-*`), AWS Cloudscape (`$*-gen-ai`), and a Mantine/Primer negative control — with a recall test that proves `detectReservedAiTokens` catches the AI-governance tokens of real systems while staying empty on the precision control. Reproducible public evidence underpinning the #71 governance-promotion decision; test-only, no score change.
