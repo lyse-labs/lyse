@@ -193,6 +193,25 @@
       ]
     },
     {
+      "id": "components/svg-viewbox",
+      "axis": "components",
+      "defaultSeverity": "warning",
+      "shortDescription": "Inline `<svg>` icons should declare a `viewBox`",
+      "fullDescription": "Scans TypeScript/JavaScript JSX for inline `<svg>` opening tags and flags any without a `viewBox` attribute. A `<svg>` with fixed width/height but no `viewBox` does not scale cleanly and can crop its contents — an icon-quality defect. Counts every inline `<svg>` as one opportunity (tags carrying a `{...spread}` are skipped, since a viewBox may arrive at runtime); emits a warning per viewBox-less tag and nothing when all carry one. Self-gating: a design system with no inline SVG records zero opportunities and is N/A.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/components-svg-viewbox.md",
+      "rationale": "Why it matters\n\nAn inline `<svg>` without a `viewBox` is locked to its intrinsic pixel size: scaling it (a larger icon, a high-DPI display, a zoom) crops or distorts the artwork instead of resizing the coordinate system. A `viewBox` makes the icon resolution-independent — the single most important attribute for a scalable icon.\n\nThe check is purely structural — it asks only whether the attribute is present, never inspecting its value — so synthetic precision equals real precision. Tags with a JSX spread are deliberately not counted, because the attribute could be supplied dynamically.",
+      "examples": [
+        {
+          "good": "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\"><path d=\"…\" /></svg>",
+          "bad": "<svg width=\"24\" height=\"24\"><path d=\"…\" /></svg>"
+        }
+      ],
+      "allowlist": [
+        "inline `// lyse-disable-next-line components/svg-viewbox` above the element",
+        "`<svg {...props}>` — skipped (viewBox may be supplied at runtime), not counted as an opportunity"
+      ]
+    },
+    {
       "id": "components/contracts-strictness",
       "axis": "components",
       "defaultSeverity": "warning",

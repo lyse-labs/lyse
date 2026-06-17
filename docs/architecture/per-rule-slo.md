@@ -23,6 +23,7 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 | `naming/hook-prefix` | `components.naming-hook-prefix` | 0.904 | 0.904 | — | 2026-06-17 |
 | `components/no-native-shadows` | `components.native-shadows` | 0.901 | 0.901 | — | 2026-06-17 |
 | `components/no-icon-fonts` | `components.no-icon-fonts` | 0.904 | 0.901 | — | 2026-06-17 |
+| `components/svg-viewbox` | `components.svg-viewbox` | 0.901 | 0.904 | — | 2026-06-18 |
 | `stories/coverage` | `stories.coverage` | 0.901 | 0.901 | — | 2026-06-17 |
 | `ai-surface/agent-instruction-files` | `ai-surface.agent-instruction-files` | 0.901 | 0.901 | — | 2026-06-15 |
 | `ai-surface/agents-md-quality` | `ai-surface.agents-md-quality` | 0.901 | 0.901 | — | 2026-06-17 |
