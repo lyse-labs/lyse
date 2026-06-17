@@ -23,7 +23,7 @@ Run `lyse mcp setup` to auto-detect your IDE and write the correct config block:
 lyse mcp setup
 ```
 
-The command detects Cursor, Claude Code, or VS Code and appends the `lyse` server entry to the correct file. Pass `--ide=cursor` / `--ide=claude-code` to override detection.
+The command detects **Cursor** (`.cursor/mcp.json`), **Claude Code** (`.mcp.json`), and **Copilot / VS Code** (`.vscode/mcp.json`), and appends the `lyse` server entry to the correct file(s). Pass `--target cursor | claude-code | copilot | all` to choose explicitly (`all` writes every detected client). Writes are **idempotent** — re-running won't duplicate the entry, and existing unrelated servers are preserved. Note Cursor/Claude use the `mcpServers` key while Copilot/VS Code use `servers` (with `"type": "stdio"`); `lyse mcp setup` writes the right shape per client.
 
 > **Dev-mode auto-detection.** When you run `lyse mcp setup` from a local checkout (e.g. `node packages/core/dist/cli.js mcp setup`), Lyse detects that it is not running from an npm install and writes an absolute-path entry instead of the `npx -y lyse mcp` default. You can also force this behavior with `--dev`. This ensures contributors get a working MCP server entry without manually editing `.mcp.json`.
 >

@@ -43,7 +43,7 @@ export interface McpSetupCompletedEvent {
   schema_version: number;
   event_type: "mcp_setup_completed";
   timestamp: string;
-  ide: "cursor" | "claude-code" | "both";
+  ide: "cursor" | "claude-code" | "copilot" | "both" | "all";
 }
 
 export interface InitStepCompletedEvent {
@@ -124,7 +124,7 @@ export async function appendCommandInvokedEvent(
  */
 export async function appendMcpSetupCompletedEvent(
   cwd: string,
-  ide: "cursor" | "claude-code" | "both",
+  ide: "cursor" | "claude-code" | "copilot" | "both" | "all",
 ): Promise<void> {
   if (!telemetryEnabled()) return;
   await appendLine(cwd, {
