@@ -48,6 +48,7 @@ const EXPECTED_IDS = [
   "ai-governance/bot-identity-labeling",
   "ai-governance/ai-token-misuse",
   "ai-governance/interaction-pattern-docs",
+  "ai-governance/draft-attribution",
 ];
 
 describe("rules/registry", () => {
