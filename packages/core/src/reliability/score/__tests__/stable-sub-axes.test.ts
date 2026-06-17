@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveStableSubAxes } from "../stable-sub-axes.js";
+import { resolveStableSubAxes, stableRuleIds } from "../stable-sub-axes.js";
 import type { SubAxisRecord } from "../../types.js";
 import { SUB_AXES } from "../../catalogue/sub-axes.js";
 
@@ -58,5 +58,23 @@ describe("resolveStableSubAxes", () => {
     const withFilter = resolveStableSubAxes(SUB_AXES, { filterRan: true });
     const withoutFilter = resolveStableSubAxes(SUB_AXES, { filterRan: false });
     expect(withFilter).toEqual(withoutFilter);
+  });
+});
+
+describe("stableRuleIds", () => {
+  it("collects the rule ids of stable contributing sub-axes", () => {
+    const axes = [
+      makeSubAxis({ id: "a.stable", status: "stable", contributesToScore: true, ruleIds: ["tokens/no-hardcoded-color"] }),
+      makeSubAxis({ id: "a.exp", status: "experimental", contributesToScore: false, ruleIds: ["ai-governance/ai-tokens-reserved"] }),
+    ];
+    const ids = stableRuleIds(axes, { filterRan: false });
+    expect(ids.has("tokens/no-hardcoded-color")).toBe(true);
+    expect(ids.has("ai-governance/ai-tokens-reserved")).toBe(false);
+  });
+
+  it("on the real catalogue, includes a known-stable rule and excludes a known-experimental one", () => {
+    const ids = stableRuleIds(SUB_AXES, { filterRan: false });
+    expect(ids.has("versioning/deprecation-markers")).toBe(true); // promoted this session
+    expect(ids.has("ai-governance/ai-tokens-reserved")).toBe(false); // recall-failing, experimental
   });
 });
