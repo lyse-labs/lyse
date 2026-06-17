@@ -22,7 +22,7 @@ findings (per severity) + opportunities per axis
 
 ## Stage 1 — per-axis score
 
-For each of the 5 axes (`tokens`, `a11y`, `components`, `stories`, `ai-surface`):
+For each of the 6 axes (`tokens`, `a11y`, `components`, `stories`, `ai-surface`, `ai-governance`):
 
 ```ts
 const weightedFindings = 4 * errors + 2 * warnings + 1 * infos;
@@ -75,7 +75,7 @@ Examples:
 ### One axis N/A (e.g., no Storybook)
 
 ```
-active = { tokens, a11y, components, ai-surface }  // 4 of 5 axes (stories N/A)
+active = { tokens, a11y, components, ai-surface }  // 4 of 6 axes (stories, ai-governance N/A)
 final  = (tokens + a11y + components + ai-surface) / 4
 ```
 

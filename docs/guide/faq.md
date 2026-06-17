@@ -26,7 +26,7 @@ Lyse is the **measurement and enforcement layer** that none of these provide. Yo
 finalScore = equal-weight mean of axisScore across active axes
 ```
 
-Each of the 5 axes (tokens, a11y, components, stories, ai-surface) is computed from its rule findings. Inactive axes (no opportunities visible in your repo) are omitted from the mean — no weights to rebalance.
+Each of the 6 axes (tokens, a11y, components, stories, ai-surface, ai-governance) is computed from its rule findings. Inactive axes (no opportunities visible in your repo) are omitted from the mean — no weights to rebalance.
 
 Full details: [`health-score.md`](./health-score.md).
 
