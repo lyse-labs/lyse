@@ -1161,6 +1161,31 @@
         "non-AI docs (path/content without an AI reference) — pattern headings there do not count",
         "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
       ]
+    },
+    {
+      "id": "ai-governance/draft-attribution",
+      "axis": "ai-governance",
+      "defaultSeverity": "warning",
+      "shortDescription": "Detect the AI draft-attribution convention",
+      "fullDescription": "When an AI surface (AI-marker component) is present, this rule checks whether the design system adopts an AI-content attribution convention (Appendix A). Detection is conservative for precision: the phrase form requires \"first draft\" anchored to an authoring verb (created / made / generated / written / drafted) plus with/by/using — so generic \"Created with Sketch\" or \"first draft of the proposal\" do not match; the structured form matches distinctive markers (`data-ai-generated`, `ai-generated` / `aiGenerated`, `drafted-with`, or a `DraftAttribution` / `AiAttribution` / `GeneratedWith*` identifier). Scans `**/*.{tsx,jsx,vue,md,mdx,ts}`. Three outcomes: AI surface + convention present → `info`; AI surface + absent → `warning`; no AI surface → no finding.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-draft-attribution.md",
+      "rationale": "Why it matters\n\nAs AI assists more design-system content — copy, docs, even component scaffolds — transparent provenance becomes a trust and governance requirement. The \"First draft created with [tool]\" convention (HAX / emerging AI-disclosure norms, Appendix A) gives teams a lightweight, consistent way to attribute AI-assisted content so reviewers and users know what was machine-drafted.\n\nThis rule detects whether the convention is adopted at all. It is deliberately precision-first — anchored phrases and distinctive structured markers, never bare \"created with\" — so it rewards genuine attribution rather than incidental text. The rule is silent on design systems with no AI surface, so non-AI systems are never penalized.",
+      "examples": [
+        {
+          "good": "<!-- README.md — AI-assisted content attributed -->\n# Component spec\n\n_First draft created with Claude; reviewed by the design team._",
+          "bad": "<!-- AI surface shipped, but no attribution convention anywhere -->\n# Component spec\n\nWritten by the team."
+        },
+        {
+          "good": "// Structured marker on AI-assisted content\nexport const Doc = () => <article data-ai-generated=\"true\">…</article>;",
+          "bad": "// Generic footer — not an attribution convention\nexport const Footer = () => <p>Created with Sketch</p>;"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable ai-governance/draft-attribution` in an adjacent README or `.lyse.yaml` — rule is N/A",
+        "repos with no AI-marker component — no AI surface detected, rule emits nothing",
+        "generic `created with` / unrelated `first draft` text — not matched (anchored detection)",
+        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
+      ]
     }
   ]
 }
