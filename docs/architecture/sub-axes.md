@@ -4,7 +4,7 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**45 sub-axes total** — stable: 22 · experimental: 23 · disabled: 0
+**48 sub-axes total** — stable: 22 · experimental: 26 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
@@ -50,8 +50,11 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `ai-governance.ai-marker-component-present` | `ai-governance` | AI-marker component present | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-governance.ai-token-requires-marker` | `ai-governance` | AI token requires co-located marker | **experimental** | — | 0.100 | — |
 | `ai-governance.ai-tokens-reserved` | `ai-governance` | Reserved AI-marker tokens inventory | **experimental** | — | 0.409 | — |
+| `ai-governance.bot-identity-labeling` | `ai-governance` | AI non-human identity labeling | **experimental** | — | — | — |
+| `ai-governance.confidence-indicator-present` | `ai-governance` | AI confidence indicator present | **experimental** | — | — | — |
 | `ai-governance.disclaimer-present` | `ai-governance` | AI disclaimer present | **experimental** | — | 0.901 | — |
 | `ai-governance.explainability-affordance` | `ai-governance` | Explainability affordance | **experimental** | — | 0.901 | — |
 | `ai-governance.feedback-control-present` | `ai-governance` | AI feedback control present | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-governance.human-control-affordances` | `ai-governance` | Human-control affordances | **experimental** | — | 0.901 | — |
+| `ai-governance.source-attribution-present` | `ai-governance` | AI source attribution present | **experimental** | — | — | — |
 | `ai-governance.value-gate-doc-present` | `ai-governance` | AI value-gate governance doc | **experimental** | — | 0.641 | — |
