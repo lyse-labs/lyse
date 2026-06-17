@@ -4,7 +4,7 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**48 sub-axes total** — stable: 25 · experimental: 23 · disabled: 0
+**49 sub-axes total** — stable: 25 · experimental: 24 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
@@ -48,6 +48,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `ai-governance.ai-loading-error-states` | `ai-governance` | AI loading state & error state | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-governance.ai-marker-anti-patterns` | `ai-governance` | AI-marker anti-patterns | **experimental** | — | 0.901 | — |
 | `ai-governance.ai-marker-component-present` | `ai-governance` | AI-marker component present | **stable** | 0.901 | 0.901 | ✅ |
+| `ai-governance.ai-token-misuse` | `ai-governance` | AI token misused on non-AI element | **experimental** | — | — | — |
 | `ai-governance.ai-token-requires-marker` | `ai-governance` | AI token requires co-located marker | **experimental** | — | 0.100 | — |
 | `ai-governance.ai-tokens-reserved` | `ai-governance` | Reserved AI-marker tokens inventory | **experimental** | — | 0.409 | — |
 | `ai-governance.bot-identity-labeling` | `ai-governance` | AI non-human identity labeling | **stable** | 0.901 | 0.901 | ✅ |
