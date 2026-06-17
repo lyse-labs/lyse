@@ -6,6 +6,7 @@ import { rule as rThemeModesPresent } from "./tokens-theme-modes-present.js";
 import { rule as rResponsiveBreakpoints } from "./tokens-responsive-breakpoints.js";
 import { rule as rShadowNative } from "./components-shadow-native.js";
 import { rule as rNoIconFonts } from "./components-no-icon-fonts.js";
+import { rule as rSvgViewbox } from "./components-svg-viewbox.js";
 import { rule as rContractsStrictness } from "./components-contracts-strictness.js";
 import { rule as rNamingPascalCase } from "./naming-component-pascalcase.js";
 import { rule as rNamingHookPrefix } from "./naming-hook-prefix.js";
@@ -61,6 +62,7 @@ export const ruleObjects: Rule[] = [
   rResponsiveBreakpoints,
   rShadowNative,
   rNoIconFonts,
+  rSvgViewbox,
   rContractsStrictness,
   rNamingPascalCase,
   rNamingHookPrefix,
