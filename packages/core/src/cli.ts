@@ -703,6 +703,7 @@ const fixCommand = defineCommand({
     "verify-with-tests": { type: "boolean", default: false, description: "run tests after each rule batch; revert on failure" },
     branch: { type: "string", description: "override the branch name (useful for tests)" },
     scaffold: { type: "boolean", default: false, description: "generate missing AI-readiness files (llms.txt, AGENTS.md, value-gate doc)" },
+    "migrate-tokens": { type: "boolean", default: false, description: "migrate legacy ({ value, type }) token JSON to DTCG ({ $value, $type }); skips files that wouldn't be conformant" },
     ...GLOBAL_FLAGS,
   },
   async run({ args }) {
@@ -724,6 +725,7 @@ const fixCommand = defineCommand({
       verifyWithTests: args["verify-with-tests"],
       branch: args.branch,
       scaffold: args.scaffold,
+      migrateTokens: args["migrate-tokens"],
     };
 
     const isQuiet = args.quiet === true;
@@ -752,6 +754,12 @@ const fixCommand = defineCommand({
       console.log(`✓ ${verb} ${result.scaffolds.length} AI-readiness file(s): ${result.scaffolds.join(", ")}`);
     } else if (args.scaffold) {
       console.log("✓ Scaffold: all AI-readiness files already present.");
+    }
+    if (result.migratedTokens.length > 0) {
+      const verb = args["dry-run"] ? "Would migrate" : "Migrated";
+      console.log(`✓ ${verb} ${result.migratedTokens.length} token file(s) to DTCG: ${result.migratedTokens.join(", ")}`);
+    } else if (args["migrate-tokens"]) {
+      console.log("✓ Migrate-tokens: no convertible legacy token files found.");
     }
     if (result.skipped.medium > 0 || result.skipped.low > 0) {
       console.log(`  Skipped: ${result.skipped.medium} medium-confidence, ${result.skipped.low} low-confidence findings`);
