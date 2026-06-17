@@ -4,7 +4,7 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**51 sub-axes total** — stable: 28 · experimental: 23 · disabled: 0
+**51 sub-axes total** — stable: 33 · experimental: 18 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
@@ -18,21 +18,21 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `tokens.dtcg-conformance` | `tokens` | DTCG conformance | **stable** | 0.901 | 0.901 | ✅ |
 | `tokens.motion` | `tokens` | Motion token scale (duration/easing) | **experimental** | — | — | — |
 | `tokens.opacity` | `tokens` | Opacity token scale | **experimental** | — | — | — |
-| `tokens.responsive-breakpoints` | `tokens` | Responsive breakpoint scale | **experimental** | — | — | — |
+| `tokens.responsive-breakpoints` | `tokens` | Responsive breakpoint scale | **stable** | 0.904 | 0.901 | ✅ |
 | `tokens.shadow` | `tokens` | Shadow / elevation token scale | **experimental** | — | — | — |
 | `tokens.spacing` | `tokens` | Spacing tokens | **experimental** | 0.163 | 0.904 | — |
 | `tokens.theme-modes` | `tokens` | Theme modes (light/dark) | **stable** | 0.901 | 0.904 | ✅ |
 | `tokens.typography` | `tokens` | Typography token scale (size/weight/letter-spacing) | **experimental** | — | — | — |
 | `tokens.z-index` | `tokens` | Z-index token scale | **experimental** | — | — | — |
 | `a11y.essentials` | `a11y` | jsx-a11y essentials | **experimental** | — | 0.904 | — |
-| `a11y.focus-visible` | `a11y` | focus-visible adoption | **experimental** | — | — | — |
-| `a11y.inclusive-language` | `a11y` | Inclusive language | **experimental** | — | — | — |
-| `a11y.prefers-reduced-motion` | `a11y` | prefers-reduced-motion compliance | **experimental** | — | — | — |
+| `a11y.focus-visible` | `a11y` | focus-visible adoption | **stable** | 0.904 | 0.901 | ✅ |
+| `a11y.inclusive-language` | `a11y` | Inclusive language | **stable** | 0.904 | 0.901 | ✅ |
+| `a11y.prefers-reduced-motion` | `a11y` | prefers-reduced-motion compliance | **stable** | 0.904 | 0.901 | ✅ |
 | `components.contracts-strictness` | `components` | Component prop contract strictness | **experimental** | — | — | — |
 | `components.naming-component-pascalcase` | `components` | Component PascalCase | **stable** | 0.904 | 0.904 | ✅ |
 | `components.naming-hook-prefix` | `components` | Hook `use` prefix | **stable** | 0.904 | 0.904 | ✅ |
 | `components.native-shadows` | `components` | Native shadow elements | **stable** | 0.901 | 0.901 | ✅ |
-| `components.no-icon-fonts` | `components` | Icon delivery (SVG over icon-font) | **experimental** | — | — | — |
+| `components.no-icon-fonts` | `components` | Icon delivery (SVG over icon-font) | **stable** | 0.904 | 0.901 | ✅ |
 | `stories.coverage` | `stories` | Storybook coverage | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-surface.agent-instruction-files` | `ai-surface` | Agent instruction files (Cursor / Claude) | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-surface.agents-md-quality` | `ai-surface` | AGENTS.md quality | **stable** | 0.901 | 0.901 | ✅ |
