@@ -43,6 +43,9 @@ const EXPECTED_IDS = [
   "ai-governance/disclaimer-present",
   "ai-governance/feedback-control-present",
   "ai-governance/value-gate-doc-present",
+  "ai-governance/confidence-indicator-present",
+  "ai-governance/source-attribution-present",
+  "ai-governance/bot-identity-labeling",
 ];
 
 describe("rules/registry", () => {

@@ -1036,6 +1036,81 @@
         "doc files larger than 500 KB — skipped to avoid pathological cases",
         "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
       ]
+    },
+    {
+      "id": "ai-governance/confidence-indicator-present",
+      "axis": "ai-governance",
+      "defaultSeverity": "warning",
+      "shortDescription": "Detect a confidence/uncertainty indicator on AI output",
+      "fullDescription": "When an AI-marker component is detected in the design system, this rule checks whether a companion confidence/uncertainty indicator exists co-located in the same file. Detection is per-file: a confidence vocabulary match only earns credit when the same file also contains an AI marker (component name or JSX tag). The scan checks exported identifiers and file base names against the confidence vocabulary (case-insensitive substring, separator-normalised): `confidence`, `uncertainty`, `certainty` — covering names like ConfidenceBadge, ConfidenceScore, ConfidenceLevel, UncertaintyIndicator, CertaintyMeter. Three outcomes: AI-marker present + confidence indicator co-located → `info`; AI-marker present + no co-located confidence indicator → `warning`; no AI-marker anywhere → no finding.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-confidence-indicator-present.md",
+      "rationale": "Why it matters\n\nGenerative AI output is probabilistic — it can be confidently wrong. HAX G2 (IBM Human-AI Experience guidelines, \"Make clear how well the system can do what it can do\") and the Google PAIR Explainability + Trust guidebook require AI interfaces to communicate uncertainty, so users can calibrate how much to trust a given result rather than treating every answer as authoritative.\n\nA dedicated, reusable confidence affordance (badge, score, meter, or qualitative low/medium/high indicator) gives teams a consistent vocabulary and accessible UX for surfacing model uncertainty. Without one, teams either omit uncertainty entirely (over-trust) or hand-roll inconsistent ad-hoc indicators.\n\nThe rule uses per-file co-location: a confidence component only earns credit when it lives in the same file as an AI-marker component or JSX tag, so a statistical ConfidenceInterval chart component in an unrelated file does not falsely count. The rule fires only when at least one AI-marker file exists — a design system with no AI surface is not penalized.",
+      "examples": [
+        {
+          "good": "// AiAnswer.tsx — confidence indicator co-located with AI marker\nexport const AILabel = () => null;\nexport const ConfidenceBadge = () => null;",
+          "bad": "// AILabel.tsx — AI marker present but no confidence indicator shipped anywhere"
+        },
+        {
+          "good": "// AIOutput.tsx — exposes an uncertainty indicator alongside the AI badge\nexport const AIBadge = () => null;\nexport const UncertaintyIndicator = () => null;",
+          "bad": "// ConfidenceInterval.tsx — statistics chart, no AI marker in the file → does not count"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable ai-governance/confidence-indicator-present` in an adjacent README or `.lyse.yaml` — rule is N/A",
+        "repos with no AI-marker component — no AI surface detected, rule emits nothing",
+        "files larger than 1 MB — skipped to avoid pathological cases",
+        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
+      ]
+    },
+    {
+      "id": "ai-governance/source-attribution-present",
+      "axis": "ai-governance",
+      "defaultSeverity": "warning",
+      "shortDescription": "Detect a source-attribution component on AI output",
+      "fullDescription": "When an AI-marker component is detected in the design system, this rule checks whether a companion source-attribution / citation component exists co-located in the same file. Detection is per-file: an attribution vocabulary match only earns credit when the same file also contains an AI marker (component name or JSX tag). The scan checks exported identifiers and file base names against a distinctive attribution vocabulary (case-insensitive substring, separator-normalised): `citation`, `attribution`, `provenance` — covering names like Citation, Citations, SourceCitation, SourceAttribution, Provenance. The bare generic `source`/`reference` are deliberately excluded to avoid matching SourceCode / ReferenceDocs. Three outcomes: AI-marker present + attribution component co-located → `info`; AI-marker present + no co-located attribution component → `warning`; no AI-marker anywhere → no finding.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-source-attribution-present.md",
+      "rationale": "Why it matters\n\nGenerative AI answers are most trustworthy when they cite where their claims come from. HAX G11 (IBM Human-AI Experience guidelines, \"Convey the consequences of user actions\" / explainability of outputs) and the Google PAIR Explainability + Trust guidebook call for AI interfaces to attribute sources, so users can verify generated claims rather than taking them on faith — directly mitigating hallucination harm.\n\nA dedicated, reusable source-attribution component (citation list, inline citations, provenance panel) gives teams a consistent, accessible pattern for surfacing the documents or data behind an answer. Without one, teams either omit attribution (unverifiable output) or hand-roll inconsistent citation UIs.\n\nThe rule uses per-file co-location: an attribution component only earns credit when it lives in the same file as an AI-marker component or JSX tag, so a generic bibliography or academic Citation component in an unrelated, non-AI file does not falsely count. The rule fires only when at least one AI-marker file exists — a design system with no AI surface is not penalized.",
+      "examples": [
+        {
+          "good": "// AiAnswer.tsx — citation component co-located with AI marker\nexport const AILabel = () => null;\nexport const Citations = () => null;",
+          "bad": "// AILabel.tsx — AI marker present but no source-attribution component shipped anywhere"
+        },
+        {
+          "good": "// AIOutput.tsx — exposes a provenance panel alongside the AI badge\nexport const AIBadge = () => null;\nexport const SourceAttribution = () => null;",
+          "bad": "// Bibliography.tsx — academic citation list, no AI marker in the file → does not count"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable ai-governance/source-attribution-present` in an adjacent README or `.lyse.yaml` — rule is N/A",
+        "repos with no AI-marker component — no AI surface detected, rule emits nothing",
+        "files larger than 1 MB — skipped to avoid pathological cases",
+        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
+      ]
+    },
+    {
+      "id": "ai-governance/bot-identity-labeling",
+      "axis": "ai-governance",
+      "defaultSeverity": "warning",
+      "shortDescription": "Detect non-human (bot/avatar) identity labeling on AI surfaces",
+      "fullDescription": "When an AI-marker component is detected in the design system, this rule checks whether a companion non-human identity label (bot/AI avatar or persona) exists co-located in the same file. Detection is per-file: an identity vocabulary match only earns credit when the same file also contains an AI marker (component name or JSX tag). The scan checks exported identifiers and file base names against a DISTINCTIVE COMPOUND vocabulary (case-insensitive substring, separator-normalised): `aiavatar`, `botavatar`, `assistantavatar`, `agentavatar`, `aipersona`, `botpersona`, `assistantpersona`, `aiidentity`, `botidentity`, `nonhuman`. A bare `bot` token is deliberately NOT used (it would false-fire on \"bottom\"/\"robot\"). Three outcomes: AI-marker present + identity label co-located → `info`; AI-marker present + no co-located identity label → `warning`; no AI-marker anywhere → no finding.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-bot-identity-labeling.md",
+      "rationale": "Why it matters\n\nUsers have a right to know when they are interacting with an AI rather than a human. HAX G1 (IBM Human-AI Experience guidelines, \"Make clear what the system can do\") and the Google PAIR \"Set expectations\" guidance — echoed by emerging disclosure regulation (EU AI Act transparency obligations) — call for conversational AI surfaces to clearly label the agent as non-human, preventing deceptive anthropomorphism.\n\nA dedicated, reusable non-human identity affordance (a bot/AI avatar or a labeled persona) gives teams a consistent, accessible way to disclose the agent's nature. Without one, teams ship human-looking avatars with no disclosure, or hand-roll inconsistent labels.\n\nThe rule uses per-file co-location and distinctive compound vocabulary: an identity label only earns credit when it lives in the same file as an AI-marker component or JSX tag, and only compound names (AiAvatar, BotPersona, NonHumanBadge) match — a generic Avatar primitive does not. The rule fires only when at least one AI-marker file exists — a design system with no AI surface is not penalized.",
+      "examples": [
+        {
+          "good": "// AiChat.tsx — non-human identity label co-located with AI marker\nexport const AILabel = () => null;\nexport const AiAvatar = () => null;",
+          "bad": "// AILabel.tsx — AI marker present but no non-human identity label shipped anywhere"
+        },
+        {
+          "good": "// Assistant.tsx — exposes a labeled bot persona alongside the AI badge\nexport const AIBadge = () => null;\nexport const BotPersona = () => null;",
+          "bad": "// Avatar.tsx — generic user avatar primitive, no AI marker in the file → does not count"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable ai-governance/bot-identity-labeling` in an adjacent README or `.lyse.yaml` — rule is N/A",
+        "repos with no AI-marker component — no AI surface detected, rule emits nothing",
+        "files larger than 1 MB — skipped to avoid pathological cases",
+        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
+      ]
     }
   ]
 }

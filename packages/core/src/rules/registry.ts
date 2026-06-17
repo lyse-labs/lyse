@@ -43,6 +43,9 @@ import { rule as rAiContentLiveRegion } from "./ai-governance-ai-content-live-re
 import { rule as rDisclaimerPresent } from "./ai-governance-disclaimer-present.js";
 import { rule as rFeedbackControlPresent } from "./ai-governance-feedback-control-present.js";
 import { rule as rValueGateDocPresent } from "./ai-governance-value-gate-doc-present.js";
+import { rule as rConfidenceIndicatorPresent } from "./ai-governance-confidence-indicator-present.js";
+import { rule as rSourceAttributionPresent } from "./ai-governance-source-attribution-present.js";
+import { rule as rBotIdentityLabeling } from "./ai-governance-bot-identity-labeling.js";
 import type { Rule } from "../types.js";
 
 export const ruleObjects: Rule[] = [
@@ -91,6 +94,9 @@ export const ruleObjects: Rule[] = [
   rDisclaimerPresent,
   rFeedbackControlPresent,
   rValueGateDocPresent,
+  rConfidenceIndicatorPresent,
+  rSourceAttributionPresent,
+  rBotIdentityLabeling,
 ];
 
 export const ruleMap = new Map<string, Rule>(ruleObjects.map((r) => [r.id, r]));
