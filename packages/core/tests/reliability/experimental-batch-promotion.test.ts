@@ -11,6 +11,9 @@ const PROMOTED = [
   "a11y.inclusive-language",
   "tokens.responsive-breakpoints",
   "components.no-icon-fonts",
+  // a11y.essentials: cleared after expanding its compliant generator past N=36
+  // (precision LB 0.898 → 0.908).
+  "a11y.essentials",
 ];
 
 describe("batch promotion of 5 deterministic experimental rules", () => {
@@ -27,8 +30,8 @@ describe("batch promotion of 5 deterministic experimental rules", () => {
     }
   });
 
-  it("brings the trusted stable set to ≥ 33 sub-axes", () => {
+  it("brings the trusted stable set to ≥ 34 sub-axes", () => {
     const v1 = resolveStableSubAxes(SUB_AXES, { filterRan: false });
-    expect(v1.size).toBeGreaterThanOrEqual(33);
+    expect(v1.size).toBeGreaterThanOrEqual(34);
   });
 });

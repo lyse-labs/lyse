@@ -60,22 +60,22 @@ describe("resolveScoreV2PreviewSubAxes (#71)", () => {
 
 describe("formatExplainScore surfaces the read-only preview (#71)", () => {
   const finding: Finding = {
-    ruleId: "a11y/essentials",
-    subAxisId: "a11y.essentials",
+    ruleId: "tokens/no-hardcoded-color",
+    subAxisId: "tokens.color",
     severity: "warning",
     confidence: "high",
-    message: "missing label",
+    message: "hardcoded color",
     file: "Button.tsx",
     line: 1,
     column: null,
   };
-  const confidenceByAxis: Record<string, number> = { "a11y.essentials": 0.9 };
+  const confidenceByAxis: Record<string, number> = { "tokens.color": 0.9 };
 
   it("reports a scoreV2Preview that counts preview-only sub-axes the trusted score ignores", () => {
     const stableSubAxes = resolveStableSubAxes(SUB_AXES, { filterRan: false });
-    // a11y.essentials is NOT promoted (precision LB 0.898) — inject it into the
+    // tokens.color is NOT promoted (drift, data/LLM-walled) — inject it into the
     // preview set explicitly to exercise the rendering mechanism.
-    const previewSubAxes = new Set([...stableSubAxes, "a11y.essentials"]);
+    const previewSubAxes = new Set([...stableSubAxes, "tokens.color"]);
     const r = formatExplainScore({ findings: [finding], stableSubAxes, previewSubAxes, confidenceByAxis });
     expect(r.scoreV2Preview).toBeDefined();
     expect(r.countedTotal).toBe(0);
