@@ -475,10 +475,116 @@ async function fromDtcg(root: string): Promise<TokenMap | null> {
   };
 }
 
+// Serialize a Tokens-Studio / Style-Dictionary shadow value (object with
+// x/y or offsetX/offsetY, or an array of them) to a CSS box-shadow string.
+function serializeValueTypeShadow(v: unknown): string | null {
+  const one = (o: Record<string, unknown>): string =>
+    [o.x ?? o.offsetX, o.y ?? o.offsetY, o.blur, o.spread, o.color]
+      .filter((p) => p !== undefined && p !== null && p !== "")
+      .map(String)
+      .join(" ");
+  if (typeof v === "string") return v.trim() || null;
+  if (Array.isArray(v)) {
+    const parts = v.filter((o) => o && typeof o === "object").map((o) => one(o as Record<string, unknown>)).filter(Boolean);
+    return parts.length > 0 ? parts.join(", ") : null;
+  }
+  if (typeof v === "object" && v !== null) {
+    const s = one(v as Record<string, unknown>);
+    return s || null;
+  }
+  return null;
+}
+
+interface ValueTypeMaps {
+  colors: Map<string, string[]>; spacing: Map<string, string[]>; typography: Map<string, string[]>;
+  radii: Map<string, string[]>; shadows: Map<string, string[]>; motion: Map<string, string[]>;
+  zIndex: Map<string, string[]>; opacity: Map<string, string[]>; borderWidth: Map<string, string[]>;
+  breakpoints: Map<string, string[]>;
+}
+
+// Route a Style-Dictionary / Tokens-Studio `{ value, type }` leaf into the
+// token map by its EXPLICIT type name (more precise than DTCG's path heuristic).
+function routeValueTypeToken(maps: ValueTypeMaps, type: string, rawValue: unknown, path: string): void {
+  // References (`{color.brand}` / `$color.brand`) are aliases, not literal tokens.
+  if (typeof rawValue === "string" && /^\{.*\}$/.test(rawValue.trim())) return;
+  const t = type.toLowerCase();
+  const value = String(rawValue).toLowerCase().trim();
+  if (t === "color") pushToken(maps.colors, value, path);
+  else if (["spacing", "sizing", "dimension", "size"].includes(t)) pushToken(maps.spacing, value.replace(/px$/, ""), path);
+  else if (["borderradius", "radius"].includes(t)) pushToken(maps.radii, value, path);
+  else if (t === "borderwidth") pushToken(maps.borderWidth, value, path);
+  else if (["fontsizes", "fontsize"].includes(t)) pushToken(maps.typography, value, path);
+  else if (["fontfamilies", "fontfamily"].includes(t)) pushToken(maps.typography, `family/${value}`, path);
+  else if (["fontweights", "fontweight"].includes(t)) pushToken(maps.typography, `weight/${value}`, path);
+  else if (["lineheights", "lineheight"].includes(t)) pushToken(maps.typography, `line-height/${value}`, path);
+  else if (t === "letterspacing") pushToken(maps.typography, `letter-spacing/${value}`, path);
+  else if (["boxshadow", "shadow"].includes(t)) { const s = serializeValueTypeShadow(rawValue); if (s) pushToken(maps.shadows, s.toLowerCase(), path); }
+  else if (t === "opacity") pushToken(maps.opacity, value, path);
+  else if (["zindex", "z-index"].includes(t)) pushToken(maps.zIndex, value, path);
+  else if (["duration", "transition"].includes(t)) pushToken(maps.motion, `duration/${value}`, path);
+  else if (["cubicbezier", "easing"].includes(t)) pushToken(maps.motion, `easing/${value}`, path);
+}
+
+interface JsonObj { [k: string]: unknown }
+
+/**
+ * Style Dictionary (v3 `value`/`type`), Tokens Studio (`$metadata`/`$themes`
+ * wrappers + TS type names), and Figma Variables (via their DTCG/Tokens-Studio
+ * export) — all share a `{ value, type }` leaf shape. Normalized into the same
+ * token-map model. DTCG (`$value`/`$type`) files are inert here (handled by
+ * `fromDtcg`) since they carry no bare `value`/`type` leaf.
+ */
+async function fromValueTypeTokens(root: string): Promise<TokenMap | null> {
+  const files = await fg(["**/tokens.json", "**/tokens/**/*.json", "**/*.tokens.json"], {
+    cwd: root, absolute: true, ignore: ["**/node_modules/**", "**/dist/**", "**/build/**"], onlyFiles: true, unique: true,
+  });
+  if (files.length === 0) return null;
+
+  const maps: ValueTypeMaps = {
+    colors: new Map(), spacing: new Map(), typography: new Map(), radii: new Map(), shadows: new Map(),
+    motion: new Map(), zIndex: new Map(), opacity: new Map(), borderWidth: new Map(), breakpoints: new Map(),
+  };
+  let sawTokensStudio = false;
+
+  const walk = (node: JsonObj, path: string[]): void => {
+    const type = node["type"];
+    if (node["value"] !== undefined && typeof type === "string") {
+      routeValueTypeToken(maps, type, node["value"], path.join("/"));
+      return;
+    }
+    for (const [k, v] of Object.entries(node)) {
+      if (k.startsWith("$")) continue; // strips Tokens-Studio $metadata / $themes
+      if (v && typeof v === "object") walk(v as JsonObj, [...path, k]);
+    }
+  };
+
+  for (const f of files) {
+    let parsed: unknown;
+    try { parsed = JSON.parse(readFileSync(f, "utf8")); } catch { continue; }
+    if (!parsed || typeof parsed !== "object") continue;
+    const obj = parsed as JsonObj;
+    if ("$metadata" in obj || "$themes" in obj) sawTokensStudio = true;
+    walk(obj, []);
+  }
+
+  const total = maps.colors.size + maps.spacing.size + maps.typography.size + maps.radii.size +
+    maps.shadows.size + maps.motion.size + maps.zIndex.size + maps.opacity.size + maps.borderWidth.size + maps.breakpoints.size;
+  if (total === 0) return null;
+  return { ...maps, source: sawTokensStudio ? "tokens-studio" : "style-dictionary" };
+}
+
+function hasAnyToken(tm: TokenMap | null): TokenMap | null {
+  if (!tm) return null;
+  const n = tm.colors.size + tm.spacing.size + tm.typography.size + tm.radii.size + tm.shadows.size +
+    tm.motion.size + tm.zIndex.size + tm.opacity.size + tm.borderWidth.size + tm.breakpoints.size;
+  return n > 0 ? tm : null;
+}
+
 export async function loadTokens(root: string): Promise<TokenMap | null> {
   return (
-    (await fromTailwindV3(root)) ??
-    (await fromTailwindV4(root)) ??
-    (await fromDtcg(root))
+    hasAnyToken(await fromTailwindV3(root)) ??
+    hasAnyToken(await fromTailwindV4(root)) ??
+    hasAnyToken(await fromDtcg(root)) ??
+    hasAnyToken(await fromValueTypeTokens(root))
   );
 }

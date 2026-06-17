@@ -109,7 +109,7 @@ export interface TokenMap {
   zIndex: Map<string, string[]>;       // z-index values → [token-paths]
   opacity: Map<string, string[]>;      // opacity values → [token-paths]
   borderWidth: Map<string, string[]>;  // border-width values → [token-paths]
-  source: "tailwind-v3" | "tailwind-v4" | "dtcg" | "css-vars" | "mixed";
+  source: "tailwind-v3" | "tailwind-v4" | "dtcg" | "css-vars" | "style-dictionary" | "tokens-studio" | "figma-variables" | "mixed";
 }
 
 /** A single prop extracted from a component's TypeScript type annotation. */
