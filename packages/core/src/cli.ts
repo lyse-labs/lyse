@@ -702,6 +702,7 @@ const fixCommand = defineCommand({
     "force-on-dirty": { type: "boolean", default: false, description: "allow running on a dirty working tree" },
     "verify-with-tests": { type: "boolean", default: false, description: "run tests after each rule batch; revert on failure" },
     branch: { type: "string", description: "override the branch name (useful for tests)" },
+    scaffold: { type: "boolean", default: false, description: "generate missing AI-readiness files (llms.txt, AGENTS.md, value-gate doc)" },
     ...GLOBAL_FLAGS,
   },
   async run({ args }) {
@@ -722,6 +723,7 @@ const fixCommand = defineCommand({
       forceOnDirty: args["force-on-dirty"],
       verifyWithTests: args["verify-with-tests"],
       branch: args.branch,
+      scaffold: args.scaffold,
     };
 
     const isQuiet = args.quiet === true;
@@ -744,6 +746,12 @@ const fixCommand = defineCommand({
           process.stderr.write(`  ⚠ ${w}\n`);
         }
       }
+    }
+    if (result.scaffolds.length > 0) {
+      const verb = args["dry-run"] ? "Would scaffold" : "Scaffolded";
+      console.log(`✓ ${verb} ${result.scaffolds.length} AI-readiness file(s): ${result.scaffolds.join(", ")}`);
+    } else if (args.scaffold) {
+      console.log("✓ Scaffold: all AI-readiness files already present.");
     }
     if (result.skipped.medium > 0 || result.skipped.low > 0) {
       console.log(`  Skipped: ${result.skipped.medium} medium-confidence, ${result.skipped.low} low-confidence findings`);
