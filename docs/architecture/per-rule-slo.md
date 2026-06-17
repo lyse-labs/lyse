@@ -13,10 +13,15 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 | `tokens/deprecated-token-usage` | `tokens.deprecated-token-usage` | 0.901 | 0.904 | — | 2026-06-15 |
 | `tokens/description-coverage` | `tokens.description-coverage` | 0.901 | 0.901 | — | 2026-06-17 |
 | `tokens/dtcg-conformance` | `tokens.dtcg-conformance` | 0.901 | 0.901 | — | 2026-06-15 |
+| `tokens/responsive-breakpoints` | `tokens.responsive-breakpoints` | 0.904 | 0.901 | — | 2026-06-17 |
 | `tokens/theme-modes-present` | `tokens.theme-modes` | 0.901 | 0.904 | — | 2026-06-15 |
+| `a11y/focus-visible` | `a11y.focus-visible` | 0.904 | 0.901 | — | 2026-06-17 |
+| `a11y/inclusive-language` | `a11y.inclusive-language` | 0.904 | 0.901 | — | 2026-06-17 |
+| `a11y/prefers-reduced-motion` | `a11y.prefers-reduced-motion` | 0.904 | 0.901 | — | 2026-06-17 |
 | `naming/component-pascalcase` | `components.naming-component-pascalcase` | 0.904 | 0.904 | — | 2026-06-17 |
 | `naming/hook-prefix` | `components.naming-hook-prefix` | 0.904 | 0.904 | — | 2026-06-17 |
 | `components/no-native-shadows` | `components.native-shadows` | 0.901 | 0.901 | — | 2026-06-17 |
+| `components/no-icon-fonts` | `components.no-icon-fonts` | 0.904 | 0.901 | — | 2026-06-17 |
 | `stories/coverage` | `stories.coverage` | 0.901 | 0.901 | — | 2026-06-17 |
 | `ai-surface/agent-instruction-files` | `ai-surface.agent-instruction-files` | 0.901 | 0.901 | — | 2026-06-15 |
 | `ai-surface/agents-md-quality` | `ai-surface.agents-md-quality` | 0.901 | 0.901 | — | 2026-06-17 |
