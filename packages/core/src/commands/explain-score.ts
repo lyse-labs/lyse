@@ -6,6 +6,7 @@ import { CURRENT_SCORING_VERSION } from "../reliability/score/version-pin.js";
 import { findingWeight } from "../reliability/score/weight.js";
 import { BUNDLED_MANIFEST } from "../reliability/confidence/bundled-manifest.js";
 import { resolveStableSubAxes } from "../reliability/score/stable-sub-axes.js";
+import { resolveScoreV2PreviewSubAxes } from "../reliability/score/score-v2-preview.js";
 import { computeGovernanceMaturityLevel, MATURITY_LABELS } from "../reliability/governance-maturity.js";
 import type { GovernanceSignals } from "../reliability/governance-maturity.js";
 import { generateGapReport } from "../reliability/gap-report.js";
@@ -82,12 +83,24 @@ export interface ExplainScoreResult {
   rawText: string;
   maturityLevel?: number;
   gapReport: GapReport;
+  /**
+   * Read-only score-v2 preview (#71): what the Health Score would be if the
+   * deterministic gate-clearing sub-axes were promoted into the trusted score.
+   * Present only when `previewSubAxes` was supplied. Never the live score.
+   */
+  scoreV2Preview?: { score: number; countedTotal: number };
 }
 
 export interface FormatExplainScoreArgs {
   findings: ReliabilityFinding[];
   stableSubAxes: Set<string>;
   confidenceByAxis: Record<string, number>;
+  /**
+   * score-v2 PREVIEW sub-axis set (#71). When provided, a read-only preview score
+   * over this strict superset of `stableSubAxes` is computed and surfaced. Never
+   * alters the trusted (v1) score.
+   */
+  previewSubAxes?: Set<string>;
   /** AI-Governance Maturity Level (Track #72/#155) — reported alongside the score. */
   maturity?: { level: number; signals: GovernanceSignals; llmDerived?: boolean };
 }
@@ -95,6 +108,10 @@ export interface FormatExplainScoreArgs {
 export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreResult {
   const { findings, stableSubAxes, confidenceByAxis } = args;
   const scoring = computeScoreV1({ findings, stableSubAxes, confidenceByAxis });
+  const preview =
+    args.previewSubAxes !== undefined
+      ? computeScoreV1({ findings, stableSubAxes: args.previewSubAxes, confidenceByAxis })
+      : undefined;
   const bucketsBySubAxis = new Map<string, AxisBucket>();
   for (const f of findings) {
     const sa = SUB_AXES.find((s) => s.id === f.subAxisId);
@@ -132,6 +149,11 @@ export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreRe
   lines.push("");
   lines.push(`  Health Score: ${scoring.score} / 100  ·  ${CURRENT_SCORING_VERSION}`);
   lines.push(`  Counted findings: ${scoring.findingsCountedInScore}  ·  experimental (reported only): ${scoring.findingsReportedOnly}`);
+  if (preview) {
+    lines.push(
+      `  score-v2 preview: ${preview.score} / 100  ·  ${preview.findingsCountedInScore} counted  (read-only — trusted score unchanged)`,
+    );
+  }
   if (args.maturity) {
     const m = args.maturity;
     const label = MATURITY_LABELS[m.level] ?? "unknown";
@@ -206,6 +228,7 @@ export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreRe
     rawText: lines.join("\n"),
     gapReport,
     ...(args.maturity ? { maturityLevel: args.maturity.level } : {}),
+    ...(preview ? { scoreV2Preview: { score: preview.score, countedTotal: preview.findingsCountedInScore } } : {}),
   };
 }
 
@@ -223,6 +246,7 @@ export async function explainScore(opts: ExplainScoreOpts): Promise<ExplainScore
 
   const filterRan = pipeline.result.meta?.layer4?.filterRan === true;
   const stableSubAxes = resolveStableSubAxes(SUB_AXES, { filterRan });
+  const previewSubAxes = resolveScoreV2PreviewSubAxes(SUB_AXES, { filterRan });
   const confidenceByAxis: Record<string, number> = {};
   for (const sa of SUB_AXES) {
     const manifestEntry = BUNDLED_MANIFEST.subAxes[sa.id];
@@ -265,7 +289,7 @@ export async function explainScore(opts: ExplainScoreOpts): Promise<ExplainScore
   }
   const maturity = { level: computeGovernanceMaturityLevel(signals), signals, llmDerived };
 
-  return formatExplainScore({ findings, stableSubAxes, confidenceByAxis, maturity });
+  return formatExplainScore({ findings, stableSubAxes, previewSubAxes, confidenceByAxis, maturity });
 }
 
 export async function runExplainScore(opts: ExplainScoreOpts): Promise<void> {

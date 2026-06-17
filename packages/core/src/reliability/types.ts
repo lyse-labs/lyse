@@ -38,6 +38,15 @@ export interface SubAxisRecord {
    * has been calibrated to LB ≥ 0.90. Inert when the filter did not run.
    */
   contributesToScoreWhenFiltered?: boolean;
+  /**
+   * Counts toward the score-v2 PREVIEW channel (#71). The preview is a read-only,
+   * strict superset of the trusted v1 set: deterministic structural sub-axes whose
+   * synthetic recall AND precision Wilson lower bounds both clear the 0.90 gate but
+   * which have not yet been promoted into the live (v1) trusted score. Never feeds
+   * the trusted Health Score; surfaced by `explain --score` so the impact of
+   * promoting them can be inspected before any v1 change.
+   */
+  contributesToScoreV2?: boolean;
 }
 
 export interface ConfidenceManifest {
