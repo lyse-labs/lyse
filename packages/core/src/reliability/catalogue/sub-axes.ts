@@ -1,4 +1,4 @@
-// 48 sub-axes, 1:1 mapped to the 48 shipped rules.
+// 49 sub-axes, 1:1 mapped to the 49 shipped rules.
 // Each sub-axis declares the scoring axis it reports under (6 total per
 // AxisName in packages/core/src/types.ts: tokens, a11y, components, stories,
 // ai-surface, ai-governance). Naming rules report under the components axis.
@@ -53,6 +53,7 @@ export const SUB_AXES: SubAxisRecord[] = [
   { id: "ai-governance.confidence-indicator-present", axis: "ai-governance", name: "AI confidence indicator present", status: "stable", precisionMeasured: 1, recallMeasured: 1, precisionWilsonLowerBound: 0.9010990076755959, recallWilsonLowerBound: 0.9010990076755959, lastCalibrated: "2026-06-17T00:00:00.000Z", contributesToScore: true, ruleIds: ["ai-governance/confidence-indicator-present"], llmDriven: false, deterministicValidator: true },
   { id: "ai-governance.source-attribution-present", axis: "ai-governance", name: "AI source attribution present", status: "stable", precisionMeasured: 1, recallMeasured: 1, precisionWilsonLowerBound: 0.9010990076755959, recallWilsonLowerBound: 0.9010990076755959, lastCalibrated: "2026-06-17T00:00:00.000Z", contributesToScore: true, ruleIds: ["ai-governance/source-attribution-present"], llmDriven: false, deterministicValidator: true },
   { id: "ai-governance.bot-identity-labeling", axis: "ai-governance", name: "AI non-human identity labeling", status: "stable", precisionMeasured: 1, recallMeasured: 1, precisionWilsonLowerBound: 0.9010990076755959, recallWilsonLowerBound: 0.9010990076755959, lastCalibrated: "2026-06-17T00:00:00.000Z", contributesToScore: true, ruleIds: ["ai-governance/bot-identity-labeling"], llmDriven: false, deterministicValidator: true },
+  { id: "ai-governance.ai-token-misuse", axis: "ai-governance", name: "AI token misused on non-AI element", status: "experimental", precisionMeasured: null, recallMeasured: null, precisionWilsonLowerBound: null, recallWilsonLowerBound: null, lastCalibrated: null, contributesToScore: false, ruleIds: ["ai-governance/ai-token-misuse"], llmDriven: false, deterministicValidator: true },
 ];
 
 export function getSubAxis(id: string): SubAxisRecord | undefined {

@@ -1111,6 +1111,31 @@
         "files larger than 1 MB — skipped to avoid pathological cases",
         "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
       ]
+    },
+    {
+      "id": "ai-governance/ai-token-misuse",
+      "axis": "ai-governance",
+      "defaultSeverity": "warning",
+      "shortDescription": "Detect AI-reserved design tokens used outside AI surfaces",
+      "fullDescription": "Flags reserved AI design tokens (Carbon `--cds-ai-*` / `$ai-aura-*`, Cloudscape `$*-gen-ai`, Polaris `magic-*`, etc.) that are USED (`var(--ai-*)`, `$ai-*`, `theme.$ai-*`) in a file that is not an AI surface. A file counts as an AI context — a legitimate place to use AI tokens — when it (1) contains an AI-marker component or JSX tag, (2) is AI-named by path (e.g. Carbon's `_ai-aura.scss`), or (3) defines reserved AI tokens itself. Token DECLARATIONS (`--ai-*:` / `$ai-*:`) are never flagged — defining a token is not misuse. A reserved AI token referenced in a file that is none of those (e.g. a generic `Button.css`) is flagged as misuse. The rule is silent on repos that use no reserved AI tokens.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-ai-token-misuse.md",
+      "rationale": "Why it matters\n\nAI design systems reserve a distinct visual language — gradient auras, sparkle accents, \"magic\" tokens — to signal *this content was AI-generated*. The signal only works if it is exclusive: if the same AI-reserved tokens are reused to decorate ordinary, non-AI UI, users can no longer trust the visual cue to mean \"AI\". IBM Carbon, Salesforce, and Microsoft AI guidelines all treat the AI visual treatment as reserved.\n\nThis rule (Appendix A static signal `ai-token-misused-on-non-AI-element`) catches the dilution at the source: a reserved AI token referenced outside any AI surface. Detection is deliberately conservative — usage only (never token definitions), and three independent AI-context signals (marker component, AI-named path, or local AI-token definition) suppress the obvious legitimate cases (Carbon's `_ai-*.scss`, the token-source file) to keep precision high. The rule emits nothing on design systems that ship no reserved AI tokens, so non-AI systems are never penalized.",
+      "examples": [
+        {
+          "good": "/* AiPanel.tsx — AI token used inside an AI surface */\nexport const AILabel = () => null;\nexport const Panel = () => <div style={{ background: 'var(--ai-gradient-1)' }} />;",
+          "bad": "/* Button.css — AI-reserved token reused on generic UI */\n.btn { background: var(--ai-gradient-1); }"
+        },
+        {
+          "good": "/* _ai-aura.scss — AI-named file legitimately uses the AI token */\n.aura { background: theme.$ai-aura-start; }",
+          "bad": "/* Card.scss — non-AI component misusing the AI aura token */\n.card { box-shadow: 0 0 8px theme.$ai-aura-start; }"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable ai-governance/ai-token-misuse` in an adjacent README or `.lyse.yaml` — rule is N/A",
+        "repos with no reserved AI tokens — rule emits nothing",
+        "files that define reserved AI tokens, are AI-named, or contain an AI-marker — usage there is legitimate",
+        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
+      ]
     }
   ]
 }

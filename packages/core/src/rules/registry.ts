@@ -46,6 +46,7 @@ import { rule as rValueGateDocPresent } from "./ai-governance-value-gate-doc-pre
 import { rule as rConfidenceIndicatorPresent } from "./ai-governance-confidence-indicator-present.js";
 import { rule as rSourceAttributionPresent } from "./ai-governance-source-attribution-present.js";
 import { rule as rBotIdentityLabeling } from "./ai-governance-bot-identity-labeling.js";
+import { rule as rAiTokenMisuse } from "./ai-governance-ai-token-misuse.js";
 import type { Rule } from "../types.js";
 
 export const ruleObjects: Rule[] = [
@@ -97,6 +98,7 @@ export const ruleObjects: Rule[] = [
   rConfidenceIndicatorPresent,
   rSourceAttributionPresent,
   rBotIdentityLabeling,
+  rAiTokenMisuse,
 ];
 
 export const ruleMap = new Map<string, Rule>(ruleObjects.map((r) => [r.id, r]));
