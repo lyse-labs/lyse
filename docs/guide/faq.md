@@ -114,7 +114,7 @@ Telemetry and the public bench require network — both are opt-in.
 
 On a typical project (500–2000 source files): 2–5 seconds.
 Cached re-audit: < 1 second.
-MCP `audit_file` per file: 50–200ms.
+MCP `audit_file` per file: 50–200ms cold; a few ms warm (the repo context — tokens, stories, config — is cached per project root across calls, so a burst of single-file audits stays well under the 300ms P95 budget even on Carbon-scale repos).
 
 Larger monorepos scale linearly. If you see audit times above 30 seconds on a project under 10k files, that's a bug — please file an issue.
 
