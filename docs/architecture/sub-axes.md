@@ -4,7 +4,7 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**49 sub-axes total** — stable: 26 · experimental: 23 · disabled: 0
+**50 sub-axes total** — stable: 27 · experimental: 23 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
@@ -57,5 +57,6 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `ai-governance.explainability-affordance` | `ai-governance` | Explainability affordance | **experimental** | — | 0.901 | — |
 | `ai-governance.feedback-control-present` | `ai-governance` | AI feedback control present | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-governance.human-control-affordances` | `ai-governance` | Human-control affordances | **experimental** | — | 0.901 | — |
+| `ai-governance.interaction-pattern-docs` | `ai-governance` | AI interaction-pattern docs present | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-governance.source-attribution-present` | `ai-governance` | AI source attribution present | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-governance.value-gate-doc-present` | `ai-governance` | AI value-gate governance doc | **experimental** | — | 0.641 | — |

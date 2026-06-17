@@ -35,4 +35,5 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 | `ai-governance/bot-identity-labeling` | `ai-governance.bot-identity-labeling` | 0.901 | 0.901 | — | 2026-06-17 |
 | `ai-governance/confidence-indicator-present` | `ai-governance.confidence-indicator-present` | 0.901 | 0.901 | — | 2026-06-17 |
 | `ai-governance/feedback-control-present` | `ai-governance.feedback-control-present` | 0.901 | 0.901 | — | 2026-06-17 |
+| `ai-governance/interaction-pattern-docs` | `ai-governance.interaction-pattern-docs` | 0.901 | 0.901 | — | 2026-06-17 |
 | `ai-governance/source-attribution-present` | `ai-governance.source-attribution-present` | 0.901 | 0.901 | — | 2026-06-17 |
