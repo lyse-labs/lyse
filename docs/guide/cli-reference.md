@@ -444,7 +444,7 @@ See [`packages/core/README.md`](../../packages/core/README.md) for the full libr
 
 ## Known limitations
 
-- Vue / Svelte / Solid / Angular: not yet supported. React (TSX/JSX) only.
+- **Component frameworks:** React (TSX/JSX) has full coverage (a11y, naming, contracts, stories). **Svelte (`.svelte`) and Vue (`.vue`) single-file components are scanned at the *style* level** — their `<style>` blocks are extracted so the token-drift detectors (color, spacing, radius, …) cover them. Their template/script a11y + naming parity is not yet wired (follow-up). Angular component styles in separate `.css`/`.scss` files are already covered; Solid is not yet supported.
 - styled-components / Emotion / Stitches: partial support; CSS-in-JS via template literals is parsed with Babel. vanilla-extract object styles (`style`, `styleVariants`, `globalStyle`, `recipe` from `@vanilla-extract/css`) are also extracted — the declaration object is serialized to CSS so the same hardcoded-value detectors run over `*.css.ts` files.
 - **Tailwind utility classes** (e.g. `bg-blue-500`, `p-4`) are recognized as compliant token references when they reference the project's `tailwind.config` scale. Arbitrary values (e.g. `bg-[#1e293b]`) remain flagged as drift since they bypass the configured scale.
 - **Token sources discovered:** Tailwind (v3 config + v4 `@theme`), DTCG (`*.tokens.json` with `$value`/`$type`), **Style Dictionary** (`{ "value", "type" }`), **Tokens Studio** (`$metadata`/`$themes` + TS type names), and **Figma Variables** (via their committed DTCG / Tokens-Studio export). The first source with a non-empty token map wins.

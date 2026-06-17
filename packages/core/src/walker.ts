@@ -11,6 +11,8 @@ const SOURCE_GLOBS = [
   "**/*.cjs",
   "**/*.css",
   "**/*.scss",
+  "**/*.svelte",
+  "**/*.vue",
 ];
 
 /**

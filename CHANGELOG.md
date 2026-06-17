@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Svelte / Vue single-file-component style coverage (Track #102).** The walker now scans `.svelte` and `.vue` files, and a new `extractSfcStyleBlocks` parser pulls their embedded `<style>` blocks (`lang="scss"` / `scoped` ignored) into the CSS-scanning path. This closes a systematic blind spot: a Svelte/Vue design system's hardcoded colors / spacing / radii / etc. inside `<style>` were previously invisible to the token-drift detectors. Template/script a11y + naming parity for these frameworks remains a follow-up; Angular external-style files were already covered.
+
+
 - **Token ingestion: Style Dictionary, Tokens Studio, Figma Variables (Track #103).** `loadTokens` now discovers token maps from the formats teams actually use, not just Tailwind + DTCG. A new `value`/`type` loader normalizes **Style Dictionary** (`{ "value": "#fff", "type": "color" }`) and **Tokens Studio** (`$metadata`/`$themes` wrappers + TS type names like `borderRadius`, `fontWeights`, `boxShadow`) into the existing token-map model, with **explicit type→bucket routing** (more precise than DTCG's path heuristic) and alias (`{token.path}`) skipping. **Figma Variables** are ingested via their committed DTCG / Tokens-Studio export (the de-facto Figma→code path). `TokenMap.source` gains `style-dictionary` / `tokens-studio` / `figma-variables`. The loader chain now falls through empty maps so a non-token `tokens.json` doesn't shadow a real source. This widens where `lyse fix`'s token-map discovery (guard 3) works.
 
 ### Changed
