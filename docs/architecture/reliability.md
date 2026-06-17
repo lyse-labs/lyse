@@ -24,11 +24,11 @@ Precision tells you whether a finding is real. Recall tells you whether you caug
 - **9 reference OSS design systems** — Cal.com, Twenty, Plane, Documenso, Cap, Formbricks, Mantine, Radix UI, shadcn/ui — mined for real-world violations.
 - **Frozen gold set** — ~8k Claude-seeded provisional labels (see "Gold-set composition" below); community re-labels supersede. Maintained in [`github.com/lyse-labs/lyse-bench`](https://github.com/lyse-labs/lyse-bench) (CC BY 4.0).
 
-Every Lyse PR runs `pnpm test:recall` in CI; the build blocks if any `stable` sub-axis's Wilson 95 % lower bound on **recall** drops below 0.90. The 17 sub-axes ship as `experimental` and stabilize after 4 consecutive green Bench weeks.
+Every Lyse PR runs `pnpm test:recall` in CI; the build blocks if any `stable` sub-axis's Wilson 95 % lower bound on **recall** drops below 0.90. Sub-axes ship `experimental` and promote to `stable` once calibrated past the gate.
 
 ### Pillar 3 — Coverage via the public catalogue
 
-Lyse ships **5 axes** (`tokens`, `a11y`, `components`, `stories`, `ai-surface`) decomposed into **17 sub-axes** (1 per rule). Every sub-axis is tagged `stable`, `experimental`, or `disabled`. Only `stable` contributes to the Health Score by default. Promotion gate: N ≥ 30 hand-labelled samples AND Wilson 95 % LB ≥ 0.90 on recall (precision LB is a follow-up once compliant-case generators land). The full catalogue is auto-generated at [`docs/architecture/sub-axes.md`](./sub-axes.md). Every sub-axis currently ships as `experimental` — the system runs dormant and the gold set grows it.
+Lyse ships **6 axes** (`tokens`, `a11y`, `components`, `stories`, `ai-surface`, `ai-governance`) decomposed into **45 sub-axes** (1 per rule). Every sub-axis is tagged `stable`, `experimental`, or `disabled`. Only `stable` contributes to the Health Score by default. Promotion gate: N ≥ 30 samples AND Wilson 95 % LB ≥ 0.90 on recall — and, for **deterministic validators** (file-presence / JSON-schema / grammar rules whose verdict is structural, not context-dependent), on precision too. As of 2026-06-17, **22 sub-axes are `stable`** and contribute to the Health Score; the rest ship `experimental` (reported-only) and promote as calibration data accrues. The full catalogue is auto-generated at [`docs/architecture/sub-axes.md`](./sub-axes.md).
 
 **score-v2 preview channel (#71).** `lyse explain --score` also reports a read-only **preview** score over a strict superset of the trusted set: the deterministic structural sub-axes whose synthetic recall *and* precision Wilson 95 % lower bounds both clear the 0.90 gate but which are not yet promoted into the live score (flagged `contributesToScoreV2`). The preview never alters the trusted Health Score — it exists so the impact of promoting the AI-governance moat can be inspected before any v1 change. Promoting a preview sub-axis into v1 (flipping `contributesToScore`) remains a deliberate release decision, not an automatic consequence of clearing the gate.
 
@@ -42,7 +42,7 @@ Marketing surfaces use only these three claims; everything else is a derivative.
 
 1. **100 % deterministic on the JSON artifact** — same input, same Health Score, byte-for-byte. Verifiable: run `lyse audit --format=json` twice on the same git commit; the JSON output is identical. Scoring formula is pinned as `scoring-v1` and stamped on the `AuditResult.scoringVersion` field of every emitted JSON artifact. Bumping to `scoring-v2` is a semver-major event with a CHANGELOG entry.
 2. **≥ 90 % recall on every `stable` sub-axis** — measured against the public gold set, reported as a Wilson 95 % lower bound on N ≥ 30 hand-labelled samples. The per-rule SLO is published at [`docs/architecture/per-rule-slo.md`](./per-rule-slo.md). The table is seeded with the 17 rules; promotion to `stable` happens as the gold set grows.
-3. **Open catalogue of 17 sub-axes (1 per rule)** — status published per axis at [`docs/architecture/sub-axes.md`](./sub-axes.md). All 17 sub-axes ship as `experimental`; promotion to `stable` happens as the gold set grows.
+3. **Open catalogue of 45 sub-axes (1 per rule)** — status published per axis at [`docs/architecture/sub-axes.md`](./sub-axes.md). 22 sub-axes are `stable`; the rest ship `experimental` and promote to `stable` as calibration data accrues.
 
 ## Reproducing the numbers
 

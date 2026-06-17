@@ -11,9 +11,15 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 | Rule | Sub-axis | Precision (Wilson LB) | Recall (Wilson LB) | N samples | Last calibrated |
 |---|---|---|---|---|---|
 | `tokens/deprecated-token-usage` | `tokens.deprecated-token-usage` | 0.901 | 0.904 | — | 2026-06-15 |
+| `tokens/description-coverage` | `tokens.description-coverage` | 0.901 | 0.901 | — | 2026-06-17 |
 | `tokens/dtcg-conformance` | `tokens.dtcg-conformance` | 0.901 | 0.901 | — | 2026-06-15 |
 | `tokens/theme-modes-present` | `tokens.theme-modes` | 0.901 | 0.904 | — | 2026-06-15 |
+| `naming/component-pascalcase` | `components.naming-component-pascalcase` | 0.904 | 0.904 | — | 2026-06-17 |
+| `naming/hook-prefix` | `components.naming-hook-prefix` | 0.904 | 0.904 | — | 2026-06-17 |
+| `components/no-native-shadows` | `components.native-shadows` | 0.901 | 0.901 | — | 2026-06-17 |
+| `stories/coverage` | `stories.coverage` | 0.901 | 0.901 | — | 2026-06-17 |
 | `ai-surface/agent-instruction-files` | `ai-surface.agent-instruction-files` | 0.901 | 0.901 | — | 2026-06-15 |
+| `ai-surface/agents-md-quality` | `ai-surface.agents-md-quality` | 0.901 | 0.901 | — | 2026-06-17 |
 | `versioning/changelog-present` | `ai-surface.changelog-present` | 0.901 | 0.904 | — | 2026-06-15 |
 | `ai-surface/component-manifest-json` | `ai-surface.component-manifest-json` | 0.901 | 0.901 | — | 2026-06-15 |
 | `ai-surface/ds-index-exported` | `ai-surface.ds-index-exported` | 0.901 | 0.901 | — | 2026-06-15 |
@@ -22,3 +28,7 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 | `versioning/migration-guide-present` | `ai-surface.migration-guide-present` | 0.901 | 0.904 | — | 2026-06-15 |
 | `versioning/semver-versioning` | `ai-surface.semver-versioning` | 0.901 | 0.904 | — | 2026-06-15 |
 | `ai-surface/shadcn-registry-valid` | `ai-surface.shadcn-registry-valid` | 0.901 | 0.904 | — | 2026-06-15 |
+| `ai-governance/ai-content-live-region` | `ai-governance.ai-content-live-region` | 0.901 | 0.901 | — | 2026-06-17 |
+| `ai-governance/ai-loading-error-states` | `ai-governance.ai-loading-error-states` | 0.901 | 0.901 | — | 2026-06-17 |
+| `ai-governance/ai-marker-component-present` | `ai-governance.ai-marker-component-present` | 0.901 | 0.901 | — | 2026-06-17 |
+| `ai-governance/feedback-control-present` | `ai-governance.feedback-control-present` | 0.901 | 0.901 | — | 2026-06-17 |
