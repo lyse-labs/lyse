@@ -5,9 +5,7 @@ import { findProjectRoot } from "../_find-root.js";
 import { parseTs } from "../../parsers/ts.js";
 import { parseCss } from "../../parsers/css.js";
 import { extractCssInJs } from "../../parsers/css-in-js.js";
-import { loadTokens } from "../../loaders/tokens.js";
-import { loadStories } from "../../loaders/stories.js";
-import { loadConfig } from "../../config/schema.js";
+import { getProjectContext } from "../context-cache.js";
 import { disabledRuleIds } from "../../config/rules-config.js";
 import { ruleObjects } from "../../rules/registry.js";
 import { runRules } from "../../rule-runner.js";
@@ -171,12 +169,10 @@ export async function runAuditFile(input: AuditFileInput): Promise<AuditFileResu
     };
   }
 
-  // Load project context (tokens, stories, etc.) — same as full audit
-  const tokens = await loadTokens(projectRoot);
-  const storyIndex = await loadStories(projectRoot);
-  // degrade (not throw) on malformed config: a single-file audit must never
-  // fail because of an unrelated .lyse.yaml error.
-  const config = loadConfig(projectRoot, { onError: "degrade" });
+  // Load project context (tokens, stories, config) — cached per project root so
+  // a burst of single-file audits on a large repo doesn't re-scan the tree each
+  // call (MCP P95 budget). See mcp/context-cache.ts.
+  const { tokens, storyIndex, config } = await getProjectContext(projectRoot);
   const ctx: RuleContext = {
     repoRoot: projectRoot,
     tokens,
