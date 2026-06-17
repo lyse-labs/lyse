@@ -35,8 +35,9 @@ describe("v1 promotion of the 10 deterministic gate-clearers (#71)", () => {
     }
   });
 
-  it("the trusted stable set is now 22 sub-axes (12 original + 10 promoted)", () => {
+  it("the trusted stable set includes all 10 promoted (≥ 22 — later cohorts add more)", () => {
     const v1 = resolveStableSubAxes(SUB_AXES, { filterRan: false });
-    expect(v1.size).toBe(22);
+    for (const id of PROMOTED) expect(v1.has(id)).toBe(true);
+    expect(v1.size).toBeGreaterThanOrEqual(22);
   });
 });
