@@ -5,8 +5,8 @@
  * full-ds fixture so that a scoring regression turns CI red.
  *
  * Bands (not exact pins) so small noise deltas don't create false positives:
- *   - Health Score:       N ∈ [79, 85]  (±3 around 82)
- *   - Counted findings:   M ∈ [6,  8]   (guards against stableSubAxes going empty → trivial 100)
+ *   - Health Score:       N ∈ [75, 81]  (±3 around 78)
+ *   - Counted findings:   M ∈ [8, 11]   (guards against stableSubAxes going empty → trivial 100)
  *   - Scoring path:       "scoring-v1"  (trusted-score path is active)
  *
  * As of the `explain --score <path>` fix, this command now genuinely audits the
@@ -19,7 +19,10 @@
  * Band history: [90,96]/[2,4] with 7 stable sub-axes → [85,91]/[4,6] after the
  * 8th (`tokens.theme-modes`, #127) → (cwd fix: now genuinely audits full-ds) →
  * [82,88]/[5,7] after the 10th (`ai-surface.semver-versioning`, #131) →
- * [79,85]/[6,8] after the 11th (`ai-surface.migration-guide-present`, #131).
+ * [79,85]/[6,8] after the 11th (`ai-surface.migration-guide-present`, #131) →
+ * [75,81]/[8,11] after promoting the 10 deterministic gate-clearers into v1
+ * (#71, 12→22 stable sub-axes; only a couple fire on the clean full-ds fixture,
+ * so the band steps down modestly).
  * Each new scored sub-axis that fires on full-ds (which ships none of these
  * AI/versioning artifacts) steps the band down by one finding.
  *
@@ -46,7 +49,7 @@ function stripAnsi(s: string): string {
 }
 
 describe("cli explain --score smoke (Track 8.10)", () => {
-  it("Health Score is within [79, 85] and scoring-v1 is active", { timeout: 30_000 }, () => {
+  it("Health Score is within [75, 81] and scoring-v1 is active", { timeout: 30_000 }, () => {
     if (!existsSync(LYSE_CLI_PATH)) {
       throw new Error(
         `CLI not built — run \`pnpm --filter lyse build\` first. Looked at: ${LYSE_CLI_PATH}`,
@@ -67,11 +70,11 @@ describe("cli explain --score smoke (Track 8.10)", () => {
     const score = parseInt(scoreMatch![1]!, 10);
     expect(
       score,
-      `Health Score ${score} is outside expected band [79, 85]. ` +
+      `Health Score ${score} is outside expected band [75, 81]. ` +
         `Either a scoring regression occurred or a new stable sub-axis was added ` +
         `and the band needs updating.`,
-    ).toBeGreaterThanOrEqual(79);
-    expect(score).toBeLessThanOrEqual(85);
+    ).toBeGreaterThanOrEqual(75);
+    expect(score).toBeLessThanOrEqual(81);
 
     // --- scoring-v1 path ---
     expect(out, "Expected 'scoring-v1' in output — trusted-score path may not be active").toContain(
@@ -84,10 +87,10 @@ describe("cli explain --score smoke (Track 8.10)", () => {
     const counted = parseInt(countedMatch![1]!, 10);
     expect(
       counted,
-      `Counted findings ${counted} is outside expected band [6, 8]. ` +
+      `Counted findings ${counted} is outside expected band [8, 11]. ` +
         `If 0, stableSubAxes may have silently gone empty (trivial 100 regression). ` +
-        `If >8, new stable sub-axes were promoted without updating this band.`,
-    ).toBeGreaterThanOrEqual(6);
-    expect(counted).toBeLessThanOrEqual(8);
+        `If >11, new stable sub-axes were promoted without updating this band.`,
+    ).toBeGreaterThanOrEqual(8);
+    expect(counted).toBeLessThanOrEqual(11);
   });
 });

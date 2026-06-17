@@ -2,94 +2,82 @@ import { describe, it, expect } from "vitest";
 import { SUB_AXES } from "../../src/reliability/catalogue/sub-axes.js";
 import { resolveStableSubAxes } from "../../src/reliability/score/stable-sub-axes.js";
 import { resolveScoreV2PreviewSubAxes } from "../../src/reliability/score/score-v2-preview.js";
-import { computeScoreV1 } from "../../src/reliability/score/formula-v1.js";
 import { formatExplainScore } from "../../src/commands/explain-score.js";
-import type { Finding } from "../../src/reliability/types.js";
+import type { Finding, SubAxisRecord } from "../../src/reliability/types.js";
 
 // #71 — score-v2 PREVIEW channel. A read-only, strict superset of the trusted
-// v1 set: every v1 contributor PLUS the deterministic structural sub-axes whose
-// synthetic recall AND precision Wilson lower bounds both cleared the 0.90 gate.
-// It must NEVER alter the trusted (v1) score.
+// v1 set: every v1 contributor PLUS any sub-axis flagged `contributesToScoreV2`
+// (gate-cleared but not yet promoted into v1). The mechanism is tested against
+// synthetic records so it does not depend on which rules are currently promoted.
 
-// The 10 deterministic gate-clearers promoted into the preview (recall LB and
-// precision LB both >= 0.90 on the synthetic recall suite, 2026-06-17 run).
-const PROMOTED = [
-  "tokens.description-coverage",
-  "components.native-shadows",
-  "components.naming-component-pascalcase",
-  "components.naming-hook-prefix",
-  "stories.coverage",
-  "ai-surface.agents-md-quality",
-  "ai-governance.ai-marker-component-present",
-  "ai-governance.ai-loading-error-states",
-  "ai-governance.ai-content-live-region",
-  "ai-governance.feedback-control-present",
-];
+function rec(over: Partial<SubAxisRecord> & Pick<SubAxisRecord, "id">): SubAxisRecord {
+  return {
+    axis: "tokens",
+    name: over.id,
+    status: "experimental",
+    precisionMeasured: null,
+    recallMeasured: null,
+    precisionWilsonLowerBound: null,
+    recallWilsonLowerBound: null,
+    lastCalibrated: null,
+    contributesToScore: false,
+    ruleIds: [over.id],
+    llmDriven: false,
+    ...over,
+  };
+}
 
-describe("score-v2 preview sub-axis set (#71)", () => {
-  it("is a strict superset of the trusted v1 stable set", () => {
+describe("resolveScoreV2PreviewSubAxes (#71)", () => {
+  it("includes every v1 contributor (superset of the trusted set)", () => {
+    const axes = [
+      rec({ id: "a.stable", status: "stable", contributesToScore: true }),
+      rec({ id: "b.pending", contributesToScoreV2: true }),
+      rec({ id: "c.experimental" }),
+    ];
+    const v1 = resolveStableSubAxes(axes, { filterRan: false });
+    const v2 = resolveScoreV2PreviewSubAxes(axes, { filterRan: false });
+    for (const id of v1) expect(v2.has(id)).toBe(true);
+  });
+
+  it("adds a gate-cleared-but-unpromoted sub-axis (contributesToScoreV2) that v1 ignores", () => {
+    const axes = [
+      rec({ id: "a.stable", status: "stable", contributesToScore: true }),
+      rec({ id: "b.pending", contributesToScoreV2: true }),
+    ];
+    const v1 = resolveStableSubAxes(axes, { filterRan: false });
+    const v2 = resolveScoreV2PreviewSubAxes(axes, { filterRan: false });
+    expect(v1.has("b.pending")).toBe(false);
+    expect(v2.has("b.pending")).toBe(true);
+  });
+
+  it("never drops below v1 on the real catalogue (superset, possibly equal)", () => {
     const v1 = resolveStableSubAxes(SUB_AXES, { filterRan: false });
     const v2 = resolveScoreV2PreviewSubAxes(SUB_AXES, { filterRan: false });
     for (const id of v1) expect(v2.has(id)).toBe(true);
-    expect(v2.size).toBeGreaterThan(v1.size);
-  });
-
-  it("includes every promoted deterministic gate-clearer", () => {
-    const v2 = resolveScoreV2PreviewSubAxes(SUB_AXES, { filterRan: false });
-    for (const id of PROMOTED) expect(v2.has(id)).toBe(true);
-  });
-
-  it("excludes a11y.essentials (precision LB 0.898 < 0.90 — missed the gate)", () => {
-    const v2 = resolveScoreV2PreviewSubAxes(SUB_AXES, { filterRan: false });
-    expect(v2.has("a11y.essentials")).toBe(false);
-  });
-
-  it("preview counts a finding in a preview-only sub-axis that v1 ignores", () => {
-    const finding: Finding = {
-      ruleId: "stories/coverage",
-      subAxisId: "stories.coverage",
-      severity: "warning",
-      confidence: "high",
-      message: "missing story",
-      file: "Button.tsx",
-      line: 1,
-      column: null,
-    };
-    const confidenceByAxis: Record<string, number> = { "stories.coverage": 0.9 };
-    const v1 = computeScoreV1({
-      findings: [finding],
-      stableSubAxes: resolveStableSubAxes(SUB_AXES, { filterRan: false }),
-      confidenceByAxis,
-    });
-    const v2 = computeScoreV1({
-      findings: [finding],
-      stableSubAxes: resolveScoreV2PreviewSubAxes(SUB_AXES, { filterRan: false }),
-      confidenceByAxis,
-    });
-    expect(v1.findingsCountedInScore).toBe(0);
-    expect(v2.findingsCountedInScore).toBe(1);
+    expect(v2.size).toBeGreaterThanOrEqual(v1.size);
   });
 });
 
 describe("formatExplainScore surfaces the read-only preview (#71)", () => {
   const finding: Finding = {
-    ruleId: "stories/coverage",
-    subAxisId: "stories.coverage",
+    ruleId: "a11y/essentials",
+    subAxisId: "a11y.essentials",
     severity: "warning",
     confidence: "high",
-    message: "missing story",
+    message: "missing label",
     file: "Button.tsx",
     line: 1,
     column: null,
   };
-  const confidenceByAxis: Record<string, number> = { "stories.coverage": 0.9 };
+  const confidenceByAxis: Record<string, number> = { "a11y.essentials": 0.9 };
 
   it("reports a scoreV2Preview that counts preview-only sub-axes the trusted score ignores", () => {
     const stableSubAxes = resolveStableSubAxes(SUB_AXES, { filterRan: false });
-    const previewSubAxes = resolveScoreV2PreviewSubAxes(SUB_AXES, { filterRan: false });
+    // a11y.essentials is NOT promoted (precision LB 0.898) — inject it into the
+    // preview set explicitly to exercise the rendering mechanism.
+    const previewSubAxes = new Set([...stableSubAxes, "a11y.essentials"]);
     const r = formatExplainScore({ findings: [finding], stableSubAxes, previewSubAxes, confidenceByAxis });
     expect(r.scoreV2Preview).toBeDefined();
-    // trusted score ignores stories.coverage → no penalty; preview counts it → lower.
     expect(r.countedTotal).toBe(0);
     expect(r.scoreV2Preview?.countedTotal).toBe(1);
     expect(r.scoreV2Preview?.score).toBeLessThan(r.score);
