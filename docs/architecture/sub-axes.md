@@ -14,7 +14,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `tokens.border-width` | `tokens` | Border-width token scale | **experimental** | — | — | — |
 | `tokens.color` | `tokens` | Color tokens | **experimental** | 0.339 | 0.904 | — |
 | `tokens.deprecated-token-usage` | `tokens` | Deprecated-token aliasing ($deprecated) | **stable** | 0.901 | 0.904 | ✅ |
-| `tokens.description-coverage` | `tokens` | Token description coverage | **experimental** | — | 0.901 | — |
+| `tokens.description-coverage` | `tokens` | Token description coverage | **experimental** | 0.901 | 0.901 | — |
 | `tokens.dtcg-conformance` | `tokens` | DTCG conformance | **stable** | 0.901 | 0.901 | ✅ |
 | `tokens.motion` | `tokens` | Motion token scale (duration/easing) | **experimental** | — | — | — |
 | `tokens.opacity` | `tokens` | Opacity token scale | **experimental** | — | — | — |
@@ -29,13 +29,13 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `a11y.inclusive-language` | `a11y` | Inclusive language | **experimental** | — | — | — |
 | `a11y.prefers-reduced-motion` | `a11y` | prefers-reduced-motion compliance | **experimental** | — | — | — |
 | `components.contracts-strictness` | `components` | Component prop contract strictness | **experimental** | — | — | — |
-| `components.naming-component-pascalcase` | `components` | Component PascalCase | **experimental** | — | 0.904 | — |
-| `components.naming-hook-prefix` | `components` | Hook `use` prefix | **experimental** | — | 0.904 | — |
-| `components.native-shadows` | `components` | Native shadow elements | **experimental** | — | 0.901 | — |
+| `components.naming-component-pascalcase` | `components` | Component PascalCase | **experimental** | 0.904 | 0.904 | — |
+| `components.naming-hook-prefix` | `components` | Hook `use` prefix | **experimental** | 0.904 | 0.904 | — |
+| `components.native-shadows` | `components` | Native shadow elements | **experimental** | 0.901 | 0.901 | — |
 | `components.no-icon-fonts` | `components` | Icon delivery (SVG over icon-font) | **experimental** | — | — | — |
-| `stories.coverage` | `stories` | Storybook coverage | **experimental** | — | 0.901 | — |
+| `stories.coverage` | `stories` | Storybook coverage | **experimental** | 0.901 | 0.901 | — |
 | `ai-surface.agent-instruction-files` | `ai-surface` | Agent instruction files (Cursor / Claude) | **stable** | 0.901 | 0.901 | ✅ |
-| `ai-surface.agents-md-quality` | `ai-surface` | AGENTS.md quality | **experimental** | — | 0.901 | — |
+| `ai-surface.agents-md-quality` | `ai-surface` | AGENTS.md quality | **experimental** | 0.901 | 0.901 | — |
 | `ai-surface.changelog-present` | `ai-surface` | Structured CHANGELOG (versioning) | **stable** | 0.901 | 0.904 | ✅ |
 | `ai-surface.component-manifest-json` | `ai-surface` | Component manifest JSON | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-surface.ds-index-exported` | `ai-surface` | DS index export | **stable** | 0.901 | 0.901 | ✅ |
@@ -44,14 +44,14 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `ai-surface.migration-guide-present` | `ai-surface` | Migration / upgrade guide | **stable** | 0.901 | 0.904 | ✅ |
 | `ai-surface.semver-versioning` | `ai-surface` | Semver version (package.json) | **stable** | 0.901 | 0.904 | ✅ |
 | `ai-surface.shadcn-registry-valid` | `ai-surface` | shadcn registry validity | **stable** | 0.901 | 0.904 | ✅ |
-| `ai-governance.ai-content-live-region` | `ai-governance` | AI content live region | **experimental** | — | 0.901 | — |
-| `ai-governance.ai-loading-error-states` | `ai-governance` | AI loading state & error state | **experimental** | — | 0.901 | — |
+| `ai-governance.ai-content-live-region` | `ai-governance` | AI content live region | **experimental** | 0.901 | 0.901 | — |
+| `ai-governance.ai-loading-error-states` | `ai-governance` | AI loading state & error state | **experimental** | 0.901 | 0.901 | — |
 | `ai-governance.ai-marker-anti-patterns` | `ai-governance` | AI-marker anti-patterns | **experimental** | — | 0.901 | — |
-| `ai-governance.ai-marker-component-present` | `ai-governance` | AI-marker component present | **experimental** | — | 0.901 | — |
+| `ai-governance.ai-marker-component-present` | `ai-governance` | AI-marker component present | **experimental** | 0.901 | 0.901 | — |
 | `ai-governance.ai-token-requires-marker` | `ai-governance` | AI token requires co-located marker | **experimental** | — | 0.100 | — |
 | `ai-governance.ai-tokens-reserved` | `ai-governance` | Reserved AI-marker tokens inventory | **experimental** | — | 0.409 | — |
 | `ai-governance.disclaimer-present` | `ai-governance` | AI disclaimer present | **experimental** | — | 0.901 | — |
 | `ai-governance.explainability-affordance` | `ai-governance` | Explainability affordance | **experimental** | — | 0.901 | — |
-| `ai-governance.feedback-control-present` | `ai-governance` | AI feedback control present | **experimental** | — | 0.901 | — |
+| `ai-governance.feedback-control-present` | `ai-governance` | AI feedback control present | **experimental** | 0.901 | 0.901 | — |
 | `ai-governance.human-control-affordances` | `ai-governance` | Human-control affordances | **experimental** | — | 0.901 | — |
 | `ai-governance.value-gate-doc-present` | `ai-governance` | AI value-gate governance doc | **experimental** | — | 0.641 | — |
