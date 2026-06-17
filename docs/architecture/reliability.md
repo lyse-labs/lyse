@@ -41,7 +41,7 @@ When the antivirus detects a regression, an Opus 4.7-driven pipeline runs nightl
 Marketing surfaces use only these three claims; everything else is a derivative.
 
 1. **100 % deterministic on the JSON artifact** — same input, same Health Score, byte-for-byte. Verifiable: run `lyse audit --format=json` twice on the same git commit; the JSON output is identical. Scoring formula is pinned as `scoring-v1` and stamped on the `AuditResult.scoringVersion` field of every emitted JSON artifact. Bumping to `scoring-v2` is a semver-major event with a CHANGELOG entry.
-2. **≥ 90 % recall on every `stable` sub-axis** — measured against the public gold set, reported as a Wilson 95 % lower bound on N ≥ 30 hand-labelled samples. The per-rule SLO is published at [`docs/architecture/per-rule-slo.md`](./per-rule-slo.md). The table is seeded with the 17 rules; promotion to `stable` happens as the gold set grows.
+2. **≥ 90 % recall on every `stable` sub-axis** — measured against the public gold set, reported as a Wilson 95 % lower bound on N ≥ 30 hand-labelled samples. The per-rule SLO is published at [`docs/architecture/per-rule-slo.md`](./per-rule-slo.md). The table is seeded with all 51 rules; promotion to `stable` happens as calibration data accrues.
 3. **Open catalogue of 51 sub-axes (1 per rule)** — status published per axis at [`docs/architecture/sub-axes.md`](./sub-axes.md). 34 sub-axes are `stable`; the rest ship `experimental` and promote to `stable` as calibration data accrues.
 
 ## Reproducing the numbers

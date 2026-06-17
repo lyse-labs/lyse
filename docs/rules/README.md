@@ -40,6 +40,28 @@ Rule output appears in:
 | `ai-surface/llms-txt-structure` | AI surface | warning | No | [→](./ai-surface-llms-txt-structure.md) |
 | `ai-surface/shadcn-registry-valid` | AI surface | warning | No | [→](./ai-surface-shadcn-registry-valid.md) |
 | `ai-surface/agent-instruction-files` | AI surface | warning | No | [→](./ai-surface-agent-instruction-files.md) |
+| `tokens/deprecated-token-usage` | Tokens | warning | No | [→](./tokens-deprecated-token-usage.md) |
+| `tokens/theme-modes-present` | Tokens | warning | No | — |
+| `versioning/changelog-present` | AI surface | warning | No | [→](./versioning-changelog-present.md) |
+| `versioning/semver-versioning` | AI surface | warning | No | [→](./versioning-semver-versioning.md) |
+| `versioning/migration-guide-present` | AI surface | warning | No | [→](./versioning-migration-guide-present.md) |
+| `ai-governance/ai-tokens-reserved` | AI governance | info | No | [→](./ai-governance-ai-tokens-reserved.md) |
+| `ai-governance/ai-marker-component-present` | AI governance | warning | No | [→](./ai-governance-ai-marker-component-present.md) |
+| `ai-governance/ai-token-requires-marker` | AI governance | error | No | [→](./ai-governance-ai-token-requires-marker.md) |
+| `ai-governance/ai-marker-anti-patterns` | AI governance | warning | No | [→](./ai-governance-ai-marker-anti-patterns.md) |
+| `ai-governance/ai-loading-error-states` | AI governance | warning | No | [→](./ai-governance-ai-loading-error-states.md) |
+| `ai-governance/ai-content-live-region` | AI governance | warning | No | [→](./ai-governance-ai-content-live-region.md) |
+| `ai-governance/disclaimer-present` | AI governance | warning | No | [→](./ai-governance-disclaimer-present.md) |
+| `ai-governance/feedback-control-present` | AI governance | warning | No | [→](./ai-governance-feedback-control-present.md) |
+| `ai-governance/explainability-affordance` | AI governance | warning | No | [→](./ai-governance-explainability-affordance.md) |
+| `ai-governance/human-control-affordances` | AI governance | warning | No | [→](./ai-governance-human-control-affordances.md) |
+| `ai-governance/value-gate-doc-present` | AI governance | warning | No | [→](./ai-governance-value-gate-doc-present.md) |
+| `ai-governance/confidence-indicator-present` | AI governance | warning | No | [→](./ai-governance-confidence-indicator-present.md) |
+| `ai-governance/source-attribution-present` | AI governance | warning | No | [→](./ai-governance-source-attribution-present.md) |
+| `ai-governance/bot-identity-labeling` | AI governance | warning | No | [→](./ai-governance-bot-identity-labeling.md) |
+| `ai-governance/ai-token-misuse` | AI governance | warning | No | [→](./ai-governance-ai-token-misuse.md) |
+| `ai-governance/interaction-pattern-docs` | AI governance | warning | No | [→](./ai-governance-interaction-pattern-docs.md) |
+| `ai-governance/draft-attribution` | AI governance | warning | No | [→](./ai-governance-draft-attribution.md) |
 
 ## How rules score
 

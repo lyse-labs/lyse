@@ -28,7 +28,7 @@ grade      = computeGrade(finalScore, axes)
 
 The Health Score is the equal-weight mean of every active axis (axes with `opportunities > 0`). Users can disable axes they don't care about via `.lyse.yaml`.
 
-## The 5 axes
+## The 6 axes
 
 ### Tokens
 
@@ -71,6 +71,10 @@ Rules on this axis:
 - `ai-surface/agents-md-quality`
 - `ai-surface/component-manifest-json`
 - `ai-surface/ds-index-exported`
+
+### AI governance
+
+Does a design system that ships AI surfaces govern them responsibly — AI-generated content marked, loading/error and live-region states present, feedback and confidence affordances, source attribution, non-human (bot) labeling, and AI-reserved tokens used only on AI surfaces? Lyse's differentiated axis. Silent on design systems with no AI surface (so non-AI systems are never penalized). See [`docs/architecture/sub-axes.md`](../architecture/sub-axes.md) for the full ai-governance sub-axis list.
 
 ## Axis score, fields, and N/A
 
@@ -129,7 +133,7 @@ The Health Score is a structural metric for design system adherence. Use it alon
 
 ### Coverage by axis
 
-Lyse ships **12 deterministic static rules across 5 axes**. Default audits are static-only — no LLM, no network.
+Lyse ships **51 deterministic static rules across 6 axes**. Default audits are static-only — no LLM, no network.
 
 | Axis | Rules | Notes |
 |---|---|---|
@@ -139,7 +143,7 @@ Lyse ships **12 deterministic static rules across 5 axes**. Default audits are s
 | Stories | `stories/coverage` | Storybook or alternative documentation per component |
 | AI surface | `ai-surface/agents-md-quality`, `ai-surface/component-manifest-json`, `ai-surface/ds-index-exported` | Machine-readable signals coding agents rely on |
 
-Each rule contributes 1 sub-axis to the reliability catalogue (17 sub-axes total). The full catalogue lives at [`docs/architecture/sub-axes.md`](../architecture/sub-axes.md); promotion to `stable` requires N ≥ 30 hand-labelled samples + Wilson 95 % LB ≥ 0.90 on recall.
+Each rule contributes 1 sub-axis to the reliability catalogue (51 sub-axes total, 34 currently `stable` and scored). The full catalogue lives at [`docs/architecture/sub-axes.md`](../architecture/sub-axes.md); promotion to `stable` requires N ≥ 30 hand-labelled samples + Wilson 95 % LB ≥ 0.90 on recall.
 
 Known limitations:
 
@@ -161,7 +165,7 @@ You can run `lyse audit --format=json` in a cron job and append to a CSV to trac
 
 ## See also
 
-- [Rules index](../rules/) — the 12 deterministic static rules that compose the audit.
+- [Rules index](../rules/) — the 51 deterministic static rules that compose the audit.
 - [Configuration](./configuration.md) — disable rules, override severities.
 - [Reliability](../architecture/reliability.md) — reliability pillars + version-pinned scoring.
 - [Calibration](../architecture/calibration.md) — calibration corpus and methodology.
