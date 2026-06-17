@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`lyse mcp setup` now supports Copilot / VS Code (Track #98).** Beyond Cursor (`.cursor/mcp.json`) and Claude Code (`.mcp.json`), setup now targets **Copilot / VS Code** — writing `.vscode/mcp.json` under the `servers` key (not `mcpServers`) with `"type": "stdio"`, the shape VS Code's MCP client expects. `--target` accepts `cursor | claude-code | copilot | both | all` (`all` = every detected client); detection now includes `.vscode/`. All writes are idempotent and preserve pre-existing unrelated server entries.
+
 - **Svelte / Vue single-file-component style coverage (Track #102).** The walker now scans `.svelte` and `.vue` files, and a new `extractSfcStyleBlocks` parser pulls their embedded `<style>` blocks (`lang="scss"` / `scoped` ignored) into the CSS-scanning path. This closes a systematic blind spot: a Svelte/Vue design system's hardcoded colors / spacing / radii / etc. inside `<style>` were previously invisible to the token-drift detectors. Template/script a11y + naming parity for these frameworks remains a follow-up; Angular external-style files were already covered.
 
 

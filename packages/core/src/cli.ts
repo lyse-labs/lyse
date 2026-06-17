@@ -643,7 +643,7 @@ const mcpCommand = defineCommand({
       meta: { name: "setup", description: "Configure your IDE's MCP file" },
       args: {
         path: { type: "positional", required: false, default: ".", description: "repository root" },
-        target: { type: "string", description: "cursor | claude-code | both" },
+        target: { type: "string", description: "cursor | claude-code | copilot | both | all" },
         dev: { type: "boolean", description: "Force absolute-path entry (auto-detected when running from a local build)." },
         ...GLOBAL_FLAGS,
       },
@@ -656,7 +656,7 @@ const mcpCommand = defineCommand({
           autoApprove: yes,
         } as Parameters<typeof runMcpSetup>[0];
         if (typeof args.target === "string") {
-          opts.target = args.target as "cursor" | "claude-code" | "both";
+          opts.target = args.target as "cursor" | "claude-code" | "copilot" | "both" | "all";
         }
         if (args.dev === true) {
           opts.dev = true;
