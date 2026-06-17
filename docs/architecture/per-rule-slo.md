@@ -31,4 +31,7 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 | `ai-governance/ai-content-live-region` | `ai-governance.ai-content-live-region` | 0.901 | 0.901 | — | 2026-06-17 |
 | `ai-governance/ai-loading-error-states` | `ai-governance.ai-loading-error-states` | 0.901 | 0.901 | — | 2026-06-17 |
 | `ai-governance/ai-marker-component-present` | `ai-governance.ai-marker-component-present` | 0.901 | 0.901 | — | 2026-06-17 |
+| `ai-governance/bot-identity-labeling` | `ai-governance.bot-identity-labeling` | 0.901 | 0.901 | — | 2026-06-17 |
+| `ai-governance/confidence-indicator-present` | `ai-governance.confidence-indicator-present` | 0.901 | 0.901 | — | 2026-06-17 |
 | `ai-governance/feedback-control-present` | `ai-governance.feedback-control-present` | 0.901 | 0.901 | — | 2026-06-17 |
+| `ai-governance/source-attribution-present` | `ai-governance.source-attribution-present` | 0.901 | 0.901 | — | 2026-06-17 |
