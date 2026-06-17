@@ -33,6 +33,16 @@ describe("runAuditFile", () => {
     expect(colorViolations).toHaveLength(0);
   });
 
+  it("respects `rules: { <id>: off }` from .lyse.yaml in the single-file path", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "lyse-mcp-off-"));
+    writeFileSync(join(dir, ".lyse.yaml"), "rules:\n  tokens/no-hardcoded-color: off\n");
+    const filePath = join(dir, "Page.tsx");
+    writeFileSync(filePath, 'export default () => <div style={{ background: "#2563eb" }}>x</div>;');
+    const result = await runAuditFile({ path: filePath });
+    const colorViolations = result.violations.filter((v) => v.rule_id === "tokens/no-hardcoded-color");
+    expect(colorViolations).toHaveLength(0);
+  });
+
   it("returns an error finding when `path` is missing", async () => {
     const result = await runAuditFile({});
     expect(result.violations[0]!.rule_id).toBe("internal");
