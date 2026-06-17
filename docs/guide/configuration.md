@@ -145,15 +145,21 @@ rules:
     severity: error   # default: warning
 ```
 
-Severities: `error`, `warning`, `info`, `off`. Only `off` is applied today
-(it disables the rule). Overriding to another level — `error` / `warning` /
-`info` — is **validated but not yet applied**; it is tracked as a follow-up.
+Severities: `error`, `warning`, `info`, `off`. `off` disables the rule (no
+findings, no opportunities). Overriding to another level — `error` / `warning`
+/ `info` — changes the **displayed** severity (terminal, JSON, SARIF) but
+**not the Health Score**: scoring always uses each rule's canonical severity,
+so a config override can never move the score. This keeps the determinism
+contract intact and scores comparable regardless of local `.lyse.yaml`.
 
 ### Per-rule options
 
 > **Note:** per-rule options (`tolerance`, `disable`, etc.) below are validated
-> at load but **not yet applied** by the built-in rules — tracked as a
-> follow-up. Only rule disabling (`off`) is wired today.
+> at load but **not yet applied** by the built-in rules. `tolerance` in
+> particular requires near-match matching semantics (color-distance / spacing
+> snapping) that the exact-match rules do not yet implement — applying it is a
+> rule-semantics + recalibration change tracked separately, not a config-wiring
+> gap. Rule disabling (`off`) and severity display overrides are wired today.
 
 Some rules accept rule-specific options. See each rule's documentation page in [`./rules/`](../rules/) for the available options.
 
@@ -192,11 +198,7 @@ Allowlisted findings still appear in JSON output with `severity: "off"` for tran
 
 ## Per-file overrides via comment frontmatter
 
-> **Not yet implemented.** This `@lyse-overrides` frontmatter block is planned
-> but not wired today. Use inline `lyse-disable` directives (above) or the
-> `rules:` block for now.
-
-Planned: pin per-file rule severities via a frontmatter block at the top of a TSX/JSX file:
+Pin per-file rule severities via an `@lyse-overrides` frontmatter block at the top of a TSX/JSX file:
 
 ```tsx
 /**
@@ -206,6 +208,11 @@ Planned: pin per-file rule severities via a frontmatter block at the top of a TS
  */
 import React from "react";
 ```
+
+Entries are read line-by-line right after the `@lyse-overrides` tag and stop at the first line that is not a `<rule-id>: <level>` entry. Two behaviours:
+
+- **`off`** — suppresses that rule's findings in this file (like an inline `lyse-disable`): the finding is dropped and does not count toward the score.
+- **`error` / `warning` / `info`** — overrides the **displayed** severity for that rule's findings in this file. Like the `rules:` block, this changes what reporters show but **never the Health Score** (severity does not change the score). A per-file entry wins over a global `rules:` entry on conflict.
 
 Use sparingly. Centralized config is preferable.
 

@@ -10,7 +10,8 @@ import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { loadConfig, resolveConfigPath } from "../config/schema.js";
-import { findUnknownRuleIds, disabledRuleIds } from "../config/rules-config.js";
+import { findUnknownRuleIds, disabledRuleIds, applySeverityOverrides } from "../config/rules-config.js";
+import { parseFileOverrides, type FileOverrides } from "../suppression/frontmatter.js";
 import { hashDeps } from "../util/hash-deps.js";
 import { detectFromPackageJson } from "../detection/from-package-json.js";
 import { walk, DEFAULT_EXCLUDE_PATHS } from "../walker.js";
@@ -334,11 +335,29 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   // and `/* lyse-disable <ruleId> */` — to drop findings the user has
   // explicitly approved. Filter happens AFTER the rule engine so rules don't
   // need to be suppression-aware. Per `packages/core/src/suppression/inline.ts`.
+  // Per-file `@lyse-overrides` frontmatter, parsed once per file path.
+  const overridesCache = new Map<string, FileOverrides>();
+  const fileOverrides = (file: string): FileOverrides => {
+    let o = overridesCache.get(file);
+    if (!o) {
+      const src = fileContents.get(file);
+      o = src ? parseFileOverrides(src) : { off: new Set(), severity: new Map() };
+      overridesCache.set(file, o);
+    }
+    return o;
+  };
+
   const suppressedFindings: Finding[] = [];
   runResult.findings = runResult.findings.filter((f) => {
     const source = fileContents.get(f.location.file);
     if (!source) return true;
     if (isSuppressed(source, f.ruleId, f.location.line)) {
+      suppressedFindings.push(f);
+      return false;
+    }
+    // Per-file `@lyse-overrides: <rule>: off` — suppresses like an inline
+    // disable (drops the finding, so it does not count toward the score).
+    if (fileOverrides(f.location.file).off.has(f.ruleId)) {
       suppressedFindings.push(f);
       return false;
     }
@@ -409,6 +428,16 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   const scoring = scoreFromFindings(runResult.findings, runResult.opportunitiesByAxis);
   const grade = computeGrade(scoring.finalScore, scoring.axes);
 
+  // Apply severity display overrides AFTER scoring so user config changes what
+  // reporters show but never the Health Score (determinism contract: severity
+  // does not change the score). Global `rules.<id>.severity` first, then the
+  // narrower per-file `@lyse-overrides` frontmatter wins on conflict.
+  let displayFindings = applySeverityOverrides(runResult.findings, config);
+  displayFindings = displayFindings.map((f) => {
+    const next = fileOverrides(f.location.file).severity.get(f.ruleId);
+    return next && next !== f.severity ? { ...f, severity: next } : f;
+  });
+
   const result: AuditResult = {
     schemaVersion: 2,
     rulesVersion: RULES_VERSION,
@@ -426,7 +455,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     tier: scoring.tier,
     grade,
     axes: scoring.axes,
-    findings: runResult.findings,
+    findings: displayFindings,
     ...(suppressedFindings.length > 0 ? { suppressedFindings } : {}),
     meta: {
       ...(layer4Meta ? { layer4: layer4Meta } : {}),

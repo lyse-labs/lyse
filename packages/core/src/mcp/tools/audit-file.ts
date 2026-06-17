@@ -8,6 +8,7 @@ import { extractCssInJs } from "../../parsers/css-in-js.js";
 import { loadTokens } from "../../loaders/tokens.js";
 import { loadStories } from "../../loaders/stories.js";
 import { loadConfig } from "../../config/schema.js";
+import { disabledRuleIds } from "../../config/rules-config.js";
 import { ruleObjects } from "../../rules/registry.js";
 import { runRules } from "../../rule-runner.js";
 import type { ParsedFiles, RuleContext } from "../../types.js";
@@ -184,7 +185,10 @@ export async function runAuditFile(input: AuditFileInput): Promise<AuditFileResu
     storyIndex,
     excludePaths: [],
   };
-  const rules = ruleObjects.filter((r) => r.singleFileCapable === true);
+  const disabled = disabledRuleIds(config);
+  const rules = ruleObjects.filter(
+    (r) => r.singleFileCapable === true && !disabled.has(r.id),
+  );
   const runResult = await runRules(rules, ctx, parsed);
 
   // `loadTokens()` returns `TokenMap | null`. A null return ===

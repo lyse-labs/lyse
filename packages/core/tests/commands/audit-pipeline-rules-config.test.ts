@@ -52,6 +52,60 @@ describe("audit-pipeline: rules: config block", () => {
     expect(after.result.findings.length).toBeLessThan(before.result.findings.length);
   });
 
+  it("applies a severity override to displayed findings WITHOUT changing the score", async () => {
+    const dir = scaffold();
+    const ruleId = "tokens/no-hardcoded-color";
+    const before = await auditDirectory(dir);
+    const beforeF = before.result.findings.find((f) => f.ruleId === ruleId);
+    expect(beforeF?.severity).toBe("warning");
+
+    writeFileSync(join(dir, ".lyse.yaml"), `rules:\n  ${ruleId}:\n    severity: error\n`);
+    const after = await auditDirectory(dir);
+    const afterF = after.result.findings.find((f) => f.ruleId === ruleId);
+    // display severity flips...
+    expect(afterF?.severity).toBe("error");
+    // ...but the Health Score is unchanged (determinism contract).
+    expect(after.result.finalScore).toBe(before.result.finalScore);
+    // and findings on other rules keep their severity
+    const other = after.result.findings.find((f) => f.ruleId !== ruleId);
+    const otherBefore = before.result.findings.find((f) => f.ruleId === other?.ruleId);
+    expect(other?.severity).toBe(otherBefore?.severity);
+  });
+
+  it("@lyse-overrides frontmatter `off` suppresses a finding in that file", async () => {
+    const dir = scaffold();
+    const tsx = join(dir, "src", "Page.tsx");
+    const ruleId = "tokens/no-hardcoded-color";
+    writeFileSync(tsx, 'export default () => <div style={{ background: "#2563eb" }}>x</div>;');
+    const before = await auditDirectory(dir);
+    expect(before.result.findings.some((f) => f.ruleId === ruleId && f.location.file.endsWith("Page.tsx"))).toBe(true);
+
+    writeFileSync(
+      tsx,
+      `/**\n * @lyse-overrides\n *   ${ruleId}: off\n */\nexport default () => <div style={{ background: "#2563eb" }}>x</div>;`,
+    );
+    const after = await auditDirectory(dir);
+    expect(after.result.findings.some((f) => f.ruleId === ruleId && f.location.file.endsWith("Page.tsx"))).toBe(false);
+    expect(after.result.suppressedFindings?.some((f) => f.ruleId === ruleId)).toBe(true);
+  });
+
+  it("@lyse-overrides frontmatter severity flips display without changing the score", async () => {
+    const dir = scaffold();
+    const tsx = join(dir, "src", "Page.tsx");
+    const ruleId = "tokens/no-hardcoded-color";
+    writeFileSync(tsx, 'export default () => <div style={{ background: "#2563eb" }}>x</div>;');
+    const before = await auditDirectory(dir);
+
+    writeFileSync(
+      tsx,
+      `/**\n * @lyse-overrides\n *   ${ruleId}: error\n */\nexport default () => <div style={{ background: "#2563eb" }}>x</div>;`,
+    );
+    const after = await auditDirectory(dir);
+    const f = after.result.findings.find((x) => x.ruleId === ruleId && x.location.file.endsWith("Page.tsx"));
+    expect(f?.severity).toBe("error");
+    expect(after.result.finalScore).toBe(before.result.finalScore);
+  });
+
   it("throws on an unknown rule id in the rules: block", async () => {
     const dir = scaffold();
     writeFileSync(join(dir, ".lyse.yaml"), `rules:\n  tokens/typoooo: off\n`);
