@@ -578,6 +578,25 @@
       ]
     },
     {
+      "id": "versioning/deprecation-markers",
+      "axis": "ai-surface",
+      "defaultSeverity": "warning",
+      "shortDescription": "`@deprecated` JSDoc tags should carry migration guidance",
+      "fullDescription": "Scans TypeScript/JavaScript JSDoc block comments for `@deprecated` tags and flags any that are bare — no inline description, no wrapped description, no `@see` sibling, and no inline `{@link}`. Counts every `@deprecated` tag as one opportunity; emits a warning per bare tag and nothing when guidance is present. Self-gating: a design system with no `@deprecated` tags records zero opportunities and is N/A (never penalized). Part of the AI-consumable contract (Face A): a coding agent that hits a deprecated symbol needs a machine-readable migration target, not a dead-end marker.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/versioning-deprecation-markers.md",
+      "rationale": "Why it matters\n\nA bare `@deprecated` tag tells a consumer the symbol is going away but not what to use instead. A human can grep the changelog; a coding agent editing against the design system cannot reliably recover the migration target and will either keep the deprecated symbol or guess. A tag that carries a replacement pointer (inline description, `@see`, or `{@link}`) is machine-readable migration guidance.\n\nThe check is deliberately structural, not semantic: it only asks whether *some* guidance accompanies the tag, never whether the prose is correct. Detecting deprecation intent in free prose (without the structured tag) is irreducibly heuristic and is out of scope for this deterministic rule — it belongs to the LLM-graded layer. Because this is a pure structural check, synthetic precision equals real precision.",
+      "examples": [
+        {
+          "good": "/** @deprecated Use {@link NewButton} instead. */\nexport const OldButton = () => null;",
+          "bad": "/** @deprecated */\nexport const OldButton = () => null;"
+        }
+      ],
+      "allowlist": [
+        "block comments containing `lyse-disable versioning/deprecation-markers` — that tag is skipped (and not counted as an opportunity)",
+        "any `@deprecated` carrying an inline/wrapped description, a `@see` sibling, or an inline `{@link}` — treated as compliant"
+      ]
+    },
+    {
       "id": "tokens/deprecated-token-usage",
       "axis": "tokens",
       "defaultSeverity": "warning",

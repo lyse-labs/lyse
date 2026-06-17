@@ -1,6 +1,6 @@
 # Rules
 
-Lyse ships with 51 rules. Each rule has a stable ID, a version, a severity, an axis, and (optionally) a codemod for auto-fix.
+Lyse ships with 52 rules. Each rule has a stable ID, a version, a severity, an axis, and (optionally) a codemod for auto-fix.
 
 Rule output appears in:
 - Terminal text (default reporter).
@@ -45,6 +45,7 @@ Rule output appears in:
 | `versioning/changelog-present` | AI surface | warning | No | [→](./versioning-changelog-present.md) |
 | `versioning/semver-versioning` | AI surface | warning | No | [→](./versioning-semver-versioning.md) |
 | `versioning/migration-guide-present` | AI surface | warning | No | [→](./versioning-migration-guide-present.md) |
+| `versioning/deprecation-markers` | AI surface | warning | No | [→](./versioning-deprecation-markers.md) |
 | `ai-governance/ai-tokens-reserved` | AI governance | info | No | [→](./ai-governance-ai-tokens-reserved.md) |
 | `ai-governance/ai-marker-component-present` | AI governance | warning | No | [→](./ai-governance-ai-marker-component-present.md) |
 | `ai-governance/ai-token-requires-marker` | AI governance | error | No | [→](./ai-governance-ai-token-requires-marker.md) |
