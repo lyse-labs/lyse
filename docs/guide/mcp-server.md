@@ -6,10 +6,11 @@ Wire Lyse into Cursor, Claude Code, Codex, or any [Model Context Protocol](https
 
 Without Lyse, your AI agent writes UI code without knowing your design system. It hallucinates components, hardcodes colors, ignores accessibility — silently, every day.
 
-With Lyse's MCP server, your agent can call two tools:
+With Lyse's MCP server, your agent can call three tools:
 
 - Audit a file it's about to save (`audit_file`).
 - Request a unified diff to fix a finding (`suggest_fix`).
+- Validate a proposed edit *before* it lands, with a block/pass verdict (`preflight_diff`).
 
 Result: fewer DS violations in AI-generated PRs, fewer review cycles, less drift.
 
@@ -171,6 +172,39 @@ Request an auto-fix for a specific finding.
 - `naming/hook-prefix`
 
 For non-auto-fixable rules, `suggest_fix` returns a structured error explaining why.
+
+### `preflight_diff(path, content)`
+
+A compiler-style guardrail: the agent passes the **full proposed file content**
+(the post-edit buffer) and Lyse returns a verdict *before* the write lands.
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `path` | string | yes | Path of the file being edited (relative or absolute). |
+| `content` | string | yes | The full proposed file content to validate. |
+| `project_root` | string | no | Project root for config/token resolution. |
+
+The result partitions findings into **`blocking`** and **`advisory`**:
+
+```json
+{
+  "schema_version": "1.0.0",
+  "verdict": "blocked",
+  "blocking": [{ "rule_id": "a11y/essentials", "severity": "error", "range": { "line": 1, "column": 21 }, "message": "...", "suggestion_available": false }],
+  "advisory": [{ "rule_id": "tokens/no-hardcoded-color", "severity": "warning", "range": { "line": 1, "column": 40 }, "message": "...", "suggestion_available": true }],
+  "summary": "Blocked: 1 stable-rule violation (+ 1 advisory). Fix the blocking findings before writing."
+}
+```
+
+Only **stable** rules (calibrated to recall *and* precision Wilson 95 % LB ≥ 0.90)
+can produce a `blocked` verdict. Experimental rules — including precision-walled
+ones like `tokens/no-hardcoded-color` today — are **advisory** only and never
+block, so the guardrail never rejects a valid edit on an unproven signal.
+`rules: { <id>: off }` and inline suppression are respected.
+
+**Use case:** wire `preflight_diff` into the agent's pre-write hook. A diff that
+introduces a stable-rule violation is rejected with an actionable explanation
+(rule, line, message); advisory findings are surfaced but don't block.
 
 ## Resources exposed
 

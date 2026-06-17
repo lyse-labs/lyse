@@ -22,3 +22,21 @@ export function resolveStableSubAxes(
   }
   return ids;
 }
+
+/**
+ * The set of RULE ids belonging to stable, score-contributing sub-axes. Used by
+ * the pre-flight MCP guardrail to decide which findings may *block* a diff —
+ * blocking on an experimental rule would be indefensible, so only these block.
+ */
+export function stableRuleIds(
+  subAxes: readonly SubAxisRecord[],
+  opts: StableSubAxesOptions,
+): Set<string> {
+  const stableSubAxisIds = resolveStableSubAxes(subAxes, opts);
+  const out = new Set<string>();
+  for (const s of subAxes) {
+    if (!stableSubAxisIds.has(s.id)) continue;
+    for (const r of s.ruleIds) out.add(r);
+  }
+  return out;
+}
