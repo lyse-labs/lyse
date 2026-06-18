@@ -222,3 +222,45 @@ describe("scorer ai-governance grace ramp (#89 / ADR-0018)", () => {
     expect(a.finalScore).toBe(b.finalScore);
   });
 });
+
+// Mutation-killing tests (#104) — close gaps stryker surfaced in the scorer.
+describe("scorer mutation hardening (#104)", () => {
+  it("buckets every axis — a11y and stories findings are aggregated (not dropped)", () => {
+    const findings: Finding[] = [
+      { ruleId: "a11y/essentials", axis: "a11y", severity: "error", location: { file: "a", line: 1, column: 1 }, message: "" },
+      { ruleId: "stories/coverage", axis: "stories", severity: "warning", location: { file: "b", line: 1, column: 1 }, message: "" },
+    ];
+    const r = scoreFromFindings(findings, { tokens: 0, a11y: 10, components: 0, stories: 10, "ai-surface": 0, "ai-governance": 0 } as Record<AxisName, number>);
+    const a11y = r.axes.find((a) => a.axis === "a11y")!.score;
+    const stories = r.axes.find((a) => a.axis === "stories")!.score;
+    expect(typeof a11y).toBe("number");
+    expect(a11y as number).toBeLessThan(100);
+    expect(typeof stories).toBe("number");
+    expect(stories as number).toBeLessThan(100);
+  });
+
+  it("ignores a finding on an unknown axis without throwing", () => {
+    const findings = [
+      { ruleId: "x/y", axis: "bogus" as AxisName, severity: "error" as const, location: { file: "a", line: 1, column: 1 }, message: "" },
+      { ruleId: "tokens/no-hardcoded-color", axis: "tokens" as AxisName, severity: "error" as const, location: { file: "a", line: 1, column: 1 }, message: "" },
+    ];
+    expect(() => scoreFromFindings(findings, { tokens: 10, a11y: 0, components: 0, stories: 0, "ai-surface": 0, "ai-governance": 0 } as Record<AxisName, number>)).not.toThrow();
+  });
+
+  it("grace blends the ai-governance axis to an EXACT value (0.5 * raw + 0.5 * 100)", () => {
+    const f = noFindings();
+    f["ai-governance"] = { errorCount: 0, warningCount: 10, infoCount: 0 }; // raw → 0
+    const opp = { tokens: 0, a11y: 0, components: 0, stories: 0, "ai-surface": 0, "ai-governance": 10 } as Record<AxisName, number>;
+    const r = score(f, opp, { aiGovernanceGrace: 0.5 });
+    expect(r.finalScore).toBe(50); // 0.5*0 + 0.5*100, single active axis
+  });
+
+  it("grace blends ONLY ai-governance — an active tokens axis keeps its raw score", () => {
+    const f = noFindings();
+    f.tokens = { errorCount: 0, warningCount: 5, infoCount: 0 }; // weighted 10, opp 20 → raw 50
+    f["ai-governance"] = { errorCount: 0, warningCount: 10, infoCount: 0 };
+    const opp = { tokens: 20, a11y: 0, components: 0, stories: 0, "ai-surface": 0, "ai-governance": 10 } as Record<AxisName, number>;
+    const r = score(f, opp, { aiGovernanceGrace: 0.5 });
+    expect(r.axes.find((a) => a.axis === "tokens")!.score).toBe(50); // unblended
+  });
+});
