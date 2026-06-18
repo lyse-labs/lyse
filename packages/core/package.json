@@ -60,7 +60,8 @@
     "test:watch": "vitest",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "docs:reliability": "tsx ../../scripts/render-coverage.ts"
+    "docs:reliability": "tsx ../../scripts/render-coverage.ts",
+    "mutation": "stryker run"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
@@ -94,6 +95,8 @@
     "keytar": "^7.9.0"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/vitest-runner": "^9.6.1",
     "@types/babel__traverse": "^7.28.0",
     "@types/node": "22.19.19",
     "@types/prompts": "^2.4.9",

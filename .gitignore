@@ -43,3 +43,7 @@ packages/core/fixtures/**/.lyse/
 !.claude/skills/
 .claude/settings.local.json
 .worktrees/
+
+# Stryker mutation testing
+.stryker-tmp/
+packages/core/reports/

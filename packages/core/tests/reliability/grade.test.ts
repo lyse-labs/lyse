@@ -58,3 +58,12 @@ describe("computeGrade — auto-fail", () => {
     expect(r.reasons[0]).toContain("a11y, components, stories");
   });
 });
+
+describe("computeGrade N/A path (mutation hardening #104)", () => {
+  it("returns exactly { grade: N/A, autoFailed: false, reasons: [] } for an N/A score with < 2 zero axes", () => {
+    const g = computeGrade("N/A", [{ axis: "tokens", score: 50, findings: 0, opportunities: 1 }] as never);
+    expect(g.grade).toBe("N/A");
+    expect(g.autoFailed).toBe(false);
+    expect(g.reasons).toEqual([]);
+  });
+});

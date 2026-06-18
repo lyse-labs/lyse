@@ -122,3 +122,28 @@ describe("scoring-v1 conformal gate (Phase D, D-gov-2a)", () => {
     expect(base.findingsCountedInScore).toBe(withMap.findingsCountedInScore);
   });
 });
+
+describe("scoring-v1 mutation hardening (#104)", () => {
+  it("computes an EXACT score for a known penalty (kills the *1.5 arithmetic mutant)", () => {
+    // 1 stable warning, confidence 1.0 → penalty = 2*1.0 = 2 → score = round(100 - 2*1.5) = 97.
+    const findings: Finding[] = [
+      { ruleId: "a11y/essentials", subAxisId: "a11y.essentials", severity: "warning", confidence: "high", message: "", file: "a", line: 1, column: null },
+    ];
+    const r = computeScoreV1({ findings, stableSubAxes: new Set(["a11y.essentials"]), confidenceByAxis: { "a11y.essentials": 1.0 } });
+    expect(r.score).toBe(97);
+  });
+
+  it("conformal gate counts a finding whose confidence EQUALS the threshold (kills > vs >=)", () => {
+    const f: Finding = {
+      ruleId: "ai-governance/disclaimer-present", subAxisId: "ai-governance.disclaimer-present",
+      severity: "warning", confidence: "high", message: "", file: "a", line: 1, column: null,
+      llmJudgement: { verdict: "violation", confidence: 0.7 },
+    };
+    const r = computeScoreV1({
+      findings: [f], stableSubAxes: new Set(),
+      conformalSubAxes: new Map([["ai-governance.disclaimer-present", 0.7]]),
+      confidenceByAxis: { "ai-governance.disclaimer-present": 1.0 },
+    });
+    expect(r.findingsCountedInScore).toBe(1); // conf === theta must count
+  });
+});
