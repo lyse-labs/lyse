@@ -76,6 +76,18 @@ Rules on this axis:
 
 Does a design system that ships AI surfaces govern them responsibly — AI-generated content marked, loading/error and live-region states present, feedback and confidence affordances, source attribution, non-human (bot) labeling, and AI-reserved tokens used only on AI surfaces? Lyse's differentiated axis. Silent on design systems with no AI surface (so non-AI systems are never penalized). See [`docs/architecture/sub-axes.md`](../architecture/sub-axes.md) for the full ai-governance sub-axis list.
 
+#### Early-adopter grace ramp (ADR-0018)
+
+The ai-governance axis activates the moment a design system ships *any* AI surface. Without a ramp, adding a single `AIBadge` to a healthy DS would suddenly apply the full weight of ~10 governance affordances it hasn't built yet — cratering the score (~−20 pts) and punishing teams for *starting* to do AI governance.
+
+Instead the axis's contribution **ramps in with AI-surface maturity**:
+
+```
+graceFactor = min(1, aiMarkerCount / window)      # window default 5
+```
+
+The ai-governance contribution is scaled by `graceFactor`: at 1 AI marker it weighs `1/window` (≈20 %), at `window`+ markers it weighs fully. Findings are **still reported** at every stage — only their score *contribution* ramps in, so the guidance is visible from day one without the cliff. The window is configurable via `scoring.aiGovernanceGraceWindow` in `.lyse.yaml` (set `1` to disable the ramp). This grace applies **only** to ai-governance — every other axis is scored fully from the first finding.
+
 ## Axis score, fields, and N/A
 
 - **`errorCount` / `warningCount` / `infoCount`** — findings on this axis per severity, after allowlists.

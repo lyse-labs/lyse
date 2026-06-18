@@ -30,6 +30,40 @@ describe("scoring-v1", () => {
   });
 });
 
+describe("scoring-v1 ai-governance grace ramp (#89 / ADR-0018)", () => {
+  const govFindings: Finding[] = [
+    { ruleId: "ai-governance/disclaimer-present", subAxisId: "ai-governance.disclaimer-present", severity: "warning", confidence: "high", message: "", file: "AIBadge.tsx", line: 1, column: null },
+    { ruleId: "ai-governance/feedback-control-present", subAxisId: "ai-governance.feedback-control-present", severity: "warning", confidence: "high", message: "", file: "AIBadge.tsx", line: 1, column: null },
+  ];
+  const stable = new Set(["ai-governance.disclaimer-present", "ai-governance.feedback-control-present"]);
+  const conf = { "ai-governance.disclaimer-present": 1.0, "ai-governance.feedback-control-present": 1.0 };
+
+  it("grace 1 (default/inert) penalizes ai-governance findings fully", () => {
+    const full = computeScoreV1({ findings: govFindings, stableSubAxes: stable, confidenceByAxis: conf });
+    const explicit1 = computeScoreV1({ findings: govFindings, stableSubAxes: stable, confidenceByAxis: conf, aiGovernanceGrace: 1 });
+    expect(explicit1.score).toBe(full.score);
+    expect(full.score).toBeLessThan(100);
+  });
+
+  it("a low grace factor (nascent AI surface) barely dents the score", () => {
+    const graced = computeScoreV1({ findings: govFindings, stableSubAxes: stable, confidenceByAxis: conf, aiGovernanceGrace: 0.2 });
+    const full = computeScoreV1({ findings: govFindings, stableSubAxes: stable, confidenceByAxis: conf, aiGovernanceGrace: 1 });
+    expect(graced.score).toBeGreaterThan(full.score);
+    expect(graced.score).toBeGreaterThanOrEqual(95); // one AIBadge must not crater
+    // findings are still COUNTED (reported), only their penalty is scaled
+    expect(graced.findingsCountedInScore).toBe(2);
+  });
+
+  it("grace does NOT touch non-ai-governance findings", () => {
+    const mixed: Finding[] = [
+      { ruleId: "tokens/no-hardcoded-color", subAxisId: "tokens.color", severity: "error", confidence: "high", message: "", file: "x.tsx", line: 1, column: null },
+    ];
+    const a = computeScoreV1({ findings: mixed, stableSubAxes: new Set(["tokens.color"]), confidenceByAxis: { "tokens.color": 1.0 }, aiGovernanceGrace: 0.2 });
+    const b = computeScoreV1({ findings: mixed, stableSubAxes: new Set(["tokens.color"]), confidenceByAxis: { "tokens.color": 1.0 }, aiGovernanceGrace: 1 });
+    expect(a.score).toBe(b.score);
+  });
+});
+
 describe("scoring-v1 conformal gate (Phase D, D-gov-2a)", () => {
   const gov = (msg: string, conf?: number): Finding => ({
     ruleId: "ai-governance/disclaimer-present",

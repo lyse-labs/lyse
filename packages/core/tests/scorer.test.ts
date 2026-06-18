@@ -186,3 +186,39 @@ describe("scorer v2 — scoreFromFindings adapter", () => {
     expect(axis.score).toBe(91);
   });
 });
+
+describe("scorer ai-governance grace ramp (#89 / ADR-0018)", () => {
+  function govCratered(): Record<AxisName, AxisFindings> {
+    const f = noFindings();
+    // ai-governance axis with heavy findings (would score 0 without grace).
+    f["ai-governance"] = { errorCount: 0, warningCount: 10, infoCount: 0 };
+    return f;
+  }
+  const opp: Record<AxisName, number> = {
+    tokens: 0, a11y: 0, components: 0, stories: 0, "ai-surface": 0, "ai-governance": 10,
+  };
+
+  it("grace < 1 blends the ai-governance axis toward 100 (nascent AI surface)", () => {
+    const full = score(govCratered(), opp, { aiGovernanceGrace: 1 });
+    const graced = score(govCratered(), opp, { aiGovernanceGrace: 0.2 });
+    const govFull = full.axes.find((a) => a.axis === "ai-governance")!.score as number;
+    const govGraced = graced.axes.find((a) => a.axis === "ai-governance")!.score as number;
+    expect(govFull).toBe(0);
+    expect(govGraced).toBeGreaterThanOrEqual(79); // 0.2*0 + 0.8*100 = 80
+  });
+
+  it("grace 1 (default) is inert", () => {
+    const a = score(govCratered(), opp);
+    const b = score(govCratered(), opp, { aiGovernanceGrace: 1 });
+    expect(a.finalScore).toBe(b.finalScore);
+  });
+
+  it("grace only touches ai-governance, not other axes", () => {
+    const f = noFindings();
+    f.tokens = { errorCount: 0, warningCount: 10, infoCount: 0 };
+    const o: Record<AxisName, number> = { ...opp, tokens: 10, "ai-governance": 0 };
+    const a = score(f, o, { aiGovernanceGrace: 0.2 });
+    const b = score(f, o, { aiGovernanceGrace: 1 });
+    expect(a.finalScore).toBe(b.finalScore);
+  });
+});

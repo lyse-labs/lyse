@@ -1,6 +1,7 @@
 import type { Finding } from "../types.js";
 import { findingWeight } from "./weight.js";
 import { CURRENT_SCORING_VERSION } from "./version-pin.js";
+import { AI_GOVERNANCE_PREFIX } from "./grace.js";
 
 export interface ScoreInput {
   findings: Finding[];
@@ -13,6 +14,14 @@ export interface ScoreInput {
    * the map (or an empty map) is inert — scoring is unchanged.
    */
   conformalSubAxes?: ReadonlyMap<string, number>;
+  /**
+   * Early-adopter grace factor in [0, 1] for ai-governance findings (#89 /
+   * ADR-0018). A nascent AI surface should not take the full weight of
+   * governance affordances it has not built yet. Each ai-governance finding's
+   * score penalty is scaled by this factor; findings are still reported.
+   * Omitting it (or 1) is inert. See `score/grace.ts`.
+   */
+  aiGovernanceGrace?: number;
 }
 
 export interface ScoreOutput {
@@ -43,7 +52,9 @@ export function computeScoreV1(input: ScoreInput): ScoreOutput {
       reportedOnly++;
       continue;
     }
-    penalty += findingWeight(f.severity, input.confidenceByAxis[f.subAxisId] ?? 0);
+    const w = findingWeight(f.severity, input.confidenceByAxis[f.subAxisId] ?? 0);
+    const grace = input.aiGovernanceGrace ?? 1;
+    penalty += f.subAxisId.startsWith(AI_GOVERNANCE_PREFIX) ? w * grace : w;
     counted++;
   }
   const score = Math.max(0, Math.min(100, Math.round(100 - penalty * 1.5)));

@@ -390,6 +390,10 @@ export interface LyseConfig {
    * separately.
    */
   rules?: Record<string, "off" | RuleConfigEntry>;
+  /** Scoring tuning. `aiGovernanceGraceWindow` ramps the ai-governance axis in over N AI markers (#89 / ADR-0018; default 5). */
+  scoring?: {
+    aiGovernanceGraceWindow?: number;
+  };
   i18n?: {
     locales?: string[];
     vocabulary?: {
