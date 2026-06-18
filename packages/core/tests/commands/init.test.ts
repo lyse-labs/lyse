@@ -5,7 +5,7 @@ vi.mock("../../src/util/git.js", () => ({
   modifiedFilesWithHashes: vi.fn().mockResolvedValue([]),
 }));
 
-import { execSync } from "node:child_process";
+import { git, gitInit, gitCommitAll } from "../_helpers/git.js";
 import { mkdtempSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -14,10 +14,7 @@ import { runInit } from "../../src/commands/init.js";
 let dir: string;
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "lyse-init-"));
-  execSync("git init && git config user.email t@t.com && git config user.name t", {
-    cwd: dir,
-    shell: "/bin/sh",
-  });
+  gitInit(dir);
   writeFileSync(
     join(dir, "package.json"),
     JSON.stringify({
@@ -27,7 +24,7 @@ beforeEach(() => {
     }),
   );
   writeFileSync(join(dir, "Sample.tsx"), 'export const S = () => <div>x</div>;');
-  execSync("git add . && git commit -m init", { cwd: dir });
+  gitCommitAll(dir, "init");
 });
 
 
@@ -74,10 +71,7 @@ describe("runInit auto-fix with findings doesn't silently skip on dirty tree (Cr
 
   beforeEach(() => {
     fixDir = mkdtempSync(join(tmpdir(), "lyse-init-fix-"));
-    execSync("git init && git config user.email t@t.com && git config user.name t", {
-      cwd: fixDir,
-      shell: "/bin/sh",
-    });
+    gitInit(fixDir);
     writeFileSync(
       join(fixDir, "package.json"),
       JSON.stringify({
@@ -91,14 +85,14 @@ describe("runInit auto-fix with findings doesn't silently skip on dirty tree (Cr
       join(fixDir, "Sample.tsx"),
       'export const S = () => <div style={{background:"#3B82F6"}}>x</div>;',
     );
-    execSync("git add . && git commit -m init", { cwd: fixDir });
+    gitCommitAll(fixDir, "init");
   });
 
   it("creates a lyse/auto-fix-* branch even though init wrote .lyse.yaml + .gitignore first", async () => {
     await runInit({ cwd: fixDir, yes: true, skipNodeCheck: true });
 
     // The branch should exist (fix actually ran, not silently skipped)
-    const branches = execSync("git branch", { cwd: fixDir, encoding: "utf8" });
+    const branches = git(fixDir, ["branch"]);
     expect(branches).toMatch(/lyse\/auto-fix-/);
   });
 });

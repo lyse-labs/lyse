@@ -26,7 +26,7 @@ import { ruleObjects } from "../rules/registry.js";
 import { loadGeneratedPack } from "../rules/pack-loader.js";
 import { runRules } from "../rule-runner.js";
 import { scoreFromFindings } from "../scorer.js";
-import { posixRelative } from "../util/paths.js";
+import { posixRelative, toPosix } from "../util/paths.js";
 import { scanForMarkerComponents } from "../rules/ai-governance-ai-marker-component-present.js";
 import { aiGovernanceGraceFactor, DEFAULT_AI_GOVERNANCE_GRACE_WINDOW } from "../reliability/score/grace.js";
 import { computeGrade } from "../reliability/grade.js";
@@ -472,7 +472,10 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
       coverage: {
         scannedFiles: files.length,
         durationMs: Date.now() - t0,
-        configPath: resolveConfigPath(absoluteRoot),
+        configPath: (() => {
+          const cp = resolveConfigPath(absoluteRoot);
+          return cp === null ? null : toPosix(cp);
+        })(),
         ...(runResult.parseErrors.length > 0 ? { parseErrors: runResult.parseErrors } : {}),
       },
     },

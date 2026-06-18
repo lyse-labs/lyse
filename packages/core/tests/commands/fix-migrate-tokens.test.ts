@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync } from "node:fs";
-import { execSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { git, gitInit, gitCommitAll } from "../_helpers/git.js";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runFix } from "../../src/commands/fix.js";
@@ -8,14 +8,14 @@ import { runFix } from "../../src/commands/fix.js";
 let dir: string;
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "lyse-fix-migrate-"));
-  execSync("git init && git config user.email t@t.com && git config user.name t", { cwd: dir });
+  gitInit(dir);
   writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "@acme/ui", version: "1.0.0" }));
 });
 
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 function commitAll(): void {
-  execSync("git add -A && git commit -m fixtures", { cwd: dir });
+  gitCommitAll(dir, "fixtures");
 }
 
 describe("runFix --migrate-tokens", () => {
@@ -32,8 +32,8 @@ describe("runFix --migrate-tokens", () => {
     const out = JSON.parse(readFileSync(join(dir, "tokens.json"), "utf8"));
     expect(out.color.primary).toEqual({ $value: "#2563eb", $type: "color" });
 
-    expect(execSync("git status --porcelain", { cwd: dir }).toString().trim()).toBe("");
-    expect(execSync("git log --oneline", { cwd: dir }).toString()).toMatch(/migrate \d+ token file/);
+    expect(git(dir, ["status", "--porcelain"])).toBe("");
+    expect(git(dir, ["log", "--oneline"])).toMatch(/migrate \d+ token file/);
   });
 
   it("dry-run reports the path but writes nothing", async () => {

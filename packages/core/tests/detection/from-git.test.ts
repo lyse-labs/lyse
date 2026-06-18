@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { execSync } from "node:child_process";
+import { git, gitInit, gitCommitAll } from "../_helpers/git.js";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -8,7 +8,7 @@ import { detectFromGit } from "../../src/detection/from-git.js";
 let dir: string;
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "lyse-git-"));
-  execSync("git init && git config user.email t@t.com && git config user.name t", { cwd: dir, shell: "/bin/sh" });
+  gitInit(dir);
 });
 
 describe("detectFromGit", () => {
@@ -18,7 +18,7 @@ describe("detectFromGit", () => {
 
   it("detects clean tree after commit", async () => {
     writeFileSync(join(dir, "f.txt"), "x");
-    execSync("git add . && git commit -m init", { cwd: dir, shell: "/bin/sh" });
+    gitCommitAll(dir, "init");
     expect((await detectFromGit(dir)).git.value?.isClean).toBe(true);
   });
 
@@ -33,19 +33,19 @@ describe("detectFromGit", () => {
   });
 
   it("parses GitHub HTTPS remote URL", async () => {
-    execSync("git remote add origin https://github.com/acme/web.git", { cwd: dir });
+    git(dir, ["remote", "add", "origin", "https://github.com/acme/web.git"]);
     const r = await detectFromGit(dir);
     expect(r.github.value).toEqual({ owner: "acme", repo: "web" });
   });
 
   it("parses GitHub SSH remote URL", async () => {
-    execSync("git remote add origin git@github.com:acme/web.git", { cwd: dir });
+    git(dir, ["remote", "add", "origin", "git@github.com:acme/web.git"]);
     const r = await detectFromGit(dir);
     expect(r.github.value).toEqual({ owner: "acme", repo: "web" });
   });
 
   it("returns null github for non-GitHub remote", async () => {
-    execSync("git remote add origin https://gitlab.com/acme/web.git", { cwd: dir });
+    git(dir, ["remote", "add", "origin", "https://gitlab.com/acme/web.git"]);
     const r = await detectFromGit(dir);
     expect(r.github.value).toBe(null);
   });

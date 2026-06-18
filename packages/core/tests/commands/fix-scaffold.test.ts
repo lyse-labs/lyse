@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync } from "node:fs";
-import { execSync } from "node:child_process";
+import { git, gitInit, gitCommitAll } from "../_helpers/git.js";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runFix } from "../../src/commands/fix.js";
@@ -8,9 +8,9 @@ import { runFix } from "../../src/commands/fix.js";
 let dir: string;
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "lyse-fix-scaffold-"));
-  execSync("git init && git config user.email t@t.com && git config user.name t", { cwd: dir });
+  gitInit(dir);
   writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "@acme/ui", version: "1.0.0" }));
-  execSync("git add . && git commit -m init", { cwd: dir });
+  gitCommitAll(dir, "init");
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -22,9 +22,9 @@ describe("runFix --scaffold", () => {
     expect(existsSync(join(dir, "llms.txt"))).toBe(true);
     expect(existsSync(join(dir, "AGENTS.md"))).toBe(true);
     // committed → working tree clean
-    const status = execSync("git status --porcelain", { cwd: dir }).toString().trim();
+    const status = git(dir, ["status", "--porcelain"]);
     expect(status).toBe("");
-    const log = execSync("git log --oneline", { cwd: dir }).toString();
+    const log = git(dir, ["log", "--oneline"]);
     expect(log).toMatch(/scaffold \d+ AI-readiness file/);
   });
 

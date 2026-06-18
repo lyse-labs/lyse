@@ -22,7 +22,8 @@ describe("resolveLyseMcpEntry", () => {
     });
   });
 
-  it("realpath-resolves a symlinked argv1 to its real path in dev mode", () => {
+  // symlinkSync requires elevated privilege / developer mode on Windows.
+  it.skipIf(process.platform === "win32")("realpath-resolves a symlinked argv1 to its real path in dev mode", () => {
     const dir = mkdtempSync(join(tmpdir(), "lyse-mcp-entry-"));
     try {
       const realPathRaw = join(dir, "real-cli.js");
@@ -38,6 +39,13 @@ describe("resolveLyseMcpEntry", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("detects npm mode for a Windows-style backslash node_modules path", () => {
+    const entry = resolveLyseMcpEntry({
+      argv1: "C:\\Users\\dev\\AppData\\npm\\node_modules\\lyse\\dist\\cli.js",
+    });
+    expect(entry).toEqual({ command: "npx", args: ["-y", "@lyse-labs/lyse", "mcp"] });
   });
 
   it("detects npm mode for the npx -y cache path shape", () => {

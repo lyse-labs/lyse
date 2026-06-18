@@ -1,10 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { readFileSync, existsSync, writeFileSync, mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { LYSE_CLI_PATH } from "./_helpers/cli.js";
+import { gitInit, gitCommitAll, git } from "./_helpers/git.js";
 
 function makeConsentHome(accepted: boolean): string {
   const tmpHome = mkdtempSync(join(tmpdir(), "lyse-cli-home-"));
@@ -21,6 +22,16 @@ function makeConsentHome(accepted: boolean): string {
   return tmpHome;
 }
 
+/** Run `node <cli> <args…>` with no shell, so it works on Windows too. */
+function runCli(cli: string, args: string[], opts: { env?: NodeJS.ProcessEnv } = {}): void {
+  execFileSync("node", [cli, ...args], { stdio: "ignore", ...(opts.env ? { env: opts.env } : {}) });
+}
+
+/** os.homedir() reads USERPROFILE on Windows and HOME on posix — set both. */
+function homeEnv(home: string): NodeJS.ProcessEnv {
+  return { ...process.env, HOME: home, USERPROFILE: home };
+}
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 describe("cli audit integration (full-ds fixture)", () => {
@@ -31,7 +42,7 @@ describe("cli audit integration (full-ds fixture)", () => {
     if (!existsSync(cli)) {
       throw new Error(`CLI not built — run \`pnpm --filter lyse build\` first. Looked at: ${cli}`);
     }
-    execSync(`node ${cli} audit ${root} --static-only --output ${out}`, { stdio: "inherit" });
+    runCli(cli, ["audit", root, "--static-only", "--output", out]);
     const json = JSON.parse(readFileSync(join(out, "lyse.json"), "utf8"));
     expect(json.finalScore).not.toBe("N/A");
     expect(json.findings.length).toBeGreaterThan(0);
@@ -48,8 +59,8 @@ describe("cli audit integration (full-ds fixture)", () => {
     if (!existsSync(cli)) {
       throw new Error(`CLI not built — run \`pnpm --filter lyse build\` first. Looked at: ${cli}`);
     }
-    execSync(`node ${cli} audit ${root} --static-only --output ${out1}`, { stdio: "inherit" });
-    execSync(`node ${cli} audit ${root} --static-only --output ${out2}`, { stdio: "inherit" });
+    runCli(cli, ["audit", root, "--static-only", "--output", out1]);
+    runCli(cli, ["audit", root, "--static-only", "--output", out2]);
     const json1 = readFileSync(join(out1, "lyse.json"), "utf8");
     const json2 = readFileSync(join(out2, "lyse.json"), "utf8");
     expect(json1).toBe(json2);
@@ -62,7 +73,7 @@ describe("cli audit integration (full-ds fixture)", () => {
     if (!existsSync(cli)) {
       throw new Error(`CLI not built — run \`pnpm --filter lyse build\` first. Looked at: ${cli}`);
     }
-    execSync(`node ${cli} audit ${root} --static-only --output ${out}`, { stdio: "inherit" });
+    runCli(cli, ["audit", root, "--static-only", "--output", out]);
     // lyse.json present
     expect(existsSync(join(out, "lyse.json"))).toBe(true);
     // AGENTS.md ABSENT (moved to agents-md subcommand)
@@ -79,20 +90,15 @@ describe("cli telemetry (consent.accepted=true)", () => {
     }
     const tmp = mkdtempSync(join(tmpdir(), "lyse-cli-tel-"));
     const tmpHome = makeConsentHome(true);
-    execSync("git init -q", { cwd: tmp });
-    execSync('git config user.email "t@t"', { cwd: tmp });
-    execSync('git config user.name "t"', { cwd: tmp });
-    execSync("git remote add origin https://github.com/t/t.git", { cwd: tmp });
+    gitInit(tmp);
+    git(tmp, ["remote", "add", "origin", "https://github.com/t/t.git"]);
     writeFileSync(
       join(tmp, "Page.tsx"),
       'export default () => <div style={{ background: "#fff" }} />',
     );
-    execSync("git add . && git commit -q -m init", { cwd: tmp });
+    gitCommitAll(tmp, "init");
     try {
-      execSync(`node ${cli} audit ${tmp} --static-only --format json > /dev/null`, {
-        env: { ...process.env, HOME: tmpHome },
-        shell: "/bin/bash",
-      });
+      runCli(cli, ["audit", tmp, "--static-only", "--format", "json"], { env: homeEnv(tmpHome) });
       const ndjsonPath = join(tmp, ".lyse/events.ndjson");
       expect(existsSync(ndjsonPath)).toBe(true);
       const lines = readFileSync(ndjsonPath, "utf8").trim().split("\n").filter(Boolean);
@@ -112,13 +118,10 @@ describe("cli telemetry (consent.accepted=true)", () => {
     }
     const tmp = mkdtempSync(join(tmpdir(), "lyse-cli-no-tel-"));
     const tmpHome = mkdtempSync(join(tmpdir(), "lyse-cli-home-no-"));
-    execSync("git init -q", { cwd: tmp });
+    gitInit(tmp);
     writeFileSync(join(tmp, "Page.tsx"), "export default () => null;");
     try {
-      execSync(`node ${cli} audit ${tmp} --static-only --format json > /dev/null`, {
-        env: { ...process.env, HOME: tmpHome },
-        shell: "/bin/bash",
-      });
+      runCli(cli, ["audit", tmp, "--static-only", "--format", "json"], { env: homeEnv(tmpHome) });
       expect(existsSync(join(tmp, ".lyse/events.ndjson"))).toBe(false);
       // Non-TTY path must NOT persist a consent file (per ADR 0012).
       expect(existsSync(join(tmpHome, ".lyse/consent.json"))).toBe(false);
@@ -133,12 +136,11 @@ describe("cli telemetry (consent.accepted=true)", () => {
     }
     const tmp = mkdtempSync(join(tmpdir(), "lyse-cli-noflag-"));
     const tmpHome = makeConsentHome(true);
-    execSync("git init -q", { cwd: tmp });
+    gitInit(tmp);
     writeFileSync(join(tmp, "Page.tsx"), "export default () => null;");
     try {
-      execSync(`node ${cli} audit ${tmp} --static-only --no-telemetry --format json > /dev/null`, {
-        env: { ...process.env, HOME: tmpHome },
-        shell: "/bin/bash",
+      runCli(cli, ["audit", tmp, "--static-only", "--no-telemetry", "--format", "json"], {
+        env: homeEnv(tmpHome),
       });
       expect(existsSync(join(tmp, ".lyse/events.ndjson"))).toBe(false);
       // Persisted consent must remain accepted=true (single-run override).
