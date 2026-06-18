@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { join, relative, dirname } from "node:path";
+import { join, dirname } from "node:path";
 import fg from "fast-glob";
 import { parse as parseBabel } from "@babel/parser";
 import _traverse from "@babel/traverse";
@@ -364,7 +364,7 @@ const evaluate = async (
           ruleId: RULE_ID,
           axis: "components",
           severity: "warning",
-          location: { file: relative(ctx.repoRoot, abs) || rel, line: 1, column: 1 },
+          location: { file: rel, line: 1, column: 1 },
           message: `package.json is missing the 'types' (or 'typings') field — consumers and AI agents get no .d.ts surface`,
           suggestion: `add '"types": "./dist/index.d.ts"' (or the matching path for your build output)`,
         });
@@ -373,7 +373,7 @@ const evaluate = async (
           ruleId: RULE_ID,
           axis: "components",
           severity: "warning",
-          location: { file: relative(ctx.repoRoot, abs) || rel, line: 1, column: 1 },
+          location: { file: rel, line: 1, column: 1 },
           message: `package.json 'types' points to '${outcome.typesPath}' which does not exist — build output is missing or path is wrong`,
           suggestion: `run the package build, or update the 'types' field to point at the produced .d.ts file`,
         });

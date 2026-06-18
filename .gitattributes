@@ -1,0 +1,9 @@
+# Normalize line endings to LF on checkout across platforms so byte-for-byte
+# fixtures, snapshots, and deterministic outputs match on Windows too (#104).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
