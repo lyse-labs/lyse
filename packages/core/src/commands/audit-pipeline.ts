@@ -18,7 +18,7 @@ import { walk, DEFAULT_EXCLUDE_PATHS } from "../walker.js";
 import { parseTs } from "../parsers/ts.js";
 import { parseCss } from "../parsers/css.js";
 import { extractCssInJs } from "../parsers/css-in-js.js";
-import { extractSfcStyleBlocks } from "../parsers/sfc-styles.js";
+import { extractSfcStyleCss } from "../parsers/sfc-styles.js";
 import { loadTokens } from "../loaders/tokens.js";
 import { loadStories } from "../loaders/stories.js";
 import { buildComponentInventory } from "../loaders/components.js";
@@ -256,10 +256,11 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
         return { kind: "css", css, path, rel, source };
       }
       // Svelte/Vue single-file components embed CSS in <style> blocks — extract
-      // them so token-drift rules cover non-React design systems (#102).
+      // them (line-preserving, scss-aware) so token-drift rules cover non-React
+      // design systems without the SCSS-in-SFC false positives (#102).
       if (/\.(svelte|vue)$/.test(path)) {
-        const styles = extractSfcStyleBlocks(source).join("\n\n");
-        if (styles) {
+        const styles = extractSfcStyleCss(source);
+        if (styles.trim()) {
           const css = await parseCss(rel, styles);
           return { kind: "css", css, path, rel, source };
         }
