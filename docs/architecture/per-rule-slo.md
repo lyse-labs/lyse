@@ -10,12 +10,16 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 
 | Rule | Sub-axis | Precision (Wilson LB) | Recall (Wilson LB) | N samples | Last calibrated |
 |---|---|---|---|---|---|
+| `tokens/no-hardcoded-border-radius` | `tokens.border-radius` | 0.958 | 0.916 | — | 2026-06-18 |
 | `tokens/deprecated-token-usage` | `tokens.deprecated-token-usage` | 0.901 | 0.904 | — | 2026-06-15 |
 | `tokens/description-coverage` | `tokens.description-coverage` | 0.901 | 0.901 | — | 2026-06-17 |
 | `tokens/dtcg-conformance` | `tokens.dtcg-conformance` | 0.901 | 0.901 | — | 2026-06-15 |
+| `tokens/no-hardcoded-opacity` | `tokens.opacity` | 0.989 | 0.916 | — | 2026-06-18 |
 | `tokens/responsive-breakpoints` | `tokens.responsive-breakpoints` | 0.904 | 0.901 | — | 2026-06-17 |
 | `tokens/no-hardcoded-spacing` | `tokens.spacing` | 0.985 | 0.904 | — | 2026-06-18 |
 | `tokens/theme-modes-present` | `tokens.theme-modes` | 0.901 | 0.904 | — | 2026-06-15 |
+| `tokens/no-hardcoded-typography` | `tokens.typography` | 0.989 | 0.916 | — | 2026-06-18 |
+| `tokens/no-hardcoded-z-index` | `tokens.z-index` | 0.988 | 0.916 | — | 2026-06-18 |
 | `a11y/essentials` | `a11y.essentials` | 0.908 | 0.904 | — | 2026-06-17 |
 | `a11y/focus-visible` | `a11y.focus-visible` | 0.904 | 0.901 | — | 2026-06-17 |
 | `a11y/inclusive-language` | `a11y.inclusive-language` | 0.904 | 0.901 | — | 2026-06-17 |
