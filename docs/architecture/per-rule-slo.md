@@ -14,6 +14,7 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 | `tokens/description-coverage` | `tokens.description-coverage` | 0.901 | 0.901 | — | 2026-06-17 |
 | `tokens/dtcg-conformance` | `tokens.dtcg-conformance` | 0.901 | 0.901 | — | 2026-06-15 |
 | `tokens/responsive-breakpoints` | `tokens.responsive-breakpoints` | 0.904 | 0.901 | — | 2026-06-17 |
+| `tokens/no-hardcoded-spacing` | `tokens.spacing` | 0.985 | 0.904 | — | 2026-06-18 |
 | `tokens/theme-modes-present` | `tokens.theme-modes` | 0.901 | 0.904 | — | 2026-06-15 |
 | `a11y/essentials` | `a11y.essentials` | 0.908 | 0.904 | — | 2026-06-17 |
 | `a11y/focus-visible` | `a11y.focus-visible` | 0.904 | 0.901 | — | 2026-06-17 |
