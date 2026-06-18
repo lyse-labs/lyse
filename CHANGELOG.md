@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Windows CI lane (#104).** Added a `test-windows` job (windows-latest) running the full type-check + test suite, to catch path-handling / line-ending / filesystem case-sensitivity divergences behind the cross-platform trust claims. Advisory (not a required check) until consistently green.
+- **Windows CI lane (#104) — now hard-failing.** Added a `test-windows` job (windows-latest) running the full type-check + test suite, to catch path-handling / line-ending / filesystem case-sensitivity divergences behind the cross-platform trust claims. The full suite is now green on Windows, so `continue-on-error` is dropped — Windows regressions fail the build.
 
 - **Mutation testing on the scoring engine (#104).** Wired Stryker (`@stryker-mutator/core` + vitest runner, `pnpm mutation`) scoped to the four trust-bearing scoring files (`scorer.ts`, `formula-v1.ts`, `grace.ts`, `grade.ts`) with `perTest` coverage. The initial run scored **91.3 %** and surfaced ~6 genuine test gaps — now closed with targeted tests (exact score-formula value, exact grace-blend value, ai-governance-only blending, a11y/stories bucket aggregation, unknown-axis guard, the N/A grade path, and a conformal-gate boundary at `confidence === θ`) — lifting the score to **94.95 %**. The remaining survivors are equivalent mutants (e.g. `K=0` makes `±` identical, `grace=1` makes `<=1`/`<1` identical) and are documented as such. A break threshold of 85 % guards the engine against future test regressions. (Property-based suites landed earlier; the Windows CI lane remains for #104.)
 
