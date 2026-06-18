@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import fg from "fast-glob";
 import { parse } from "@babel/parser";
 import _traverse from "@babel/traverse";
@@ -207,7 +207,10 @@ export async function loadStories(root: string): Promise<StoryIndex | null> {
     const titleMatch = src.match(/title\s*:\s*["'`]([^"'`]+)["'`]/);
     if (!titleMatch || !titleMatch[1]) continue;
     const leaf = titleMatch[1].split("/").pop() ?? titleMatch[1];
-    const importPath = f.replace(root + "/", "");
+    // Normalize to a posix-style import path: fast-glob returns "/" paths but
+    // `root` uses the OS separator, so a naive `replace(root + "/")` leaves the
+    // path absolute on Windows. `relative` + "/"-join is cross-platform.
+    const importPath = relative(root, f).split(/[\\/]/).join("/");
     const storyEntry: StoryEntry = {
       id: leaf.toLowerCase(),
       importPath,
