@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Cross-platform git invocation + path handling (#104, Windows).** Surfaced by the new Windows CI lane: (1) the build's manifest step did `import(absolutePath)` → fixed with `pathToFileURL`; (2) finding `location.file` was relativized via `abs.startsWith(root + "/")`, which fails on Windows (fast-glob returns `/`, the repo root uses `\`) — added a `posixRelative` helper so finding/import paths are relative `/` on every platform (fixed the walker + stories/contracts); (3) `git-helpers` ran shell command strings with POSIX single-quote escaping → switched to `execFile("git", argsArray)` (no shell, no quoting) so the commit/branch/guard paths work on Windows; (4) `.gitattributes` (`eol=lf`) so byte-for-byte fixtures/snapshots match on Windows checkouts. The `test-windows` lane is advisory until the remaining divergences clear.
+
 ### Changed
 
 - **Windows CI lane (#104).** Added a `test-windows` job (windows-latest) running the full type-check + test suite, to catch path-handling / line-ending / filesystem case-sensitivity divergences behind the cross-platform trust claims. Advisory (not a required check) until consistently green.
