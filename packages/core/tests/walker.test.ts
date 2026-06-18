@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { join } from "node:path";
+import { posixRelative } from "../src/util/paths.js";
 import { walk } from "../src/walker.js";
 
 describe("walker", () => {
@@ -20,7 +21,7 @@ describe("walker", () => {
 
   it("returns matching files relative to root, respects .gitignore and node_modules", async () => {
     const files = await walk(root);
-    const rel = files.map((f) => f.replace(root + "/", "")).sort();
+    const rel = files.map((f) => posixRelative(root, f)).sort();
     expect(rel).toEqual(["src/a.tsx", "src/b.css"]);
   });
 });
@@ -34,7 +35,7 @@ describe("walker default excludes", () => {
     writeFileSync(join(tmp, "examples", "basic", "b.tsx"), "export const y = 2;");
 
     const files = await walk(tmp);
-    const rel = files.map((f) => relative(tmp, f));
+    const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
     expect(rel).not.toContain(join("examples", "basic", "b.tsx"));
   });
@@ -47,7 +48,7 @@ describe("walker default excludes", () => {
     writeFileSync(join(tmp, "apps", "docs", "pages", "index.tsx"), "export const z = 3;");
 
     const files = await walk(tmp);
-    const rel = files.map((f) => relative(tmp, f));
+    const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
     expect(rel).not.toContain(join("apps", "docs", "pages", "index.tsx"));
   });
@@ -60,7 +61,7 @@ describe("walker default excludes", () => {
     writeFileSync(join(tmp, "packages", "dev", "scripts", "gen.ts"), "export const g = 4;");
 
     const files = await walk(tmp);
-    const rel = files.map((f) => relative(tmp, f));
+    const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
     expect(rel).not.toContain(join("packages", "dev", "scripts", "gen.ts"));
   });
@@ -73,7 +74,7 @@ describe("walker default excludes", () => {
     writeFileSync(join(tmp, "packages", "core", "fixtures", "full-ds.tsx"), "export const f = 5;");
 
     const files = await walk(tmp);
-    const rel = files.map((f) => relative(tmp, f));
+    const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
     expect(rel).not.toContain(join("packages", "core", "fixtures", "full-ds.tsx"));
   });
@@ -88,7 +89,7 @@ describe("walker default excludes", () => {
     writeFileSync(join(tmp, "custom-dir", "c.tsx"), "export const z = 3;");
 
     const files = await walk(tmp, { extraIgnores: ["custom-dir/**"] });
-    const rel = files.map((f) => relative(tmp, f));
+    const rel = files.map((f) => posixRelative(tmp, f));
     // src is included
     expect(rel).toContain("src/a.tsx");
     // default excludes still apply
@@ -105,7 +106,7 @@ describe("walker default excludes", () => {
     writeFileSync(join(tmp, "starters", "vite", "App.tsx"), "export const s = 6;");
 
     const files = await walk(tmp);
-    const rel = files.map((f) => relative(tmp, f));
+    const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
     expect(rel).not.toContain(join("starters", "vite", "App.tsx"));
   });
@@ -118,7 +119,7 @@ describe("walker default excludes", () => {
     writeFileSync(join(tmp, "playground", "test.tsx"), "export const p = 7;");
 
     const files = await walk(tmp);
-    const rel = files.map((f) => relative(tmp, f));
+    const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
     expect(rel).not.toContain(join("playground", "test.tsx"));
   });
@@ -131,7 +132,7 @@ describe("walker default excludes", () => {
     writeFileSync(join(tmp, "e2e", "spec.ts"), "export const e = 8;");
 
     const files = await walk(tmp);
-    const rel = files.map((f) => relative(tmp, f));
+    const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
     expect(rel).not.toContain(join("e2e", "spec.ts"));
   });

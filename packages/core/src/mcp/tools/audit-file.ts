@@ -6,6 +6,7 @@ import { parseTs } from "../../parsers/ts.js";
 import { parseCss } from "../../parsers/css.js";
 import { extractCssInJs } from "../../parsers/css-in-js.js";
 import { getProjectContext } from "../context-cache.js";
+import { posixRelative } from "../../util/paths.js";
 import { disabledRuleIds } from "../../config/rules-config.js";
 import { ruleObjects } from "../../rules/registry.js";
 import { runRules } from "../../rule-runner.js";
@@ -146,7 +147,7 @@ export async function runAuditFile(input: AuditFileInput): Promise<AuditFileResu
   }
 
   // Build a minimal ParsedFiles for ONE file
-  const rel = filePath.startsWith(projectRoot + "/") ? filePath.slice(projectRoot.length + 1) : filePath;
+  const rel = posixRelative(projectRoot, filePath);
   const parsed: ParsedFiles = { ts: [], css: [], cssInJs: [] };
   if (/\.(tsx?|jsx?|mjs|cjs)$/.test(filePath)) {
     parsed.ts.push(await parseTs(rel, source));

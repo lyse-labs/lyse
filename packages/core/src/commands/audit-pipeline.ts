@@ -26,6 +26,7 @@ import { ruleObjects } from "../rules/registry.js";
 import { loadGeneratedPack } from "../rules/pack-loader.js";
 import { runRules } from "../rule-runner.js";
 import { scoreFromFindings } from "../scorer.js";
+import { posixRelative } from "../util/paths.js";
 import { scanForMarkerComponents } from "../rules/ai-governance-ai-marker-component-present.js";
 import { aiGovernanceGraceFactor, DEFAULT_AI_GOVERNANCE_GRACE_WINDOW } from "../reliability/score/grace.js";
 import { computeGrade } from "../reliability/grade.js";
@@ -244,7 +245,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   const fileResults = await Promise.all(
     files.map(async (path): Promise<FileResult> => {
       const source = readFileSync(path, "utf8");
-      const rel = path.startsWith(absoluteRoot + "/") ? path.slice(absoluteRoot.length + 1) : path;
+      const rel = posixRelative(absoluteRoot, path);
       if (/\.(tsx?|jsx?|mjs|cjs)$/.test(path)) {
         const ts = await parseTs(rel, source);
         const cssInJs = ts.ast !== null ? extractCssInJs(rel, source) : [];
