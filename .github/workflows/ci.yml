@@ -22,14 +22,10 @@ jobs:
       - run: pnpm test
 
   # Cross-platform robustness lane (#104): path handling, line endings, FS case
-  # sensitivity. Not a required check until consistently green — advisory signal.
+  # sensitivity. Hard-failing as of 2026-06-18 — the full suite is green on
+  # windows-latest (the path/separator + shell-harness divergences are fixed).
   test-windows:
     runs-on: windows-latest
-    # Advisory until consistently green (#104): runs + surfaces cross-platform
-    # divergences in the logs, but does not fail the commit status. Flip off
-    # continue-on-error + add to required checks once the remaining Windows
-    # failures (walker/fix/init path + CRLF normalization) are resolved.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
