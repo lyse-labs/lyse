@@ -39,7 +39,8 @@ describe("PlainFileCredentialStore", () => {
     expect(keys.sort()).toEqual(["a", "b"]);
   });
 
-  it("file is created with chmod 600", async () => {
+  // POSIX file-mode bits don't apply on Windows (chmod is a near no-op there).
+  it.skipIf(process.platform === "win32")("file is created with chmod 600", async () => {
     await store.set("x", "y");
     const mode = statSync(join(dir, "credentials")).mode & 0o777;
     expect(mode).toBe(0o600);

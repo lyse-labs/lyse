@@ -1,5 +1,5 @@
 import { realpathSync } from "node:fs";
-import { sep } from "node:path";
+import { toPosix } from "../util/paths.js";
 
 export interface McpEntry {
   command: string;
@@ -48,7 +48,7 @@ function resolve(opts: ResolveOptions): ResolutionContext {
     return { mode: "dev", resolved: "" };
   }
   const resolved = tryRealpath(argv1);
-  const mode: InstallMode = resolved.includes(`${sep}node_modules${sep}`)
+  const mode: InstallMode = toPosix(resolved).includes("/node_modules/")
     ? "npm"
     : "dev";
   return { mode, resolved };

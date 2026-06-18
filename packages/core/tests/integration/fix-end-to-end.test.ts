@@ -32,8 +32,7 @@ vi.mock("../../src/util/git.js", () => ({
   gitHeadSha: vi.fn().mockResolvedValue("no-git"),
   modifiedFilesWithHashes: vi.fn().mockResolvedValue([]),
 }));
-import { execSync } from "node:child_process";
-import { gitCommitAll } from "../_helpers/git.js";
+import { gitInit, gitCommitAll } from "../_helpers/git.js";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -43,10 +42,7 @@ let dir: string;
 
 function setup() {
   dir = mkdtempSync(join(tmpdir(), "lyse-int-fix-"));
-  execSync(
-    "git init && git config user.email t@t.com && git config user.name t",
-    { cwd: dir, shell: "/bin/sh" },
-  );
+  gitInit(dir);
   writeFileSync(
     join(dir, "package.json"),
     JSON.stringify({

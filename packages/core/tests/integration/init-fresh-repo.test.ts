@@ -35,8 +35,7 @@ vi.mock("../../src/util/git.js", () => ({
   gitHeadSha: vi.fn().mockResolvedValue("no-git"),
   modifiedFilesWithHashes: vi.fn().mockResolvedValue([]),
 }));
-import { execSync } from "node:child_process";
-import { gitCommitAll } from "../_helpers/git.js";
+import { gitInit, gitCommitAll } from "../_helpers/git.js";
 import {
   mkdtempSync,
   writeFileSync,
@@ -53,10 +52,7 @@ let dir: string;
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "lyse-int-init-"));
-  execSync(
-    "git init && git config user.email t@t.com && git config user.name t",
-    { cwd: dir, shell: "/bin/sh" },
-  );
+  gitInit(dir);
   writeFileSync(
     join(dir, "package.json"),
     JSON.stringify({
@@ -133,10 +129,7 @@ describe("runInit chains through mcp-setup (Critical #2 regression)", () => {
 
   beforeEach(() => {
     ciDir = mkdtempSync(join(tmpdir(), "lyse-int-init-mcp-"));
-    execSync(
-      "git init && git config user.email t@t.com && git config user.name t",
-      { cwd: ciDir, shell: "/bin/sh" },
-    );
+    gitInit(ciDir);
     // .cursor directory — triggers the MCP setup branch
     mkdirSync(join(ciDir, ".cursor"), { recursive: true });
     writeFileSync(

@@ -8,7 +8,8 @@
 // When the templates change, edit the constants below.
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { posixRelative } from "../util/paths.js";
 import { VERSION } from "../index.js";
 
 export interface AddCiGateOptions {
@@ -89,19 +90,19 @@ export function runAddCiGate(opts: AddCiGateOptions): AddCiGateResult {
 
   // Refuse to overwrite unless --force.
   if (existsSync(workflowPath) && !opts.force) {
-    skipped.push({ path: relative(cwd, workflowPath), reason: "already exists (pass --force to overwrite)" });
+    skipped.push({ path: posixRelative(cwd, workflowPath), reason: "already exists (pass --force to overwrite)" });
   } else {
     mkdirSync(dirname(workflowPath), { recursive: true });
     writeFileSync(workflowPath, renderWorkflow({ lyseVersion, threshold }), "utf8");
-    written.push(relative(cwd, workflowPath));
+    written.push(posixRelative(cwd, workflowPath));
   }
 
   if (existsSync(scriptPath) && !opts.force) {
-    skipped.push({ path: relative(cwd, scriptPath), reason: "already exists (pass --force to overwrite)" });
+    skipped.push({ path: posixRelative(cwd, scriptPath), reason: "already exists (pass --force to overwrite)" });
   } else {
     mkdirSync(dirname(scriptPath), { recursive: true });
     writeFileSync(scriptPath, GATE_SCRIPT, "utf8");
-    written.push(relative(cwd, scriptPath));
+    written.push(posixRelative(cwd, scriptPath));
   }
 
   return { written, skipped };
