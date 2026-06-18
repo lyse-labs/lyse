@@ -43,4 +43,27 @@ describe("audit-pipeline: Svelte/Vue <style> ingestion (#102)", () => {
     const result = await auditDirectory(dir);
     expect(result.result.findings.some((f) => f.ruleId === "tokens/no-hardcoded-color")).toBe(true);
   });
+
+  it("does NOT flag a SCSS $-var definition in a Vue <style lang=\"scss\"> block, and reports the real drift on its source line", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "lyse-sfc-"));
+    writeFileSync(join(dir, "package.json"), '{"name":"a","dependencies":{"vue":"3"}}');
+    mkdirSync(join(dir, "src"));
+    writeFileSync(
+      join(dir, "src", "Comp.vue"),
+      [
+        `<template><button class="btn"/></template>`, // 1
+        `<style lang="scss" scoped>`, // 2
+        `$brand: #3B82F6;`, // 3 — a token DEFINITION, must NOT be flagged
+        `.btn {`, // 4
+        `  color: #FF0000;`, // 5 — genuine drift
+        `}`, // 6
+        `</style>`, // 7
+      ].join("\n"),
+    );
+    const result = await auditDirectory(dir);
+    const colors = result.result.findings.filter((f) => f.ruleId === "tokens/no-hardcoded-color");
+    // Exactly one finding — the real declaration, not the $-var definition.
+    expect(colors).toHaveLength(1);
+    expect(colors[0]!.location.line).toBe(5); // line-preserved against the .vue source
+  });
 });
