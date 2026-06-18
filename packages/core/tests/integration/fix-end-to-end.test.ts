@@ -33,6 +33,7 @@ vi.mock("../../src/util/git.js", () => ({
   modifiedFilesWithHashes: vi.fn().mockResolvedValue([]),
 }));
 import { execSync } from "node:child_process";
+import { gitCommitAll } from "../_helpers/git.js";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -64,7 +65,7 @@ function setup() {
     join(dir, "Button.tsx"),
     'export const Button = () => <button style={{background:"#3B82F6"}}>click</button>;',
   );
-  execSync("git add . && git commit -m init", { cwd: dir });
+  gitCommitAll(dir, "init");
 }
 
 beforeEach(setup);

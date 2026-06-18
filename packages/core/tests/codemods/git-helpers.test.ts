@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { execSync } from "node:child_process";
+import { git, gitInitWithCommit } from "../_helpers/git.js";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { ensureClean, ensureSafeBranch, createBranch, commitAll, hasTestScript } from "../../src/codemods/git-helpers.js";
+import { ensureClean, createBranch, commitAll, hasTestScript } from "../../src/codemods/git-helpers.js";
 
 let dir: string;
 
 function initRepo() {
   dir = mkdtempSync(join(tmpdir(), "lyse-gh-"));
-  execSync("git init && git config user.email t@t.com && git config user.name t && git commit --allow-empty -m init", { cwd: dir, shell: "/bin/sh" });
+  gitInitWithCommit(dir);
 }
 
 beforeEach(() => { initRepo(); });
@@ -32,14 +32,14 @@ describe("createBranch", () => {
   it("creates a new branch", async () => {
     const name = await createBranch(dir, "lyse/test");
     expect(name).toBe("lyse/test");
-    const current = execSync("git rev-parse --abbrev-ref HEAD", { cwd: dir }).toString().trim();
+    const current = git(dir, ["rev-parse", "--abbrev-ref", "HEAD"]);
     expect(current).toBe("lyse/test");
   });
   it("suffixes on collision", async () => {
     await createBranch(dir, "lyse/dup");
     // checkout back to original branch (could be main or master)
-    const original = execSync("git for-each-ref --format='%(refname:short)' refs/heads/ | head -1", { cwd: dir, shell: "/bin/sh" }).toString().trim().replace(/'/g, "");
-    execSync(`git checkout ${original.replace("'", "")}`, { cwd: dir, shell: "/bin/sh" }).toString();
+    const original = git(dir, ["for-each-ref", "--format=%(refname:short)", "--count=1", "refs/heads/"]);
+    git(dir, ["checkout", original]);
     const name = await createBranch(dir, "lyse/dup");
     expect(name).toBe("lyse/dup-2");
   });
