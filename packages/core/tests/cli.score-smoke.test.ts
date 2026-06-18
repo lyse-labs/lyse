@@ -22,7 +22,10 @@
  * [79,85]/[6,8] after the 11th (`ai-surface.migration-guide-present`, #131) →
  * [75,81]/[8,11] after promoting the 10 deterministic gate-clearers into v1
  * (#71, 12→22 stable sub-axes; only a couple fire on the clean full-ds fixture,
- * so the band steps down modestly).
+ * so the band steps down modestly) →
+ * [70,76]/[9,13] after promoting `tokens.spacing` into v1 (oracle-valid
+ * precision LB 0.985, #128/#120; full-ds has one hardcoded-spacing finding at
+ * src/Page.tsx, so the score steps down ~5 pts and counted +2).
  * Each new scored sub-axis that fires on full-ds (which ships none of these
  * AI/versioning artifacts) steps the band down by one finding.
  *
@@ -70,11 +73,11 @@ describe("cli explain --score smoke (Track 8.10)", () => {
     const score = parseInt(scoreMatch![1]!, 10);
     expect(
       score,
-      `Health Score ${score} is outside expected band [75, 81]. ` +
+      `Health Score ${score} is outside expected band [70, 76]. ` +
         `Either a scoring regression occurred or a new stable sub-axis was added ` +
         `and the band needs updating.`,
-    ).toBeGreaterThanOrEqual(75);
-    expect(score).toBeLessThanOrEqual(81);
+    ).toBeGreaterThanOrEqual(70);
+    expect(score).toBeLessThanOrEqual(76);
 
     // --- scoring-v1 path ---
     expect(out, "Expected 'scoring-v1' in output — trusted-score path may not be active").toContain(
@@ -87,10 +90,10 @@ describe("cli explain --score smoke (Track 8.10)", () => {
     const counted = parseInt(countedMatch![1]!, 10);
     expect(
       counted,
-      `Counted findings ${counted} is outside expected band [8, 11]. ` +
+      `Counted findings ${counted} is outside expected band [9, 13]. ` +
         `If 0, stableSubAxes may have silently gone empty (trivial 100 regression). ` +
-        `If >11, new stable sub-axes were promoted without updating this band.`,
-    ).toBeGreaterThanOrEqual(8);
-    expect(counted).toBeLessThanOrEqual(11);
+        `If >13, new stable sub-axes were promoted without updating this band.`,
+    ).toBeGreaterThanOrEqual(9);
+    expect(counted).toBeLessThanOrEqual(13);
   });
 });
