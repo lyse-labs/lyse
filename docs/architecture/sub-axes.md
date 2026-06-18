@@ -4,26 +4,26 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**53 sub-axes total** — stable: 37 · experimental: 16 · disabled: 0
+**53 sub-axes total** — stable: 41 · experimental: 12 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
 | ID | Axis | Name | Status | Precision (LB) | Recall (LB) | In Score |
 |---|---|---|---|---|---|---|
-| `tokens.border-radius` | `tokens` | Radii token scale | **experimental** | — | — | — |
+| `tokens.border-radius` | `tokens` | Radii token scale | **stable** | 0.958 | 0.916 | ✅ |
 | `tokens.border-width` | `tokens` | Border-width token scale | **experimental** | — | — | — |
 | `tokens.color` | `tokens` | Color tokens | **experimental** | 0.339 | 0.904 | — |
 | `tokens.deprecated-token-usage` | `tokens` | Deprecated-token aliasing ($deprecated) | **stable** | 0.901 | 0.904 | ✅ |
 | `tokens.description-coverage` | `tokens` | Token description coverage | **stable** | 0.901 | 0.901 | ✅ |
 | `tokens.dtcg-conformance` | `tokens` | DTCG conformance | **stable** | 0.901 | 0.901 | ✅ |
 | `tokens.motion` | `tokens` | Motion token scale (duration/easing) | **experimental** | — | — | — |
-| `tokens.opacity` | `tokens` | Opacity token scale | **experimental** | — | — | — |
+| `tokens.opacity` | `tokens` | Opacity token scale | **stable** | 0.989 | 0.916 | ✅ |
 | `tokens.responsive-breakpoints` | `tokens` | Responsive breakpoint scale | **stable** | 0.904 | 0.901 | ✅ |
 | `tokens.shadow` | `tokens` | Shadow / elevation token scale | **experimental** | — | — | — |
 | `tokens.spacing` | `tokens` | Spacing tokens | **stable** | 0.985 | 0.904 | ✅ |
 | `tokens.theme-modes` | `tokens` | Theme modes (light/dark) | **stable** | 0.901 | 0.904 | ✅ |
-| `tokens.typography` | `tokens` | Typography token scale (size/weight/letter-spacing) | **experimental** | — | — | — |
-| `tokens.z-index` | `tokens` | Z-index token scale | **experimental** | — | — | — |
+| `tokens.typography` | `tokens` | Typography token scale (size/weight/letter-spacing) | **stable** | 0.989 | 0.916 | ✅ |
+| `tokens.z-index` | `tokens` | Z-index token scale | **stable** | 0.988 | 0.916 | ✅ |
 | `a11y.essentials` | `a11y` | jsx-a11y essentials | **stable** | 0.908 | 0.904 | ✅ |
 | `a11y.focus-visible` | `a11y` | focus-visible adoption | **stable** | 0.904 | 0.901 | ✅ |
 | `a11y.inclusive-language` | `a11y` | Inclusive language | **stable** | 0.904 | 0.901 | ✅ |

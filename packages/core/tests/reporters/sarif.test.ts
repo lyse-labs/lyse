@@ -159,7 +159,7 @@ describe("renderSarif", () => {
       const sarif = JSON.parse(renderSarif(sample));
       const rules: { id: string; properties: { precision?: number } }[] =
         sarif.runs[0].tool.driver.rules;
-      const noPrecision = rules.find((r) => r.id === "tokens/no-hardcoded-z-index");
+      const noPrecision = rules.find((r) => r.id === "tokens/no-hardcoded-shadow");
       expect(noPrecision).toBeDefined();
       expect(noPrecision?.properties).not.toHaveProperty("precision");
     });
