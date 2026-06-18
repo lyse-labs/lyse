@@ -66,4 +66,25 @@ describe("audit-pipeline: Svelte/Vue <style> ingestion (#102)", () => {
     expect(colors).toHaveLength(1);
     expect(colors[0]!.location.line).toBe(5); // line-preserved against the .vue source
   });
+
+  it("flags a hardcoded color constant in a Vue <script setup> block, on its source line", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "lyse-sfc-"));
+    writeFileSync(join(dir, "package.json"), '{"name":"a","dependencies":{"vue":"3"}}');
+    mkdirSync(join(dir, "src"));
+    writeFileSync(
+      join(dir, "src", "Card.vue"),
+      [
+        `<template><button/></template>`, // 1
+        `<script setup lang="ts">`, // 2
+        `const accent = "#3B82F6";`, // 3 — hardcoded color in the script
+        `</script>`, // 4
+      ].join("\n"),
+    );
+    const result = await auditDirectory(dir);
+    const colors = result.result.findings.filter(
+      (f) => f.ruleId === "tokens/no-hardcoded-color" && f.location.file.endsWith("Card.vue"),
+    );
+    expect(colors).toHaveLength(1);
+    expect(colors[0]!.location.line).toBe(3); // line-preserved against the .vue source
+  });
 });

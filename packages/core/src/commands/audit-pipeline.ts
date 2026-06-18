@@ -19,6 +19,7 @@ import { parseTs } from "../parsers/ts.js";
 import { parseCss } from "../parsers/css.js";
 import { extractCssInJs } from "../parsers/css-in-js.js";
 import { extractSfcStyleCss } from "../parsers/sfc-styles.js";
+import { extractSfcScript } from "../parsers/sfc-script.js";
 import { loadTokens } from "../loaders/tokens.js";
 import { loadStories } from "../loaders/stories.js";
 import { buildComponentInventory } from "../loaders/components.js";
@@ -239,36 +240,42 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
 
   type FileResult =
     | { kind: "ts"; ts: Awaited<ReturnType<typeof parseTs>>; cssInJs: ReturnType<typeof extractCssInJs>; rel: string; source: string }
-    | { kind: "css"; css: Awaited<ReturnType<typeof parseCss>>; path: string; rel: string; source: string }
-    | null;
+    | { kind: "css"; css: Awaited<ReturnType<typeof parseCss>>; path: string; rel: string; source: string };
 
-  const fileResults = await Promise.all(
-    files.map(async (path): Promise<FileResult> => {
+  const fileResults = (await Promise.all(
+    files.map(async (path): Promise<FileResult[]> => {
       const source = readFileSync(path, "utf8");
       const rel = posixRelative(absoluteRoot, path);
       if (/\.(tsx?|jsx?|mjs|cjs)$/.test(path)) {
         const ts = await parseTs(rel, source);
         const cssInJs = ts.ast !== null ? extractCssInJs(rel, source) : [];
-        return { kind: "ts", ts, cssInJs, rel, source };
+        return [{ kind: "ts", ts, cssInJs, rel, source }];
       }
       if (/\.(s?css)$/.test(path)) {
         const css = await parseCss(rel, source);
-        return { kind: "css", css, path, rel, source };
+        return [{ kind: "css", css, path, rel, source }];
       }
-      // Svelte/Vue single-file components embed CSS in <style> blocks — extract
-      // them (line-preserving, scss-aware) so token-drift rules cover non-React
-      // design systems without the SCSS-in-SFC false positives (#102).
+      // Svelte/Vue single-file components: scan BOTH the <style> block (CSS
+      // path, line-preserving + scss-aware) and the <script> block (TS path),
+      // so token/component rules cover non-React design systems the same way
+      // they cover .tsx — without the SCSS-in-SFC false positives (#102).
       if (/\.(svelte|vue)$/.test(path)) {
+        const results: FileResult[] = [];
         const styles = extractSfcStyleCss(source);
         if (styles.trim()) {
-          const css = await parseCss(rel, styles);
-          return { kind: "css", css, path, rel, source };
+          results.push({ kind: "css", css: await parseCss(rel, styles), path, rel, source });
         }
-        return null;
+        const script = extractSfcScript(source);
+        if (script.trim()) {
+          const ts = await parseTs(rel, script);
+          const cssInJs = ts.ast !== null ? extractCssInJs(rel, script) : [];
+          results.push({ kind: "ts", ts, cssInJs, rel, source });
+        }
+        return results;
       }
-      return null;
+      return [];
     }),
-  );
+  )).flat();
 
   for (const r of fileResults) {
     if (r) fileContents.set(r.rel, r.source);
