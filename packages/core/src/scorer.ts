@@ -90,9 +90,19 @@ function weighted(f: AxisFindings): number {
   );
 }
 
+export interface ScoreOptions {
+  /**
+   * Early-adopter grace factor in [0, 1] for the ai-governance axis (#89 /
+   * ADR-0018). The axis score is blended toward 100 (neutral) by (1 - factor),
+   * so a nascent AI surface barely dents the mean. 1 (default) is inert.
+   */
+  aiGovernanceGrace?: number;
+}
+
 export function score(
   findingsByAxis: Record<AxisName, AxisFindings>,
   opportunitiesByAxis: Record<AxisName, number>,
+  opts: ScoreOptions = {},
 ): ScoreResult {
   const axes: AxisScoreV2[] = [];
   const activeAxisScores: number[] = [];
@@ -119,7 +129,13 @@ export function score(
 
     const rateRaw = 100 * (1 - sevPenalty / opp);
     const capRaw = 100 - SCORING_K * Math.log10(1 + sevPenalty);
-    const axisRaw = Math.max(0, Math.min(rateRaw, capRaw));
+    let axisRaw = Math.max(0, Math.min(rateRaw, capRaw));
+    // Early-adopter grace (#89): a nascent AI surface should not take the full
+    // weight of governance affordances it hasn't built yet — blend toward 100.
+    if (axis === "ai-governance" && opts.aiGovernanceGrace !== undefined && opts.aiGovernanceGrace < 1) {
+      const g = Math.max(0, opts.aiGovernanceGrace);
+      axisRaw = g * axisRaw + (1 - g) * 100;
+    }
     const axisScore = Math.round(axisRaw);
 
     axes.push({
@@ -152,6 +168,7 @@ export function score(
 export function scoreFromFindings(
   findings: Finding[],
   opportunitiesByAxis: Record<AxisName, number>,
+  opts: ScoreOptions = {},
 ): ScoreResult {
   const buckets: Record<AxisName, AxisFindings> = {
     tokens: { errorCount: 0, warningCount: 0, infoCount: 0 },
@@ -168,5 +185,5 @@ export function scoreFromFindings(
     else if (f.severity === "warning") bucket.warningCount++;
     else bucket.infoCount++;
   }
-  return score(buckets, opportunitiesByAxis);
+  return score(buckets, opportunitiesByAxis, opts);
 }

@@ -26,6 +26,8 @@ import { ruleObjects } from "../rules/registry.js";
 import { loadGeneratedPack } from "../rules/pack-loader.js";
 import { runRules } from "../rule-runner.js";
 import { scoreFromFindings } from "../scorer.js";
+import { scanForMarkerComponents } from "../rules/ai-governance-ai-marker-component-present.js";
+import { aiGovernanceGraceFactor, DEFAULT_AI_GOVERNANCE_GRACE_WINDOW } from "../reliability/score/grace.js";
 import { computeGrade } from "../reliability/grade.js";
 import { VERSION } from "../index.js";
 import { RULES_VERSION } from "../rules/manifest.js";
@@ -425,7 +427,14 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   // We pass the flat findings list (post-suppression, post-Layer-4) directly;
   // the adapter aggregates into per-axis severity buckets internally.
   flags?.progress?.update("Scoring…");
-  const scoring = scoreFromFindings(runResult.findings, runResult.opportunitiesByAxis);
+  // Early-adopter grace (#89 / ADR-0018): ramp the ai-governance axis weight in
+  // by AI-surface maturity so a nascent surface (one AIBadge) isn't cratered.
+  const aiMarkerCount = scanForMarkerComponents(absoluteRoot).length;
+  const graceWindow = config.scoring?.aiGovernanceGraceWindow ?? DEFAULT_AI_GOVERNANCE_GRACE_WINDOW;
+  const aiGovernanceGrace = aiGovernanceGraceFactor(aiMarkerCount, graceWindow);
+  const scoring = scoreFromFindings(runResult.findings, runResult.opportunitiesByAxis, {
+    aiGovernanceGrace,
+  });
   const grade = computeGrade(scoring.finalScore, scoring.axes);
 
   // Apply severity display overrides AFTER scoring so user config changes what

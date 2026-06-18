@@ -37,6 +37,16 @@ export const LyseConfigSchema = z.object({
       ]),
     )
     .optional(),
+  scoring: z
+    .object({
+      // Early-adopter grace ramp (#89 / ADR-0018): the ai-governance axis
+      // weighs `min(1, aiMarkerCount / window)`. A nascent AI surface (1 marker)
+      // is graced so adding one AIBadge doesn't crater a healthy score. Set 1 to
+      // disable the ramp. Default 5.
+      aiGovernanceGraceWindow: z.number().int().min(1).optional(),
+    })
+    .nullish()
+    .transform((v) => v ?? undefined),
   i18n: z
     .object({
       locales: z.array(z.string()).optional(),

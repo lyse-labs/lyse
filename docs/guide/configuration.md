@@ -173,6 +173,24 @@ Common per-rule options:
 | `componentPaths` | `stories/coverage` | (inferred) | Globs for what counts as a component. |
 | `storyExtensions` | `stories/coverage` | `["stories.tsx", "stories.mdx"]` | What counts as a story file. |
 
+## `scoring`
+
+### `aiGovernanceGraceWindow`
+
+Early-adopter grace ramp for the ai-governance axis (ADR-0018). A nascent AI
+surface should not take the full weight of governance affordances it hasn't
+built yet — so the axis ramps in over `window` AI markers:
+`graceFactor = min(1, aiMarkerCount / window)`.
+
+```yaml
+scoring:
+  aiGovernanceGraceWindow: 5   # default 5; set 1 to disable the ramp
+```
+
+At 1 AI marker the ai-governance axis weighs ≈ 1/window; at `window`+ markers it
+weighs fully. Findings are still reported at every stage — only their score
+contribution ramps in. See [`health-score.md`](./health-score.md#early-adopter-grace-ramp-adr-0018).
+
 ## Allowlist directives
 
 Skip a finding inline:
