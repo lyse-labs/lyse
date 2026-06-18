@@ -100,7 +100,7 @@ By extension, in order:
 4. `.js` → SWC.
 5. `.css`, `.module.css` → PostCSS.
 6. `.scss` → PostCSS with `postcss-scss`.
-7. `.vue`, `.svelte` → `<style>` blocks extracted (`src/parsers/sfc-styles.ts`) and fed to the CSS path. The extraction is **line-preserving** (findings report the correct SFC source line) and **lang-aware**: `<style lang="scss">` is run through the same `transformScssToCss` pass as `.scss` files, so SCSS `$`-var definitions and `//` comments don't surface as false hardcoded-value drift. `lang="sass"` (indented) / `less` / `stylus` blocks are skipped. `<template>` and `<script>` are not yet parsed to an AST.
+7. `.vue`, `.svelte` → both the `<style>` and `<script>` blocks are extracted and fed to the existing paths, so token + TS rules cover SFCs the same way they cover `.tsx`. `<style>` (`src/parsers/sfc-styles.ts`) → CSS path: **line-preserving** (findings report the correct SFC source line) and **lang-aware** (`<style lang="scss">` runs through the same `transformScssToCss` pass as `.scss` files, so SCSS `$`-var definitions and `//` comments don't surface as false drift; `lang="sass"`/`less`/`stylus` blocks are skipped). `<script>` / `<script setup>` (`src/parsers/sfc-script.ts`) → TS path (also line-preserving), so a hardcoded value in the script is caught like in `.tsx`. `<template>` is **not** parsed — its syntax is not JSX (directives, `:prop`/`@event`), so pointing JSX rules at it would manufacture false positives.
 8. Anything else → ignored.
 
 There is no shebang detection, no content sniffing. Extension is authoritative.
@@ -111,9 +111,10 @@ There is no shebang detection, no content sniffing. Extension is authoritative.
 
 ## Adding support for a new file type
 
-Vue / Svelte `<style>` blocks are already ingested (see #7 above). To add
-`<template>` / `<script>` AST support (so JSX/TS-AST rules can visit Vue/Svelte
-component structure), or a new framework like Solid / Angular:
+Vue / Svelte `<style>` and `<script>` blocks are already ingested (see #7
+above). To add `<template>` structural support (mapping Vue/Svelte template
+directives to a component AST the structural rules can visit), or a new
+framework like Solid / Angular:
 
 1. Add a new parser file: `src/parsers/vue.ts`.
 2. Extend `ParsedFiles` with the new map: `vue: Map<string, VueAst>;`.
