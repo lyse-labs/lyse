@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `lyse fix` codemod for `ai-governance/ai-token-requires-marker`: inserts a `data-ai` attribute on the AI-token-using element (high-confidence, deterministic single-element case only; behind the 6 safety guards) (lyse-labs/lyse-internal#92).
+- Scoring semver gate: the v1 Health-Score output is now locked as a versioned contract; any change requires a deliberate `scoringVersion` bump (lyse-labs/lyse-internal#90).
 
 ### Changed
 

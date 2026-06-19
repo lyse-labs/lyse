@@ -144,6 +144,23 @@ Documented in [`health-score.md`](../guide/health-score.md) for users; reproduce
 
 These are not formal thresholds in code — they're communication aids.
 
+## Scoring semver policy
+
+The Health Score is a **public contract**. Consumers pin it via `scoringVersion`
+in the audit output (`CURRENT_SCORING_VERSION`, today `scoring-v1`).
+
+- **Any change to a score output** — the `finalScore` formula, axis weighting,
+  grade thresholds / auto-fail logic, or tier banding — is a **semver-major**
+  change to the score, even when the JSON schema is unchanged.
+- Such a change MUST: (1) bump `CURRENT_SCORING_VERSION`, and (2) add a new
+  entry to the `LOCKED` table in `packages/core/tests/scoring-contract.test.ts`
+  keyed by the new version. Never edit an existing version's locked values.
+- The contract test turns any silent score drift into a CI failure, forcing the
+  bump-or-revert decision to be explicit.
+- Consumers (CI score thresholds, dashboards, telemetry) should re-baseline when
+  `scoringVersion` changes — a changed version signals "the same input may now
+  score differently."
+
 ## See also
 
 - [`health-score.md`](../guide/health-score.md) — user-facing formula documentation.
