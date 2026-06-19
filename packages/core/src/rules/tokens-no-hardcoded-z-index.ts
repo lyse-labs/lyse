@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
+import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 
 const RULE_ID = "tokens/no-hardcoded-z-index";
 const MAX_FILE_BYTES = 1_000_000;
@@ -27,6 +28,7 @@ function extractZIndexValues(text: string): ZIndexHit[] {
   while ((m = RE_Z_INDEX.exec(text)) !== null) {
     const value = Number.parseInt(m[1]!, 10);
     if (Number.isNaN(value) || TRIVIAL.has(value)) continue;
+    if (isInCommentOrUrl(text, m.index) || isCssCustomPropertyDeclaration(text, m.index)) continue;
     hits.push({ value, index: m.index });
   }
   return hits;

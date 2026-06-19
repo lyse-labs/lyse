@@ -43,4 +43,9 @@ describe("rule tokens/no-hardcoded-opacity", () => {
     expect(r.findings).toHaveLength(0);
     expect(r.opportunities).toBe(0);
   });
+  it("does not flag an opacity value that lives in a comment", async () => {
+    const r = await rule.evaluate(makeCtx(tmp), makeParsed({ css: [{ path: "a.css", source: "/* opacity: 0.65 — deprecated */\n.x{color:red}" }] }));
+    expect(r.findings).toHaveLength(0);
+    expect(r.opportunities).toBe(0);
+  });
 });

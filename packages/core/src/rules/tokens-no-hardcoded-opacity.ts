@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
+import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 
 const RULE_ID = "tokens/no-hardcoded-opacity";
 const MAX_FILE_BYTES = 1_000_000;
@@ -44,6 +45,7 @@ function extractOpacity(text: string): Hit[] {
     if (Number.isNaN(n)) continue;
     const norm = m[2] === "%" ? n / 100 : n;
     if (norm === 0 || norm === 1) continue; // semantic extremes, not drift
+    if (isInCommentOrUrl(text, m.index) || isCssCustomPropertyDeclaration(text, m.index)) continue;
     hits.push({ raw: m[1]! + m[2]!, norm, index: m.index });
   }
   return hits;

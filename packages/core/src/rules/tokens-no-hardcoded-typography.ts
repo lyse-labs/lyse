@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
+import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 
 const RULE_ID = "tokens/no-hardcoded-typography";
 const MAX_FILE_BYTES = 1_000_000;
@@ -35,6 +36,7 @@ function extractTypography(text: string): TypoHit[] {
     if (/var\(/i.test(v)) continue;
     const lm = RE_LENGTH.exec(v);
     if (!lm) continue; // % / keyword (medium, larger…) → not drift
+    if (isInCommentOrUrl(text, m.index) || isCssCustomPropertyDeclaration(text, m.index)) continue;
     hits.push({ prop: "font-size", raw: lm[0]!, scaleKey: lm[0]!, index: m.index });
   }
 
@@ -46,6 +48,7 @@ function extractTypography(text: string): TypoHit[] {
     if (!wm) continue; // keyword (normal/bold/lighter/bolder)
     const n = Number.parseInt(wm[1]!, 10);
     if (EXEMPT_WEIGHTS.has(n)) continue;
+    if (isInCommentOrUrl(text, m.index) || isCssCustomPropertyDeclaration(text, m.index)) continue;
     hits.push({ prop: "font-weight", raw: String(n), scaleKey: `weight/${n}`, index: m.index });
   }
 
@@ -56,6 +59,7 @@ function extractTypography(text: string): TypoHit[] {
     const lm = RE_LENGTH.exec(v);
     if (!lm) continue; // normal / 0 (no unit) → not drift
     if (Number.parseFloat(lm[1]!) === 0) continue;
+    if (isInCommentOrUrl(text, m.index) || isCssCustomPropertyDeclaration(text, m.index)) continue;
     hits.push({ prop: "letter-spacing", raw: lm[0]!, scaleKey: `letter-spacing/${lm[0]!}`, index: m.index });
   }
 

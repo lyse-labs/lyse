@@ -53,6 +53,16 @@ describe("rule tokens/no-hardcoded-motion", () => {
     const r = await rule.evaluate(makeCtx(tmp, tokensWithMotion()), makeParsed({ css }));
     expect(r.findings).toHaveLength(0);
   });
+  it("does not flag a cubic-bezier() inside a CSS custom-property definition (token def)", async () => {
+    const r = await rule.evaluate(makeCtx(tmp), makeParsed({ css: [{ path: "a.css", source: ":root { --easing-standard: cubic-bezier(0.4, 0, 0.2, 1); }" }] }));
+    expect(r.findings).toHaveLength(0);
+    expect(r.opportunities).toBe(0);
+  });
+  it("does not flag motion values that live in a comment", async () => {
+    const r = await rule.evaluate(makeCtx(tmp), makeParsed({ css: [{ path: "a.css", source: "/* transition-duration: 240ms; cubic-bezier(0.1,0.2,0.3,0.4) — old values */\n.x { color: red; }" }] }));
+    expect(r.findings).toHaveLength(0);
+    expect(r.opportunities).toBe(0);
+  });
   it("is allowlisted via README", async () => {
     writeFileSync(join(tmp, "README.md"), "lyse-disable tokens/no-hardcoded-motion\n");
     const r = await rule.evaluate(makeCtx(tmp), makeParsed({ css: [{ path: "a.css", source: ".x { transition-duration: 240ms; }" }] }));

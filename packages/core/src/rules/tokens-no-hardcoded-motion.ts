@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
+import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 
 const RULE_ID = "tokens/no-hardcoded-motion";
 const MAX_FILE_BYTES = 1_000_000;
@@ -21,6 +22,12 @@ export interface MotionHit {
   index: number;
 }
 
+// A value in a comment/URL, or inside a `--custom-prop:` declaration (a token
+// *definition*, not drift), is not a hardcoded-value opportunity.
+function isSkippedContext(text: string, index: number): boolean {
+  return isInCommentOrUrl(text, index) || isCssCustomPropertyDeclaration(text, index);
+}
+
 function extractMotion(text: string): MotionHit[] {
   const hits: MotionHit[] = [];
   RE_DURATION_DECL.lastIndex = 0;
@@ -33,12 +40,15 @@ function extractMotion(text: string): MotionHit[] {
     let t: RegExpExecArray | null;
     while ((t = RE_TIME.exec(value)) !== null) {
       if (Number.parseFloat(t[1]!) === 0) continue;
-      hits.push({ kind: "duration", raw: t[0]!, index: valStart + t.index });
+      const index = valStart + t.index;
+      if (isSkippedContext(text, index)) continue;
+      hits.push({ kind: "duration", raw: t[0]!, index });
     }
   }
   RE_CUBIC_BEZIER.lastIndex = 0;
   let c: RegExpExecArray | null;
   while ((c = RE_CUBIC_BEZIER.exec(text)) !== null) {
+    if (isSkippedContext(text, c.index)) continue;
     hits.push({ kind: "easing", raw: c[0]!, index: c.index });
   }
   return hits.sort((a, b) => a.index - b.index);
