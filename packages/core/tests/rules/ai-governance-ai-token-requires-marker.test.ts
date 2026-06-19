@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { rule, _internal } from "../../src/rules/ai-governance-ai-token-requires-marker.js";
+import { rule, _internal, reservedTokenRefOffsets } from "../../src/rules/ai-governance-ai-token-requires-marker.js";
 import type { RuleContext, ParsedFiles } from "../../src/types.js";
 
 const { analyseComponent, isAllowlisted } = _internal;
@@ -28,6 +28,25 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(tmp, { recursive: true, force: true });
+});
+
+// ---------------------------------------------------------------------------
+// Unit: reservedTokenRefOffsets
+// ---------------------------------------------------------------------------
+describe("reservedTokenRefOffsets", () => {
+  it("returns the offset of a single var(--ai-*) reference", () => {
+    const src = `const C = () => <div style={{ background: "var(--ai-gradient)" }} />;`;
+    const offs = reservedTokenRefOffsets(src);
+    expect(offs).toHaveLength(1);
+    expect(src.slice(offs[0]!, offs[0]! + 17)).toContain("var(--ai-gradient");
+  });
+  it("returns two offsets for two distinct reserved references", () => {
+    const src = `<div style={{ color: "var(--ai-aura-start)", background: "var(--ai-gradient)" }} />`;
+    expect(reservedTokenRefOffsets(src).length).toBe(2);
+  });
+  it("ignores non-reserved tokens", () => {
+    expect(reservedTokenRefOffsets(`<div style={{ color: "var(--color-fg)" }} />`)).toEqual([]);
+  });
 });
 
 // ---------------------------------------------------------------------------
