@@ -147,7 +147,7 @@ These are not formal thresholds in code — they're communication aids.
 ## Scoring semver policy
 
 The Health Score is a **public contract**. Consumers pin it via `scoringVersion`
-in the audit output (`CURRENT_SCORING_VERSION`, today `scoring-v1`).
+in the audit output (the `CURRENT_SCORING_VERSION` constant).
 
 - **Any change to a score output** — the `finalScore` formula, axis weighting,
   grade thresholds / auto-fail logic, or tier banding — is a **semver-major**
