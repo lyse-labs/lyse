@@ -51,6 +51,7 @@ import { rule as rBotIdentityLabeling } from "./ai-governance-bot-identity-label
 import { rule as rAiTokenMisuse } from "./ai-governance-ai-token-misuse.js";
 import { rule as rInteractionPatternDocs } from "./ai-governance-interaction-pattern-docs.js";
 import { rule as rDraftAttribution } from "./ai-governance-draft-attribution.js";
+import { rule as rProductAnalytics } from "./ai-governance-product-analytics.js";
 import type { Rule } from "../types.js";
 
 export const ruleObjects: Rule[] = [
@@ -107,6 +108,7 @@ export const ruleObjects: Rule[] = [
   rAiTokenMisuse,
   rInteractionPatternDocs,
   rDraftAttribution,
+  rProductAnalytics,
 ];
 
 export const ruleMap = new Map<string, Rule>(ruleObjects.map((r) => [r.id, r]));

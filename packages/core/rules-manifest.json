@@ -1224,6 +1224,27 @@
         "generic `created with` / unrelated `first draft` text — not matched (anchored detection)",
         "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
       ]
+    },
+    {
+      "id": "ai-governance/product-analytics",
+      "axis": "ai-governance",
+      "defaultSeverity": "warning",
+      "shortDescription": "Detect AI accept/reject/feedback surfaces shipped without product-analytics instrumentation",
+      "fullDescription": "Scans component files (`**/*.{tsx,jsx,vue}`) for AI-marker surfaces (per the shared `fileHasAiMarker` predicate) that carry accept/reject/feedback interaction handlers (`onAccept`, `onReject`, `onApprove`, `onThumbsUp`, `onThumbsDown`, `onRate`, `onFeedback`, or `data-action=\"accept|reject|feedback|thumbs-up|thumbs-down|rate\"`). For each such file it checks, file-level, whether any product-analytics instrumentation call is present (curated, word-bounded set: `track(`, `trackEvent(`, `captureEvent(`, `logEvent(`, `gtag(`, `.track(`, `.capture(`, `dataLayer.push(`, the `posthog.`/`mixpanel.`/`amplitude.`/`segment.`/`analytics.` SDK prefixes, and `useAnalytics`). When the AI surface has the interaction handlers but no instrumentation, emits one `warning` per file at the first handler's location. Files that are not AI surfaces, or AI surfaces with no such handler, emit nothing. Presence only — one analytics call satisfies the check.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-product-analytics.md",
+      "rationale": "Why it matters\n\nWhen a product ships AI accept/reject/feedback controls but never instruments them, it cannot measure acceptance and rejection rates — it flies blind on its own AI quality. Detecting the presence of product-analytics instrumentation on those surfaces is a cheap, high-signal static check.\n\nThis rule is presence-only: it verifies that some instrumentation exists in the file, not that it is correctly wired. A repo with no AI-marker surface emits nothing and is not penalised.",
+      "examples": [
+        {
+          "good": "// AiSuggestion.tsx — AI surface with accept/reject + analytics\nimport { analytics } from './analytics';\nexport function AiSuggestion() {\n  return <Row onAccept={() => analytics.track('ai_accepted')} onReject={() => analytics.track('ai_rejected')} />;\n}",
+          "bad": "// AiSuggestion.tsx — AI surface, accept/reject handlers, NO analytics\nexport function AiSuggestion() {\n  return <Row onAccept={accept} onReject={reject} />;\n}"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable ai-governance/product-analytics` in an adjacent README or `.lyse.yaml` — rule is N/A",
+        "repos with no AI-marker component at all — no AI surface detected, rule emits nothing",
+        "AI surfaces with no accept/reject/feedback handler — out of scope, rule emits nothing",
+        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
+      ]
     }
   ]
 }
