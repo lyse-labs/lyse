@@ -223,6 +223,56 @@ describe("scorer ai-governance grace ramp (#89 / ADR-0018)", () => {
   });
 });
 
+describe("scorer auto-fail cap (#87)", () => {
+  it("auto-fail (>=2 zero axes) caps finalScore into the Fail band", () => {
+    const zero = { errorCount: 1, warningCount: 0, infoCount: 0 };
+    const clean = { errorCount: 0, warningCount: 0, infoCount: 0 };
+    const r = score(
+      { tokens: zero, "ai-surface": zero, components: clean, a11y: clean,
+        stories: clean, "ai-governance": clean },
+      { tokens: 1, "ai-surface": 1, components: 1, a11y: 1, stories: 0, "ai-governance": 0 },
+    );
+    // raw mean of [0,0,100,100] = 50; two zero axes → capped to 39.
+    expect(r.finalScore).toBe(39);
+    expect(r.autoFail?.reasons).toEqual(["2 axes scored 0: ai-surface, tokens"]);
+    expect(r.tier).toBe("Managed");
+  });
+
+  it("no auto-fail leaves finalScore uncapped", () => {
+    const clean = { errorCount: 0, warningCount: 0, infoCount: 0 };
+    const r = score(
+      { tokens: clean, a11y: clean, components: clean, stories: clean,
+        "ai-surface": clean, "ai-governance": clean },
+      { tokens: 1, a11y: 1, components: 1, stories: 0, "ai-surface": 0, "ai-governance": 0 },
+    );
+    expect(r.finalScore).toBe(100);
+    expect(r.autoFail).toBeUndefined();
+  });
+
+  it("single zero axis does not trigger auto-fail", () => {
+    const zero = { errorCount: 1, warningCount: 0, infoCount: 0 };
+    const clean = { errorCount: 0, warningCount: 0, infoCount: 0 };
+    const r = score(
+      { tokens: zero, "ai-surface": clean, components: clean, a11y: clean,
+        stories: clean, "ai-governance": clean },
+      { tokens: 1, "ai-surface": 1, components: 1, a11y: 1, stories: 0, "ai-governance": 0 },
+    );
+    expect(r.autoFail).toBeUndefined();
+  });
+
+  it("score already in Fail band with 2 zero axes stays at the lower value", () => {
+    const zero = { errorCount: 1, warningCount: 0, infoCount: 0 };
+    const r = score(
+      { tokens: zero, "ai-surface": zero, components: zero, a11y: zero,
+        stories: zero, "ai-governance": zero },
+      { tokens: 1, "ai-surface": 1, components: 1, a11y: 1, stories: 1, "ai-governance": 0 },
+    );
+    // all 5 active axes score 0 → raw avg = 0; min(0, 39) = 0
+    expect(r.finalScore).toBe(0);
+    expect(r.autoFail).toBeDefined();
+  });
+});
+
 // Mutation-killing tests (#104) — close gaps stryker surfaced in the scorer.
 describe("scorer mutation hardening (#104)", () => {
   it("buckets every axis — a11y and stories findings are aggregated (not dropped)", () => {

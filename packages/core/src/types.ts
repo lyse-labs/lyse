@@ -317,11 +317,10 @@ export interface AuditResult {
   toolVersion: string;
   /**
    * The pinned scoring-formula version stamped on every emitted audit artifact.
-   * Currently always `"scoring-v1"`. Bumping to `"scoring-v2"` is a semver-major
-   * event — same input may produce a different score.
+   * Bumping is a semver-major event — same input may produce a different score.
    * (ADR 0017 + spec §3 falsifiable claim 1.)
    */
-  scoringVersion: "scoring-v1";
+  scoringVersion: string;
   repoRoot: string;
   timestamp: string;        // ISO date (day-truncated for bench; full ISO for local)
   stack: string[];          // ["react", "tailwind", "storybook", ...]

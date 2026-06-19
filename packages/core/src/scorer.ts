@@ -30,6 +30,10 @@ const SEVERITY_WEIGHT: Record<Severity, number> = { error: 4, warning: 2, info: 
 // LOO MAE: 10.36 pts (target <= 8). See `docs/architecture/calibration.md`.
 export const SCORING_K = 0;
 
+// Auto-fail cap (#87): when >=2 axes score 0, the final score is capped into
+// the Fail band so the number, tier, and grade can never contradict each other.
+const FAIL_CAP = 39;
+
 const AXIS_ORDER: AxisName[] = ["tokens", "a11y", "components", "stories", "ai-surface", "ai-governance"];
 
 export type MaturityTier =
@@ -62,6 +66,8 @@ export interface ScoreResult {
   axes: AxisScoreV2[];
   /** Surface K so consumers can audit the formula. */
   scoringK: number;
+  /** Present when >=2 axes scored 0 and the score was capped into the Fail band. */
+  autoFail?: { reasons: string[] };
 }
 
 /**
@@ -156,8 +162,27 @@ export function score(
   }
 
   const avg = activeAxisScores.reduce((s, x) => s + x, 0) / activeAxisScores.length;
-  const finalScore = Math.round(avg);
-  return { finalScore, tier: scoreTotier(finalScore), axes, scoringK: SCORING_K };
+  let finalScore = Math.round(avg);
+
+  // Auto-fail (#87): >=2 axes scored 0 caps the score into the Fail band, so
+  // the number, tier, and grade can never contradict each other.
+  const zeroAxes = axes
+    .filter((a) => a.score === 0)
+    .map((a) => a.axis)
+    .sort((a, b) => a.localeCompare(b));
+  let autoFail: { reasons: string[] } | undefined;
+  if (zeroAxes.length >= 2) {
+    finalScore = Math.min(finalScore, FAIL_CAP);
+    autoFail = { reasons: [`${zeroAxes.length} axes scored 0: ${zeroAxes.join(", ")}`] };
+  }
+
+  return {
+    finalScore,
+    tier: scoreTotier(finalScore),
+    axes,
+    scoringK: SCORING_K,
+    ...(autoFail ? { autoFail } : {}),
+  };
 }
 
 /**

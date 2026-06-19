@@ -1,11 +1,12 @@
-import type { AxisScore, Grade, GradeResult } from "../types.js";
+import type { Grade, GradeResult } from "../types.js";
 
 /**
- * A/B/C/Fail letter grade over the canonical Health Score, with deterministic
- * automatic-fail conditions (Track #87). Today the only statically-evaluable
- * auto-fail is "≥ 2 axes scored 0" — the roadmap's anchor-based conditions
- * (over-reliance ≤ 1, agent-expectations ≤ 1) require the 0–3 anchor model
- * (#86) / LLM rubric dimensions (#83) and are added when those land.
+ * A/B/C/Fail letter grade over the canonical Health Score (#87).
+ *
+ * The auto-fail logic (>=2 axes scored 0) now lives in scorer.ts, which caps
+ * `finalScore` into the Fail band (<=39) and carries `autoFail` on the result.
+ * `computeGrade` is therefore a pure band lookup + flag passthrough — the
+ * number, tier, and grade are guaranteed consistent by construction.
  */
 
 // Band lower bounds, aligned with the CMMI tier boundaries in scorer.ts.
@@ -16,23 +17,16 @@ function bandGrade(score: number): Grade {
   return "Fail";
 }
 
-export function computeGrade(finalScore: number | "N/A", axes: AxisScore[]): GradeResult {
-  const zeroAxes = axes
-    .filter((a) => a.score === 0)
-    .map((a) => a.axis)
-    .sort((a, b) => a.localeCompare(b));
-
-  if (zeroAxes.length >= 2) {
-    return {
-      grade: "Fail",
-      autoFailed: true,
-      reasons: [`${zeroAxes.length} axes scored 0: ${zeroAxes.join(", ")}`],
-    };
-  }
-
+export function computeGrade(
+  finalScore: number | "N/A",
+  autoFail?: { reasons: string[] },
+): GradeResult {
   if (finalScore === "N/A") {
     return { grade: "N/A", autoFailed: false, reasons: [] };
   }
-
-  return { grade: bandGrade(finalScore), autoFailed: false, reasons: [] };
+  return {
+    grade: bandGrade(finalScore),
+    autoFailed: autoFail !== undefined,
+    reasons: autoFail?.reasons ?? [],
+  };
 }

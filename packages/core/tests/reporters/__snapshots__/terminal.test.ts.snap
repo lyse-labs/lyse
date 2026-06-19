@@ -5,7 +5,7 @@ exports[`renderTerminal (plain-text mode for snapshot stability) > matches snaps
   lyse  0.1.0-alpha.1  ·  247 files  ·  1.4s
 
 
-  *  43 / 100   Health Score · scoring-v1
+  *  Grade N/A  (43 / 100)   Health Score · scoring-v1
 
   ℹ No design token registry found (no .lyse.yaml or componentsModule).
      Your score reflects a/y + Storybook coverage only.

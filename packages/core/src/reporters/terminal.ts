@@ -29,13 +29,20 @@ function header(result: AuditResult, opts: TerminalOpts): string {
 function scoreLine(result: AuditResult, opts: TerminalOpts, deltaSuffix?: string): string {
   const score = result.finalScore;
   const dot = statusDot(score, opts);
-  const num = score === "N/A" ? "N/A" : `${score} / 100`;
-  const colored = score === "N/A" ? dim(num, opts) : bold(thresholdColor(score, opts)(num), opts);
   const suffix = deltaSuffix ? ` ${dim(deltaSuffix, opts)}` : "";
-  const gradeText = result.grade && result.grade.grade !== "N/A"
-    ? `  ${bold(`Grade ${result.grade.grade}`, opts)}${result.grade.autoFailed ? dim(" (auto-fail)", opts) : ""}`
-    : "";
-  return `  ${dot}  ${colored}${suffix}${gradeText}   ${dim("Health Score", opts)} · ${dim(result.scoringVersion, opts)}`;
+
+  if (score === "N/A") {
+    const gradeLabel = bold("Grade N/A", opts);
+    const numLabel = dim("(N/A)", opts);
+    return `  ${dot}  ${gradeLabel}  ${numLabel}${suffix}   ${dim("Health Score", opts)} · ${dim(result.scoringVersion, opts)}`;
+  }
+
+  const hasGrade = result.grade && result.grade.grade !== "N/A";
+  const gradeStr = hasGrade ? `Grade ${result.grade!.grade}` : `Grade N/A`;
+  const autoFail = hasGrade && result.grade!.autoFailed ? dim(" (auto-fail)", opts) : "";
+  const gradeLabel = bold(thresholdColor(score, opts)(gradeStr), opts);
+  const numLabel = dim(`(${score} / 100)`, opts);
+  return `  ${dot}  ${gradeLabel}${autoFail}  ${numLabel}${suffix}   ${dim("Health Score", opts)} · ${dim(result.scoringVersion, opts)}`;
 }
 
 function axisLine(a: AxisScore, opts: TerminalOpts): string {
