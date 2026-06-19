@@ -266,7 +266,6 @@ The marker vocabulary (\`AI_MARKER_NAMES\`) is shared with sibling rule \`ai-gov
   create: () => ({ evaluate }),
   classifyConfidence,
   applyCodemod,
-  singleFileCapable: true,
 });
 
 export const _internal = {

@@ -152,9 +152,9 @@ describe("Rule.applyCodemod returns the new shape", () => {
     expect(r.diff).toContain("<Button");
   });
 
-  it("ai-governance/ai-token-requires-marker exposes applyCodemod and singleFileCapable", () => {
+  it("ai-governance/ai-token-requires-marker exposes applyCodemod and does NOT set singleFileCapable", () => {
     expect(aiTokenRequiresMarker.applyCodemod).toBeDefined();
-    expect(aiTokenRequiresMarker.singleFileCapable).toBe(true);
+    expect(aiTokenRequiresMarker.singleFileCapable).toBeFalsy();
   });
 
   it("ai-governance/ai-token-requires-marker.applyCodemod inserts data-ai for a single reserved-token fixture", () => {
