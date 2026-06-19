@@ -23,6 +23,7 @@ import { checkEntitlement } from "./entitlement/index.js";
 import { computeRepoBucket, BUCKET_SALT } from "./identity/index.js";
 import { startMcpServer } from "./mcp/server.js";
 import { runFix, type FixOptions } from "./commands/fix.js";
+import { resolveDryRun, dryRunFlagPresent } from "./commands/dry-run-guard.js";
 import { runExplain } from "./commands/explain.js";
 import { runExplainScore } from "./commands/explain-score.js";
 import { feedbackMissed } from "./commands/feedback.js";
@@ -695,7 +696,7 @@ const fixCommand = defineCommand({
   meta: { name: "fix", description: "Auto-fix design system violations with confidence gates and safety guards" },
   args: {
     path: { type: "positional", required: false, default: ".", description: "repository root" },
-    "dry-run": { type: "boolean", default: false, description: "preview changes without writing or committing" },
+    "dry-run": { type: "boolean", default: false, description: "preview changes without writing or committing (the default in non-TTY contexts; pass --no-dry-run to apply fixes there)" },
     interactive: { type: "boolean", default: false, description: "enable interactive prompts" },
     confidence: { type: "string", default: "high", description: "confidence floor: high | medium | low" },
     rule: { type: "string", description: "limit fixes to a specific rule ID" },
@@ -715,9 +716,20 @@ const fixCommand = defineCommand({
     }
 
     const cwd = resolve(args.path ?? ".");
+    // Guard 6: in a non-TTY context (CI, pipe) default to dry-run so an
+    // unattended invocation never mutates + commits the repo. An explicit
+    // --dry-run / --no-dry-run always wins.
+    const isTTY = process.stdout.isTTY ?? false;
+    const flagPresent = dryRunFlagPresent(process.argv);
+    const dryRun = resolveDryRun({ flagPresent, flagValue: args["dry-run"], isTTY });
+    if (dryRun && !flagPresent && !isTTY) {
+      process.stderr.write(
+        "[lyse] Non-interactive context — defaulting to --dry-run (no files written, no commit). Pass --no-dry-run to apply fixes.\n",
+      );
+    }
     const opts: FixOptions = {
       cwd,
-      dryRun: args["dry-run"],
+      dryRun,
       interactive: args.interactive,
       confidence: (args.confidence ?? "high") as "high" | "medium" | "low",
       rule: args.rule,
