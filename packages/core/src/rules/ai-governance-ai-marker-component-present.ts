@@ -129,6 +129,22 @@ function isLocalizedMarkerName(lower: string, repoRoot: string): boolean {
   return localizedNounRe(repoRoot).test(residue);
 }
 
+// Universal (non-localized) AI-brand synonyms. Real-world marker components are
+// named for the model family, not just "AI" (e.g. `LLMBadge`, `GPTTag`,
+// `CopilotLabel`). These complement the i18n "AI" noun without polluting the
+// locale vocabulary. Matched with the same boundary discipline as the localized
+// nouns so structural-word false friends never match: `FilmTag` (no bounded
+// `llm`), `HelicopterChip` (`copter` ≠ `copilot`), `CryptoTag` (no `gpt`).
+const AI_SYNONYM_NOUNS = ["llm", "gpt", "copilot"] as const;
+const AI_SYNONYM_RE = new RegExp(`(?:^|[^a-z])(?:${AI_SYNONYM_NOUNS.join("|")})(?:[^a-z]|$)`);
+
+function isSynonymMarkerName(lower: string): boolean {
+  if (!STRUCTURAL_MARKER_WORDS.some((w) => lower.includes(w))) return false;
+  let residue = lower;
+  for (const w of STRUCTURAL_MARKER_WORDS) residue = residue.replaceAll(w, " ");
+  return AI_SYNONYM_RE.test(residue);
+}
+
 export function isAiMarkerName(name: string, repoRoot = ""): boolean {
   const lower = name.toLowerCase();
   if (AI_MARKER_NAMES.has(lower)) return true;
@@ -137,6 +153,7 @@ export function isAiMarkerName(name: string, repoRoot = ""): boolean {
   if (lower.includes("aimarker")) return true;
   if (lower.includes("aiavatar")) return true;
   if (lower.includes("aiindicator")) return true;
+  if (isSynonymMarkerName(lower)) return true;
   return isLocalizedMarkerName(lower, repoRoot);
 }
 
