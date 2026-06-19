@@ -444,7 +444,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   const scoring = scoreFromFindings(runResult.findings, runResult.opportunitiesByAxis, {
     aiGovernanceGrace,
   });
-  const grade = computeGrade(scoring.finalScore, scoring.axes);
+  const grade = computeGrade(scoring.finalScore, scoring.autoFail);
 
   // Apply severity display overrides AFTER scoring so user config changes what
   // reporters show but never the Health Score (determinism contract: severity

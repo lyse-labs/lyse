@@ -2,11 +2,12 @@ import { describe, it, expect } from "vitest";
 import fc from "fast-check";
 import { isReservedTokenName, _internal as aiInternal } from "../../src/parsers/ai-tokens.js";
 import { computeGrade } from "../../src/reliability/grade.js";
+import { score } from "../../src/scorer.js";
 import { _internal as zIndexInternal } from "../../src/rules/tokens-no-hardcoded-z-index.js";
 import { _internal as opacityInternal } from "../../src/rules/tokens-no-hardcoded-opacity.js";
 import { _internal as typoInternal } from "../../src/rules/tokens-no-hardcoded-typography.js";
 import { detectInText } from "../../src/rules/tokens-no-hardcoded-color.js";
-import type { AxisScore, AxisName } from "../../src/types.js";
+import type { AxisName } from "../../src/types.js";
 
 // Property-based hardening (#104): detectors must be total (never throw on
 // arbitrary input) and honor their core invariants for ALL inputs, not just
@@ -57,33 +58,45 @@ describe("property: z-index extractor never returns trivial stacking values", ()
 });
 
 const AXES: AxisName[] = ["tokens", "a11y", "components", "stories", "ai-surface", "ai-governance"];
-const axisArb = fc.record<AxisScore>({
-  axis: fc.constantFrom(...AXES),
-  score: fc.oneof(fc.integer({ min: 0, max: 100 }), fc.constant("N/A" as const)),
-  findings: fc.nat(),
-  opportunities: fc.nat(),
-});
 
 describe("property: computeGrade invariants", () => {
   it("the grade is always one of A/B/C/Fail/N/A", () => {
     fc.assert(fc.property(
       fc.oneof(fc.integer({ min: 0, max: 100 }), fc.constant("N/A" as const)),
-      fc.array(axisArb, { maxLength: 8 }),
-      (score, axes) => {
-        const r = computeGrade(score, axes);
+      fc.option(fc.record({ reasons: fc.array(fc.string()) })),
+      (finalScore, autoFail) => {
+        const r = computeGrade(finalScore, autoFail ?? undefined);
         expect(["A", "B", "C", "Fail", "N/A"]).toContain(r.grade);
       },
     ));
   });
-  it("two or more axes scored 0 always force an auto-fail (Fail), whatever the score", () => {
+
+  it("passing an autoFail object always sets autoFailed=true (numeric scores only)", () => {
     fc.assert(fc.property(
-      fc.oneof(fc.integer({ min: 0, max: 100 }), fc.constant("N/A" as const)),
-      fc.uniqueArray(fc.constantFrom(...AXES), { minLength: 2, maxLength: 6 }),
-      (score, zeroAxes) => {
-        const axes: AxisScore[] = zeroAxes.map((a) => ({ axis: a, score: 0, findings: 1, opportunities: 1 }));
-        const r = computeGrade(score, axes);
+      fc.integer({ min: 0, max: 100 }),
+      fc.array(fc.string(), { minLength: 1, maxLength: 4 }),
+      (finalScore, reasons) => {
+        const r = computeGrade(finalScore, { reasons });
         expect(r.autoFailed).toBe(true);
-        expect(r.grade).toBe("Fail");
+      },
+    ));
+  });
+
+  it("scorer: two or more axes scored 0 cap finalScore into Fail band and set autoFail", () => {
+    fc.assert(fc.property(
+      fc.uniqueArray(fc.constantFrom(...AXES), { minLength: 2, maxLength: 4 }),
+      fc.array(fc.constantFrom(...AXES), { minLength: 1, maxLength: 2 })
+        .map((axes) => axes.filter((a) => !AXES.slice(0, 2).includes(a))),
+      (zeroAxes) => {
+        const findings = Object.fromEntries(
+          AXES.map((a) => [a, zeroAxes.includes(a)
+            ? { errorCount: 1, warningCount: 0, infoCount: 0 }
+            : { errorCount: 0, warningCount: 0, infoCount: 0 }]),
+        ) as Record<AxisName, { errorCount: number; warningCount: number; infoCount: number }>;
+        const opps = Object.fromEntries(AXES.map((a) => [a, 1])) as Record<AxisName, number>;
+        const r = score(findings, opps);
+        expect(r.autoFail).toBeDefined();
+        expect(r.finalScore).toBeLessThanOrEqual(39);
       },
     ));
   });
