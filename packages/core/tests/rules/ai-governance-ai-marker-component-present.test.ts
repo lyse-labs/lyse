@@ -66,6 +66,21 @@ describe("isAiMarkerName", () => {
     expect(isAiMarkerName("RailNav")).toBe(false);
     expect(isAiMarkerName("CaptionText")).toBe(false);
   });
+
+  it("matches AI-synonym prefixes (LLM / GPT / Copilot) on marker components", () => {
+    expect(isAiMarkerName("LLMBadge")).toBe(true);
+    expect(isAiMarkerName("GPTTag")).toBe(true);
+    expect(isAiMarkerName("CopilotLabel")).toBe(true);
+    expect(isAiMarkerName("CopilotChip")).toBe(true);
+  });
+
+  it("does NOT match false friends of those synonyms", () => {
+    // structural marker word present, but no real AI noun
+    expect(isAiMarkerName("FilmTag")).toBe(false);   // 'llm' not bounded inside 'film'
+    expect(isAiMarkerName("EmailBadge")).toBe(false);
+    expect(isAiMarkerName("HelicopterChip")).toBe(false); // 'copter' != 'copilot'
+    expect(isAiMarkerName("CryptoTag")).toBe(false); // 'gpt' not in 'crypto'
+  });
 });
 
 // ---------------------------------------------------------------------------

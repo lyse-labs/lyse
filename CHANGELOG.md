@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`ai-governance/ai-marker-component-present` now detects AI-synonym marker names.** The detector recognized `AI*` / `GenAI*` / `magic-*` / localized "AI"-noun markers, but missed components named for the model family — `LLMBadge`, `GPTTag`, `CopilotLabel`. It now also matches the universal AI synonyms `llm` / `gpt` / `copilot` as a bounded prefix on a structural marker word (`badge`/`label`/`tag`/`chip`/…), with the same boundary discipline so false friends never fire (`FilmTag`, `HelicopterChip`, `CryptoTag`, `EmailBadge`). This closes a real recall gap and de-couples the rule's detection from the literal `AI_MARKER_NAMES` set.
+
 ### Fixed
 
 - **A single malformed token file no longer crashes the whole audit.** `loadTokens` read DTCG `*.tokens.json` files with a bare `JSON.parse(readFileSync(...))` inside a `Promise.all` (and the Tailwind v4 path read candidate CSS with a bare `readFileSync`), so one broken `.tokens.json` — or a file deleted/permission-denied between the glob and the read — rejected the whole batch and took the audit down. Both now degrade gracefully (skip the unreadable/unparseable file, keep loading the rest), matching the existing Style-Dictionary loader's behavior. A stderr warning names each skipped file, so a broken token map isn't masked (a missing token entry would otherwise surface as a false-positive "hardcoded" finding).
