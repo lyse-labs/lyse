@@ -17,9 +17,21 @@ function noFix(rationale: string): CodemodResult {
  */
 function findRealTagClose(text: string, fromIndex: number): number {
   let depth = 0;
+  let quote: string | null = null; // current string delimiter, or null if not in string
   for (let i = fromIndex; i < text.length; i++) {
     const ch = text[i]!;
-    if (ch === "{") {
+    if (quote !== null) {
+      // Inside a string literal — only look for the matching closing quote (unescaped)
+      if (ch === "\\" ) {
+        i++; // skip escaped character
+      } else if (ch === quote) {
+        quote = null;
+      }
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      quote = ch;
+    } else if (ch === "{") {
       depth++;
     } else if (ch === "}") {
       if (depth > 0) depth--;

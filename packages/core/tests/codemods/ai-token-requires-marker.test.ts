@@ -57,6 +57,13 @@ describe("fixWrapAiToken", () => {
     expect(res.patch).toContain("<Button data-ai onClick=");
   });
 
+  it("inserts data-ai correctly when a quoted attribute value contains > (string-literal scanning)", () => {
+    const src = `<Comp data-label="a > b" style={{ background: "var(--ai-gradient-start)" }}>{x}</Comp>`;
+    const res = fixWrapAiToken(makeInput(src));
+    expect(res.confidence).toBeGreaterThanOrEqual(0.8);
+    expect(res.patch).toContain("<Comp data-ai data-label=");
+  });
+
   it("single var(--ai-gradient-start) counts as ONE ref (dedup) so it is fixable", () => {
     // var(--ai-gradient-start) contains a bare --ai-gradient-start inside it.
     // reservedTokenRefOffsets must dedup so only one offset is returned → fixable.
