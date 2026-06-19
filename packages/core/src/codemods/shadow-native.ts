@@ -1,5 +1,5 @@
 import type { CodemodInput, CodemodResult } from "./index.js";
-import { singleLineDiff, prependLineDiff } from "./diff.js";
+import { singleLineDiff, insertAndReplaceDiff } from "./diff.js";
 
 const NATIVE_TO_DS: Record<string, string> = {
   button: "Button",
@@ -110,16 +110,23 @@ export function fixShadowNative(input: CodemodInput): CodemodResult {
     if (/^import\s/.test(sourceLines[i] ?? "")) lastImportLine = i + 1;
   }
 
-  const importPatch = prependLineDiff(
+  // One diff, one hunk: insert the import AND replace the tag together so the
+  // line offsets stay consistent. Concatenating two independently-generated
+  // diffs corrupts the patch (the second hunk's offsets are wrong once the
+  // first changes the file length) and git apply rejects it.
+  const chainedPatch = insertAndReplaceDiff(
     path,
     source,
-    `import { ${dsName} } from "${ctx.componentsModule}";`,
     lastImportLine,
+    `import { ${dsName} } from "${ctx.componentsModule}";`,
+    finding.location.line,
+    oldFragment,
+    newFragment,
   );
 
   return {
-    patch: importPatch + tagPatch,
-    confidence: confidence - 0.1, // chained patches are slightly less safe
+    patch: chainedPatch,
+    confidence: confidence - 0.1, // chained edits are slightly less safe
     alternatives: [],
     rationale: closingOnSameLine
       ? null
