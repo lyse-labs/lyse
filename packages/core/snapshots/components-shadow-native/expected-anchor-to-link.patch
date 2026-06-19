@@ -1,14 +1,9 @@
 --- a/Footer.tsx
 +++ b/Footer.tsx
-@@ -1,4 +1,5 @@
+@@ -1,9 +1,10 @@
  import React from "react";
 +import { Link } from "@acme/ui";
  
- export function Footer() {
-   return (
---- a/Footer.tsx
-+++ b/Footer.tsx
-@@ -3,7 +3,7 @@
  export function Footer() {
    return (
      <footer>
