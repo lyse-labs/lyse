@@ -1,6 +1,5 @@
 import type { Finding } from "../types.js";
 import { findingWeight } from "./weight.js";
-import { CURRENT_SCORING_VERSION } from "./version-pin.js";
 import { AI_GOVERNANCE_PREFIX } from "./grace.js";
 
 export interface ScoreInput {
@@ -58,5 +57,5 @@ export function computeScoreV1(input: ScoreInput): ScoreOutput {
     counted++;
   }
   const score = Math.max(0, Math.min(100, Math.round(100 - penalty * 1.5)));
-  return { score, version: CURRENT_SCORING_VERSION, findingsCountedInScore: counted, findingsReportedOnly: reportedOnly };
+  return { score, version: "scoring-v1", findingsCountedInScore: counted, findingsReportedOnly: reportedOnly };
 }
