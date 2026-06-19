@@ -33,6 +33,7 @@ import { aiGovernanceGraceFactor, DEFAULT_AI_GOVERNANCE_GRACE_WINDOW } from "../
 import { computeGrade } from "../reliability/grade.js";
 import { VERSION } from "../index.js";
 import { RULES_VERSION } from "../rules/manifest.js";
+import { CURRENT_SCORING_VERSION } from "../reliability/score/version-pin.js";
 import { runLayer4Stage } from "../llm/layer4-stage.js";
 import { runFilterStage } from "../llm/filter-stage.js";
 import { isSuppressed } from "../suppression/inline.js";
@@ -460,12 +461,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     schemaVersion: 2,
     rulesVersion: RULES_VERSION,
     toolVersion: VERSION,
-    // "scoring-v1" = pinned axis-weighted formula in `scorer.ts` (the v0.1.0
-    // active path). The sub-axis-aware variant (`computeScoreV1` in
-    // `reliability/score/formula-v1.ts`) is read-only at v0.1.0 — powers
-    // `lyse explain --score` and goes live as the actual scorer once gold-set
-    // promotion of sub-axes to `stable` lands (v0.2+). Same semver bump.
-    scoringVersion: "scoring-v1",
+    scoringVersion: CURRENT_SCORING_VERSION,
     repoRoot: absoluteRoot,
     timestamp: new Date().toISOString(),
     stack: detectStack(absoluteRoot),

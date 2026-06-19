@@ -85,8 +85,6 @@ describe("property: computeGrade invariants", () => {
   it("scorer: two or more axes scored 0 cap finalScore into Fail band and set autoFail", () => {
     fc.assert(fc.property(
       fc.uniqueArray(fc.constantFrom(...AXES), { minLength: 2, maxLength: 4 }),
-      fc.array(fc.constantFrom(...AXES), { minLength: 1, maxLength: 2 })
-        .map((axes) => axes.filter((a) => !AXES.slice(0, 2).includes(a))),
       (zeroAxes) => {
         const findings = Object.fromEntries(
           AXES.map((a) => [a, zeroAxes.includes(a)

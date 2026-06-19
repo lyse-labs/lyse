@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Health Score `scoring-v1.1`: an auto-fail (≥2 axes scored 0) now caps the numeric score into the Fail band, so the score, tier, and grade are always consistent (previously the grade could read Fail while the number stayed high) (lyse-labs/lyse-internal#87).
+
 - **`ai-governance/ai-marker-component-present` now detects AI-synonym marker names.** The detector recognized `AI*` / `GenAI*` / `magic-*` / localized "AI"-noun markers, but missed components named for the model family — `LLMBadge`, `GPTTag`, `CopilotLabel`. It now also matches the universal AI synonyms `llm` / `gpt` / `copilot` as a bounded prefix on a structural marker word (`badge`/`label`/`tag`/`chip`/…), with the same boundary discipline so false friends never fire (`FilmTag`, `HelicopterChip`, `CryptoTag`, `EmailBadge`). This closes a real recall gap and de-couples the rule's detection from the literal `AI_MARKER_NAMES` set.
 
 ### Fixed

@@ -161,6 +161,8 @@ in the audit output (`CURRENT_SCORING_VERSION`, today `scoring-v1`).
   `scoringVersion` changes — a changed version signals "the same input may now
   score differently."
 
+Lyse's auto-fail / banded-grade structure follows the pattern of published industry scorecards such as Microsoft's Fluent 2 Responsible-AI scorecard — a methodology reference, not a product dependency.
+
 ## See also
 
 - [`health-score.md`](../guide/health-score.md) — user-facing formula documentation.

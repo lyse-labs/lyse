@@ -32,6 +32,19 @@ const LOCKED: Record<
       { axis: "ai-governance", score: "N/A" },
     ],
   },
+  "scoring-v1.1": {
+    finalScore: 33,
+    tier: "Managed",
+    grade: { grade: "Fail", autoFailed: true, reasons: ["2 axes scored 0: ai-surface, tokens"] },
+    axes: [
+      { axis: "tokens", score: 0 },
+      { axis: "a11y", score: "N/A" },
+      { axis: "components", score: 100 },
+      { axis: "stories", score: "N/A" },
+      { axis: "ai-surface", score: 0 },
+      { axis: "ai-governance", score: "N/A" },
+    ],
+  },
 };
 
 describe("scoring contract — semver gate (#90)", () => {

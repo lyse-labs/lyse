@@ -26,7 +26,7 @@ export interface ScoreInput {
 
 export interface ScoreOutput {
   score: number;
-  version: "scoring-v1";
+  version: string;
   findingsCountedInScore: number;
   findingsReportedOnly: number;
 }
