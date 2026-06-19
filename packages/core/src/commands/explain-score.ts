@@ -226,6 +226,10 @@ export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreRe
 
   return {
     score: scoring.score,
+    // formula-v1's own identity ("scoring-v1"), NOT the active scorer's
+    // CURRENT_SCORING_VERSION — explain --score previews the v1 formula, which
+    // did not get the v1.1 auto-fail cap. Keep them distinct if this is ever
+    // surfaced (e.g. a future --format json).
     version: scoring.version,
     countedTotal: scoring.findingsCountedInScore,
     reportedOnlyTotal: scoring.findingsReportedOnly,
