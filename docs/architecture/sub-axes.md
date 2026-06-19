@@ -4,7 +4,7 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**53 sub-axes total** — stable: 43 · experimental: 10 · disabled: 0
+**55 sub-axes total** — stable: 43 · experimental: 12 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
@@ -16,6 +16,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `tokens.deprecated-token-usage` | `tokens` | Deprecated-token aliasing ($deprecated) | **stable** | 0.901 | 0.904 | ✅ |
 | `tokens.description-coverage` | `tokens` | Token description coverage | **stable** | 0.901 | 0.901 | ✅ |
 | `tokens.dtcg-conformance` | `tokens` | DTCG conformance | **stable** | 0.901 | 0.901 | ✅ |
+| `tokens.media-query` | `tokens` | Media-query breakpoint drift | **experimental** | — | — | — |
 | `tokens.motion` | `tokens` | Motion token scale (duration/easing) | **stable** | 0.918 | 0.916 | ✅ |
 | `tokens.opacity` | `tokens` | Opacity token scale | **stable** | 0.989 | 0.916 | ✅ |
 | `tokens.responsive-breakpoints` | `tokens` | Responsive breakpoint scale | **stable** | 0.904 | 0.901 | ✅ |
@@ -61,5 +62,6 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `ai-governance.feedback-control-present` | `ai-governance` | AI feedback control present | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-governance.human-control-affordances` | `ai-governance` | Human-control affordances | **experimental** | — | 0.901 | — |
 | `ai-governance.interaction-pattern-docs` | `ai-governance` | AI interaction-pattern docs present | **stable** | 0.901 | 0.901 | ✅ |
+| `ai-governance.product-analytics` | `ai-governance` | AI product-analytics instrumentation | **experimental** | — | 0.901 | — |
 | `ai-governance.source-attribution-present` | `ai-governance` | AI source attribution present | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-governance.value-gate-doc-present` | `ai-governance` | AI value-gate governance doc | **experimental** | — | 0.641 | — |

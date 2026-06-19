@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- New experimental rule `tokens/no-hardcoded-media-query` (axis: tokens): flags raw `px`/`rem`/`em` literals used as breakpoint values inside `@media` width/height features (colon and range syntax) when they are not on the tokenized breakpoint scale. The per-occurrence complement to `tokens/responsive-breakpoints` (the repo-level presence check). Reported-only — does not contribute to the Health Score until calibration data is available (lyse-labs/lyse-internal#128).
 - `lyse fix` codemod for `ai-governance/ai-token-requires-marker`: inserts a `data-ai` attribute on the AI-token-using element (high-confidence, deterministic single-element case only; behind the 6 safety guards) (lyse-labs/lyse-internal#92).
 - Scoring semver gate: the v1 Health-Score output is now locked as a versioned contract; any change requires a deliberate `scoringVersion` bump (lyse-labs/lyse-internal#90).
 

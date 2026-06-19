@@ -8,6 +8,7 @@ const EXPECTED_IDS = [
   "tokens/description-coverage",
   "tokens/theme-modes-present",
   "tokens/responsive-breakpoints",
+  "tokens/no-hardcoded-media-query",
   "tokens/no-hardcoded-z-index",
   "tokens/no-hardcoded-shadow",
   "tokens/no-hardcoded-typography",
