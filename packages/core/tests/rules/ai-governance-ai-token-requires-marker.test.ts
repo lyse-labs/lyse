@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { rule, _internal, reservedTokenRefOffsets } from "../../src/rules/ai-governance-ai-token-requires-marker.js";
+import { rule, _internal } from "../../src/rules/ai-governance-ai-token-requires-marker.js";
+import { reservedTokenRefOffsets } from "../../src/parsers/ai-tokens.js";
 import type { RuleContext, ParsedFiles } from "../../src/types.js";
 
 const { analyseComponent, isAllowlisted } = _internal;

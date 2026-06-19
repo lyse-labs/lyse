@@ -1,6 +1,6 @@
 import type { CodemodInput, CodemodResult } from "./index.js";
 import { singleLineDiff } from "./diff.js";
-import { reservedTokenRefOffsets } from "../rules/ai-governance-ai-token-requires-marker.js";
+import { reservedTokenRefOffsets } from "../parsers/ai-tokens.js";
 
 const RULE_ID = "ai-governance/ai-token-requires-marker";
 const DATA_AI_RE = /\bdata-ai(?:-[a-z][a-z0-9-]*)?\b/;

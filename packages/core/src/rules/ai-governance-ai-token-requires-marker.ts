@@ -8,8 +8,12 @@ import type {
   Finding,
   Confidence,
   ClassifyContext,
+  CodemodContext,
+  CodemodResult,
 } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
+import { adaptOldCodemodResult } from "./_codemod-adapter.js";
+import { fixWrapAiToken } from "../codemods/ai-token-requires-marker.js";
 import { detectReservedAiTokens, isReservedTokenName } from "../parsers/ai-tokens.js";
 import {
   AI_MARKER_NAMES,
@@ -199,6 +203,27 @@ const classifyConfidence: NonNullable<Rule["classifyConfidence"]> = (
   return finding.confidence ?? "high";
 };
 
+const applyCodemod: NonNullable<Rule["applyCodemod"]> = (
+  finding: Finding,
+  ctx: CodemodContext,
+): CodemodResult => {
+  const ruleCtx: RuleContext = {
+    repoRoot: "",
+    tokens: ctx.tokens,
+    componentsModule: null,
+    componentInventory: [],
+    storyIndex: null,
+    excludePaths: [],
+  };
+  const oldResult = fixWrapAiToken({
+    source: ctx.fileContent,
+    path: finding.location.file,
+    finding,
+    ctx: ruleCtx,
+  });
+  return adaptOldCodemodResult(oldResult);
+};
+
 export const rule: Rule = createLyseRule({
   meta: {
     axis: "ai-governance",
@@ -240,37 +265,9 @@ The marker vocabulary (\`AI_MARKER_NAMES\`) is shared with sibling rule \`ai-gov
   defaultOptions: [],
   create: () => ({ evaluate }),
   classifyConfidence,
+  applyCodemod,
+  singleFileCapable: true,
 });
-
-/**
- * Source offsets of the HIGH-confidence reserved-token references the rule
- * keys on (`var(--reserved)` and bare `--reserved`). Used by the wrap-ai-token
- * codemod to locate the element to annotate. The dot-path heuristic is excluded
- * (low-confidence, never auto-fixed). Offsets are unique and ascending.
- */
-export function reservedTokenRefOffsets(source: string): number[] {
-  const offsets = new Set<number>();
-  // Track ranges covered by var(--...) matches so bare-token pass skips them.
-  const varRanges: Array<[number, number]> = [];
-
-  CSS_VAR_RE.lastIndex = 0;
-  let m: RegExpExecArray | null;
-  while ((m = CSS_VAR_RE.exec(source)) !== null) {
-    if (m[1] && isReservedTokenName(m[1])) {
-      offsets.add(m.index);
-      varRanges.push([m.index, m.index + m[0].length]);
-    }
-  }
-  BARE_CSS_TOKEN_RE.lastIndex = 0;
-  while ((m = BARE_CSS_TOKEN_RE.exec(source)) !== null) {
-    if (m[1] && isReservedTokenName(m[1])) {
-      // Skip if this bare reference falls inside an already-captured var() match.
-      const inside = varRanges.some(([start, end]) => m!.index >= start && m!.index < end);
-      if (!inside) offsets.add(m.index);
-    }
-  }
-  return [...offsets].sort((a, b) => a - b);
-}
 
 export const _internal = {
   analyseComponent,

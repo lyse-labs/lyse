@@ -199,6 +199,41 @@ export function detectReservedAiTokens(repoRoot: string): string[] {
   return Array.from(found).sort();
 }
 
+// Matches `var(--token-name)` CSS-in-JS / inline style references.
+const OFFSET_CSS_VAR_RE = /var\(\s*(--[a-zA-Z_][a-zA-Z0-9_-]*)\s*\)/g;
+
+// Matches bare `--token-name` references (not declarations — no trailing colon).
+const OFFSET_BARE_CSS_TOKEN_RE = /(?<![a-zA-Z0-9_-])(--[a-zA-Z_][a-zA-Z0-9_-]*)(?!\s*:)(?![a-zA-Z0-9_-])/g;
+
+/**
+ * Source offsets of the HIGH-confidence reserved-token references the
+ * ai-token-requires-marker rule keys on (`var(--reserved)` and bare `--reserved`).
+ * Used by the wrap-ai-token codemod to locate the element to annotate.
+ * The dot-path heuristic is excluded (low-confidence, never auto-fixed).
+ * Offsets are unique and ascending.
+ */
+export function reservedTokenRefOffsets(source: string): number[] {
+  const offsets = new Set<number>();
+  const varRanges: Array<[number, number]> = [];
+
+  OFFSET_CSS_VAR_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = OFFSET_CSS_VAR_RE.exec(source)) !== null) {
+    if (m[1] && isReservedTokenName(m[1])) {
+      offsets.add(m.index);
+      varRanges.push([m.index, m.index + m[0].length]);
+    }
+  }
+  OFFSET_BARE_CSS_TOKEN_RE.lastIndex = 0;
+  while ((m = OFFSET_BARE_CSS_TOKEN_RE.exec(source)) !== null) {
+    if (m[1] && isReservedTokenName(m[1])) {
+      const inside = varRanges.some(([start, end]) => m!.index >= start && m!.index < end);
+      if (!inside) offsets.add(m.index);
+    }
+  }
+  return [...offsets].sort((a, b) => a - b);
+}
+
 export const _internal = {
   isReservedTokenName,
   collectJsonLeafPaths,
