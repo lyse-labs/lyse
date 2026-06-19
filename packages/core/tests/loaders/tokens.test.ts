@@ -45,6 +45,18 @@ describe("loadTokens", () => {
     const root = mkdtempSync(join(tmpdir(), "lyse-none-"));
     expect(await loadTokens(root)).toBeNull();
   });
+
+  it("degrades gracefully when a DTCG token file is malformed JSON", async () => {
+    const root = mkdtempSync(join(tmpdir(), "lyse-dtcg-bad-"));
+    writeFileSync(join(root, "broken.tokens.json"), "{ this is not valid json");
+    writeFileSync(
+      join(root, "good.tokens.json"),
+      JSON.stringify({ color: { brand: { $value: "#2563eb", $type: "color" } } }),
+    );
+    const tokens = await loadTokens(root);
+    expect(tokens!.source).toBe("dtcg");
+    expect(tokens!.colors.get("#2563eb")).toContain("color/brand");
+  });
 });
 
 // ─── Sprint 1 Step 1: 8 new token type tests ────────────────────────────────

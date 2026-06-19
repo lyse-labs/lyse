@@ -225,7 +225,13 @@ async function fromTailwindV4(root: string): Promise<TokenMap | null> {
 
   const perFileResults = await Promise.all(
     cssFiles.map(async (file) => {
-      const css = readFileSync(file, "utf8");
+      let css: string;
+      try {
+        css = readFileSync(file, "utf8");
+      } catch {
+        // File vanished between glob and read, or unreadable — skip it.
+        return null;
+      }
       if (!css.includes("@theme") || !css.includes("tailwindcss")) return null;
       const localColors = new Map<string, string[]>();
       const localSpacing = new Map<string, string[]>();
@@ -450,7 +456,14 @@ async function fromDtcg(root: string): Promise<TokenMap | null> {
           if (v && typeof v === "object") visit(v as DtcgNode, [...path, k]);
         }
       };
-      visit(JSON.parse(readFileSync(f, "utf8")) as DtcgNode, []);
+      let parsed: DtcgNode;
+      try {
+        parsed = JSON.parse(readFileSync(f, "utf8")) as DtcgNode;
+      } catch {
+        // Malformed JSON or unreadable file — skip it, don't crash the audit.
+        return null;
+      }
+      visit(parsed, []);
       return {
         localColors, localSpacing, localTypography, localRadii, localShadows,
         localMotion, localZIndex, localOpacity, localBorderWidth, localBreakpoints,
@@ -458,6 +471,7 @@ async function fromDtcg(root: string): Promise<TokenMap | null> {
     }),
   );
   for (const entry of localEntries) {
+    if (!entry) continue;
     for (const [k, vs] of entry.localColors) for (const v of vs) pushToken(colors, k, v);
     for (const [k, vs] of entry.localSpacing) for (const v of vs) pushToken(spacing, k, v);
     for (const [k, vs] of entry.localTypography) for (const v of vs) pushToken(typography, k, v);
