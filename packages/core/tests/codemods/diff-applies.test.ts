@@ -138,7 +138,8 @@ describe("generated diffs apply cleanly via git apply", () => {
     execSync(`git apply "${patchPath}"`, { cwd: tmp, stdio: "pipe" });
     const out = readFileSync(join(tmp, "App.tsx"), "utf8");
     expect(out).toContain(`import { Button } from "@acme/ui";`);
-    expect(out).toContain("<Button>");
-    expect(out).not.toContain("<button>");
+    // Both tags swapped → valid JSX, not a mismatched <Button>…</button>.
+    expect(out).toContain("<Button>Click</Button>");
+    expect(out).not.toContain("button");
   });
 });

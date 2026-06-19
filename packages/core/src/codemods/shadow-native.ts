@@ -75,13 +75,20 @@ export function fixShadowNative(input: CodemodInput): CodemodResult {
     );
   });
 
-  const oldFragment = `<${nativeTag}`;
-  const newFragment = `<${dsName}`;
   const oldClosing = `</${nativeTag}>`;
-
   // Check if the closing tag is on the same line — affects confidence
   const closingOnSameLine = sourceLine.includes(oldClosing);
   const confidence = closingOnSameLine ? 0.85 : 0.5;
+
+  // When the closing tag is on the same line, rewrite BOTH tags so the result
+  // is valid JSX (`<Button>…</Button>`), not a mismatched `<Button>…</button>`.
+  // We do this by substituting the whole source line. Otherwise rewrite only
+  // the opening tag (self-closing `<input/>` needs no closing swap; a multi-line
+  // element's closing tag is handled by the manual-verify rationale below).
+  const oldFragment = closingOnSameLine ? sourceLine : `<${nativeTag}`;
+  const newFragment = closingOnSameLine
+    ? sourceLine.replace(`<${nativeTag}`, `<${dsName}`).replace(oldClosing, `</${dsName}>`)
+    : `<${dsName}`;
 
   const tagPatch = singleLineDiff(
     path,
