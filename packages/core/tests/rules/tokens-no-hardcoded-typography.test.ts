@@ -60,6 +60,12 @@ describe("rule tokens/no-hardcoded-typography", () => {
     expect(r.opportunities).toBe(0);
   });
 
+  it("does not flag a typography value that lives in a comment", async () => {
+    const r = await rule.evaluate(makeCtx(tmp), makeParsed({ css: [{ path: "a.css", source: "/* font-size: 13px — legacy */\n.x{color:red}" }] }));
+    expect(r.findings).toHaveLength(0);
+    expect(r.opportunities).toBe(0);
+  });
+
   describe("_internal.extractTypography", () => {
     it("captures size/weight/letter-spacing drift, skipping exemptions + line-height", () => {
       const kinds = _internal

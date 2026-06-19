@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
+import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 
 const RULE_ID = "tokens/no-hardcoded-border-radius";
 const MAX_FILE_BYTES = 1_000_000;
@@ -52,7 +53,9 @@ function extractRadiusLengths(text: string): Hit[] {
       const n = Number.parseFloat(l[1]!);
       const px = l[2] === "px" ? n : n * 16; // rough rem/em → px for the pill guard
       if (n === 0 || px >= PILL_THRESHOLD_PX) continue;
-      hits.push({ raw: l[0]!, index: declStart + l.index });
+      const index = declStart + l.index;
+      if (isInCommentOrUrl(text, index) || isCssCustomPropertyDeclaration(text, index)) continue;
+      hits.push({ raw: l[0]!, index });
     }
   }
   return hits;

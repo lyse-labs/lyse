@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
+import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 
 const RULE_ID = "tokens/no-hardcoded-border-width";
 const MAX_FILE_BYTES = 1_000_000;
@@ -59,7 +60,9 @@ function extractBorderWidths(text: string): Hit[] {
       const lm = RE_LENGTH.exec(value);
       if (!lm) continue; // keyword (thin/medium/thick) or no length
       if (isExemptWidth(lm[0]!)) continue;
-      hits.push({ raw: lm[0]!, index: d.index + d[0]!.indexOf(value) + lm.index });
+      const index = d.index + d[0]!.indexOf(value) + lm.index;
+      if (isInCommentOrUrl(text, index) || isCssCustomPropertyDeclaration(text, index)) continue;
+      hits.push({ raw: lm[0]!, index });
     }
   }
   return hits.sort((a, b) => a.index - b.index);

@@ -47,4 +47,9 @@ describe("rule tokens/no-hardcoded-border-width", () => {
     expect(r.findings).toHaveLength(0);
     expect(r.opportunities).toBe(0);
   });
+  it("does not flag a border-width value that lives in a comment", async () => {
+    const r = await rule.evaluate(makeCtx(tmp), makeParsed({ css: [{ path: "a.css", source: "/* border-width: 3px — old */\n.x{color:red}" }] }));
+    expect(r.findings).toHaveLength(0);
+    expect(r.opportunities).toBe(0);
+  });
 });

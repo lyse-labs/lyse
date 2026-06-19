@@ -48,6 +48,12 @@ describe("rule tokens/no-hardcoded-shadow", () => {
     expect(r.opportunities).toBe(0);
   });
 
+  it("does not flag a box-shadow value that lives in a comment", async () => {
+    const r = await rule.evaluate(makeCtx(tmp), makeParsed({ css: [{ path: "a.css", source: "/* box-shadow: 0 2px 4px rgba(0,0,0,0.3) — old */\n.x{color:red}" }] }));
+    expect(r.findings).toHaveLength(0);
+    expect(r.opportunities).toBe(0);
+  });
+
   describe("_internal.extractShadows", () => {
     it("captures literal box-shadow values, skipping none/var", () => {
       expect(_internal.extractShadows(".c{box-shadow:0 2px 8px #000}").map((h) => h.raw.trim())).toEqual(["0 2px 8px #000"]);

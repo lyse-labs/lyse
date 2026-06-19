@@ -69,6 +69,13 @@ describe("rule tokens/no-hardcoded-z-index", () => {
     expect(result.opportunities).toBe(0);
   });
 
+  it("does not flag a z-index value that lives in a comment", async () => {
+    const parsed = makeParsed({ css: [{ path: "a.css", source: "/* z-index: 9999 — old value */\n.x { color: red; }" }] });
+    const result = await rule.evaluate(makeCtx(tmp), parsed);
+    expect(result.findings).toHaveLength(0);
+    expect(result.opportunities).toBe(0);
+  });
+
   describe("_internal.extractZIndexValues", () => {
     it("captures integer z-index values, skipping var() and trivial ones", () => {
       expect(_internal.extractZIndexValues(".a{z-index:9999}").map((h) => h.value)).toEqual([9999]);
