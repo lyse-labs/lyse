@@ -4,6 +4,7 @@ import { rule as rDtcgConformance } from "./tokens-dtcg-conformance.js";
 import { rule as rDescriptionCoverage } from "./tokens-description-coverage.js";
 import { rule as rThemeModesPresent } from "./tokens-theme-modes-present.js";
 import { rule as rResponsiveBreakpoints } from "./tokens-responsive-breakpoints.js";
+import { rule as rMediaQuery } from "./tokens-no-hardcoded-media-query.js";
 import { rule as rShadowNative } from "./components-shadow-native.js";
 import { rule as rNoIconFonts } from "./components-no-icon-fonts.js";
 import { rule as rSvgViewbox } from "./components-svg-viewbox.js";
@@ -61,6 +62,7 @@ export const ruleObjects: Rule[] = [
   rDescriptionCoverage,
   rThemeModesPresent,
   rResponsiveBreakpoints,
+  rMediaQuery,
   rShadowNative,
   rNoIconFonts,
   rSvgViewbox,

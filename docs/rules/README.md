@@ -1,6 +1,6 @@
 # Rules
 
-Lyse ships with 53 rules. Each rule has a stable ID, a version, a severity, an axis, and (optionally) a codemod for auto-fix.
+Lyse ships with 55 rules. Each rule has a stable ID, a version, a severity, an axis, and (optionally) a codemod for auto-fix.
 
 Rule output appears in:
 - Terminal text (default reporter).
@@ -16,6 +16,7 @@ Rule output appears in:
 | `tokens/dtcg-conformance` | Tokens | warning | No | [→](./tokens-dtcg-conformance.md) |
 | `tokens/description-coverage` | Tokens | info | No | — |
 | `tokens/responsive-breakpoints` | Tokens | warning | No | [→](./tokens-responsive-breakpoints.md) |
+| `tokens/no-hardcoded-media-query` | Tokens | warning | No | [→](./tokens-no-hardcoded-media-query.md) |
 | `tokens/no-hardcoded-z-index` | Tokens | warning | No | [→](./tokens-no-hardcoded-z-index.md) |
 | `tokens/no-hardcoded-shadow` | Tokens | warning | No | [→](./tokens-no-hardcoded-shadow.md) |
 | `tokens/no-hardcoded-typography` | Tokens | warning | No | [→](./tokens-no-hardcoded-typography.md) |
@@ -64,6 +65,7 @@ Rule output appears in:
 | `ai-governance/ai-token-misuse` | AI governance | warning | No | [→](./ai-governance-ai-token-misuse.md) |
 | `ai-governance/interaction-pattern-docs` | AI governance | warning | No | [→](./ai-governance-interaction-pattern-docs.md) |
 | `ai-governance/draft-attribution` | AI governance | warning | No | [→](./ai-governance-draft-attribution.md) |
+| `ai-governance/product-analytics` | AI governance | warning | No | [→](./ai-governance-product-analytics.md) |
 
 ## How rules score
 
