@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -56,6 +56,21 @@ describe("loadTokens", () => {
     const tokens = await loadTokens(root);
     expect(tokens!.source).toBe("dtcg");
     expect(tokens!.colors.get("#2563eb")).toContain("color/brand");
+  });
+
+  it("warns on stderr when it skips a malformed DTCG token file", async () => {
+    const root = mkdtempSync(join(tmpdir(), "lyse-dtcg-warn-"));
+    writeFileSync(join(root, "broken.tokens.json"), "{ nope");
+    writeFileSync(join(root, "good.tokens.json"), JSON.stringify({ color: { brand: { $value: "#abcdef", $type: "color" } } }));
+    const spy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      await loadTokens(root);
+    } finally {
+      const out = spy.mock.calls.map((c) => String(c[0])).join("");
+      spy.mockRestore();
+      expect(out).toMatch(/broken\.tokens\.json/);
+      expect(out.toLowerCase()).toMatch(/skip|ignor|invalid|unreadable/);
+    }
   });
 });
 

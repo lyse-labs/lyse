@@ -230,6 +230,7 @@ async function fromTailwindV4(root: string): Promise<TokenMap | null> {
         css = readFileSync(file, "utf8");
       } catch {
         // File vanished between glob and read, or unreadable — skip it.
+        process.stderr.write(`[lyse] skipped unreadable CSS file while loading tokens: ${file}\n`);
         return null;
       }
       if (!css.includes("@theme") || !css.includes("tailwindcss")) return null;
@@ -461,6 +462,9 @@ async function fromDtcg(root: string): Promise<TokenMap | null> {
         parsed = JSON.parse(readFileSync(f, "utf8")) as DtcgNode;
       } catch {
         // Malformed JSON or unreadable file — skip it, don't crash the audit.
+        // Warn so a broken token file isn't masked (a missing token map entry
+        // would otherwise surface as a false-positive "hardcoded" finding).
+        process.stderr.write(`[lyse] skipped invalid/unreadable token file: ${f}\n`);
         return null;
       }
       visit(parsed, []);

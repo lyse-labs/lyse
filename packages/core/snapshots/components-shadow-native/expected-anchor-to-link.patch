@@ -8,7 +8,7 @@
    return (
      <footer>
 -      <a href="/privacy" className="link">Privacy</a>
-+      <Link href="/privacy" className="link">Privacy</a>
++      <Link href="/privacy" className="link">Privacy</Link>
      </footer>
    );
  }
