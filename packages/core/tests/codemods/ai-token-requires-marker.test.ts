@@ -50,6 +50,13 @@ describe("fixWrapAiToken", () => {
     expect(fixWrapAiToken(makeInput(`<div style={{ color: "var(--color-fg)" }} />`)).patch).toBeNull();
   });
 
+  it("inserts data-ai past => and nested {} in attribute expressions (arrow-handler case)", () => {
+    const src = `<Button onClick={() => doAI()} style={{ background: "var(--ai-gradient-start)" }}>{x}</Button>`;
+    const res = fixWrapAiToken(makeInput(src));
+    expect(res.confidence).toBeGreaterThanOrEqual(0.8);
+    expect(res.patch).toContain("<Button data-ai onClick=");
+  });
+
   it("single var(--ai-gradient-start) counts as ONE ref (dedup) so it is fixable", () => {
     // var(--ai-gradient-start) contains a bare --ai-gradient-start inside it.
     // reservedTokenRefOffsets must dedup so only one offset is returned → fixable.

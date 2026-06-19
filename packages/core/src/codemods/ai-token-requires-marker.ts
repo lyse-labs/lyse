@@ -11,6 +11,28 @@ function noFix(rationale: string): CodemodResult {
 }
 
 /**
+ * Scan `text` from `fromIndex` to find the real closing `>` of a JSX opening
+ * tag, skipping `>` characters that are (a) part of `=>` or (b) inside `{...}`
+ * attribute expressions. Returns the index of the real `>`, or -1 if not found.
+ */
+function findRealTagClose(text: string, fromIndex: number): number {
+  let depth = 0;
+  for (let i = fromIndex; i < text.length; i++) {
+    const ch = text[i]!;
+    if (ch === "{") {
+      depth++;
+    } else if (ch === "}") {
+      if (depth > 0) depth--;
+    } else if (ch === ">" && depth === 0) {
+      // Skip `=>` (arrow function)
+      if (i > 0 && text[i - 1] === "=") continue;
+      return i;
+    }
+  }
+  return -1;
+}
+
+/**
  * Locate the single-line JSX opening tag that encloses the reserved-token
  * reference at `refIndex`. Returns the 1-based line, the line text, and the
  * column just after the tag name (where ` data-ai` is inserted). Null when the
@@ -33,7 +55,7 @@ function findEnclosingOpeningTag(
   while ((m = OPEN_TAG_RE.exec(lineText)) !== null) {
     const open = m.index;
     if (open >= refCol) break;
-    const close = lineText.indexOf(">", open);
+    const close = findRealTagClose(lineText, open);
     if (close === -1 || close < refCol) continue; // tag must enclose the ref on this line
     best = { tagNameEnd: open + m[0].length, open };
   }
