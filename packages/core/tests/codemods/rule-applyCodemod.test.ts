@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { rule as tokensNoHardcodedColor } from "../../src/rules/tokens-no-hardcoded-color.js";
 import { rule as tokensNoHardcodedSpacing } from "../../src/rules/tokens-no-hardcoded-spacing.js";
 import { rule as componentsShadowNative } from "../../src/rules/components-shadow-native.js";
+import { rule as aiTokenRequiresMarker } from "../../src/rules/ai-governance-ai-token-requires-marker.js";
 import type { Finding, CodemodContext } from "../../src/types.js";
 
 function makeCtx(overrides: Partial<CodemodContext> = {}): CodemodContext {
@@ -149,5 +150,29 @@ describe("Rule.applyCodemod returns the new shape", () => {
     const r = componentsShadowNative.applyCodemod!(findingOnLine2, ctx);
     expect(r.importsAdded).toContain(`import { Button } from "@acme/ui";`);
     expect(r.diff).toContain("<Button");
+  });
+
+  it("ai-governance/ai-token-requires-marker exposes applyCodemod and does NOT set singleFileCapable", () => {
+    expect(aiTokenRequiresMarker.applyCodemod).toBeDefined();
+    expect(aiTokenRequiresMarker.singleFileCapable).toBeFalsy();
+  });
+
+  it("ai-governance/ai-token-requires-marker.applyCodemod inserts data-ai for a single reserved-token fixture", () => {
+    expect(aiTokenRequiresMarker.applyCodemod).toBeDefined();
+    const fileContent = `export const C = () => <div style={{ background: "var(--ai-gradient-start)" }}>{a}</div>;`;
+    const finding: Finding = {
+      ruleId: "ai-governance/ai-token-requires-marker",
+      axis: "ai-governance",
+      severity: "error",
+      location: { file: "src/C.tsx", line: 1, column: 1 },
+      message: "Component uses reserved AI token(s) but renders no AI-marker",
+    };
+    const ctx = makeCtx({ fileContent });
+    const r = aiTokenRequiresMarker.applyCodemod!(finding, ctx);
+    expect(r).toHaveProperty("diff");
+    expect(r).toHaveProperty("importsAdded");
+    expect(r).toHaveProperty("confidence");
+    expect(r.confidence).toBe("high");
+    expect(r.diff).toContain("<div data-ai style=");
   });
 });

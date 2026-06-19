@@ -8,8 +8,12 @@ import type {
   Finding,
   Confidence,
   ClassifyContext,
+  CodemodContext,
+  CodemodResult,
 } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
+import { adaptOldCodemodResult } from "./_codemod-adapter.js";
+import { fixWrapAiToken } from "../codemods/ai-token-requires-marker.js";
 import { detectReservedAiTokens, isReservedTokenName } from "../parsers/ai-tokens.js";
 import {
   AI_MARKER_NAMES,
@@ -199,6 +203,27 @@ const classifyConfidence: NonNullable<Rule["classifyConfidence"]> = (
   return finding.confidence ?? "high";
 };
 
+const applyCodemod: NonNullable<Rule["applyCodemod"]> = (
+  finding: Finding,
+  ctx: CodemodContext,
+): CodemodResult => {
+  const ruleCtx: RuleContext = {
+    repoRoot: "",
+    tokens: ctx.tokens,
+    componentsModule: null,
+    componentInventory: [],
+    storyIndex: null,
+    excludePaths: [],
+  };
+  const oldResult = fixWrapAiToken({
+    source: ctx.fileContent,
+    path: finding.location.file,
+    finding,
+    ctx: ruleCtx,
+  });
+  return adaptOldCodemodResult(oldResult);
+};
+
 export const rule: Rule = createLyseRule({
   meta: {
     axis: "ai-governance",
@@ -240,6 +265,7 @@ The marker vocabulary (\`AI_MARKER_NAMES\`) is shared with sibling rule \`ai-gov
   defaultOptions: [],
   create: () => ({ evaluate }),
   classifyConfidence,
+  applyCodemod,
 });
 
 export const _internal = {

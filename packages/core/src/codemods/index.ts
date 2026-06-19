@@ -2,6 +2,7 @@ import type { Finding, RuleContext } from "../types.js";
 import { fixHardcodedColor } from "./tokens-color.js";
 import { fixHardcodedSpacing } from "./tokens-spacing.js";
 import { fixShadowNative } from "./shadow-native.js";
+import { fixWrapAiToken } from "./ai-token-requires-marker.js";
 import { ruleMap } from "../rules/registry.js";
 
 export interface CodemodInput {
@@ -46,6 +47,8 @@ export async function applyCodemod(input: CodemodInput): Promise<CodemodResult> 
       return fixHardcodedSpacing(input);
     case "components/no-native-shadows":
       return fixShadowNative(input);
+    case "ai-governance/ai-token-requires-marker":
+      return fixWrapAiToken(input);
     case "a11y/essentials":
       return NO_FIX(
         input.finding.ruleId,
