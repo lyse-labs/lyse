@@ -12,8 +12,10 @@ const README_CANDIDATES = ["README.md", "README", "readme.md", "README.mdx"];
 // A CSS custom-property DEFINITION (`--name: value`), not a consumption
 // (`var(--name)`). The leading boundary avoids matching inside `var(--x)`.
 const RE_CUSTOM_PROP_DEF = /(?:^|[\s;{])--[\w-]+\s*:/;
-// Tailwind v4 `@theme { --color-*: … }` also exports tokens as CSS variables.
-const RE_THEME_BLOCK = /@theme\b/;
+// Tailwind v4 exports its whole theme as real CSS custom properties (`--color-*`,
+// `--spacing-*`, …). Either an explicit `@theme { … }` block OR adopting Tailwind
+// v4 via `@import "tailwindcss"` means the theme IS exported through the framework.
+const RE_THEME_BLOCK = /@theme\b|@import\s+["']tailwindcss["']/;
 // A styling declaration — the signal that this CSS actually paints something
 // (a `prop: value;` pair inside a rule). Used to decide applicability (N/A).
 const RE_DECLARATION = /[\w-]+\s*:\s*[^;{}]+;/;

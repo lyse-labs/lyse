@@ -40,6 +40,11 @@ describe("rule tokens/css-custom-property-export", () => {
     expect(r.findings).toHaveLength(0);
   });
 
+  it("clears when the repo adopts Tailwind v4 via @import \"tailwindcss\" (theme exported by the framework)", async () => {
+    const r = await rule.evaluate(makeCtx(tmp), makeParsed({ css: [{ path: "globals.css", source: "@import \"tailwindcss\";\n@layer base { * { border-color: var(--color-gray-200); } }" }] }));
+    expect(r.findings).toHaveLength(0);
+  });
+
   it("clears when the custom property is defined in a CSS-in-JS block", async () => {
     const r = await rule.evaluate(makeCtx(tmp), makeParsed({
       css: [{ path: "a.css", source: ".btn { color: #fff; }" }],

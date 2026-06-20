@@ -76,6 +76,14 @@ describe("rule a11y/semantic-html", () => {
     expect(r.findings).toHaveLength(0);
   });
 
+  it("skips singular .story.tsx and .demo.tsx demo files (low-signal)", async () => {
+    const r = await rule.evaluate(makeCtx(tmp), makeParsed([
+      { path: "Popover.story.tsx", source: "export const S = () => <div onClick={go}>x</div>;" },
+      { path: "Button.demo.tsx", source: "export const D = () => <div onClick={go}>x</div>;" },
+    ]));
+    expect(r.findings).toHaveLength(0);
+  });
+
   it("is allowlisted via README", async () => {
     writeFileSync(join(tmp, "README.md"), "lyse-disable a11y/semantic-html\n");
     const r = await rule.evaluate(makeCtx(tmp), makeParsed([{ path: "M.tsx", source: "export const M = () => <div onClick={go}>x</div>;" }]));
