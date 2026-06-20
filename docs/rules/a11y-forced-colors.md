@@ -1,6 +1,6 @@
 # `a11y/forced-colors`
 
-> **Axis:** A11y · **Severity:** warning · **Auto-fixable:** no · **Status:** experimental (reported-only, not yet scored)
+> **Axis:** A11y · **Severity:** warning · **Auto-fixable:** no · **Status:** scored (v1)
 
 Checks, at repo level, whether a design system that paints colors also ships a forced-colors / high-contrast affordance.
 
@@ -46,7 +46,7 @@ lyse-disable a11y/forced-colors
 
 ## Status
 
-Experimental and **reported-only**: it does not contribute to the Health Score until calibration data is available.
+**Scored (v1):** contributes to the Health Score. Promoted 2026-06-20 after clearing both gates on the synthetic recall suite (recall LB 0.901, precision LB 0.916).
 
 ## See also
 
