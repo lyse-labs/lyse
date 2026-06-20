@@ -1,6 +1,6 @@
 # Rules
 
-Lyse ships with 57 rules. Each rule has a stable ID, a version, a severity, an axis, and (optionally) a codemod for auto-fix.
+Lyse ships with 58 rules. Each rule has a stable ID, a version, a severity, an axis, and (optionally) a codemod for auto-fix.
 
 Rule output appears in:
 - Terminal text (default reporter).
@@ -19,6 +19,7 @@ Rule output appears in:
 | `tokens/no-hardcoded-media-query` | Tokens | warning | No | [→](./tokens-no-hardcoded-media-query.md) |
 | `tokens/no-hardcoded-z-index` | Tokens | warning | No | [→](./tokens-no-hardcoded-z-index.md) |
 | `tokens/no-hardcoded-shadow` | Tokens | warning | No | [→](./tokens-no-hardcoded-shadow.md) |
+| `tokens/no-hardcoded-gradient` | Tokens | warning | No | [→](./tokens-no-hardcoded-gradient.md) |
 | `tokens/no-hardcoded-typography` | Tokens | warning | No | [→](./tokens-no-hardcoded-typography.md) |
 | `tokens/no-hardcoded-opacity` | Tokens | warning | No | [→](./tokens-no-hardcoded-opacity.md) |
 | `tokens/no-hardcoded-border-radius` | Tokens | warning | No | [→](./tokens-no-hardcoded-border-radius.md) |

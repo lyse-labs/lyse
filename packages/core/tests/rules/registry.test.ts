@@ -11,6 +11,7 @@ const EXPECTED_IDS = [
   "tokens/no-hardcoded-media-query",
   "tokens/no-hardcoded-z-index",
   "tokens/no-hardcoded-shadow",
+  "tokens/no-hardcoded-gradient",
   "tokens/no-hardcoded-typography",
   "tokens/no-hardcoded-opacity",
   "tokens/no-hardcoded-border-radius",
