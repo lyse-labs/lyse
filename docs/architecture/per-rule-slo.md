@@ -12,6 +12,7 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 |---|---|---|---|---|---|
 | `tokens/no-hardcoded-border-radius` | `tokens.border-radius` | 0.958 | 0.916 | — | 2026-06-18 |
 | `tokens/no-hardcoded-border-width` | `tokens.border-width` | 0.974 | 0.916 | — | 2026-06-18 |
+| `tokens/css-custom-property-export` | `tokens.css-custom-property-export` | 0.904 | 0.901 | — | 2026-06-20 |
 | `tokens/deprecated-token-usage` | `tokens.deprecated-token-usage` | 0.901 | 0.904 | — | 2026-06-15 |
 | `tokens/description-coverage` | `tokens.description-coverage` | 0.901 | 0.901 | — | 2026-06-17 |
 | `tokens/dtcg-conformance` | `tokens.dtcg-conformance` | 0.901 | 0.901 | — | 2026-06-15 |

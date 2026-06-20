@@ -4,7 +4,7 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**58 sub-axes total** — stable: 48 · experimental: 10 · disabled: 0
+**59 sub-axes total** — stable: 49 · experimental: 10 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
@@ -13,6 +13,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `tokens.border-radius` | `tokens` | Radii token scale | **stable** | 0.958 | 0.916 | ✅ |
 | `tokens.border-width` | `tokens` | Border-width token scale | **stable** | 0.974 | 0.916 | ✅ |
 | `tokens.color` | `tokens` | Color tokens | **experimental** | 0.339 | 0.904 | — |
+| `tokens.css-custom-property-export` | `tokens` | CSS custom-property theme export | **stable** | 0.904 | 0.901 | ✅ |
 | `tokens.deprecated-token-usage` | `tokens` | Deprecated-token aliasing ($deprecated) | **stable** | 0.901 | 0.904 | ✅ |
 | `tokens.description-coverage` | `tokens` | Token description coverage | **stable** | 0.901 | 0.901 | ✅ |
 | `tokens.dtcg-conformance` | `tokens` | DTCG conformance | **stable** | 0.901 | 0.901 | ✅ |

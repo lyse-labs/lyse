@@ -132,6 +132,25 @@
       ]
     },
     {
+      "id": "tokens/css-custom-property-export",
+      "axis": "tokens",
+      "defaultSeverity": "warning",
+      "shortDescription": "Design systems should export theme tokens as CSS custom properties",
+      "fullDescription": "Checks, at repo level, whether a design system that paints CSS (any styling declaration in CSS / SCSS / extracted CSS-in-JS) also exports at least one CSS custom-property definition (`--name: value` in `:root`, a `[data-theme]` block, `html`, a `.theme-*` selector, or a Tailwind v4 `@theme` block). Consuming a variable (`var(--x)`) does not count — only a definition does. Emits one warning when the system styles in CSS but defines no custom property anywhere; emits nothing when at least one definition exists or when the system ships no CSS (N/A). A custom property mentioned only inside a comment does not count.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-css-custom-property-export.md",
+      "rationale": "Why it matters\n\nCSS custom properties are the runtime-themeable surface of a design system: a consumer can read `--color-primary` and override it per brand, per mode, or per surface without rebuilding. A design system that locks its tokens in Sass variables or JS objects only — styling everything with literals — can't be re-themed at runtime and gives downstream products nothing to hook into.\n\nThe check is repo-level and broad: a single custom-property definition (or a Tailwind `@theme` block) anywhere clears it. The rule is experimental and does not contribute to the health score until calibration data is available.",
+      "examples": [
+        {
+          "good": ":root { --color-primary: #3b82f6; }\n.btn { color: var(--color-primary); }",
+          "bad": ".btn { color: #3b82f6; background: #1e293b; }  /* no custom properties exported */"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable tokens/css-custom-property-export` in a README — rule is N/A",
+        "design systems that ship no CSS at all — the check does not apply (N/A)"
+      ]
+    },
+    {
       "id": "tokens/responsive-breakpoints",
       "axis": "tokens",
       "defaultSeverity": "warning",
