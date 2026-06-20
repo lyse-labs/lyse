@@ -6,6 +6,7 @@ import { rule as rThemeModesPresent } from "./tokens-theme-modes-present.js";
 import { rule as rCssCustomPropertyExport } from "./tokens-css-custom-property-export.js";
 import { rule as rResponsiveBreakpoints } from "./tokens-responsive-breakpoints.js";
 import { rule as rMediaQuery } from "./tokens-no-hardcoded-media-query.js";
+import { rule as rContainerQuery } from "./tokens-container-query.js";
 import { rule as rShadowNative } from "./components-shadow-native.js";
 import { rule as rNoIconFonts } from "./components-no-icon-fonts.js";
 import { rule as rSvgViewbox } from "./components-svg-viewbox.js";
@@ -68,6 +69,7 @@ export const ruleObjects: Rule[] = [
   rCssCustomPropertyExport,
   rResponsiveBreakpoints,
   rMediaQuery,
+  rContainerQuery,
   rShadowNative,
   rNoIconFonts,
   rSvgViewbox,

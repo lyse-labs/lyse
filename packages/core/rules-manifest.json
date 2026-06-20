@@ -190,6 +190,25 @@
       ]
     },
     {
+      "id": "tokens/container-query",
+      "axis": "tokens",
+      "defaultSeverity": "warning",
+      "shortDescription": "Container queries must have a containment context",
+      "fullDescription": "Checks, at repo level, whether a design system that uses CSS `@container` queries (in CSS, SCSS, or extracted CSS-in-JS) also declares a containment context — `container-type`, `container-name`, or the `container:` shorthand — on some ancestor. A `@container` query with no query container anywhere never matches and is dead CSS. Emits one warning when `@container` is used but no context is declared anywhere; emits nothing when a context exists or when the design system uses no container queries (N/A). The rule does NOT penalize design systems for not using container queries — it only checks that the ones present are wired correctly.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-container-query.md",
+      "rationale": "Why it matters\n\nContainer queries let a component respond to the size of its container rather than the viewport — the right primitive for a reusable design system. But an `@container` rule only works if some ancestor establishes a containment context with `container-type` (or the `container` shorthand). Without it, the query silently never matches and the responsive behavior is dead code — a subtle bug that ships unnoticed.\n\nThe check is repo-level and broad: a single containment-context declaration anywhere clears it. It is intentionally non-prescriptive — not using container queries at all is fine (N/A). The rule is experimental and does not contribute to the health score until calibration data is available.",
+      "examples": [
+        {
+          "good": ".card-wrap { container-type: inline-size; }\n@container (min-width: 400px) { .card { display: grid; } }",
+          "bad": "@container (min-width: 400px) { .card { display: grid; } }  /* no container-type anywhere */"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable tokens/container-query` in a README — rule is N/A",
+        "design systems that use no `@container` queries — the check does not apply (N/A)"
+      ]
+    },
+    {
       "id": "components/no-native-shadows",
       "axis": "components",
       "defaultSeverity": "warning",
