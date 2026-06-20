@@ -51,6 +51,7 @@ const PROMOTED_2026_06_20 = [
   "ai-governance.product-analytics",
   "tokens.gradient",
   "tokens.css-custom-property-export",
+  "tokens.container-query",
 ];
 
 describe("v1 promotion of the 2026-06-20 deterministic coverage batch", () => {
@@ -66,9 +67,9 @@ describe("v1 promotion of the 2026-06-20 deterministic coverage batch", () => {
     }
   });
 
-  it("the trusted stable set now includes the batch (≥ 49 total)", () => {
+  it("the trusted stable set now includes the batch (≥ 50 total)", () => {
     const v1 = resolveStableSubAxes(SUB_AXES, { filterRan: false });
     for (const id of PROMOTED_2026_06_20) expect(v1.has(id)).toBe(true);
-    expect(v1.size).toBeGreaterThanOrEqual(49);
+    expect(v1.size).toBeGreaterThanOrEqual(50);
   });
 });

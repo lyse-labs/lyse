@@ -10,6 +10,7 @@ const EXPECTED_IDS = [
   "tokens/css-custom-property-export",
   "tokens/responsive-breakpoints",
   "tokens/no-hardcoded-media-query",
+  "tokens/container-query",
   "tokens/no-hardcoded-z-index",
   "tokens/no-hardcoded-shadow",
   "tokens/no-hardcoded-gradient",
