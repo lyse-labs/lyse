@@ -1,6 +1,6 @@
 # Rules
 
-Lyse ships with 56 rules. Each rule has a stable ID, a version, a severity, an axis, and (optionally) a codemod for auto-fix.
+Lyse ships with 57 rules. Each rule has a stable ID, a version, a severity, an axis, and (optionally) a codemod for auto-fix.
 
 Rule output appears in:
 - Terminal text (default reporter).
@@ -28,6 +28,7 @@ Rule output appears in:
 | `a11y/prefers-reduced-motion` | A11y | warning | No | [→](./a11y-prefers-reduced-motion.md) |
 | `a11y/focus-visible` | A11y | warning | No | [→](./a11y-focus-visible.md) |
 | `a11y/inclusive-language` | A11y | info | No | [→](./a11y-inclusive-language.md) |
+| `a11y/forced-colors` | A11y | warning | No | [→](./a11y-forced-colors.md) |
 | `components/no-native-shadows` | Components | warning | Yes | [→](./components-shadow-native.md) |
 | `components/no-icon-fonts` | Components | warning | No | [→](./components-no-icon-fonts.md) |
 | `components/svg-viewbox` | Components | warning | No | [→](./components-svg-viewbox.md) |
