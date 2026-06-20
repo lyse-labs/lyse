@@ -71,6 +71,11 @@ describe("rule a11y/semantic-html", () => {
     expect(r.findings).toHaveLength(0);
   });
 
+  it("does not flag a static element that forwards props via spread (role may come from props)", async () => {
+    const r = await rule.evaluate(makeCtx(tmp), makeParsed([{ path: "M.tsx", source: "export const M = (props) => <div onClick={go} {...props}>x</div>;" }]));
+    expect(r.findings).toHaveLength(0);
+  });
+
   it("is allowlisted via README", async () => {
     writeFileSync(join(tmp, "README.md"), "lyse-disable a11y/semantic-html\n");
     const r = await rule.evaluate(makeCtx(tmp), makeParsed([{ path: "M.tsx", source: "export const M = () => <div onClick={go}>x</div>;" }]));

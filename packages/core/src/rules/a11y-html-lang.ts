@@ -1,9 +1,20 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import fg from "fast-glob";
+import { parse as parseBabel } from "@babel/parser";
+import _traverse from "@babel/traverse";
+import type { TraverseOptions } from "@babel/traverse";
+import type * as t from "@babel/types";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding } from "../types.js";
 import { isPathExcluded } from "./_exclude.js";
+import { isLowSignalValueFile } from "./_skip-context.js";
 import { createLyseRule } from "./_rule-module.js";
+
+type TraverseFn = (ast: t.Node, opts: TraverseOptions) => void;
+const traverse = (
+  (_traverse as unknown as { default: TraverseFn }).default ??
+  (_traverse as unknown as TraverseFn)
+);
 
 const RULE_ID = "a11y/html-lang";
 const MAX_FILE_BYTES = 1_000_000;
@@ -20,7 +31,42 @@ const RE_LANG_ATTR = /(?:^|\s|:)lang\s*=/i;
 
 const HTML_GLOB = ["**/*.html", "**/*.htm"];
 
-/** Returns the opening `<html>` tags in a source that carry no lang attribute. */
+/**
+ * JSX (.ts/.tsx) scan via Babel — a real `<html>` JSX element, not a `<html>`
+ * substring inside a string literal, comment, or code example. Returns
+ * `{ found, missingLang }`: whether any `<html>` JSX root exists and whether
+ * at least one lacks a lang attribute.
+ */
+export function scanJsxHtmlRoot(source: string): { found: boolean; missingLang: boolean } {
+  if (!/<html\b/i.test(source)) return { found: false, missingLang: false };
+  let ast: t.File;
+  try {
+    ast = parseBabel(source, { sourceType: "module", plugins: ["typescript", "jsx"], errorRecovery: true });
+  } catch {
+    return { found: false, missingLang: false };
+  }
+  let found = false;
+  let missingLang = false;
+  try {
+    traverse(ast, {
+      JSXOpeningElement(path) {
+        if (path.node.name.type !== "JSXIdentifier" || path.node.name.name !== "html") return;
+        found = true;
+        const hasLang = path.node.attributes.some(
+          (a) =>
+            (a.type === "JSXAttribute" && a.name.type === "JSXIdentifier" && /^(?:xml:)?lang$/i.test(a.name.name)) ||
+            (a.type === "JSXAttribute" && a.name.type === "JSXNamespacedName" && a.name.name.name.toLowerCase() === "lang"),
+        );
+        if (!hasLang) missingLang = true;
+      },
+    });
+  } catch {
+    return { found, missingLang };
+  }
+  return { found, missingLang };
+}
+
+/** Returns the opening `<html>` tags in an HTML-file source with no lang attr. */
 export function htmlTagsWithoutLang(source: string): string[] {
   const out: string[] = [];
   RE_HTML_OPEN.lastIndex = 0;
@@ -71,31 +117,34 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
   const findings: Finding[] = [];
   if (ctx.repoRoot && isAllowlisted(ctx.repoRoot)) return { findings, opportunities: 0 };
 
-  // Sources that can host an <html> root: JSX/TSX framework roots (Next
-  // app/layout.tsx, Remix root.tsx, Gatsby html.js) and real .html files.
-  const sources: { path: string; source: string }[] = [];
+  let opportunities = 0;
+  let firstOffender: string | null = null;
+  let sawHtml = false;
+
+  // JSX/TSX framework roots (Next app/layout.tsx, Remix root.tsx, Gatsby
+  // html.js): parse with Babel so a `<html>` inside a string literal, comment,
+  // or code example is NOT mistaken for a real document root.
   for (const f of files.ts) {
     if (isPathExcluded(f.path, ctx.excludePaths)) continue;
-    sources.push({ path: f.path, source: f.source });
+    if (isLowSignalValueFile(f.path)) continue;
+    const { found, missingLang } = scanJsxHtmlRoot(f.source);
+    if (!found) continue;
+    sawHtml = true;
+    opportunities++;
+    if (firstOffender === null && missingLang) firstOffender = f.path;
   }
+
+  // Real .html / .htm files: regex scan (no JS string/comment ambiguity).
   if (ctx.repoRoot) {
     for (const rel of discoverHtmlFiles(ctx)) {
       if (isPathExcluded(rel, ctx.excludePaths)) continue;
       const content = readFileIfSmall(join(ctx.repoRoot, rel));
-      if (content !== null) sources.push({ path: rel, source: content });
-    }
-  }
-
-  let opportunities = 0;
-  let firstOffender: string | null = null;
-  let sawHtml = false;
-  for (const { path, source } of sources) {
-    RE_HTML_OPEN.lastIndex = 0;
-    if (!RE_HTML_OPEN.test(source)) continue;
-    sawHtml = true;
-    opportunities++;
-    if (firstOffender === null && htmlTagsWithoutLang(source).length > 0) {
-      firstOffender = path;
+      if (content === null) continue;
+      RE_HTML_OPEN.lastIndex = 0;
+      if (!RE_HTML_OPEN.test(content)) continue;
+      sawHtml = true;
+      opportunities++;
+      if (firstOffender === null && htmlTagsWithoutLang(content).length > 0) firstOffender = rel;
     }
   }
 
