@@ -21,6 +21,7 @@ const EXPECTED_IDS = [
   "tokens/no-hardcoded-motion",
   "components/no-native-shadows",
   "components/no-icon-fonts",
+  "components/icon-decorative-aria",
   "components/contracts-strictness",
   "components/doc-comments",
   "naming/component-pascalcase",

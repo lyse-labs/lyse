@@ -10,6 +10,7 @@ import { rule as rContainerQuery } from "./tokens-container-query.js";
 import { rule as rShadowNative } from "./components-shadow-native.js";
 import { rule as rNoIconFonts } from "./components-no-icon-fonts.js";
 import { rule as rSvgViewbox } from "./components-svg-viewbox.js";
+import { rule as rIconDecorativeAria } from "./components-icon-decorative-aria.js";
 import { rule as rContractsStrictness } from "./components-contracts-strictness.js";
 import { rule as rDocComments } from "./components-doc-comments.js";
 import { rule as rNamingPascalCase } from "./naming-component-pascalcase.js";
@@ -75,6 +76,7 @@ export const ruleObjects: Rule[] = [
   rShadowNative,
   rNoIconFonts,
   rSvgViewbox,
+  rIconDecorativeAria,
   rContractsStrictness,
   rDocComments,
   rNamingPascalCase,

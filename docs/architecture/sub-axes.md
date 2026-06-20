@@ -4,7 +4,7 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**62 sub-axes total** — stable: 52 · experimental: 10 · disabled: 0
+**63 sub-axes total** — stable: 53 · experimental: 10 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
@@ -37,6 +37,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `a11y.semantic-html` | `a11y` | Semantic HTML (no static-element interactions) | **stable** | 0.916 | 0.934 | ✅ |
 | `components.contracts-strictness` | `components` | Component prop contract strictness | **experimental** | — | — | — |
 | `components.doc-comments` | `components` | Component doc-comment presence | **stable** | 0.912 | 0.901 | ✅ |
+| `components.icon-decorative-aria` | `components` | Inline SVG accessible treatment | **stable** | 0.916 | 0.901 | ✅ |
 | `components.naming-component-pascalcase` | `components` | Component PascalCase | **stable** | 0.904 | 0.904 | ✅ |
 | `components.naming-hook-prefix` | `components` | Hook `use` prefix | **stable** | 0.904 | 0.904 | ✅ |
 | `components.native-shadows` | `components` | Native shadow elements | **stable** | 0.901 | 0.901 | ✅ |

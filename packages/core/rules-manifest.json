@@ -270,6 +270,26 @@
       ]
     },
     {
+      "id": "components/icon-decorative-aria",
+      "axis": "components",
+      "defaultSeverity": "warning",
+      "shortDescription": "Inline SVG icons need an accessible treatment",
+      "fullDescription": "Flags inline `<svg>` elements in .tsx/.jsx that have no accessible treatment: no `aria-hidden`, `role`, `aria-label`, or `aria-labelledby` attribute and no `<title>` child. A decorative icon must be hidden from assistive tech (`aria-hidden`), and a meaningful one must be labelled (`role=\"img\"` + `aria-label` / `<title>`). A bare `<svg>` is ambiguous to screen readers — often announced as an unlabeled graphic. Any accessible attribute or a `<title>` child clears it.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/components-icon-decorative-aria.md",
+      "rationale": "Why it matters\n\nAn icon is either decorative (it repeats adjacent text — should be silent to a screen reader) or meaningful (it stands alone — must be labelled). A bare `<svg>` declares neither, so assistive tech guesses: many screen readers announce \"graphic\" or read raw path data. Marking intent — `aria-hidden` for decorative, `role=\"img\"` + label for meaningful — is the single most common SVG-accessibility fix.\n\nThe rule is conservative: any of `aria-hidden` / `role` / `aria-label` / `aria-labelledby` / a `<title>` child clears it, so authors who made any accessibility decision are never nagged. It is experimental and does not contribute to the health score until calibration data is available.",
+      "examples": [
+        {
+          "good": "<svg aria-hidden=\"true\" viewBox=\"0 0 16 16\"><path d=\"…\" /></svg>",
+          "bad": "<svg viewBox=\"0 0 16 16\"><path d=\"…\" /></svg>"
+        }
+      ],
+      "allowlist": [
+        "any `<svg>` with `aria-hidden`, `role`, `aria-label`, or `aria-labelledby`",
+        "any `<svg>` with a `<title>` child",
+        "repos containing `lyse-disable components/icon-decorative-aria` in a README — rule is N/A"
+      ]
+    },
+    {
       "id": "components/contracts-strictness",
       "axis": "components",
       "defaultSeverity": "warning",
