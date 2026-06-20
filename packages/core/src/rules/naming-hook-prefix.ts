@@ -10,6 +10,7 @@ import type {
   CodemodResult,
 } from "../types.js";
 import { isPathExcluded } from "./_exclude.js";
+import { isLowSignalValueFile } from "./_skip-context.js";
 import { fixNamingHookPrefix } from "../codemods/naming-hook-prefix.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
 import { createLyseRule } from "./_rule-module.js";
@@ -81,8 +82,9 @@ function detectBadlyNamedHooks(
   path: string,
 ): Array<{ name: string; index: number }> {
   const results: Array<{ name: string; index: number }> = [];
-  // Skip test files — test utilities that call hooks internally aren't hooks
-  if (/\.(test|spec)\.(tsx?|jsx?)$/.test(path)) return results;
+  // Skip test/story/demo/fixture low-signal files — utilities/demos that call
+  // hooks internally aren't shipped hooks (shared policy).
+  if (isLowSignalValueFile(path)) return results;
 
   const hooksDir = fileIsInHooksDir(path);
 
@@ -95,6 +97,10 @@ function detectBadlyNamedHooks(
     if (VALID_HOOK_NAME_RE.test(name)) continue;
     // Skip PascalCase — those are components, not hooks
     if (/^[A-Z]/.test(name)) continue;
+    // Skip factory functions (createStyles / createStorage / createFormContext …):
+    // a factory may call hooks while building its result, but it is not itself a
+    // hook. `create[A-Z]` is a strong, conventional signal (mirrors components).
+    if (/^create[A-Z]/.test(name)) continue;
 
     // Brace-matched body slice — bounded to the function under inspection,
     // so sibling functions further down the file don't bleed in.
