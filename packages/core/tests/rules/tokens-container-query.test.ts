@@ -67,6 +67,16 @@ describe("rule tokens/container-query", () => {
     expect(r.findings).toHaveLength(1);
   });
 
+  it("still warns when only a .container:hover selector exists (pseudo-class is not a containment context)", async () => {
+    const r = await rule.evaluate(makeCtx(tmp), makeParsed({ css: [{ path: "a.css", source: ".container:hover { opacity: 0.8; }\n@container (min-width: 400px) { .card { display: grid; } }" }] }));
+    expect(r.findings).toHaveLength(1);
+  });
+
+  it("still warns when only a .container class rule exists (selector, not container-type)", async () => {
+    const r = await rule.evaluate(makeCtx(tmp), makeParsed({ css: [{ path: "a.css", source: ".container { max-width: 80rem; }\n@container (min-width: 400px) { .card { display: grid; } }" }] }));
+    expect(r.findings).toHaveLength(1);
+  });
+
   it("is allowlisted via README", async () => {
     writeFileSync(join(tmp, "README.md"), "lyse-disable tokens/container-query\n");
     const r = await rule.evaluate(makeCtx(tmp), makeParsed({ css: [{ path: "a.css", source: "@container (min-width: 400px) { .card { color: red; } }" }] }));

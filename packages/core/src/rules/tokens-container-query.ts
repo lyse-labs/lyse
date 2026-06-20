@@ -13,9 +13,12 @@ const README_CANDIDATES = ["README.md", "README", "readme.md", "README.mdx"];
 // `@container <name> (…)`. The `(?=[\s(])` boundary avoids matching a stray
 // `@container-foo` token (none exist in CSS, but stay strict).
 const RE_CONTAINER_QUERY = /@container(?=[\s(])/i;
-// A containment context declaration: `container-type:`, `container-name:`, or
-// the `container:` shorthand. This is what makes an ancestor a query container.
-const RE_CONTAINER_CONTEXT = /\bcontainer(?:-type|-name)?\s*:/i;
+// A containment context DECLARATION (not a selector / pseudo-class). The
+// longhands `container-type` / `container-name` are unambiguous property names.
+// The `container:` shorthand must be a real declaration (start-of-declaration
+// boundary + a value), so a selector like `.container:hover {` can't satisfy it.
+const RE_CONTAINER_CONTEXT =
+  /\bcontainer-(?:type|name)\s*:\s*[a-z0-9$(]|(?:^|[;{])\s*container\s*:\s*[^{};]+;/i;
 
 function stripComments(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, " ");

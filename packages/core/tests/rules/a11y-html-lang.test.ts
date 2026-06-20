@@ -63,6 +63,23 @@ describe("rule a11y/html-lang", () => {
     expect(r.opportunities).toBe(0);
   });
 
+  it("does not flag <html> appearing inside a JS string literal (not a real root)", async () => {
+    const r = await rule.evaluate(makeCtx(tmp), makeParsed([{ path: "ssr.tsx", source: "export const TEMPLATE = `<html><body>hello</body></html>`;\nexport const Button = () => <button>x</button>;" }]));
+    expect(r.findings).toHaveLength(0);
+    expect(r.opportunities).toBe(0);
+  });
+
+  it("does not flag <html> inside a comment", async () => {
+    const r = await rule.evaluate(makeCtx(tmp), makeParsed([{ path: "note.tsx", source: "// renders <html> at the root\nexport const X = () => <div>x</div>;" }]));
+    expect(r.findings).toHaveLength(0);
+    expect(r.opportunities).toBe(0);
+  });
+
+  it("still flags a real JSX <html> root with no lang", async () => {
+    const r = await rule.evaluate(makeCtx(tmp), makeParsed([{ path: "layout.tsx", source: "export default function Root({children}) { return <html><body>{children}</body></html>; }" }]));
+    expect(r.findings).toHaveLength(1);
+  });
+
   it("is allowlisted via README directive", async () => {
     writeFileSync(join(tmp, "README.md"), "lyse-disable a11y/html-lang\n");
     const r = await rule.evaluate(makeCtx(tmp), makeParsed([{ path: "app/layout.tsx", source: "export default function Root() { return <html><body/></html>; }" }]));

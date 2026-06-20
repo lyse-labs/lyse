@@ -32,17 +32,21 @@ interface StaticInteractiveHit {
 }
 
 /**
- * Walk JSX for lowercase (native) elements that carry a click handler but no
- * `role` — the `no-static-element-interactions` accessibility bug. Custom
- * PascalCase components are skipped (the handler is a prop, not a DOM element).
+ * Walk JSX once for lowercase (native) elements that carry a click handler.
+ * Returns the offenders (handler + no role) and the total count of static
+ * interactive elements (the scored denominator). Custom PascalCase components
+ * are skipped (the handler is a prop, not a DOM element). An element with a
+ * spread (`{...props}`) is skipped entirely — `role` may be forwarded through
+ * the spread, invisible to the AST, so flagging it would be a false positive.
  */
-export function scanStaticInteractive(source: string): StaticInteractiveHit[] {
-  const hits: StaticInteractiveHit[] = [];
+export function scanStaticInteractive(source: string): { offenders: StaticInteractiveHit[]; total: number } {
+  const offenders: StaticInteractiveHit[] = [];
+  let total = 0;
   let ast: t.File;
   try {
     ast = parseBabel(source, { sourceType: "module", plugins: ["typescript", "jsx"], errorRecovery: true });
   } catch {
-    return hits;
+    return { offenders, total };
   }
 
   const visit = (opening: t.JSXOpeningElement): void => {
@@ -55,16 +59,22 @@ export function scanStaticInteractive(source: string): StaticInteractiveHit[] {
 
     let hasHandler = false;
     let hasRole = false;
+    let hasSpread = false;
     for (const attr of opening.attributes) {
-      if (attr.type !== "JSXAttribute") continue;
+      if (attr.type === "JSXSpreadAttribute") { hasSpread = true; continue; }
       if (attr.name.type !== "JSXIdentifier") continue;
       const an = attr.name.name;
       if (INTERACTIVE_HANDLERS.has(an)) hasHandler = true;
       if (an === "role") hasRole = true;
     }
-    if (hasHandler && !hasRole) {
+    if (!hasHandler) return;
+    // A spread may forward `role` — can't prove it's missing, so don't flag or
+    // count (avoids both a false positive and a skewed denominator).
+    if (hasSpread) return;
+    total++;
+    if (!hasRole) {
       const loc = opening.loc?.start ?? { line: 1, column: 0 };
-      hits.push({ tag, line: loc.line, column: loc.column + 1 });
+      offenders.push({ tag, line: loc.line, column: loc.column + 1 });
     }
   };
 
@@ -73,9 +83,9 @@ export function scanStaticInteractive(source: string): StaticInteractiveHit[] {
       JSXOpeningElement(path) { visit(path.node); },
     });
   } catch {
-    return hits;
+    return { offenders, total };
   }
-  return hits;
+  return { offenders, total };
 }
 
 function readFileIfSmall(absPath: string): string | null {
@@ -107,13 +117,8 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
     if (isPathExcluded(f.path, ctx.excludePaths)) continue;
     if (!/\.(tsx|jsx)$/.test(f.path)) continue;
     if (isLowSignalValueFile(f.path)) continue;
-    // Count every static element that carries a handler as an opportunity by
-    // re-scanning with role tolerance: a compliant (role-bearing) one still
-    // counts. We approximate by scanning twice — cheap, and keeps the score
-    // denominator meaningful.
-    const offenders = scanStaticInteractive(f.source);
-    // opportunities = offenders (no role) + role-bearing static interactives.
-    opportunities += countStaticInteractive(f.source);
+    const { offenders, total } = scanStaticInteractive(f.source);
+    opportunities += total;
     for (const h of offenders) {
       findings.push({
         ruleId: RULE_ID,
@@ -127,36 +132,6 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
   }
   return { findings, opportunities };
 };
-
-/** Count static lowercase elements carrying a click handler (role or not). */
-function countStaticInteractive(source: string): number {
-  let ast: t.File;
-  try {
-    ast = parseBabel(source, { sourceType: "module", plugins: ["typescript", "jsx"], errorRecovery: true });
-  } catch {
-    return 0;
-  }
-  let n = 0;
-  try {
-    traverse(ast, {
-      JSXOpeningElement(path) {
-        const nameNode = path.node.name;
-        if (nameNode.type !== "JSXIdentifier") return;
-        const tag = nameNode.name;
-        if (!/^[a-z]/.test(tag) || NATIVE_INTERACTIVE.has(tag)) return;
-        for (const attr of path.node.attributes) {
-          if (attr.type === "JSXAttribute" && attr.name.type === "JSXIdentifier" && INTERACTIVE_HANDLERS.has(attr.name.name)) {
-            n++;
-            break;
-          }
-        }
-      },
-    });
-  } catch {
-    return n;
-  }
-  return n;
-}
 
 export const rule: Rule = createLyseRule({
   meta: {
