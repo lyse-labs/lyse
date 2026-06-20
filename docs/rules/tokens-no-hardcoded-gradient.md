@@ -1,6 +1,6 @@
 # `tokens/no-hardcoded-gradient`
 
-> **Axis:** Tokens · **Severity:** warning · **Auto-fixable:** no · **Status:** scored (v1)
+> **Axis:** Tokens · **Severity:** warning · **Auto-fixable:** no · **Status:** experimental (reported-only — demoted after corpus validation)
 
 Flags inline CSS gradient functions used as property values, instead of a tokenized gradient.
 
@@ -39,7 +39,7 @@ lyse-disable tokens/no-hardcoded-gradient
 
 ## Status
 
-**Scored (v1):** contributes to the Health Score. Promoted 2026-06-20 after clearing both gates on the synthetic recall suite (recall LB 0.904, precision LB 0.904).
+**Experimental (reported-only).** Promoted 2026-06-20 then **demoted** after corpus precision-validation on 5 real DS surfaced precision/value issues (see internal report) — reported but not scored.
 
 ## See also
 

@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Demoted `tokens/no-hardcoded-gradient` and `components/doc-comments` from the scored v1 set back to experimental (53 → 51 stable sub-axes), after corpus precision-validation on 5 real design systems.** `gradient` fires on functional gradients (e.g. an alpha-transparency checkerboard) that are not tokenizable brand gradients; `doc-comments` is precise but a flood (≈2000 findings on a single real repo — every undocumented internal/demo component), which distorts the Health Score. Both remain shipped and reported, just not scored, until a tighter scope exists (brand-vs-functional gradient heuristic; public-API-only component scoping). The 51 remaining scored sub-axes are honest and corpus-checked (lyse-labs/lyse-internal#93, #82).
+
 - **Promoted 4 deterministic rules into the trusted v1 Health Score** (43 → 47 stable sub-axes): `tokens/no-hardcoded-media-query`, `components/doc-comments`, `a11y/forced-colors`, and `ai-governance/product-analytics`. Each cleared both gates on the synthetic recall suite (recall + precision Wilson lower bounds ≥ 0.90, calibrated 2026-06-20). These rules now contribute to the score instead of being reported-only (lyse-labs/lyse-internal#128, #82, #127, #100).
 - Health Score `scoring-v1.1`: an auto-fail (≥2 axes scored 0) now caps the numeric score into the Fail band, so the score, tier, and grade are always consistent (previously the grade could read Fail while the number stayed high) (lyse-labs/lyse-internal#87).
 

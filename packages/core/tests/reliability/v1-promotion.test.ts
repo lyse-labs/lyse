@@ -46,16 +46,21 @@ describe("v1 promotion of the 10 deterministic gate-clearers (#71)", () => {
 // (recall LB and precision LB both >= 0.90 on the synthetic recall suite).
 const PROMOTED_2026_06_20 = [
   "tokens.media-query",
-  "components.doc-comments",
   "a11y.forced-colors",
   "ai-governance.product-analytics",
-  "tokens.gradient",
   "tokens.css-custom-property-export",
   "tokens.container-query",
   "a11y.html-lang",
   "a11y.semantic-html",
   "components.icon-decorative-aria",
 ];
+
+// Demoted back to experimental after corpus precision-validation (2026-06-20):
+// `tokens.gradient` fires on functional gradients (alpha-checkerboards), and
+// `components.doc-comments` is a 3585-finding flood that distorts the score on
+// real repos. Precise but not trustworthy as scored signals — see
+// internal/corpus-validation/2026-06-20-precision-report.md.
+const DEMOTED_2026_06_20 = ["tokens.gradient", "components.doc-comments"];
 
 describe("v1 promotion of the 2026-06-20 deterministic coverage batch", () => {
   it("each batch sub-axis is status:stable + contributesToScore + deterministic with both LBs >= 0.90", () => {
@@ -70,9 +75,20 @@ describe("v1 promotion of the 2026-06-20 deterministic coverage batch", () => {
     }
   });
 
-  it("the trusted stable set now includes the batch (≥ 50 total)", () => {
+  it("the trusted stable set now includes the batch (≥ 51 total)", () => {
     const v1 = resolveStableSubAxes(SUB_AXES, { filterRan: false });
     for (const id of PROMOTED_2026_06_20) expect(v1.has(id)).toBe(true);
-    expect(v1.size).toBeGreaterThanOrEqual(53);
+    expect(v1.size).toBeGreaterThanOrEqual(51);
+  });
+
+  it("the corpus-demoted rules are NOT in the trusted v1 stable set", () => {
+    const v1 = resolveStableSubAxes(SUB_AXES, { filterRan: false });
+    for (const id of DEMOTED_2026_06_20) {
+      const sa = SUB_AXES.find((s) => s.id === id);
+      expect(sa, `missing sub-axis ${id}`).toBeDefined();
+      expect(sa!.status).toBe("experimental");
+      expect(sa!.contributesToScore).toBe(false);
+      expect(v1.has(id)).toBe(false);
+    }
   });
 });
