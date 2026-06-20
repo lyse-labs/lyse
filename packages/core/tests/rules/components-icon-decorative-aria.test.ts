@@ -69,6 +69,11 @@ describe("rule components/icon-decorative-aria", () => {
     expect(r.findings).toHaveLength(0);
   });
 
+  it("does not flag an <svg> that forwards props via spread (aria may come from props)", async () => {
+    const r = await rule.evaluate(makeCtx(tmp), makeParsed([{ path: "Icon.tsx", source: "export const Icon = (props) => <svg viewBox=\"0 0 16 16\" {...props}><path /></svg>;" }]));
+    expect(r.findings).toHaveLength(0);
+  });
+
   it("is allowlisted via README", async () => {
     writeFileSync(join(tmp, "README.md"), "lyse-disable components/icon-decorative-aria\n");
     const r = await rule.evaluate(makeCtx(tmp), makeParsed([{ path: "I.tsx", source: "export const I = () => <svg><path/></svg>;" }]));

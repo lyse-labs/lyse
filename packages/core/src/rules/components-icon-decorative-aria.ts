@@ -56,6 +56,9 @@ export function scanBareSvgs(source: string): { offenders: { line: number; colum
         total++;
         let accessible = false;
         for (const attr of opening.attributes) {
+          // A spread (`{...props}`) may forward aria-hidden / role / aria-label
+          // that the AST can't see — treat the svg as accessible (don't flag).
+          if (attr.type === "JSXSpreadAttribute") { accessible = true; break; }
           if (attr.type !== "JSXAttribute" || attr.name.type !== "JSXIdentifier") continue;
           if (ACCESSIBLE_ATTRS.has(attr.name.name)) { accessible = true; break; }
         }
