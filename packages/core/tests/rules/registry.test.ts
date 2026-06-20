@@ -30,6 +30,7 @@ const EXPECTED_IDS = [
   "a11y/focus-visible",
   "a11y/inclusive-language",
   "a11y/forced-colors",
+  "a11y/html-lang",
   "stories/coverage",
   "ai-surface/agents-md-quality",
   "ai-surface/component-manifest-json",
