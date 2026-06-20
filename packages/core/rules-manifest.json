@@ -482,6 +482,27 @@
       ]
     },
     {
+      "id": "a11y/semantic-html",
+      "axis": "a11y",
+      "defaultSeverity": "warning",
+      "shortDescription": "Interactive handlers belong on semantic elements",
+      "fullDescription": "Flags native lowercase elements (`div`, `span`, `li`, `section`, …) that carry a click handler (`onClick` / `onMouseDown` / `onMouseUp`) but no `role` attribute — the classic `no-static-element-interactions` accessibility bug. Keyboard and screen-reader users cannot operate a clickable `<div>` that has no semantic role. Native interactive elements (`button`, `a`, `input`, …) are exempt, as are custom PascalCase components (where `onClick` is a prop, not a DOM element) and elements that already declare a `role`.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/a11y-semantic-html.md",
+      "rationale": "Why it matters\n\nA clickable `<div>` works for mouse users and no one else: it's not focusable, doesn't fire on Enter/Space, and a screen reader announces nothing actionable. Using the right element — `<button>` — gives keyboard operability, focus, and role for free. When a non-semantic element must be interactive, it needs `role`, `tabIndex`, and a key handler to be equivalent. This rule catches the missing-role case, which is the most common and the most broken.\n\nIt is scoped tightly to avoid false positives: only native lowercase elements with a click handler and no role; component props and already-roled elements are left alone. The rule is experimental and does not contribute to the health score until calibration data is available.",
+      "examples": [
+        {
+          "good": "<button onClick={save}>Save</button>",
+          "bad": "<div onClick={save}>Save</div>"
+        }
+      ],
+      "allowlist": [
+        "native interactive elements (`button`, `a`, `input`, `select`, `textarea`, …) — exempt",
+        "elements that declare a `role` (the author opted into explicit semantics)",
+        "custom PascalCase components — `onClick` is a prop, not a DOM handler",
+        "repos containing `lyse-disable a11y/semantic-html` in a README — rule is N/A"
+      ]
+    },
+    {
       "id": "stories/coverage",
       "axis": "stories",
       "defaultSeverity": "warning",

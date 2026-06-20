@@ -53,6 +53,7 @@ const PROMOTED_2026_06_20 = [
   "tokens.css-custom-property-export",
   "tokens.container-query",
   "a11y.html-lang",
+  "a11y.semantic-html",
 ];
 
 describe("v1 promotion of the 2026-06-20 deterministic coverage batch", () => {
@@ -71,6 +72,6 @@ describe("v1 promotion of the 2026-06-20 deterministic coverage batch", () => {
   it("the trusted stable set now includes the batch (≥ 50 total)", () => {
     const v1 = resolveStableSubAxes(SUB_AXES, { filterRan: false });
     for (const id of PROMOTED_2026_06_20) expect(v1.has(id)).toBe(true);
-    expect(v1.size).toBeGreaterThanOrEqual(51);
+    expect(v1.size).toBeGreaterThanOrEqual(52);
   });
 });
