@@ -32,6 +32,7 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 | `a11y/html-lang` | `a11y.html-lang` | 0.912 | 0.901 | — | 2026-06-20 |
 | `a11y/inclusive-language` | `a11y.inclusive-language` | 0.904 | 0.901 | — | 2026-06-17 |
 | `a11y/prefers-reduced-motion` | `a11y.prefers-reduced-motion` | 0.904 | 0.901 | — | 2026-06-17 |
+| `a11y/semantic-html` | `a11y.semantic-html` | 0.916 | 0.934 | — | 2026-06-20 |
 | `components/doc-comments` | `components.doc-comments` | 0.912 | 0.901 | — | 2026-06-20 |
 | `naming/component-pascalcase` | `components.naming-component-pascalcase` | 0.904 | 0.904 | — | 2026-06-17 |
 | `naming/hook-prefix` | `components.naming-hook-prefix` | 0.904 | 0.904 | — | 2026-06-17 |
