@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join, isAbsolute } from "node:path";
 import { parse as parseBabel } from "@babel/parser";
 import _traverse from "@babel/traverse";
 import type { TraverseOptions } from "@babel/traverse";
@@ -63,4 +65,63 @@ export function collectReExportedNames(source: string): { names: string[]; starF
     return { names: [], starFrom: [] };
   }
   return { names: Array.from(names), starFrom };
+}
+
+export interface PackageEntryShape {
+  main?: unknown;
+  module?: unknown;
+  types?: unknown;
+  typings?: unknown;
+  exports?: unknown;
+}
+
+const CONVENTIONAL = [
+  "src/index.tsx",
+  "src/index.ts",
+  "src/index.jsx",
+  "src/index.js",
+  "index.tsx",
+  "index.ts",
+  "index.jsx",
+  "index.js",
+];
+
+function exportsDotEntry(exportsField: unknown): string | null {
+  if (typeof exportsField === "string") return exportsField;
+  if (exportsField && typeof exportsField === "object") {
+    const dot = (exportsField as Record<string, unknown>)["."];
+    const target = dot === undefined ? exportsField : dot;
+    if (typeof target === "string") return target;
+    if (target && typeof target === "object") {
+      for (const key of ["import", "module", "default", "types"]) {
+        const v = (target as Record<string, unknown>)[key];
+        if (typeof v === "string") return v;
+      }
+    }
+  }
+  return null;
+}
+
+function resolveRel(packageDir: string, rel: string): string {
+  return isAbsolute(rel) ? rel : join(packageDir, rel);
+}
+
+export function resolvePackageEntry(packageDir: string, pkg: PackageEntryShape): string | null {
+  for (const rel of CONVENTIONAL) {
+    const abs = join(packageDir, rel);
+    if (existsSync(abs)) return abs;
+  }
+  const candidates: unknown[] = [
+    pkg.module,
+    pkg.main,
+    pkg.types,
+    pkg.typings,
+    exportsDotEntry(pkg.exports),
+  ];
+  for (const c of candidates) {
+    if (typeof c !== "string" || c.length === 0) continue;
+    const abs = resolveRel(packageDir, c);
+    if (existsSync(abs)) return abs;
+  }
+  return null;
 }
