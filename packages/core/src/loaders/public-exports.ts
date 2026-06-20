@@ -1,5 +1,6 @@
-import { existsSync } from "node:fs";
-import { join, isAbsolute } from "node:path";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { join, isAbsolute, dirname } from "node:path";
+import fg from "fast-glob";
 import { parse as parseBabel } from "@babel/parser";
 import _traverse from "@babel/traverse";
 import type { TraverseOptions } from "@babel/traverse";
@@ -124,4 +125,77 @@ export function resolvePackageEntry(packageDir: string, pkg: PackageEntryShape):
     if (existsSync(abs)) return abs;
   }
   return null;
+}
+
+const MAX_FILE_BYTES = 2_000_000;
+const RESOLVE_EXTS = ["", ".tsx", ".ts", ".jsx", ".js"];
+const INDEX_EXTS = ["/index.tsx", "/index.ts", "/index.jsx", "/index.js"];
+
+function readSmall(abs: string): string | null {
+  try {
+    const st = statSync(abs);
+    if (!st.isFile() || st.size > MAX_FILE_BYTES) return null;
+    return readFileSync(abs, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+function resolveModuleFile(fromFile: string, spec: string): string | null {
+  if (!spec.startsWith(".")) return null;
+  const base = join(dirname(fromFile), spec);
+  for (const ext of RESOLVE_EXTS) {
+    const abs = base + ext;
+    if (readSmall(abs) !== null) return abs;
+  }
+  for (const ext of INDEX_EXTS) {
+    const abs = base + ext;
+    if (readSmall(abs) !== null) return abs;
+  }
+  return null;
+}
+
+function readPkg(abs: string): PackageEntryShape | null {
+  const raw = readSmall(abs);
+  if (raw === null || raw.trim().length === 0) return null;
+  try {
+    return JSON.parse(raw) as PackageEntryShape;
+  } catch {
+    return null;
+  }
+}
+
+export function resolvePublicComponentNames(repoRoot: string): Set<string> {
+  const out = new Set<string>();
+  if (!repoRoot) return out;
+  let pkgs: string[] = [];
+  try {
+    pkgs = fg.sync(["**/package.json"], {
+      cwd: repoRoot,
+      absolute: true,
+      dot: false,
+      ignore: ["**/node_modules/**", "**/dist/**", "**/build/**", "**/.git/**"],
+      followSymbolicLinks: false,
+    });
+  } catch {
+    return out;
+  }
+  for (const pkgPath of pkgs.sort()) {
+    const pkg = readPkg(pkgPath);
+    if (!pkg) continue;
+    const entry = resolvePackageEntry(dirname(pkgPath), pkg);
+    if (!entry) continue;
+    const entrySrc = readSmall(entry);
+    if (entrySrc === null) continue;
+    const { names, starFrom } = collectReExportedNames(entrySrc);
+    for (const n of names) out.add(n);
+    for (const spec of starFrom) {
+      const target = resolveModuleFile(entry, spec);
+      if (!target) continue;
+      const tsrc = readSmall(target);
+      if (tsrc === null) continue;
+      for (const n of collectReExportedNames(tsrc).names) out.add(n);
+    }
+  }
+  return out;
 }

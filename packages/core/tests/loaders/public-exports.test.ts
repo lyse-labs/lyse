@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   collectReExportedNames,
   resolvePackageEntry,
+  resolvePublicComponentNames,
 } from "../../src/loaders/public-exports.js";
 
 function tmp(): string {
@@ -98,6 +99,72 @@ describe("resolvePackageEntry", () => {
   it("returns null when nothing resolves to a real file", () => {
     const dir = tmp();
     expect(resolvePackageEntry(dir, { main: "./dist/index.js" })).toBeNull();
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("resolvePublicComponentNames", () => {
+  it("returns empty set for empty repoRoot", () => {
+    expect(resolvePublicComponentNames("").size).toBe(0);
+  });
+
+  it("unions PascalCase public names across a package barrel", () => {
+    const dir = tmp();
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "ui", module: "./src/index.ts" }),
+    );
+    mkdirSync(join(dir, "src"));
+    writeFileSync(
+      join(dir, "src", "index.ts"),
+      `export { Button } from './button';\nexport { default as Card } from './card';`,
+    );
+    const set = resolvePublicComponentNames(dir);
+    expect(set.has("Button")).toBe(true);
+    expect(set.has("Card")).toBe(true);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("follows `export * from` one level", () => {
+    const dir = tmp();
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "ui", module: "./src/index.ts" }),
+    );
+    mkdirSync(join(dir, "src"));
+    writeFileSync(join(dir, "src", "index.ts"), `export * from './primitives';`);
+    writeFileSync(
+      join(dir, "src", "primitives.ts"),
+      `export function Dialog() { return null; }\nexport const useDialog = () => null;`,
+    );
+    const set = resolvePublicComponentNames(dir);
+    expect(set.has("Dialog")).toBe(true);
+    expect(set.has("useDialog")).toBe(false);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("does NOT follow `export *` a second level (documented limit)", () => {
+    const dir = tmp();
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "ui", module: "./src/index.ts" }),
+    );
+    mkdirSync(join(dir, "src"));
+    writeFileSync(join(dir, "src", "index.ts"), `export * from './a';`);
+    writeFileSync(join(dir, "src", "a.ts"), `export * from './b';`);
+    writeFileSync(join(dir, "src", "b.ts"), `export function Deep() { return null; }`);
+    const set = resolvePublicComponentNames(dir);
+    expect(set.has("Deep")).toBe(false);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("yields empty set when no package.json resolves to a source entry", () => {
+    const dir = tmp();
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "app", main: "./dist/index.js" }),
+    );
+    expect(resolvePublicComponentNames(dir).size).toBe(0);
     rmSync(dir, { recursive: true, force: true });
   });
 });
