@@ -39,6 +39,14 @@ export interface AuditFlags {
    * Valid values: tokens | components | a11y | stories | themes | motion | patterns | naming | documentation
    */
   llmDimension?: string;
+  /** CLI `--llm` / `--no-llm`: per-run opt in/out of the LLM layer. */
+  llm?: boolean;
+  /**
+   * Resolved LLM consent for this run (set by the CLI audit entry via
+   * resolveLlmConsent). Gates the connector auto-detect path: source is never
+   * sent to an auto-detected `claude` CLI unless this is true (#115).
+   */
+  llmConsented?: boolean;
   /**
    * Optional progress reporter. When provided, the pipeline calls
    * `update()` at phase boundaries (file discovery, parsing, loading, rules,

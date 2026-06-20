@@ -15,6 +15,12 @@ This document fulfils the transparency obligations of **GDPR Articles 13–14** 
 
 A few entry points may call out to an LLM provider you configure (Anthropic, OpenAI, OpenRouter, your local Ollama, or your IDE's LLM via MCP). They are **off by default** and you choose the provider:
 
+- `lyse audit`'s LLM precision filter (drops false positives on hardcoded color/spacing). It is **off until you opt in** via one of:
+  - `lyse audit --llm` (single run), or
+  - `LYSE_LLM=1` (or accepting the one-time interactive prompt, persisted to `~/.lyse/llm-consent.json`), or
+  - an explicit `llm.provider` / `llm.connector` in `.lyse.yaml`.
+
+  Having the `claude` CLI installed no longer silently enables it. `lyse audit --no-llm` and `LYSE_LLM=0` force it off, and in non-interactive contexts (CI, pipes) it stays off.
 - `lyse init` (only if an LLM credential is detected or you explicitly opt in) — generates a tailored rule pack.
 - MCP host LLMs (Cursor / Claude Code / Codex) when your agent calls Lyse's MCP tools — that traffic goes through the IDE's own provider, not through Lyse.
 
@@ -32,7 +38,7 @@ What Lyse never sends:
 
 Every LLM call is logged at `.lyse/llm-calls.jsonl` (git-ignored). You can audit them after each run.
 
-`lyse audit --static-only` and `llm: { provider: 'none' }` in `.lyse.yaml` are explicit escape hatches that turn every LLM path off.
+`lyse audit --static-only`, `lyse audit --no-llm`, `LYSE_LLM=0`, and `llm: { provider: 'none' }` in `.lyse.yaml` are explicit escape hatches that turn every LLM path off.
 
 **Lyse Labs never sees your code, your findings, your scores, or your API keys.** We do not run a proxy, do not host any LLM endpoint, and do not receive telemetry from your audits (telemetry remains opt-in only — see [Telemetry](#telemetry) below).
 

@@ -38,7 +38,7 @@ A Health Score (0–100) across **6 axes** — tokens, a11y, components, stories
 
 ## Privacy
 
-`lyse audit` is **static-only**: nothing leaves your machine. Telemetry is opt-in only (one-time prompt, default declines). See [PRIVACY.md](./PRIVACY.md).
+`lyse audit` is **static-only by default**: nothing leaves your machine. The optional LLM precision filter is **opt-in** (`--llm`, `LYSE_LLM=1`, a one-time prompt, or explicit `llm.provider` config) and BYOK — having the `claude` CLI installed does not enable it silently. Telemetry is opt-in only (one-time prompt, default declines). See [PRIVACY.md](./PRIVACY.md).
 
 ## More
 

@@ -113,6 +113,9 @@ export function resolveConnector(
   if (provider === "none") return new NoopAdapter();
 
   if (!provider && !connector) {
+    // #115: the auto-detect path is the only one that can send source to an LLM
+    // without the user explicitly configuring a provider — gate it on consent.
+    if (flags?.llmConsented !== true) return new NoopAdapter();
     if (process.env["LYSE_DISABLE_AGENT_AUTODETECT"] === "1") return new NoopAdapter();
     const checkAvailable = opts.agentCliAvailable ?? isAgentCliAvailable;
     if (checkAvailable()) {

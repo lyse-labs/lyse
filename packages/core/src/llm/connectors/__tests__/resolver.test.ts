@@ -242,7 +242,8 @@ describe("resolveConnector", () => {
         }));
 
         const config: LyseConfig = {};
-        const client = resolveConnector(config, undefined, {
+        // #115: auto-detect now requires explicit consent.
+        const client = resolveConnector(config, { llmConsented: true }, {
           budgetStatePath: tmpBudgetPath(),
           cacheDir: tmpCacheDir(),
           agentCliAvailable: () => true,
@@ -330,7 +331,8 @@ describe("resolveConnector", () => {
           });
 
           const config: LyseConfig = {};
-          const client = resolveConnector(config, undefined, {
+          // #115: auto-detect now requires explicit consent.
+          const client = resolveConnector(config, { llmConsented: true }, {
             budgetStatePath: tmpBudgetPath(),
             cacheDir: tmpCacheDir(),
             agentCliAvailable: () => true,
