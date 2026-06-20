@@ -15,6 +15,7 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 | `tokens/deprecated-token-usage` | `tokens.deprecated-token-usage` | 0.901 | 0.904 | — | 2026-06-15 |
 | `tokens/description-coverage` | `tokens.description-coverage` | 0.901 | 0.901 | — | 2026-06-17 |
 | `tokens/dtcg-conformance` | `tokens.dtcg-conformance` | 0.901 | 0.901 | — | 2026-06-15 |
+| `tokens/no-hardcoded-media-query` | `tokens.media-query` | 0.912 | 0.912 | — | 2026-06-20 |
 | `tokens/no-hardcoded-motion` | `tokens.motion` | 0.918 | 0.916 | — | 2026-06-18 |
 | `tokens/no-hardcoded-opacity` | `tokens.opacity` | 0.989 | 0.916 | — | 2026-06-18 |
 | `tokens/responsive-breakpoints` | `tokens.responsive-breakpoints` | 0.904 | 0.901 | — | 2026-06-17 |
@@ -24,8 +25,10 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 | `tokens/no-hardcoded-z-index` | `tokens.z-index` | 0.988 | 0.916 | — | 2026-06-18 |
 | `a11y/essentials` | `a11y.essentials` | 0.908 | 0.904 | — | 2026-06-17 |
 | `a11y/focus-visible` | `a11y.focus-visible` | 0.904 | 0.901 | — | 2026-06-17 |
+| `a11y/forced-colors` | `a11y.forced-colors` | 0.916 | 0.901 | — | 2026-06-20 |
 | `a11y/inclusive-language` | `a11y.inclusive-language` | 0.904 | 0.901 | — | 2026-06-17 |
 | `a11y/prefers-reduced-motion` | `a11y.prefers-reduced-motion` | 0.904 | 0.901 | — | 2026-06-17 |
+| `components/doc-comments` | `components.doc-comments` | 0.912 | 0.901 | — | 2026-06-20 |
 | `naming/component-pascalcase` | `components.naming-component-pascalcase` | 0.904 | 0.904 | — | 2026-06-17 |
 | `naming/hook-prefix` | `components.naming-hook-prefix` | 0.904 | 0.904 | — | 2026-06-17 |
 | `components/no-native-shadows` | `components.native-shadows` | 0.901 | 0.901 | — | 2026-06-17 |
@@ -52,4 +55,5 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 | `ai-governance/draft-attribution` | `ai-governance.draft-attribution` | 0.901 | 0.901 | — | 2026-06-17 |
 | `ai-governance/feedback-control-present` | `ai-governance.feedback-control-present` | 0.901 | 0.901 | — | 2026-06-17 |
 | `ai-governance/interaction-pattern-docs` | `ai-governance.interaction-pattern-docs` | 0.901 | 0.901 | — | 2026-06-17 |
+| `ai-governance/product-analytics` | `ai-governance.product-analytics` | 0.916 | 0.901 | — | 2026-06-20 |
 | `ai-governance/source-attribution-present` | `ai-governance.source-attribution-present` | 0.901 | 0.901 | — | 2026-06-17 |

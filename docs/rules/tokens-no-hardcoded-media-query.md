@@ -1,6 +1,6 @@
 # `tokens/no-hardcoded-media-query`
 
-> **Axis:** Tokens · **Severity:** warning · **Auto-fixable:** no · **Status:** experimental (reported-only, not yet scored)
+> **Axis:** Tokens · **Severity:** warning · **Auto-fixable:** no · **Status:** scored (v1)
 
 Flags raw `px` / `rem` / `em` literals used as breakpoint values inside `@media` width/height features, when they are not on the tokenized breakpoint scale.
 
@@ -47,7 +47,7 @@ lyse-disable tokens/no-hardcoded-media-query
 
 ## Status
 
-Experimental and **reported-only**: it does not contribute to the Health Score until calibration data is available.
+**Scored (v1):** contributes to the Health Score. Promoted 2026-06-20 after clearing both gates on the synthetic recall suite (recall LB 0.912, precision LB 0.912).
 
 ## See also
 

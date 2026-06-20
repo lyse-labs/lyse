@@ -41,3 +41,32 @@ describe("v1 promotion of the 10 deterministic gate-clearers (#71)", () => {
     expect(v1.size).toBeGreaterThanOrEqual(22);
   });
 });
+
+// The 4 deterministic coverage rules promoted on the 2026-06-20 batch run
+// (recall LB and precision LB both >= 0.90 on the synthetic recall suite).
+const PROMOTED_2026_06_20 = [
+  "tokens.media-query",
+  "components.doc-comments",
+  "a11y.forced-colors",
+  "ai-governance.product-analytics",
+];
+
+describe("v1 promotion of the 2026-06-20 deterministic coverage batch", () => {
+  it("each batch sub-axis is status:stable + contributesToScore + deterministic with both LBs >= 0.90", () => {
+    for (const id of PROMOTED_2026_06_20) {
+      const sa = SUB_AXES.find((s) => s.id === id);
+      expect(sa, `missing sub-axis ${id}`).toBeDefined();
+      expect(sa!.status).toBe("stable");
+      expect(sa!.contributesToScore).toBe(true);
+      expect(sa!.deterministicValidator).toBe(true);
+      expect(sa!.recallWilsonLowerBound).toBeGreaterThanOrEqual(0.9);
+      expect(sa!.precisionWilsonLowerBound).toBeGreaterThanOrEqual(0.9);
+    }
+  });
+
+  it("the trusted stable set now includes the batch (≥ 47 total)", () => {
+    const v1 = resolveStableSubAxes(SUB_AXES, { filterRan: false });
+    for (const id of PROMOTED_2026_06_20) expect(v1.has(id)).toBe(true);
+    expect(v1.size).toBeGreaterThanOrEqual(47);
+  });
+});

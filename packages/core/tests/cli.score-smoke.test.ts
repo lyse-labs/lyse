@@ -26,6 +26,10 @@
  * [70,76]/[9,13] after promoting `tokens.spacing` into v1 (oracle-valid
  * precision LB 0.985, #128/#120; full-ds has one hardcoded-spacing finding at
  * src/Page.tsx, so the score steps down ~5 pts and counted +2).
+ * Band held at [70,76]/[9,13] through the 2026-06-20 deterministic batch
+ * (tokens.media-query, components.doc-comments, a11y.forced-colors,
+ * ai-governance.product-analytics → 43→47 stable): a few of them fire on this
+ * fixture (counted ~12, score ~71), staying inside the existing band.
  * Each new scored sub-axis that fires on full-ds (which ships none of these
  * AI/versioning artifacts) steps the band down by one finding.
  *

@@ -1,6 +1,6 @@
 # ai-governance/product-analytics
 
-**Axis:** `ai-governance` | **Default severity:** `warning` | **Status:** experimental/advisory
+**Axis:** `ai-governance` | **Default severity:** `warning` | **Status:** scored (v1)
 
 ---
 
@@ -117,7 +117,7 @@ Use this when:
 
 ## Status
 
-This rule is **advisory/experimental** until the first recall run measures precision. Findings are reported and guidance is visible, but the rule does not yet count toward the Health Score.
+**Scored (v1):** this rule contributes to the Health Score. Promoted 2026-06-20 after clearing both gates on the synthetic recall suite (recall LB 0.901, precision LB 0.916).
 
 ---
 
