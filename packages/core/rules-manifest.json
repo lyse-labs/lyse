@@ -463,6 +463,25 @@
       ]
     },
     {
+      "id": "a11y/html-lang",
+      "axis": "a11y",
+      "defaultSeverity": "warning",
+      "shortDescription": "The document root should declare a language",
+      "fullDescription": "Checks, at repo level, whether the document `<html>` root declares a `lang` attribute. Scans JSX/TSX framework roots (Next.js `app/layout.tsx`, Remix `root.tsx`, Gatsby `html.js`) and real `.html` / `.htm` files for an opening `<html>` tag, and flags one that carries no `lang` (in any form: `lang=\"en\"`, `lang={locale}`, `:lang`, `xml:lang`). Emits one warning when an `<html>` root without `lang` is found; emits nothing when every `<html>` has a language or when the repo ships no `<html>` root at all (a pure component library — N/A). The `dir` attribute (RTL) is not required and is not penalized.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/a11y-html-lang.md",
+      "rationale": "Why it matters\n\nWCAG 3.1.1 (Language of Page) requires the document language to be programmatically determinable. The `lang` attribute on `<html>` is how screen readers pick the right voice and pronunciation, how browsers choose hyphenation and quotation marks, and how language-scoped CSS (`:lang()`) and per-locale typography apply. A missing `lang` silently degrades the experience for assistive-tech and international users.\n\nThe check is repo-level and applies only when the design system actually ships an `<html>` root; a component library that never renders `<html>` is N/A. The rule is experimental and does not contribute to the health score until calibration data is available.",
+      "examples": [
+        {
+          "good": "export default function RootLayout({ children }) {\n  return <html lang=\"en\"><body>{children}</body></html>;\n}",
+          "bad": "export default function RootLayout({ children }) {\n  return <html><body>{children}</body></html>;\n}"
+        }
+      ],
+      "allowlist": [
+        "repos containing `lyse-disable a11y/html-lang` in a README — rule is N/A",
+        "design systems that ship no `<html>` root (pure component libraries) — the check does not apply (N/A)"
+      ]
+    },
+    {
       "id": "stories/coverage",
       "axis": "stories",
       "defaultSeverity": "warning",

@@ -29,6 +29,7 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 | `a11y/essentials` | `a11y.essentials` | 0.908 | 0.904 | — | 2026-06-17 |
 | `a11y/focus-visible` | `a11y.focus-visible` | 0.904 | 0.901 | — | 2026-06-17 |
 | `a11y/forced-colors` | `a11y.forced-colors` | 0.916 | 0.901 | — | 2026-06-20 |
+| `a11y/html-lang` | `a11y.html-lang` | 0.912 | 0.901 | — | 2026-06-20 |
 | `a11y/inclusive-language` | `a11y.inclusive-language` | 0.904 | 0.901 | — | 2026-06-17 |
 | `a11y/prefers-reduced-motion` | `a11y.prefers-reduced-motion` | 0.904 | 0.901 | — | 2026-06-17 |
 | `components/doc-comments` | `components.doc-comments` | 0.912 | 0.901 | — | 2026-06-20 |
