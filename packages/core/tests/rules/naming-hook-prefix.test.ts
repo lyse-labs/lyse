@@ -36,6 +36,18 @@ describe("rule naming/hook-prefix — detection", () => {
     expect(result.findings.some((f) => f.message.includes("getMyData"))).toBe(true);
   });
 
+  it("does not flag a create* factory that calls a hook while building its result [corpus FP]", async () => {
+    const source = [
+      "import { useState } from 'react';",
+      "export function createStyles() {",
+      "  const [theme] = useState(null);",
+      "  return { theme };",
+      "}",
+    ].join("\n");
+    const result = await rule.evaluate(ctx, ts(source, "src/create-styles.ts"));
+    expect(result.findings).toHaveLength(0);
+  });
+
   it("flags an exported const arrow function that calls useEffect", async () => {
     const source = [
       "import { useState, useEffect } from 'react';",

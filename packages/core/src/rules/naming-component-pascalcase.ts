@@ -10,6 +10,7 @@ import type {
   CodemodResult,
 } from "../types.js";
 import { isPathExcluded } from "./_exclude.js";
+import { isLowSignalValueFile } from "./_skip-context.js";
 import { fixNamingComponentPascalCase } from "../codemods/naming-component-pascalcase.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
 import { createLyseRule } from "./_rule-module.js";
@@ -88,8 +89,8 @@ function detectNonPascalComponents(
   path: string,
 ): Array<{ name: string; index: number }> {
   const results: Array<{ name: string; index: number }> = [];
-  // Skip test files
-  if (/\.(test|spec)\.(tsx?|jsx?)$/.test(path)) return results;
+  // Skip test/story/demo/fixture low-signal files (shared policy).
+  if (isLowSignalValueFile(path)) return results;
 
   EXPORT_FUNC_RE.lastIndex = 0;
   let m: RegExpExecArray | null;
@@ -102,6 +103,10 @@ function detectNonPascalComponents(
     if (HOC_NAME_RE.test(name)) continue;
     // Skip hooks (handled by hook-prefix rule)
     if (/^use[A-Z]/.test(name)) continue;
+    // Skip factory functions (createContext / createFormContext / createStore …):
+    // their body often contains a nested component's JSX, but the factory itself
+    // is not a component. `create[A-Z]` is a strong, conventional signal.
+    if (/^create[A-Z]/.test(name)) continue;
     const isConstArrow = m[2] !== undefined;
     const bodySlice = extractFunctionBody(source, m.index);
     const hasJsxReturn =

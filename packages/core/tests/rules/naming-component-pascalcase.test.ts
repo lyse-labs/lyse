@@ -27,6 +27,18 @@ describe("rule naming/component-pascalcase — detection", () => {
     expect(result.findings[0]!.suggestion).toContain("MyButton");
   });
 
+  it("does not flag a create* factory whose nested component returns JSX (not a component) [corpus FP]", async () => {
+    const source = `export function createFormContext() {\n  function FormProvider({ children }) { return <FormContext>{children}</FormContext>; }\n  return [FormProvider];\n}`;
+    const result = await rule.evaluate(ctx, tsx(source, "src/FormProvider.tsx"));
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("does not flag render helpers in a .story.tsx demo file [corpus FP]", async () => {
+    const source = `export const labelPosition = (args) => <Switch labelPosition="left" {...args} />;`;
+    const result = await rule.evaluate(ctx, tsx(source, "src/Switch.story.tsx"));
+    expect(result.findings).toHaveLength(0);
+  });
+
   it("flags a snake_case exported const component", async () => {
     const source = `export const my_card = () => { return (<div>x</div>); }`;
     const result = await rule.evaluate(ctx, tsx(source));
