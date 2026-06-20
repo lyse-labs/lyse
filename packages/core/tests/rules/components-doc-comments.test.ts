@@ -94,6 +94,17 @@ describe("rule components/doc-comments — public-API re-scope", () => {
     expect(r.opportunities).toBe(0);
   });
 
+  it("skips components under a demos/ directory [corpus FP: mantine @docs/demos]", () => {
+    const index = { packages: [{ dir: "", names: new Set(["CarouselDemo", "AuthForm"]) }] };
+    const files = makeParsed([
+      { path: "packages/@docs/demos/src/demos/carousel/Carousel.demo.cards.tsx", source: "export function CarouselDemo() { return <div />; }" },
+      { path: "packages/@docs/demos/src/shared/AuthForm.tsx", source: "export function AuthForm() { return <form />; }" },
+    ]);
+    const r = _internal.evaluateDocComments(files, index, makeCtx());
+    expect(r.findings).toHaveLength(0);
+    expect(r.opportunities).toBe(0);
+  });
+
   it("exposes the pure seam and the scanner", () => {
     expect(typeof _internal.evaluateDocComments).toBe("function");
     expect(typeof _internal.scanComponentDocs).toBe("function");
