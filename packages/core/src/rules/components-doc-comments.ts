@@ -5,7 +5,8 @@ import type * as t from "@babel/types";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding } from "../types.js";
 import { isPathExcluded } from "./_exclude.js";
 import { isLowSignalValueFile } from "./_skip-context.js";
-import { resolvePublicComponentNames } from "../loaders/public-exports.js";
+import { resolvePublicExports, publicNamesForFile } from "../loaders/public-exports.js";
+import type { PublicExportIndex } from "../loaders/public-exports.js";
 import { createLyseRule } from "./_rule-module.js";
 
 type TraverseFn = (ast: t.Node, opts: TraverseOptions) => void;
@@ -117,24 +118,29 @@ export function scanComponentDocs(source: string): DocFinding[] {
   return found;
 }
 
-// Pure seam: given the resolved public-API component name set, scan the parsed
-// files and flag only PUBLIC components that lack a doc comment. An empty set
-// means the package's public surface could not be resolved → the rule is N/A
-// (0 findings, 0 opportunities). Precision over recall: never flood.
+// Pure seam: given the per-package public-export index, scan the parsed files
+// and flag only components that are public IN THEIR OWN PACKAGE and lack a doc
+// comment. Per-package scoping prevents cross-package name collisions (a demo
+// `Button` in a private app must not be flagged because a sibling lib exports a
+// `Button`). A package whose public surface cannot be resolved contributes no
+// opportunities → the rule is N/A there. Precision over recall: never flood.
 function evaluateDocComments(
   files: ParsedFiles,
-  publicSet: Set<string>,
+  index: PublicExportIndex,
   ctx: RuleContext,
 ): RuleEvalResult {
   const findings: Finding[] = [];
   let opportunities = 0;
-  if (publicSet.size === 0) return { findings, opportunities };
+  if (index.packages.length === 0) return { findings, opportunities };
 
   for (const f of files.ts) {
     if (isPathExcluded(f.path, ctx.excludePaths)) continue;
     if (!/\.(tsx|jsx)$/.test(f.path)) continue;
     if (isLowSignalValueFile(f.path)) continue;
     if (!/\bexport\b/.test(f.source)) continue;
+
+    const publicSet = publicNamesForFile(index, f.path);
+    if (publicSet.size === 0) continue;
 
     for (const c of scanComponentDocs(f.source)) {
       if (!publicSet.has(c.componentName)) continue;
@@ -155,8 +161,8 @@ function evaluateDocComments(
 }
 
 const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalResult> => {
-  const publicSet = resolvePublicComponentNames(ctx.repoRoot);
-  return evaluateDocComments(files, publicSet, ctx);
+  const index = resolvePublicExports(ctx.repoRoot);
+  return evaluateDocComments(files, index, ctx);
 };
 
 export const rule: Rule = createLyseRule({

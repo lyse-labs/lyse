@@ -6,6 +6,8 @@ import {
   collectReExportedNames,
   resolvePackageEntry,
   resolvePublicComponentNames,
+  resolvePublicExports,
+  publicNamesForFile,
 } from "../../src/loaders/public-exports.js";
 
 function tmp(): string {
@@ -165,6 +167,89 @@ describe("resolvePublicComponentNames", () => {
       JSON.stringify({ name: "app", main: "./dist/index.js" }),
     );
     expect(resolvePublicComponentNames(dir).size).toBe(0);
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("publicNamesForFile (per-package scoping)", () => {
+  const index = {
+    packages: [
+      { dir: "packages/ui", names: new Set(["Button", "Card"]) },
+      { dir: "apps/demo", names: new Set<string>() },
+    ],
+  };
+
+  it("returns the owning package's names for a file inside it", () => {
+    expect(publicNamesForFile(index, "packages/ui/src/Button.tsx").has("Button")).toBe(true);
+  });
+
+  it("does NOT leak a sibling package's public names (cross-package collision)", () => {
+    // A demo `Button` in apps/demo must NOT be considered public just because
+    // packages/ui exports a `Button`.
+    expect(publicNamesForFile(index, "apps/demo/src/Button.tsx").has("Button")).toBe(false);
+    expect(publicNamesForFile(index, "apps/demo/src/Button.tsx").size).toBe(0);
+  });
+
+  it("picks the deepest matching package when packages nest", () => {
+    const nested = {
+      packages: [
+        { dir: "packages/ui", names: new Set(["Outer"]) },
+        { dir: "packages/ui/sub", names: new Set(["Inner"]) },
+      ],
+    };
+    const names = publicNamesForFile(nested, "packages/ui/sub/X.tsx");
+    expect(names.has("Inner")).toBe(true);
+    expect(names.has("Outer")).toBe(false);
+  });
+
+  it("returns empty set when no package owns the file", () => {
+    expect(publicNamesForFile(index, "scripts/build.ts").size).toBe(0);
+  });
+
+  it("matches a root package (dir = '')", () => {
+    const rootIdx = { packages: [{ dir: "", names: new Set(["Root"]) }] };
+    expect(publicNamesForFile(rootIdx, "src/Root.tsx").has("Root")).toBe(true);
+  });
+});
+
+describe("resolvePublicExports (per-package index)", () => {
+  it("keeps each package's public names separate (no union leakage)", () => {
+    const dir = tmp();
+    // lib package exports Button
+    mkdirSync(join(dir, "packages", "ui", "src"), { recursive: true });
+    writeFileSync(
+      join(dir, "packages", "ui", "package.json"),
+      JSON.stringify({ name: "ui", module: "./src/index.ts" }),
+    );
+    writeFileSync(join(dir, "packages", "ui", "src", "index.ts"), `export { Button } from './button';`);
+    // private app declares its own demo Button but exports nothing
+    mkdirSync(join(dir, "apps", "demo"), { recursive: true });
+    writeFileSync(
+      join(dir, "apps", "demo", "package.json"),
+      JSON.stringify({ name: "demo", private: true }),
+    );
+
+    const index = resolvePublicExports(dir);
+    const ui = index.packages.find((p) => p.dir === "packages/ui");
+    const demo = index.packages.find((p) => p.dir === "apps/demo");
+    expect(ui?.names.has("Button")).toBe(true);
+    expect(demo === undefined || demo.names.size === 0).toBe(true);
+    // a demo file must not see Button as public
+    expect(publicNamesForFile(index, "apps/demo/Button.tsx").has("Button")).toBe(false);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("resolvePublicComponentNames still returns the union (backward compat)", () => {
+    const dir = tmp();
+    mkdirSync(join(dir, "src"));
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "ui", module: "./src/index.ts" }),
+    );
+    writeFileSync(join(dir, "src", "index.ts"), `export { Button } from './b';\nexport { Card } from './c';`);
+    const union = resolvePublicComponentNames(dir);
+    expect(union.has("Button")).toBe(true);
+    expect(union.has("Card")).toBe(true);
     rmSync(dir, { recursive: true, force: true });
   });
 });

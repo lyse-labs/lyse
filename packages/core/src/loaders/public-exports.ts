@@ -165,9 +165,41 @@ function readPkg(abs: string): PackageEntryShape | null {
   }
 }
 
-export function resolvePublicComponentNames(repoRoot: string): Set<string> {
-  const out = new Set<string>();
-  if (!repoRoot) return out;
+function toPosix(p: string): string {
+  return p.split("\\").join("/");
+}
+
+export interface PublicExportIndex {
+  // One entry per package, `dir` relative to repoRoot in posix form ("" = root),
+  // each carrying ONLY that package's own public component names.
+  packages: Array<{ dir: string; names: Set<string> }>;
+}
+
+// Resolve the public component names a single package entry exposes, following
+// `export *` exactly one level. Returns the names contributed by THIS package.
+function resolvePackageNames(pkgPath: string): Set<string> {
+  const names = new Set<string>();
+  const pkg = readPkg(pkgPath);
+  if (!pkg) return names;
+  const entry = resolvePackageEntry(dirname(pkgPath), pkg);
+  if (!entry) return names;
+  const entrySrc = readSmall(entry);
+  if (entrySrc === null) return names;
+  const collected = collectReExportedNames(entrySrc);
+  for (const n of collected.names) names.add(n);
+  for (const spec of collected.starFrom) {
+    const target = resolveModuleFile(entry, spec);
+    if (!target) continue;
+    const tsrc = readSmall(target);
+    if (tsrc === null) continue;
+    for (const n of collectReExportedNames(tsrc).names) names.add(n);
+  }
+  return names;
+}
+
+export function resolvePublicExports(repoRoot: string): PublicExportIndex {
+  const packages: PublicExportIndex["packages"] = [];
+  if (!repoRoot) return { packages };
   let pkgs: string[] = [];
   try {
     pkgs = fg.sync(["**/package.json"], {
@@ -178,24 +210,37 @@ export function resolvePublicComponentNames(repoRoot: string): Set<string> {
       followSymbolicLinks: false,
     });
   } catch {
-    return out;
+    return { packages };
   }
+  const rootPosix = toPosix(repoRoot).replace(/\/+$/, "");
   for (const pkgPath of pkgs.sort()) {
-    const pkg = readPkg(pkgPath);
-    if (!pkg) continue;
-    const entry = resolvePackageEntry(dirname(pkgPath), pkg);
-    if (!entry) continue;
-    const entrySrc = readSmall(entry);
-    if (entrySrc === null) continue;
-    const { names, starFrom } = collectReExportedNames(entrySrc);
-    for (const n of names) out.add(n);
-    for (const spec of starFrom) {
-      const target = resolveModuleFile(entry, spec);
-      if (!target) continue;
-      const tsrc = readSmall(target);
-      if (tsrc === null) continue;
-      for (const n of collectReExportedNames(tsrc).names) out.add(n);
-    }
+    const names = resolvePackageNames(pkgPath);
+    if (names.size === 0) continue;
+    const pkgDirAbs = toPosix(dirname(pkgPath));
+    let rel = pkgDirAbs.startsWith(rootPosix) ? pkgDirAbs.slice(rootPosix.length) : pkgDirAbs;
+    rel = rel.replace(/^\/+/, "");
+    packages.push({ dir: rel, names });
+  }
+  return { packages };
+}
+
+// Find the names public for a file: the deepest package whose dir owns the file.
+export function publicNamesForFile(index: PublicExportIndex, relFilePath: string): Set<string> {
+  const file = toPosix(relFilePath).replace(/^\.?\/+/, "");
+  let best: { dir: string; names: Set<string> } | null = null;
+  for (const pkg of index.packages) {
+    const owns = pkg.dir === "" || file === pkg.dir || file.startsWith(pkg.dir + "/");
+    if (!owns) continue;
+    if (best === null || pkg.dir.length > best.dir.length) best = pkg;
+  }
+  return best ? best.names : new Set<string>();
+}
+
+// Backward-compatible union of all packages' public names.
+export function resolvePublicComponentNames(repoRoot: string): Set<string> {
+  const out = new Set<string>();
+  for (const pkg of resolvePublicExports(repoRoot).packages) {
+    for (const n of pkg.names) out.add(n);
   }
   return out;
 }

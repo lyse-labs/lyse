@@ -18,8 +18,11 @@ function tsFile(path: string, source: string): ParsedTsFile {
 function makeParsed(files: { path: string; source: string }[]): ParsedFiles {
   return { ts: files.map((f) => tsFile(f.path, f.source)), css: [], cssInJs: [] };
 }
+// A root package ("" dir) owning the given public names — preserves the simple
+// single-set behavior for the common-case tests.
 function run(files: { path: string; source: string }[], pub: string[]) {
-  return _internal.evaluateDocComments(makeParsed(files), new Set(pub), makeCtx());
+  const index = { packages: [{ dir: "", names: new Set(pub) }] };
+  return _internal.evaluateDocComments(makeParsed(files), index, makeCtx());
 }
 
 describe("rule components/doc-comments — public-API re-scope", () => {
@@ -94,5 +97,25 @@ describe("rule components/doc-comments — public-API re-scope", () => {
   it("exposes the pure seam and the scanner", () => {
     expect(typeof _internal.evaluateDocComments).toBe("function");
     expect(typeof _internal.scanComponentDocs).toBe("function");
+  });
+
+  it("does NOT flag a demo component in a package that does not export it [corpus FP: radix apps/ssr-testing]", () => {
+    // packages/ui publicly exports Button; apps/demo declares its own demo Button
+    // but exports nothing. The demo Button must NOT be flagged via cross-package
+    // name collision (the union-scoping bug found on radix).
+    const index = {
+      packages: [
+        { dir: "packages/ui", names: new Set(["Button"]) },
+        { dir: "apps/demo", names: new Set<string>() },
+      ],
+    };
+    const files = makeParsed([
+      { path: "packages/ui/src/Button.tsx", source: "export function Button() { return <button />; }" },
+      { path: "apps/demo/app/Button.tsx", source: "export function Button() { return <button />; }" },
+    ]);
+    const r = _internal.evaluateDocComments(files, index, makeCtx());
+    expect(r.findings).toHaveLength(1);
+    expect(r.findings[0]!.location.file).toBe("packages/ui/src/Button.tsx");
+    expect(r.opportunities).toBe(1);
   });
 });
