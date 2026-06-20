@@ -9,6 +9,7 @@ import { rule as rShadowNative } from "./components-shadow-native.js";
 import { rule as rNoIconFonts } from "./components-no-icon-fonts.js";
 import { rule as rSvgViewbox } from "./components-svg-viewbox.js";
 import { rule as rContractsStrictness } from "./components-contracts-strictness.js";
+import { rule as rDocComments } from "./components-doc-comments.js";
 import { rule as rNamingPascalCase } from "./naming-component-pascalcase.js";
 import { rule as rNamingHookPrefix } from "./naming-hook-prefix.js";
 import { rule as rA11y } from "./a11y-essentials.js";
@@ -67,6 +68,7 @@ export const ruleObjects: Rule[] = [
   rNoIconFonts,
   rSvgViewbox,
   rContractsStrictness,
+  rDocComments,
   rNamingPascalCase,
   rNamingHookPrefix,
   rA11y,
