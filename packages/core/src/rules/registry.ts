@@ -3,6 +3,7 @@ import { rule as rSpacing } from "./tokens-no-hardcoded-spacing.js";
 import { rule as rDtcgConformance } from "./tokens-dtcg-conformance.js";
 import { rule as rDescriptionCoverage } from "./tokens-description-coverage.js";
 import { rule as rThemeModesPresent } from "./tokens-theme-modes-present.js";
+import { rule as rCssCustomPropertyExport } from "./tokens-css-custom-property-export.js";
 import { rule as rResponsiveBreakpoints } from "./tokens-responsive-breakpoints.js";
 import { rule as rMediaQuery } from "./tokens-no-hardcoded-media-query.js";
 import { rule as rShadowNative } from "./components-shadow-native.js";
@@ -64,6 +65,7 @@ export const ruleObjects: Rule[] = [
   rDtcgConformance,
   rDescriptionCoverage,
   rThemeModesPresent,
+  rCssCustomPropertyExport,
   rResponsiveBreakpoints,
   rMediaQuery,
   rShadowNative,
