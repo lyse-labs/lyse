@@ -49,6 +49,6 @@ lyse-disable tokens/css-custom-property-export
 
 ## See also
 
-- [`tokens/theme-modes-present`](./tokens-theme-modes-present.md) — light/dark mode presence (a different theming dimension).
+- `tokens/responsive-breakpoints` — another repo-level theming/tokens presence check.
 - [MDN: Using CSS custom properties](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_custom_properties)
 - [Health Score](../guide/health-score.md) — how rules combine into the final score.
