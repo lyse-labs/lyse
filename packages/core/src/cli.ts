@@ -50,6 +50,7 @@ import {
   ensureConsentDecision,
   type LogContext,
 } from "./telemetry/index.js";
+import { resolveLlmConsent } from "./llm/consent.js";
 import { runTelemetryOn, runTelemetryOff, runTelemetryStatus } from "./commands/telemetry.js";
 import { runBenchPack } from "./commands/bench-pack.js";
 
@@ -212,6 +213,15 @@ const auditCommand = defineCommand({
       type: "string",
       description: "Override the LLM model",
     },
+    llm: {
+      type: "boolean",
+      description:
+        "Enable the LLM precision filter for this run (opt-in; sends source to your configured provider)",
+    },
+    "no-llm": {
+      type: "boolean",
+      description: "Disable the LLM layer for this run (static-only LLM behaviour)",
+    },
     dim: {
       type: "string",
       description:
@@ -290,6 +300,15 @@ const auditCommand = defineCommand({
         ? { llmDimension: (args["dim"] as string).trim().toLowerCase() }
         : {}),
     };
+
+    // #115: resolve LLM consent once, in the CLI layer (mirrors telemetry).
+    // --no-llm wins; --llm opts in for this run; otherwise env/persisted/prompt.
+    // The result gates the connector auto-detect path (resolver.ts).
+    const llmFlag =
+      args["no-llm"] === true ? false : args["llm"] === true ? true : undefined;
+    auditFlags.llmConsented = await resolveLlmConsent(
+      llmFlag === undefined ? undefined : { llm: llmFlag },
+    );
 
     // Issue #97 — visual feedback. Compute spinner enablement BEFORE running
     // the audit so we can surface phase progress. The format default mirrors
