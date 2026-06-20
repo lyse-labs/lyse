@@ -19,6 +19,7 @@ const EXPECTED_IDS = [
   "components/no-native-shadows",
   "components/no-icon-fonts",
   "components/contracts-strictness",
+  "components/doc-comments",
   "naming/component-pascalcase",
   "naming/hook-prefix",
   "a11y/essentials",
