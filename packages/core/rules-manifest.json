@@ -318,10 +318,10 @@
       "id": "components/doc-comments",
       "axis": "components",
       "defaultSeverity": "info",
-      "shortDescription": "Exported components should carry a doc comment",
-      "fullDescription": "Scans exported PascalCase components in .tsx/.jsx files (function declarations, arrow/function consts, HOC-wrapped consts via forwardRef/memo/observer/styled, and default-exported functions) and flags those with no leading JSDoc (`/** … */`) doc comment. Presence only — the quality of the prose is out of scope for the static engine. Non-component PascalCase exports (context objects, plain objects, `createContext(...)`), non-Pascal exports (hooks, constants), re-exports, and non-.tsx/.jsx files are not scanned.",
+      "shortDescription": "Public-API components should carry a doc comment",
+      "fullDescription": "Scans exported PascalCase components in .tsx/.jsx files (function declarations, arrow/function consts, HOC-wrapped consts via forwardRef/memo/observer/styled, and default-exported functions) and flags those with no leading JSDoc (`/** … */`) doc comment — but ONLY for components that are part of the package's PUBLIC API (re-exported from a resolved package entry; see loaders/public-exports). Internal, demo, and example components are not scanned. Presence only — the quality of the prose is out of scope for the static engine. If the public surface cannot be resolved (no parseable package entry / not a component library), the rule is N/A (0 findings) rather than flooding. Non-component PascalCase exports, non-Pascal exports (hooks, constants), re-exports without a local declaration, and non-.tsx/.jsx files are not scanned.",
       "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/components-doc-comments.md",
-      "rationale": "Why it matters\n\nA design system's components are its public API. A JSDoc doc comment on an exported component is what surfaces in IDE tooltips, what TypeDoc renders, and what AI coding agents read to decide whether and how to use the component. An undocumented export forces every consumer to read the source. The check is presence-only: a one-line `/** A button. */` clears it — judging the prose is the LLM layer's job, not the static engine's.\n\nThe rule is experimental and does not contribute to the health score until calibration data is available.",
+      "rationale": "Why it matters\n\nA design system's components are its public API. A JSDoc doc comment on a public component is what surfaces in IDE tooltips, what TypeDoc renders, and what AI coding agents read to decide whether and how to use the component. An undocumented public export forces every consumer to read the source. The check is presence-only: a one-line `/** A button. */` clears it — judging the prose is the LLM layer's job, not the static engine's.\n\nScope is deliberately the PUBLIC API only — the names a package actually re-exports from its entry. Internal building blocks and example/demo components carry no documentation obligation toward consumers, so flagging them is noise. When the public surface cannot be resolved, the rule abstains (N/A) rather than guess.",
       "examples": [
         {
           "good": "/** Primary action button. */\nexport function Button() { return <button />; }",
@@ -329,10 +329,11 @@
         }
       ],
       "allowlist": [
+        "internal / demo / example components not re-exported from the package entry",
         "non-component PascalCase exports (objects, `createContext(...)`, theme constants)",
         "non-Pascal exports (hooks, SCREAMING_CASE constants)",
-        "re-exports (`export { Button } from './Button'`)",
         "test / story / fixture files",
+        "packages whose public surface cannot be resolved (rule is N/A)",
         "inline `// lyse-disable-next-line components/doc-comments` directive"
       ]
     },
