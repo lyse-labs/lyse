@@ -44,7 +44,7 @@ export function isColorTokenDefFile(filePath: string): boolean {
 // ---------------------------------------------------------------------------
 
 const LOW_SIGNAL_FILE_RE =
-  /(?:^|[\\/])(__tests__|__mocks__|fixtures)[\\/]|\.(?:test|spec|stories|fixture)\.[cm]?[jt]sx?$/;
+  /(?:^|[\\/])(__tests__|__mocks__|fixtures)[\\/]|\.(?:test|spec|stories|story|demo|fixture)\.[cm]?[jt]sx?$/;
 
 /**
  * Returns true if the file path is a test, story, mock, or fixture file.
