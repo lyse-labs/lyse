@@ -56,11 +56,18 @@ const PROMOTED_2026_06_20 = [
 ];
 
 // Demoted back to experimental after corpus precision-validation (2026-06-20):
-// `tokens.gradient` fires on functional gradients (alpha-checkerboards), and
-// `components.doc-comments` is a 3585-finding flood that distorts the score on
-// real repos. Precise but not trustworthy as scored signals — see
+// `tokens.gradient` fires on functional gradients (alpha-checkerboards).
+// Precise but not trustworthy as a scored signal — see
 // internal/corpus-validation/2026-06-20-precision-report.md.
-const DEMOTED_2026_06_20 = ["tokens.gradient", "components.doc-comments"];
+const DEMOTED_2026_06_20 = ["tokens.gradient"];
+
+// Re-promoted 2026-06-20 after the #77 public-API re-scope: doc-comments now
+// flags only components re-exported from their own package entry (per-package
+// scoping), eliminating the cross-package-collision FPs and the ~3585-finding
+// flood (mantine: 3585 → 14 true positives, 0 FP across 5 OSS DS). Synthetic
+// recall LB 0.901 / precision LB 0.929. See
+// internal/corpus-validation/2026-06-20-doc-comments-public-rescope-findings.md.
+const REPROMOTED_2026_06_20 = ["components.doc-comments"];
 
 describe("v1 promotion of the 2026-06-20 deterministic coverage batch", () => {
   it("each batch sub-axis is status:stable + contributesToScore + deterministic with both LBs >= 0.90", () => {
@@ -75,10 +82,24 @@ describe("v1 promotion of the 2026-06-20 deterministic coverage batch", () => {
     }
   });
 
-  it("the trusted stable set now includes the batch (≥ 51 total)", () => {
+  it("the trusted stable set now includes the batch (≥ 52 total)", () => {
     const v1 = resolveStableSubAxes(SUB_AXES, { filterRan: false });
     for (const id of PROMOTED_2026_06_20) expect(v1.has(id)).toBe(true);
-    expect(v1.size).toBeGreaterThanOrEqual(51);
+    expect(v1.size).toBeGreaterThanOrEqual(52);
+  });
+
+  it("the re-promoted #77 public-API doc-comments sub-axis is stable + scored with both LBs >= 0.90", () => {
+    const v1 = resolveStableSubAxes(SUB_AXES, { filterRan: false });
+    for (const id of REPROMOTED_2026_06_20) {
+      const sa = SUB_AXES.find((s) => s.id === id);
+      expect(sa, `missing sub-axis ${id}`).toBeDefined();
+      expect(sa!.status).toBe("stable");
+      expect(sa!.contributesToScore).toBe(true);
+      expect(sa!.deterministicValidator).toBe(true);
+      expect(sa!.recallWilsonLowerBound).toBeGreaterThanOrEqual(0.9);
+      expect(sa!.precisionWilsonLowerBound).toBeGreaterThanOrEqual(0.9);
+      expect(v1.has(id)).toBe(true);
+    }
   });
 
   it("the corpus-demoted rules are NOT in the trusted v1 stable set", () => {
