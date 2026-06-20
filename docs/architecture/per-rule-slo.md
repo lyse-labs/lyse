@@ -17,7 +17,6 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 | `tokens/deprecated-token-usage` | `tokens.deprecated-token-usage` | 0.901 | 0.904 | — | 2026-06-15 |
 | `tokens/description-coverage` | `tokens.description-coverage` | 0.901 | 0.901 | — | 2026-06-17 |
 | `tokens/dtcg-conformance` | `tokens.dtcg-conformance` | 0.901 | 0.901 | — | 2026-06-15 |
-| `tokens/no-hardcoded-gradient` | `tokens.gradient` | 0.904 | 0.904 | — | 2026-06-20 |
 | `tokens/no-hardcoded-media-query` | `tokens.media-query` | 0.912 | 0.912 | — | 2026-06-20 |
 | `tokens/no-hardcoded-motion` | `tokens.motion` | 0.918 | 0.916 | — | 2026-06-18 |
 | `tokens/no-hardcoded-opacity` | `tokens.opacity` | 0.989 | 0.916 | — | 2026-06-18 |
@@ -33,7 +32,6 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 | `a11y/inclusive-language` | `a11y.inclusive-language` | 0.904 | 0.901 | — | 2026-06-17 |
 | `a11y/prefers-reduced-motion` | `a11y.prefers-reduced-motion` | 0.904 | 0.901 | — | 2026-06-17 |
 | `a11y/semantic-html` | `a11y.semantic-html` | 0.916 | 0.934 | — | 2026-06-20 |
-| `components/doc-comments` | `components.doc-comments` | 0.912 | 0.901 | — | 2026-06-20 |
 | `components/icon-decorative-aria` | `components.icon-decorative-aria` | 0.916 | 0.901 | — | 2026-06-20 |
 | `naming/component-pascalcase` | `components.naming-component-pascalcase` | 0.904 | 0.904 | — | 2026-06-17 |
 | `naming/hook-prefix` | `components.naming-hook-prefix` | 0.904 | 0.904 | — | 2026-06-17 |

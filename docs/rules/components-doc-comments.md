@@ -1,6 +1,6 @@
 # `components/doc-comments`
 
-> **Axis:** Components · **Severity:** info · **Auto-fixable:** no · **Status:** scored (v1)
+> **Axis:** Components · **Severity:** info · **Auto-fixable:** no · **Status:** experimental (reported-only — demoted after corpus validation)
 
 Flags exported PascalCase components that carry no leading JSDoc (`/** … */`) doc comment.
 
@@ -50,7 +50,7 @@ export function Button() { return <button />; }
 
 ## Status
 
-**Scored (v1):** contributes to the Health Score. Promoted 2026-06-20 after clearing both gates on the synthetic recall suite (recall LB 0.901, precision LB 0.912).
+**Experimental (reported-only).** Promoted 2026-06-20 then **demoted** after corpus precision-validation on 5 real DS surfaced precision/value issues (see internal report) — reported but not scored.
 
 ## See also
 
