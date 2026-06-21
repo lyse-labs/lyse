@@ -1,0 +1,5 @@
+{
+  "name": "svelte-ds",
+  "private": true,
+  "dependencies": { "svelte": "^5.0.0" }
+}
