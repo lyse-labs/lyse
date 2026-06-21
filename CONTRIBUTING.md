@@ -104,13 +104,36 @@ Adding a new rule is the highest-value contribution. The path:
 
 Run individual tests: `pnpm -F lyse test -- path/to/file.test.ts`.
 
-## Releasing (maintainers only)
+## Releasing (Changesets)
 
-1. Update CHANGELOG: move `[Unreleased]` to a new version section, set date.
-2. Bump version: `pnpm version <patch|minor|major>` in `packages/core/`.
-3. Commit: `chore: release v<version>`.
-4. Tag: `git tag v<version> && git push origin v<version>`.
-5. CI publishes to npm via OIDC + provenance.
+Releases are automated with [Changesets](https://github.com/changesets/changesets),
+currently in pre-release **alpha** mode (versions are `-alpha.N`, published under
+the `alpha` dist-tag).
+
+**Every user-facing PR adds a changeset:**
+
+```bash
+pnpm changeset
+```
+
+Pick the bump kind (`patch` / `minor` / `major`) for `@lyse-labs/lyse` and write a
+one-line summary. Commit the generated `.changeset/*.md` with your PR. (Docs-only
+or internal-only PRs don't need one.)
+
+**How a release happens (maintainers):**
+
+1. When changesets land on `main`, a bot opens/refreshes a **"Version Packages"**
+   PR that bumps `packages/core/package.json` (next `-alpha.N`) and writes the
+   release notes to **`packages/core/CHANGELOG.md`** from the accumulated
+   changesets. (Note: Changesets maintains the package-local
+   `packages/core/CHANGELOG.md`; the root `CHANGELOG.md` remains the curated
+   historical narrative — keep adding `[Unreleased]` notes there if you want the
+   human-readable log, but the changeset is what drives the version + npm notes.)
+2. **Merging that PR is the release** — CI runs `changesets/action` →
+   `pnpm release` → `npm publish --provenance` under the `alpha` tag.
+
+No manual `pnpm version` / `git tag` step — the old tag-triggered flow is retired.
+Exiting alpha (`pnpm changeset pre exit`) is a deliberate maintainer decision.
 
 ## Questions
 

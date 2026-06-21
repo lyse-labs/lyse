@@ -13,10 +13,14 @@
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
-    "release:check": "pnpm -F lyse exec tsx ../../scripts/release-check.ts"
+    "release:check": "pnpm -F lyse exec tsx ../../scripts/release-check.ts",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm --filter @lyse-labs/lyse build && changeset publish"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
+    "@changesets/cli": "^2.31.0",
     "@eslint/js": "^9.13.0",
     "@types/node": "22.19.19",
     "eslint": "9.39.4",

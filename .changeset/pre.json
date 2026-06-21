@@ -1,0 +1,8 @@
+{
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "@lyse-labs/lyse": "0.2.0-alpha.2"
+  },
+  "changesets": []
+}
