@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`lyse audit --format=html`** — a self-contained, shareable HTML report (inline CSS, no external requests; works offline, safe to email/commit) rendering the score gauge, per-axis bars, and findings table. All user-derived strings are HTML-escaped; deterministic (no timestamp unless `--include-timestamps`). Writes `lyse.html` with `--output`, or to stdout (lyse-labs/lyse-internal#207).
+
 - **Verified + documented Svelte coverage.** `.svelte` single-file components route through the SFC extractors (`<style>` → CSS rules, `<script>` → TS rules, line-preserving), so the 45 framework-agnostic rules (tokens, CSS, AI-governance, config) audit Svelte design systems today. Added a `svelte-ds` fixture + a coverage test that locks this, plus a new [framework coverage matrix](docs/guide/frameworks.md). The six JSX-markup component/a11y rules stay React/Vue-oriented (Svelte markup parsing is a separate, larger effort) (lyse-labs/lyse-internal#102).
 
 - New `lyse badge` command: prints a [shields.io](https://shields.io) Health Score badge (score + grade + colour band) for your README. `--write` emits `.lyse/badge.json` (a shields.io endpoint document) for an auto-updating badge refreshed by CI. Local-first — the score is computed on your machine and embedded in the URL/JSON you commit; nothing leaves the runner (lyse-labs/lyse-internal#73-adjacent / adoption).

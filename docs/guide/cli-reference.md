@@ -187,7 +187,7 @@ lyse audit [path] [options]
 
 | Flag | Type | Default | Description |
 |---|---|---|---|
-| `--format <name>` | `text` \| `json` \| `sarif` | `text` | Output format. |
+| `--format <name>` | `text` \| `json` \| `sarif` \| `html` | `text` | Output format. `html` emits a self-contained, shareable report. |
 | `--output <path>` | string | stdout | Write output to a file. |
 | `--limit <n>` | integer \| `all` | `10` | Max findings printed by the text/eslint/legacy output. Use `all` or `0` to show every finding. Ignored by `--format=json|sarif` (machine consumers always receive the full report). |
 | `--threshold <n>` | integer 0–100 | (none) | Exit code 1 if Health Score is below this value. |
@@ -205,6 +205,9 @@ lyse audit --format=json --output=lyse-report.json
 
 # SARIF for GitHub Security tab
 lyse audit --format=sarif --output=lyse.sarif
+
+# Self-contained shareable HTML report
+lyse audit --format=html --output=lyse-report
 
 # Fail CI if score < 70
 lyse audit --threshold=70
@@ -478,4 +481,4 @@ See [`packages/core/README.md`](../../packages/core/README.md) for the full libr
 - styled-components / Emotion / Stitches: partial support; CSS-in-JS via template literals is parsed with Babel. vanilla-extract object styles (`style`, `styleVariants`, `globalStyle`, `recipe` from `@vanilla-extract/css`) are also extracted — the declaration object is serialized to CSS so the same hardcoded-value detectors run over `*.css.ts` files.
 - **Tailwind utility classes** (e.g. `bg-blue-500`, `p-4`) are recognized as compliant token references when they reference the project's `tailwind.config` scale. Arbitrary values (e.g. `bg-[#1e293b]`) remain flagged as drift since they bypass the configured scale.
 - **Token sources discovered:** Tailwind (v3 config + v4 `@theme`), DTCG (`*.tokens.json` with `$value`/`$type`), **Style Dictionary** (`{ "value", "type" }`), **Tokens Studio** (`$metadata`/`$themes` + TS type names), and **Figma Variables** (via their committed DTCG / Tokens-Studio export). The first source with a non-empty token map wins.
-- No HTML report. `lyse audit --format=sarif` emits a SARIF 2.1.0 file you can wire into any SARIF-aware viewer (e.g. by uploading it to GitHub's Security tab via `github/codeql-action/upload-sarif`). Each result carries a stable `partialFingerprints.primaryLocationLineHash/v1` so GitHub deduplicates findings across runs instead of re-creating them; each rule definition carries its measured `properties.precision` when calibrated; and findings dismissed by an inline `lyse-disable` directive are still emitted with an in-source `suppressions[]` entry (kept for trend data rather than dropped).
+- `lyse audit --format=html` emits a self-contained HTML report (inline CSS, no external requests) — a shareable, screenshot-able snapshot of the score, axes, and findings. For machine/CI integration, `lyse audit --format=sarif` emits a SARIF 2.1.0 file you can wire into any SARIF-aware viewer (e.g. by uploading it to GitHub's Security tab via `github/codeql-action/upload-sarif`). Each result carries a stable `partialFingerprints.primaryLocationLineHash/v1` so GitHub deduplicates findings across runs instead of re-creating them; each rule definition carries its measured `properties.precision` when calibrated; and findings dismissed by an inline `lyse-disable` directive are still emitted with an in-source `suppressions[]` entry (kept for trend data rather than dropped).
