@@ -94,6 +94,11 @@ function buildFilterPrompt(relativePath: string, source: string, findings: Findi
   return [
     'You are a design-system lint auditor. Below is a source file and a list of candidate "hardcoded value" findings (raw hex colors / px spacing that may be design-system violations). Some are FALSE POSITIVES: values that are NOT design-system violations — e.g. chart/data-viz palette colors, icon SVG fills, third-party embed theme config, canvas/PDF rendering, test fixtures, values inside comments, or values already coming from a token.',
     "",
+    "Corpus-validated rubric (apply these exactly — they were the recall/precision pivots on real design systems):",
+    "  - A hardcoded color in an inline `style`/`css`/`sx` prop IS a violation (it is inline CSS / drift), NOT a theming-API surface. Do not drop it as embed/theme config.",
+    "  - A color that is the SUBJECT DATA of a color-picker / swatch / palette component (its default/value/options) IS palette data, NOT drift — drop it as a false positive.",
+    "  - Hardcoded values in demo / story / Storybook / example / playground files are low-signal — drop them as false positives.",
+    "",
     "For EACH finding return a verdict and your confidence in it:",
     '  - "violation" — a real design-system violation worth flagging.',
     '  - "fp" — a false positive that should be dropped.',
@@ -112,6 +117,8 @@ function buildFilterPrompt(relativePath: string, source: string, findings: Findi
     "Include every index exactly once.",
   ].join("\n");
 }
+
+export const _internal = { buildFilterPrompt };
 
 export async function runFilterStage(
   input: FilterStageInput,
