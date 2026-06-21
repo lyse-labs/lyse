@@ -30,6 +30,7 @@ import { feedbackMissed } from "./commands/feedback.js";
 import { auditDirectory, RefuseToRunError } from "./commands/audit-pipeline.js";
 import type { AuditFlags } from "./commands/audit-pipeline.js";
 import { runShare } from "./commands/share.js";
+import { runBadge } from "./commands/badge.js";
 import { runInit } from "./commands/init.js";
 import { runAddCiGate, AddCiGateError } from "./commands/add-ci-gate.js";
 import { maybePromptForEmail, syncPendingEmail } from "./commands/email-prompt.js";
@@ -818,6 +819,20 @@ const shareCommand = defineCommand({
   },
 });
 
+const badgeCommand = defineCommand({
+  meta: { name: "badge", description: "Audit + print a shields.io Health Score badge for your README" },
+  args: {
+    path: { type: "positional", required: false, default: ".", description: "repository root" },
+    write: { type: "boolean", description: "Also write .lyse/badge.json (shields.io endpoint, auto-updating via CI)" },
+    ...GLOBAL_FLAGS,
+  },
+  async run({ args }) {
+    applyGlobalFlags(args);
+    const cwd = resolve(args.path ?? ".");
+    await runBadge(cwd, { write: args.write === true, quiet: args.quiet === true });
+  },
+});
+
 const initCommand = defineCommand({
   meta: { name: "init", description: "Interactive wizard for first-time setup" },
   args: {
@@ -1034,7 +1049,7 @@ const main = defineCommand({
     quiet: { type: "boolean", description: "Suppress informational output" },
     "no-menu": { type: "boolean", description: "Skip the interactive menu (print help instead)" },
   },
-  subCommands: { init: initCommand, audit: auditCommand, fix: fixCommand, add: addCommand, share: shareCommand, agents: agentsCommand, "agents-md": agentsMdCommand, "bench-pack": benchPackCommand, version: versionCommand, explain: explainCommand, mcp: mcpCommand, feedback: feedbackCommand, telemetry: telemetryCommand },
+  subCommands: { init: initCommand, audit: auditCommand, fix: fixCommand, add: addCommand, share: shareCommand, badge: badgeCommand, agents: agentsCommand, "agents-md": agentsMdCommand, "bench-pack": benchPackCommand, version: versionCommand, explain: explainCommand, mcp: mcpCommand, feedback: feedbackCommand, telemetry: telemetryCommand },
   async run({ args, cmd, rawArgs }) {
     applyGlobalFlags(args);
 
