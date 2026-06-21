@@ -123,8 +123,12 @@ or internal-only PRs don't need one.)
 **How a release happens (maintainers):**
 
 1. When changesets land on `main`, a bot opens/refreshes a **"Version Packages"**
-   PR that bumps `packages/core/package.json` (next `-alpha.N`) and updates
-   `CHANGELOG.md` from the accumulated changesets.
+   PR that bumps `packages/core/package.json` (next `-alpha.N`) and writes the
+   release notes to **`packages/core/CHANGELOG.md`** from the accumulated
+   changesets. (Note: Changesets maintains the package-local
+   `packages/core/CHANGELOG.md`; the root `CHANGELOG.md` remains the curated
+   historical narrative — keep adding `[Unreleased]` notes there if you want the
+   human-readable log, but the changeset is what drives the version + npm notes.)
 2. **Merging that PR is the release** — CI runs `changesets/action` →
    `pnpm release` → `npm publish --provenance` under the `alpha` tag.
 
