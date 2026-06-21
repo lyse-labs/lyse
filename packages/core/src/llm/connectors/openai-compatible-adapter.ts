@@ -38,9 +38,19 @@ export class OpenAICompatibleAdapter implements ConnectorClient {
     this.fetchFn = opts.fetchFn ?? globalThis.fetch;
   }
 
-  async complete(messages: ChatMessage[], _opts?: CompleteOptions): Promise<ConnectorResult> {
+  async complete(messages: ChatMessage[], opts?: CompleteOptions): Promise<ConnectorResult> {
     const url = `${this.opts.baseURL.replace(/\/$/, "")}/chat/completions`;
-    const body = JSON.stringify({ model: this.opts.model, messages });
+    // #145: schema-constrained output. OpenAI-compatible APIs honour
+    // response_format json_schema; providers that ignore it degrade to free
+    // text, which the caller already parses defensively (extractJson).
+    const payload: Record<string, unknown> = { model: this.opts.model, messages };
+    if (opts?.responseSchema) {
+      payload["response_format"] = {
+        type: "json_schema",
+        json_schema: { name: "lyse_structured_output", schema: opts.responseSchema, strict: false },
+      };
+    }
+    const body = JSON.stringify(payload);
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
