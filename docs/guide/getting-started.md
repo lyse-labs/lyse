@@ -133,6 +133,16 @@ See [`mcp-server.md`](./mcp-server.md) for the full integration guide.
 
 Run `lyse fix` to apply codemods in one shot (5 rules are auto-fixable; clean git tree required). The MCP server can also produce per-file patches with `suggest_fix`. The score is the start, not the goal.
 
+## 7. Show your score (optional)
+
+Run `lyse badge` to print a shields.io Health Score badge for your README:
+
+```markdown
+[![Lyse Health Score](https://img.shields.io/badge/Lyse-82%2F100_(A)-brightgreen)](https://github.com/owner/repo)
+```
+
+Use `lyse badge --write` for an auto-updating badge (writes `.lyse/badge.json`; refresh it in CI). See [`lyse badge`](./cli-reference.md#lyse-badge-path).
+
 ## What's next
 
 - Browse [the rules](../rules/) to see what's enforced.

@@ -16,6 +16,7 @@ Commands:
 | `lyse audit [path]` | Audit a repository; output a Health Score and findings. |
 | `lyse fix [path]` | Auto-fix all safe findings (6 safety guards). |
 | `lyse share` | Copy a Markdown summary of the last audit to the clipboard. |
+| `lyse badge` | Print a shields.io Health Score badge for your README. |
 | `lyse explain <rule-id>` | Print rule rationale, examples, allowlist guidance. |
 | `lyse agents` | Generate an `AGENTS.md` summary for AI coding agents. |
 | `lyse mcp` | Start the MCP server over stdio (called by your IDE). |
@@ -142,6 +143,35 @@ If no recent audit exists in `.lyse/history.ndjson`, Lyse runs a fresh `lyse aud
 |---|---|---|---|
 | `--format` | `markdown` \| `plain` | `markdown` | Format of the clipboard content. |
 | `--top <n>` | integer | 5 | Number of top findings to include. |
+
+## `lyse badge [path]`
+
+Audit, then print a [shields.io](https://shields.io) Health Score badge you can paste into your README.
+
+```
+lyse badge
+```
+
+Prints a ready-to-paste Markdown badge with your score, grade, and a colour band
+(A → brightgreen, B → green, C → yellow, Fail → red):
+
+```markdown
+[![Lyse Health Score](https://img.shields.io/badge/Lyse-82%2F100_(A)-brightgreen)](https://github.com/owner/repo)
+```
+
+The static badge is frozen at generation. For an **auto-updating** badge, use
+`--write`: it writes `.lyse/badge.json` (a shields.io endpoint document) and prints
+the matching Markdown. Commit `.lyse/badge.json` and refresh it in CI
+(`lyse badge --write`) — the badge then reflects your latest score on every run.
+
+The score is computed locally and embedded in the URL/JSON **you** commit;
+shields.io is fetched by your README's viewer, never by Lyse. Nothing leaves your machine.
+
+### Options
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--write` | boolean | `false` | Also write `.lyse/badge.json` (auto-updating endpoint) + print its Markdown. |
 
 ## `lyse audit [path]`
 
