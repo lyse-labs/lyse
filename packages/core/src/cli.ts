@@ -8,6 +8,7 @@ import { loadTokens } from "./loaders/tokens.js";
 import { buildComponentInventory } from "./loaders/components.js";
 import { renderJson } from "./reporters/json.js";
 import { renderSarif } from "./reporters/sarif.js";
+import { renderHtml } from "./reporters/html.js";
 import { renderTerminal } from "./reporters/terminal.js";
 import { formatCoverageFooter } from "./reporters/coverage-footer.js";
 import { renderAgentsMd } from "./reporters/markdown.js";
@@ -183,7 +184,7 @@ const auditCommand = defineCommand({
   args: {
     root: { type: "positional", required: false, default: ".", description: "repository root (defaults to current working directory)" },
     output: { type: "string", description: "output directory (default: stdout)" },
-    format: { type: "string", description: "json | text | eslint | legacy | sarif (default: text → ESLint-style for tty, json otherwise)" },
+    format: { type: "string", description: "json | text | eslint | legacy | sarif | html (default: text → ESLint-style for tty, json otherwise)" },
     "include-timestamps": { type: "boolean", default: false, description: "include timestamp in JSON output (breaks determinism)" },
     quiet: { type: "boolean", default: false, description: "suppress all stdout except score" },
     verbose: { type: "boolean", default: false, description: "show all findings (default: top 5)" },
@@ -318,7 +319,8 @@ const auditCommand = defineCommand({
     const isTTYForSpinner = process.stdout.isTTY ?? false;
     const formatForSpinner = args.format ?? (isTTYForSpinner ? "text" : "json");
     const isQuiet = args.quiet === true;
-    const isMachineFormatForSpinner = formatForSpinner === "json" || formatForSpinner === "sarif";
+    const isMachineFormatForSpinner =
+      formatForSpinner === "json" || formatForSpinner === "sarif" || formatForSpinner === "html";
 
     let result: AuditResult, fileCount: number, hasTokenRegistry: boolean;
     let tokens: AuditOutcome["tokens"], config: AuditOutcome["config"];
@@ -408,6 +410,15 @@ const auditCommand = defineCommand({
         writeFileSync(join(outDir, "lyse.sarif"), sarifContent);
       } else {
         process.stdout.write(sarifContent);
+      }
+    } else if (format === "html") {
+      const htmlContent = renderHtml(result, { includeTimestamp: !!args["include-timestamps"] });
+      if (args.output) {
+        const outDir = resolve(args.output);
+        mkdirSync(outDir, { recursive: true });
+        writeFileSync(join(outDir, "lyse.html"), htmlContent);
+      } else {
+        process.stdout.write(htmlContent);
       }
     } else {
       const jsonContent = renderJson(result, { includeTimestamp: !!args["include-timestamps"] });
