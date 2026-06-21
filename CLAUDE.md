@@ -38,7 +38,9 @@ Before every commit, verify that ALL relevant documentation is in sync:
 
 1. **README.md** reflects new features, commands, architecture changes
 2. **CHANGELOG.md** has an `[Unreleased]` entry for the change
-3. **Version files** (`package.json`) bumped if needed
+3. **Changeset** (`pnpm changeset`) added for any user-facing change — this drives
+   the version bump. **Never** bump `packages/core/package.json` by hand; Changesets'
+   "Version Packages" PR does it (pre-release `alpha` mode). See [CONTRIBUTING.md](./CONTRIBUTING.md#releasing-changesets).
 4. **CLAUDE.md** updated if architecture, tools, or patterns changed
 5. **Rule docs** (`docs/rules/*.md`) updated if a rule changed
 
