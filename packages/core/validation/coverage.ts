@@ -19,33 +19,7 @@ export const ADDRESSABLE_PENDING: Record<string, string> = {
   // Axis L — AI-readiness surface (ds-index-exported requires ctx.componentsModule — not injectable from fixtures)
   "ai-surface/ds-index-exported": "construction: design-system index export file injection — blocked: needs ctx.componentsModule workspace config",
 
-  // Axis M — AI marking & identity (proxy but structurally injectable)
-  "ai-governance/ai-marker-component-present": "proxy: AI-label component vocabulary injection",
-  "ai-governance/bot-identity-labeling": "proxy: bot-identity vocab injection",
-
-  // Axis N — AI explainability & trust
-  "ai-governance/source-attribution-present": "proxy: source-attribution vocabulary injection",
-  "ai-governance/confidence-indicator-present": "proxy: confidence-indicator vocabulary injection",
-
-  // Axis O — AI control & feedback
-  "ai-governance/feedback-control-present": "proxy: feedback-control vocabulary injection",
-  "ai-governance/product-analytics": "proxy: analytics event vocabulary injection",
-
-  // Axis P — AI safety & failure (Cloudscape structural)
-  "ai-governance/ai-loading-error-states": "proxy: AI loading/error state vocabulary injection",
-  "ai-governance/ai-content-live-region": "proxy: aria live-region vocabulary injection",
-
-  // Axis Q — AI governance docs
-  "ai-governance/value-gate-doc-present": "construction: AI_GOVERNANCE.md file presence injection",
-  "ai-governance/interaction-pattern-docs": "construction: interaction-pattern doc presence injection",
-
-  // Axis R — AI token governance
-  "ai-governance/ai-tokens-reserved": "construction: reserved AI token declaration injection",
-  "ai-governance/ai-token-misuse": "construction: AI token cross-file usage injection",
-
-  // Axis M — AI governance (moved from JUDGMENT: have proxy/construction oracle)
-  "ai-governance/disclaimer-present": "proxy: vocabulary injection — high FP risk",
-  "ai-governance/ai-marker-anti-patterns": "proxy: vocabulary/regex injection — high FP risk",
+  // Axis R — AI token governance (cross-file AST tracer is recall-failing; injectable only when tracer improved)
   "ai-governance/ai-token-requires-marker": "construction: AST cross-file — recall-failing, needs improved tracer",
 };
 
