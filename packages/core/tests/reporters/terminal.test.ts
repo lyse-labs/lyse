@@ -99,7 +99,7 @@ describe("renderTerminal (plain-text mode for snapshot stability)", () => {
     expect(out).not.toContain("●");
     expect(out).toContain("#");
     expect(out).toContain("-");
-    expect(out).toContain("*");
+    expect(out).toContain("o");
   });
 
   it("handles N/A axes gracefully", async () => {
