@@ -103,6 +103,8 @@ export interface RuleContext {
    * (opportunities 0) when this is undefined.
    */
   rendered?: import("./render/types.js").ComputedTokenReading[];
+  /** Source token CSS the rendered readings were computed from (render mode only). */
+  renderedSourceCss?: string;
 }
 
 export interface TokenMap {
@@ -348,6 +350,8 @@ export interface AuditResult {
     layer4?: Layer4Meta;
     /** Phase 1 of #156 — audit-perimeter signals so the score has a visible denominator. Includes `parseErrors` (#155) as a deterministic subfield. */
     coverage?: CoverageMeta;
+    /** Render-layer metadata; present only when `lyse audit --render` ran. */
+    render?: import("./render/types.js").RenderMeta;
   };
 }
 

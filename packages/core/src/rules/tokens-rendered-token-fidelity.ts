@@ -54,8 +54,7 @@ export const rule = createLyseRule({
         if (!ctx.rendered || ctx.rendered.length === 0) {
           return { findings: [], opportunities: 0 };
         }
-        // TODO(Task 7): replace cast with typed ctx.renderedSourceCss after RuleContext is updated
-        const sourceCss = (ctx as { renderedSourceCss?: string }).renderedSourceCss ?? "";
+        const sourceCss = ctx.renderedSourceCss ?? "";
         const findings = detectRenderDrift(sourceCss, ctx.rendered);
         return { findings, opportunities: ctx.rendered.length };
       },
