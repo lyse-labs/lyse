@@ -396,7 +396,7 @@ const auditCommand = defineCommand({
     //                 pass --limit=N to truncate.
     let textFindingsLimit: number | null | undefined;
     try {
-      textFindingsLimit = resolveLimit(args, format === "legacy" ? undefined : null);
+      textFindingsLimit = resolveLimit(args, format === "eslint" ? null : undefined);
     } catch (err) {
       console.error(`[lyse] ${(err as Error).message}`);
       process.exit(64); // EX_USAGE
@@ -426,11 +426,11 @@ const auditCommand = defineCommand({
       const isTextFormat = format === "text" || format === "eslint" || format === "legacy";
 
       const renderTextForStdout = async (): Promise<string> => {
-        if (format === "legacy") {
-          const opts = computeTerminalOpts(args, isTTY, fileCount, Date.now() - startTime, repoRoot, hasTokenRegistry, textFindingsLimit);
-          return (await renderTerminal(result, opts)) + "\n";
+        if (format === "eslint") {
+          return renderEslintStyleAudit(result, textFindingsLimit) + "\n";
         }
-        return renderEslintStyleAudit(result, textFindingsLimit) + "\n";
+        const opts = computeTerminalOpts(args, isTTY, fileCount, Date.now() - startTime, repoRoot, hasTokenRegistry, textFindingsLimit);
+        return (await renderTerminal(result, opts)) + "\n";
       };
 
       if (args.output) {

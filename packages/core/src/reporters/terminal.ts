@@ -6,6 +6,8 @@ import {
   visiblePad, truncateStart,
   type TerminalOpts,
 } from "./terminal-format.js";
+import { statusGlyph } from "../ui/tokens.js";
+import { brandHeader } from "../ui/banner.js";
 
 export type { TerminalOpts } from "./terminal-format.js";
 
@@ -18,12 +20,9 @@ const RULE_ID_WIDTH = 34;
 const FINDING_NUM_WIDTH = 2;
 
 function header(result: AuditResult, opts: TerminalOpts): string {
-  const brand = teal("lyse", opts);
-  const version = dim(result.toolVersion, opts);
-  const files = dim(`${opts.fileCount} files`, opts);
-  const dur = dim(`${(opts.durationMs / 1000).toFixed(1)}s`, opts);
-  const sep = dim("·", opts);
-  return `  ${brand}  ${version}  ${sep}  ${files}  ${sep}  ${dur}`;
+  const ui = { color: opts.color, unicode: opts.unicode };
+  const subtitle = `${opts.fileCount} files · ${(opts.durationMs / 1000).toFixed(1)}s`;
+  return brandHeader(result.toolVersion, subtitle, ui);
 }
 
 function scoreLine(result: AuditResult, opts: TerminalOpts, deltaSuffix?: string): string {
@@ -46,11 +45,12 @@ function scoreLine(result: AuditResult, opts: TerminalOpts, deltaSuffix?: string
 }
 
 function axisLine(a: AxisScore, opts: TerminalOpts): string {
+  const gly = statusGlyph(a.score, { color: opts.color, unicode: opts.unicode });
   const name = visiblePad(a.axis, AXIS_NAME_WIDTH);
   const barViz = bar(a.score, opts, 20);
   const scoreText = visiblePad(a.score === "N/A" ? "N/A" : String(a.score), AXIS_SCORE_WIDTH, "left");
   const findingsText = visiblePad(dim(`${a.findings} findings`, opts), AXIS_FINDINGS_WIDTH, "left");
-  return `  ${name}  ${barViz}  ${scoreText}  ${findingsText}`;
+  return `  ${gly} ${name}  ${scoreText}  ${barViz}  ${findingsText}`;
 }
 
 function findingLines(f: Finding, index: number, opts: TerminalOpts): string[] {
