@@ -67,19 +67,6 @@
       "mutationsRun": 1
     },
     {
-      "ruleId": "ai-governance/ai-tokens-reserved",
-      "oracleKind": "construction",
-      "matrix": {
-        "tp": 0,
-        "fp": 0,
-        "tn": 1,
-        "fn": 1
-      },
-      "youdensJ": 0,
-      "metamorphicInconsistencies": [],
-      "mutationsRun": 1
-    },
-    {
       "ruleId": "ai-governance/bot-identity-labeling",
       "oracleKind": "construction",
       "matrix": {

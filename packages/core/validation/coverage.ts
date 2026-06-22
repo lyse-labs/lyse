@@ -26,6 +26,7 @@ export const ADDRESSABLE_PENDING: Record<string, string> = {
   // are structurally impossible with the current severity-aware probe (ruleFlagged counts error/warning only).
   "tokens/description-coverage": "construction: info-only rule — absence of $description emits info, not warning; cannot produce oracle TPs",
   "components/doc-comments": "construction: info-only rule — missing JSDoc emits info, not warning; cannot produce oracle TPs",
+  "ai-governance/ai-tokens-reserved": "construction: info-only inventory rule — not validatable by the recall/mutation oracle (emits no violation severity)",
 };
 
 /**

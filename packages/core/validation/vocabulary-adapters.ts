@@ -340,29 +340,6 @@ const interactionPatternDocsAdapter: OracleAdapter = makeVocabularyAdapter({
   affordanceFile: "docs/ai-patterns.md",
 });
 
-const AI_TOKENS_RESERVED_TOKENS_JSON = JSON.stringify({
-  gradient: { "dragon-fruit": "#ff6b6b" },
-});
-
-const aiTokensReservedAdapter: OracleAdapter = {
-  ruleId: "ai-governance/ai-tokens-reserved",
-  oracleKind: "construction",
-  cleanFixture: () => ({
-    "package.json": PKG,
-    "tokens.json": JSON.stringify({ color: { primary: "#0070f3" } }),
-  }),
-  mutations: [
-    {
-      name: "add-reserved-token-should-flag",
-      apply: () => ({
-        "package.json": PKG,
-        "tokens.json": AI_TOKENS_RESERVED_TOKENS_JSON,
-      }),
-    },
-  ],
-  metamorphic: [],
-};
-
 const AI_TOKEN_MISUSE_SURFACE_WITH_MARKER = `
 export const AILabel = () => null;
 export const Panel = () => <div style={{ background: 'var(--ai-aura-start)' }} />;
@@ -519,7 +496,6 @@ export const vocabularyAdapters: OracleAdapter[] = [
   aiContentLiveRegionAdapter,
   valueGateDocAdapter,
   interactionPatternDocsAdapter,
-  aiTokensReservedAdapter,
   aiTokenMisuseAdapter,
   disclaimerPresentAdapter,
   aiMarkerAntiPatternsAdapter,
