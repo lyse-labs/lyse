@@ -389,9 +389,9 @@ const auditCommand = defineCommand({
     // Resolve --limit for text/eslint/legacy output. JSON/SARIF intentionally
     // ignore the flag (machine consumers want the full report, always). When
     // the user doesn't pass --limit, the per-format default differs:
-    //   legacy      → undefined, so terminal.ts falls back to its historical
+    //   text/legacy → undefined, so terminal.ts falls back to its historical
     //                 top-5 / verbose=all behavior;
-    //   text/eslint → null (unlimited) — eslint-style already lists findings
+    //   eslint      → null (unlimited) — eslint-style already lists findings
     //                 as a flat block; users see every finding by default and
     //                 pass --limit=N to truncate.
     let textFindingsLimit: number | null | undefined;
