@@ -1,0 +1,44 @@
+{
+  "lyseVersion": "0.2.0-alpha.2",
+  "scores": [
+    {
+      "ruleId": "ai-surface/llms-txt-structure",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 6,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 6
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-color",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 4,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 4
+    },
+    {
+      "ruleId": "versioning/changelog-present",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    }
+  ]
+}
