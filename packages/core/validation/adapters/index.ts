@@ -8,6 +8,7 @@ import { vocabularyAdapters } from "../vocabulary-adapters.js";
 import { tokensStructuralAdapters } from "../tokens-structural-adapters.js";
 import { aiSurfaceVersioningAdapters } from "../ai-surface-versioning-adapters.js";
 import { componentAdapters } from "./component-adapters.js";
+import { renderAdapters } from "../render-adapters.js";
 
 export const adapters: OracleAdapter[] = [
   colorAdapter,
@@ -19,4 +20,5 @@ export const adapters: OracleAdapter[] = [
   ...vocabularyAdapters,
   ...aiSurfaceVersioningAdapters,
   ...componentAdapters,
+  ...renderAdapters,
 ];

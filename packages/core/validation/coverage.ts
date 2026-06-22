@@ -2,6 +2,17 @@ import { ruleMap } from "../src/rules/registry.js";
 import { adapters } from "./adapters/index.js";
 
 /**
+ * Rules validated by the execution-oracle render lane (evaluateRenderAdapter)
+ * rather than the static runner (evaluateAdapter / validate:autonomous).
+ * The static runner has no browser; render adapters run in their own test lane
+ * via withChromium. These rules ARE validated — just not by the static runner.
+ */
+export const EXECUTION_COVERED: Record<string, string> = {
+  "tokens/rendered-token-fidelity":
+    "execution: browser-driven oracle via evaluateRenderAdapter() — probes computed custom-property values with real Chromium, validates detectRenderDrift catches cascade/override drift",
+};
+
+/**
  * Rules that have a construction/execution oracle per coverage-universe.md
  * but whose adapter is not yet built. Value = oracle type + one-line note.
  * These are a tracked worklist, not silent gaps.
@@ -43,7 +54,7 @@ export const JUDGMENT_RULES: Record<string, string> = {
 
 /** Categorize all rules into covered, addressable-pending, judgment-only, and uncovered. */
 export function coverageGaps(): { uncovered: string[]; covered: string[]; addressablePending: string[]; judgmentOnly: string[] } {
-  const covered = new Set(adapters.map((a) => a.ruleId));
+  const covered = new Set([...adapters.map((a) => a.ruleId), ...Object.keys(EXECUTION_COVERED)]);
   const addressable = new Set(Object.keys(ADDRESSABLE_PENDING));
   const judged = new Set(Object.keys(JUDGMENT_RULES));
   const uncovered: string[] = [];
