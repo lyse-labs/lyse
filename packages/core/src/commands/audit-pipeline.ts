@@ -358,6 +358,9 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
         renderMeta = { chromiumVersion: "n/a", skippedNonCanonicalizable: 0, error: "no DTCG token source" };
       } else {
         const canonical = buildDtcgCanonicalMap(dtcgJson);
+        if (canonical.size === 0) {
+          renderMeta = { chromiumVersion: "n/a", skippedNonCanonicalizable: 0, error: "no DTCG token source" };
+        } else {
         const tokenCss = collectTokenCss(parsed);
         const tokenKeys = [...buildTokenSourceMap(tokenCss).keys()];
         const modes = detectModeSelectors(tokenCss);
@@ -374,6 +377,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
             error: e instanceof RenderUnavailableError ? e.message : String(e),
           };
         }
+        } // end canonical.size > 0
       }
     }
   }
