@@ -14,7 +14,7 @@ async function loadChromium() {
 
 export async function withChromium<T>(fn: (page: Page) => Promise<T>): Promise<T> {
   const chromium = await loadChromium();
-  let browser;
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   try {
     browser = await chromium.launch({ headless: true });
   } catch {
@@ -32,7 +32,14 @@ export async function withChromium<T>(fn: (page: Page) => Promise<T>): Promise<T
 
 export async function chromiumVersion(): Promise<string> {
   const chromium = await loadChromium();
-  const browser = await chromium.launch({ headless: true });
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+  try {
+    browser = await chromium.launch({ headless: true });
+  } catch {
+    throw new RenderUnavailableError(
+      "Chromium is not installed for Playwright. Run `npx playwright install chromium`.",
+    );
+  }
   try {
     return browser.version();
   } finally {
