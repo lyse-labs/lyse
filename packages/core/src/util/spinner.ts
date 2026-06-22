@@ -18,7 +18,7 @@
  *     persists; the in-progress frame does not.
  */
 
-import pc from "picocolors";
+import { color as token, glyph, type UiOpts } from "../ui/tokens.js";
 
 export interface SpinnerOptions {
   /** Whether the destination stream is a TTY. */
@@ -73,9 +73,10 @@ export function createSpinner(opts: SpinnerOptions): Spinner {
   let interval: NodeJS.Timeout | null = null;
   let active = false;
 
-  const colorFrame = (frame: string): string => (color ? pc.cyan(frame) : frame);
-  const colorSuccess = (s: string): string => (color ? pc.green(s) : s);
-  const colorFail = (s: string): string => (color ? pc.red(s) : s);
+  const uiOpts: UiOpts = { color, unicode: true };
+  const colorFrame = (frame: string): string => token.brand(frame, uiOpts);
+  const colorSuccess = (s: string): string => token.pass(s, uiOpts);
+  const colorFail = (s: string): string => token.fail(s, uiOpts);
 
   const writeFrame = (): void => {
     const frame = FRAMES[frameIdx % FRAMES.length] ?? FRAMES[0];
@@ -139,7 +140,7 @@ export function createSpinner(opts: SpinnerOptions): Spinner {
         interval = null;
       }
       clearLine();
-      stream.write(`${colorSuccess("✔")} ${finalLabel}\n${SHOW_CURSOR}`);
+      stream.write(`${colorSuccess(glyph("pass", uiOpts))} ${finalLabel}\n${SHOW_CURSOR}`);
       active = false;
     },
     fail(finalLabel: string) {
@@ -148,7 +149,7 @@ export function createSpinner(opts: SpinnerOptions): Spinner {
         interval = null;
       }
       clearLine();
-      stream.write(`${colorFail("✗")} ${finalLabel}\n${SHOW_CURSOR}`);
+      stream.write(`${colorFail(glyph("fail", uiOpts))} ${finalLabel}\n${SHOW_CURSOR}`);
       active = false;
     },
     stop() {

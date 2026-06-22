@@ -87,12 +87,12 @@ describe("createSpinner", () => {
     expect(out).toContain("\x1b[?25h"); // show cursor
   });
 
-  it("fail() writes a ✗ prefix", () => {
+  it("fail() writes a ✘ prefix", () => {
     const sp = createSpinner({ isTTY: true, enabled: true, stream: stream as unknown as NodeJS.WriteStream });
     sp.start("Working…");
     stream.clear();
     sp.fail("Something broke");
-    expect(stream.output).toContain("✗");
+    expect(stream.output).toContain("✘");
     expect(stream.output).toContain("Something broke");
     expect(stream.output).toContain("\x1b[?25h");
   });
@@ -152,7 +152,7 @@ describe("createSpinner", () => {
     sp.stop();
     expect(stream.output).toContain("\x1b[?25h");
     expect(stream.output).not.toContain("✔");
-    expect(stream.output).not.toContain("✗");
+    expect(stream.output).not.toContain("✘");
   });
 
   it("defaults the stream to process.stderr when none is provided", () => {
@@ -165,5 +165,27 @@ describe("createSpinner", () => {
       sp.start("x");
       sp.succeed("y");
     }).not.toThrow();
+  });
+});
+
+describe("spinner success/fail glyphs (tokens)", () => {
+  it("writes a check glyph on succeed when color is off", () => {
+    const writes: string[] = [];
+    const fakeStream = { write: (s: string) => (writes.push(s), true) } as unknown as NodeJS.WriteStream;
+    const sp = createSpinner({ isTTY: true, enabled: true, stream: fakeStream, color: false });
+    sp.start("working");
+    sp.succeed("done");
+    const joined = writes.join("");
+    expect(joined).toContain("✔");
+    expect(joined).toContain("done");
+  });
+
+  it("writes a cross glyph on fail when color is off", () => {
+    const writes: string[] = [];
+    const fakeStream = { write: (s: string) => (writes.push(s), true) } as unknown as NodeJS.WriteStream;
+    const sp = createSpinner({ isTTY: true, enabled: true, stream: fakeStream, color: false });
+    sp.start("working");
+    sp.fail("nope");
+    expect(writes.join("")).toContain("✘");
   });
 });

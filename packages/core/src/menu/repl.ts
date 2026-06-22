@@ -1,5 +1,6 @@
 import prompts from "prompts";
 import { isInteractive } from "./prompts.js";
+import { brandHeader } from "../ui/banner.js";
 
 export type ReplActionId =
   | "audit"
@@ -33,10 +34,15 @@ export interface ReplContext {
 }
 
 export function renderReplBanner(ctx: ReplContext): string {
+  const noColorEnv = typeof process.env["NO_COLOR"] === "string" && process.env["NO_COLOR"] !== "";
+  const ui = {
+    color: (process.stdout.isTTY ?? false) && !noColorEnv,
+    unicode: (process.stdout.isTTY ?? false) && process.platform !== "win32",
+  };
   return [
     "",
-    `  lyse ${ctx.version} — interactive menu`,
-    `  cwd: ${ctx.cwd}`,
+    brandHeader(ctx.version, "interactive menu", ui),
+    `  ${ctx.cwd}`,
     "",
     "  Tip: pass --no-menu (or set LYSE_NO_MENU=1) to skip the menu.",
     "  Or invoke a subcommand directly (lyse audit, lyse fix, …).",

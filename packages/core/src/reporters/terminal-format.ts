@@ -1,5 +1,5 @@
-import pc from "picocolors";
 import stringWidth from "string-width";
+import { color, glyph, statusOf, statusColor, bar as tokenBar, type UiOpts } from "../ui/tokens.js";
 
 export type TerminalMode = "default" | "quiet" | "verbose";
 
@@ -12,54 +12,41 @@ export interface TerminalOpts {
   fileCount: number;
   durationMs: number;
   cwd: string;
-  /** When false/undefined, a "no token registry" educational hint is shown after the score. */
   hasTokenRegistry?: boolean;
   findingsLimit?: number | null;
 }
 
-const TRUECOLOR_TEAL_OPEN = "\x1b[38;2;16;181;164m";
-const ANSI_RESET = "\x1b[0m";
+const ui = (opts: TerminalOpts): UiOpts => ({ color: opts.color, unicode: opts.unicode });
 
 export function teal(s: string, opts: TerminalOpts): string {
-  return opts.color ? TRUECOLOR_TEAL_OPEN + s + ANSI_RESET : s;
+  return color.brand(s, ui(opts));
 }
 
 export function thresholdColor(score: number | "N/A", opts: TerminalOpts): (s: string) => string {
   if (!opts.color || score === "N/A") return (s) => s;
-  if (score >= 70) return pc.green;
-  if (score >= 40) return pc.yellow;
-  return pc.red;
+  const paint = statusColor(statusOf(score));
+  return (s) => paint(s, ui(opts));
 }
 
-export function severityColor(severity: "error" | "warning" | "info", opts: TerminalOpts): (s: string) => string {
+export function severityColor(
+  severity: "error" | "warning" | "info",
+  opts: TerminalOpts,
+): (s: string) => string {
   if (!opts.color) return (s) => s;
-  if (severity === "error") return pc.red;
-  if (severity === "warning") return pc.yellow;
-  return pc.dim;
+  const paint = severity === "error" ? color.fail : severity === "warning" ? color.warn : color.muted;
+  return (s) => paint(s, ui(opts));
 }
 
 export function dim(s: string, opts: TerminalOpts): string {
-  return opts.color ? pc.dim(s) : s;
+  return color.muted(s, ui(opts));
 }
 
 export function bold(s: string, opts: TerminalOpts): string {
-  return opts.color ? pc.bold(s) : s;
+  return color.bold(s, ui(opts));
 }
 
-const FILL_UNI = "█"; // █
-const EMPTY_UNI = "░"; // ░
-const FILL_ASCII = "#";
-const EMPTY_ASCII = "-";
-
-export function bar(score: number | "N/A", opts: TerminalOpts, cells: number = 20): string {
-  const fillChar = opts.unicode ? FILL_UNI : FILL_ASCII;
-  const emptyChar = opts.unicode ? EMPTY_UNI : EMPTY_ASCII;
-  if (score === "N/A" || !Number.isFinite(score)) return emptyChar.repeat(cells);
-  const clamped = Math.max(0, Math.min(100, score));
-  const filled = Math.round((clamped / 100) * cells);
-  const empty = cells - filled;
-  const colorize = thresholdColor(clamped, opts);
-  return colorize(fillChar.repeat(filled)) + dim(emptyChar.repeat(empty), opts);
+export function bar(score: number | "N/A", opts: TerminalOpts, cells = 20): string {
+  return tokenBar(score, ui(opts), cells);
 }
 
 /**
@@ -83,7 +70,6 @@ export function truncateStart(text: string, maxWidth: number): string {
   if (maxWidth < 2) return text;
   const visible = stringWidth(text);
   if (visible <= maxWidth) return text;
-  // Greedy from end: take chars while they fit (maxWidth - 1, leaving room for "…").
   const target = maxWidth - 1;
   let kept = "";
   for (let i = text.length - 1; i >= 0; i--) {
@@ -94,13 +80,8 @@ export function truncateStart(text: string, maxWidth: number): string {
   return "…" + kept;
 }
 
-const DOT_UNI = "●"; // ●
-const DOT_ASCII = "*";
-
 export function statusDot(score: number | "N/A", opts: TerminalOpts): string {
-  const glyph = opts.unicode ? DOT_UNI : DOT_ASCII;
-  if (score === "N/A") return dim(glyph, opts);
-  return thresholdColor(score, opts)(glyph);
+  return statusColor(statusOf(score))(glyph("bullet", ui(opts)), ui(opts));
 }
 
 const OSC_OPEN = "\x1b]8;;";

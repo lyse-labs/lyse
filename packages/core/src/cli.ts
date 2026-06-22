@@ -80,8 +80,8 @@ function computeTerminalOpts(
 
 // ---------------------------------------------------------------------------
 // ESLint-style text renderer — problems first, score gauge in the footer.
-// Spec § 9 + T31: defaults to ESLint-style; --format=legacy restores the older
-// gauge-first terminal layout from reporters/terminal.ts.
+// Opt-in via --format=eslint; the default text view is the gauge-first doctor
+// layout from reporters/terminal.ts (also reachable as --format=legacy).
 // ---------------------------------------------------------------------------
 
 function renderEslintStyleAudit(result: AuditResult, limit: number | null | undefined): string {
@@ -389,14 +389,14 @@ const auditCommand = defineCommand({
     // Resolve --limit for text/eslint/legacy output. JSON/SARIF intentionally
     // ignore the flag (machine consumers want the full report, always). When
     // the user doesn't pass --limit, the per-format default differs:
-    //   legacy      → undefined, so terminal.ts falls back to its historical
+    //   text/legacy → undefined, so terminal.ts falls back to its historical
     //                 top-5 / verbose=all behavior;
-    //   text/eslint → null (unlimited) — eslint-style already lists findings
+    //   eslint      → null (unlimited) — eslint-style already lists findings
     //                 as a flat block; users see every finding by default and
     //                 pass --limit=N to truncate.
     let textFindingsLimit: number | null | undefined;
     try {
-      textFindingsLimit = resolveLimit(args, format === "legacy" ? undefined : null);
+      textFindingsLimit = resolveLimit(args, format === "eslint" ? null : undefined);
     } catch (err) {
       console.error(`[lyse] ${(err as Error).message}`);
       process.exit(64); // EX_USAGE
@@ -426,11 +426,11 @@ const auditCommand = defineCommand({
       const isTextFormat = format === "text" || format === "eslint" || format === "legacy";
 
       const renderTextForStdout = async (): Promise<string> => {
-        if (format === "legacy") {
-          const opts = computeTerminalOpts(args, isTTY, fileCount, Date.now() - startTime, repoRoot, hasTokenRegistry, textFindingsLimit);
-          return (await renderTerminal(result, opts)) + "\n";
+        if (format === "eslint") {
+          return renderEslintStyleAudit(result, textFindingsLimit) + "\n";
         }
-        return renderEslintStyleAudit(result, textFindingsLimit) + "\n";
+        const opts = computeTerminalOpts(args, isTTY, fileCount, Date.now() - startTime, repoRoot, hasTokenRegistry, textFindingsLimit);
+        return (await renderTerminal(result, opts)) + "\n";
       };
 
       if (args.output) {

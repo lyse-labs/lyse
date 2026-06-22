@@ -92,14 +92,14 @@ describe("renderTerminal (plain-text mode for snapshot stability)", () => {
     expect(out).not.toMatch(/\x1b\[/);
   });
 
-  it("uses plain ASCII (#-*) when unicode=false", async () => {
+  it("uses plain ASCII (#-o) when unicode=false", async () => {
     const out = await renderTerminal(sample, baseOpts);
     expect(out).not.toContain("█");
     expect(out).not.toContain("░");
     expect(out).not.toContain("●");
     expect(out).toContain("#");
     expect(out).toContain("-");
-    expect(out).toContain("*");
+    expect(out).toContain("o");
   });
 
   it("handles N/A axes gracefully", async () => {
@@ -126,6 +126,18 @@ describe("renderTerminal (plain-text mode for snapshot stability)", () => {
     const out = await renderTerminal(naResult, baseOpts);
     expect(out).toContain("N/A");
     expect(out).toContain("Health Score");
+  });
+
+  it("renders a status glyph per axis (doctor view, ascii mode)", async () => {
+    const out = await renderTerminal(sample, baseOpts);
+    const lines = out.split("\n");
+    const tokensLine = lines.find((l) => l.includes("tokens") && l.includes("31"));
+    expect(tokensLine).toBeDefined();
+    // tokens score 31 -> fail -> ascii glyph "x"
+    expect(tokensLine).toContain("x ");
+    const a11yLine = lines.find((l) => l.includes("a11y") && l.includes("62"));
+    // a11y score 62 -> warn -> ascii glyph "!"
+    expect(a11yLine).toContain("! ");
   });
 
   it("--format json branch is independent — renderTerminal is only called for human mode (sanity: no JSON pollution)", async () => {
@@ -258,7 +270,7 @@ describe("renderTerminal (colored mode alignment)", () => {
   it("aligns axis lines to the same visible width across all 4 axes", async () => {
     const out = await renderTerminal(sample, colorOpts);
     const axisLines = out.split("\n").filter((line) =>
-      /^ {2}(tokens|a11y|components|stories)\b/.test(stripAnsi(line))
+      /^ {2}\S+ (tokens|a11y|components|stories)\b/.test(stripAnsi(line))
     );
     expect(axisLines).toHaveLength(4);
     const visibleWidths = axisLines.map((l) => stripAnsi(l).trimEnd().length);
