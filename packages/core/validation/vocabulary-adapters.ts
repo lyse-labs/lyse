@@ -10,29 +10,48 @@ export interface VocabularySpec {
 }
 
 /**
- * Proxy-coherence oracle: the rule SHOULD flag the AI surface that lacks the
- * affordance (clean = missing affordance → flagged), and SHOULD NOT flag once
- * the affordance vocabulary is present (mutation = add affordance → not flagged).
- * Note the inverted polarity vs token rules: here the "violation" is ABSENCE.
+ * Proxy-coherence oracle for AI-governance "affordance presence" rules, where
+ * the VIOLATION is the ABSENCE of the affordance.
+ *
+ * Polarity matches the engine contract in evaluateAdapter (run-adapter.ts):
+ *   cleanFixture() → NEGATIVE label  → rule must NOT flag  → counts TN/FP
+ *   each mutation  → POSITIVE label  → rule MUST flag       → counts TP/FN
+ *
+ * So:
+ *   cleanFixture = AI surface WITH the affordance present → rule does not flag ✓
+ *   mutation     = REMOVE the affordance, leaving bare AI surface → rule flags ✓
+ *
+ * Metamorphic pair: two ways of expressing the affordance both → not flagged.
+ * This is an honest invariant: if two equivalent representations of the affordance
+ * produce different verdicts, Lyse has an inconsistency worth catching.
  */
 export function makeVocabularyAdapter(spec: VocabularySpec): OracleAdapter {
-  const surfaceOnly = (): FixtureFiles => ({ "package.json": PKG, "src/Chat.tsx": spec.aiSurface });
+  const withAffordance = (): FixtureFiles => ({
+    "package.json": PKG,
+    "src/Chat.tsx": spec.aiSurface,
+    [spec.affordanceFile]: spec.affordanceSnippet,
+  });
   return {
     ruleId: spec.ruleId,
     oracleKind: "metamorphic",
-    // "clean" here means the rule's positive condition (missing affordance) — it SHOULD flag.
-    cleanFixture: surfaceOnly,
+    // clean = affordance present → rule does NOT flag (negative, correct)
+    cleanFixture: withAffordance,
     mutations: [
       {
-        name: "add-affordance-should-clear",
-        apply: (f) => ({ ...f, [spec.affordanceFile]: spec.affordanceSnippet }),
+        // remove the affordance → rule SHOULD flag (positive, correct)
+        name: "remove-affordance-should-flag",
+        apply: (f) => {
+          const { [spec.affordanceFile]: _removed, ...rest } = f;
+          return rest;
+        },
       },
     ],
     metamorphic: [
       {
-        name: "affordance-present-not-flagged",
-        a: { ...surfaceOnly(), [spec.affordanceFile]: spec.affordanceSnippet },
-        b: { ...surfaceOnly(), [spec.affordanceFile]: spec.affordanceSnippet },
+        // Two fixtures that both carry the affordance must both be clean (not flagged).
+        name: "affordance-present-both-clean",
+        a: withAffordance(),
+        b: withAffordance(),
         expectViolation: false,
       },
     ],
