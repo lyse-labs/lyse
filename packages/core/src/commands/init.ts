@@ -1,7 +1,7 @@
 import { writeFile, access } from "node:fs/promises";
 import { join } from "node:path";
 import { runPreFlight, formatDetected } from "../detection/pre-flight.js";
-import { confirm } from "../menu/prompts.js";
+import { wizardIntro, wizardOutro, wizardNote, wizardStep, wizardConfirm, wizardTask } from "../ui/wizard.js";
 import { auditDirectory } from "./audit-pipeline.js";
 import { runFix } from "./fix.js";
 import { runMcpSetup } from "./mcp-setup.js";
@@ -22,19 +22,18 @@ export interface InitOptions {
 }
 
 export async function runInit(opt: InitOptions): Promise<void> {
-  console.log("\nWelcome to Lyse.\n");
+  wizardIntro("lyse init");
 
   // 1. Pre-flight + detection
   const detected = await runPreFlight(opt.cwd, opt.skipNodeCheck ? { skipNodeCheck: true } : undefined);
-  console.log(formatDetected(detected));
-  console.log("");
+  wizardNote(formatDetected(detected), "Stack detected");
   await appendInitStepCompletedEvent(opt.cwd, "detection");
 
   // 2. Confirm
   if (!opt.yes) {
-    const ok = await confirm("Proceed with this configuration?", true);
+    const ok = await wizardConfirm("Proceed with this configuration?", true);
     if (!ok) {
-      console.log("Aborted.");
+      wizardOutro("Aborted.");
       return;
     }
   }
@@ -46,8 +45,9 @@ export async function runInit(opt: InitOptions): Promise<void> {
   await ensureGitignoreEntry(opt.cwd, ".lyse/");
 
   // 5. Run first audit (static-only — Layer 4 is a no-op stub in v0.1).
-  console.log("Running first audit...\n");
-  const pipeline = await auditDirectory(opt.cwd, { staticOnly: true });
+  const pipeline = await wizardTask("Running first audit…", "Audit complete", () =>
+    auditDirectory(opt.cwd, { staticOnly: true }),
+  );
   const result = pipeline.result;
   await appendInitStepCompletedEvent(opt.cwd, "audit");
 
@@ -72,7 +72,7 @@ export async function runInit(opt: InitOptions): Promise<void> {
     null,
   );
 
-  console.log(`  Health Score: ${result.finalScore}/100\n`);
+  wizardStep(`Health Score: ${result.finalScore}/100`);
 
   // 6b. Bootstrap AI-readiness surface: LYSE.md + AGENTS.md.
   await writeAiReadinessSurface(opt.cwd, pipeline);
@@ -82,7 +82,7 @@ export async function runInit(opt: InitOptions): Promise<void> {
   const fixableCount = result.findings.length;
   if (fixableCount > 0) {
     const doFix =
-      opt.yes || (await confirm(`Apply ${fixableCount} potentially auto-fixable findings (creates a branch)?`, true));
+      opt.yes || (await wizardConfirm(`Apply ${fixableCount} potentially auto-fixable findings (creates a branch)?`, true));
     if (doFix) {
       try {
         // forceOnDirty: true is intentional — init has just written .lyse.yaml + updated
@@ -105,7 +105,7 @@ export async function runInit(opt: InitOptions): Promise<void> {
   // 8. Offer MCP setup
   if (detected.cursor.value || detected.claudeCode.value) {
     const doMcp =
-      opt.yes || (await confirm("Wire Lyse into your IDE (MCP)?", true));
+      opt.yes || (await wizardConfirm("Wire Lyse into your IDE (MCP)?", true));
     if (doMcp) {
       try {
         await runMcpSetup({ cwd: opt.cwd, autoApprove: opt.yes ?? false });
@@ -121,10 +121,11 @@ export async function runInit(opt: InitOptions): Promise<void> {
   await maybePromptForEmail({ yes: opt.yes === true });
 
   // 10. Summary
-  console.log("✓ Setup complete. Daily commands:");
-  console.log("    lyse audit       → re-check");
-  console.log("    lyse fix         → apply new auto-fixes\n");
-  console.log("⭐ Star the repo: github.com/lyse-labs/lyse\n");
+  wizardNote(
+    "lyse audit   → re-check\nlyse fix     → apply new auto-fixes\n\n⭐ Star the repo: github.com/lyse-labs/lyse",
+    "Setup complete",
+  );
+  wizardOutro("You're set up.");
 }
 
 async function writeAiReadinessSurface(
