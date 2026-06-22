@@ -82,6 +82,11 @@ export const ADDRESSABLE_PENDING: Record<string, string> = {
   // Axis R — AI token governance
   "ai-governance/ai-tokens-reserved": "construction: reserved AI token declaration injection",
   "ai-governance/ai-token-misuse": "construction: AI token cross-file usage injection",
+
+  // Axis M — AI governance (moved from JUDGMENT: have proxy/construction oracle)
+  "ai-governance/disclaimer-present": "proxy: vocabulary injection — high FP risk",
+  "ai-governance/ai-marker-anti-patterns": "proxy: vocabulary/regex injection — high FP risk",
+  "ai-governance/ai-token-requires-marker": "construction: AST cross-file — recall-failing, needs improved tracer",
 };
 
 /**
@@ -91,14 +96,12 @@ export const ADDRESSABLE_PENDING: Record<string, string> = {
  */
 export const JUDGMENT_RULES: Record<string, string> = {
   "components/contracts-strictness": "strictness is a graded design judgment; AST can detect presence but not adequacy",
-  "ai-governance/ai-marker-anti-patterns": "anti-pattern vocabulary set has no stable authoritative closure; proxy-only",
-  "ai-governance/disclaimer-present": "disclaimer vocabulary has no authoritative fixed form; proxy with high FP risk",
   "ai-governance/explainability-affordance": "explainability is a graded UX judgment; no single injected-defect oracle",
   "ai-governance/human-control-affordances": "control affordance vocabulary is open-ended; no stable structural oracle",
   "ai-governance/draft-attribution": "attribution convention is editorial; proxy vocab only, no defect injection",
-  "ai-governance/ai-token-requires-marker": "recall-failing in bench: AST cross-file trace brittle; deferred to judgment tier",
 };
 
+/** Categorize all rules into covered, addressable-pending, judgment-only, and uncovered. */
 export function coverageGaps(): { uncovered: string[]; covered: string[]; addressablePending: string[]; judgmentOnly: string[] } {
   const covered = new Set(adapters.map((a) => a.ruleId));
   const addressable = new Set(Object.keys(ADDRESSABLE_PENDING));
