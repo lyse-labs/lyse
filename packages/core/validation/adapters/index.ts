@@ -6,6 +6,7 @@ import { presenceAdapters } from "../generic-presence-adapters.js";
 import { hardcodedValueAdapters } from "../hardcoded-value-adapters.js";
 import { vocabularyAdapters } from "../vocabulary-adapters.js";
 import { tokensStructuralAdapters } from "../tokens-structural-adapters.js";
+import { aiSurfaceVersioningAdapters } from "../ai-surface-versioning-adapters.js";
 
 export const adapters: OracleAdapter[] = [
   colorAdapter,
@@ -15,4 +16,5 @@ export const adapters: OracleAdapter[] = [
   ...hardcodedValueAdapters,
   ...tokensStructuralAdapters,
   ...vocabularyAdapters,
+  ...aiSurfaceVersioningAdapters,
 ];

@@ -2,6 +2,45 @@
   "lyseVersion": "0.2.0-alpha.2",
   "scores": [
     {
+      "ruleId": "ai-surface/agent-instruction-files",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 4,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 4
+    },
+    {
+      "ruleId": "ai-surface/agents-md-quality",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 4,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 4
+    },
+    {
+      "ruleId": "ai-surface/component-manifest-json",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 4,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 4
+    },
+    {
       "ruleId": "ai-surface/llms-txt-structure",
       "oracleKind": "construction",
       "matrix": {
@@ -13,6 +52,32 @@
       "youdensJ": 1,
       "metamorphicInconsistencies": [],
       "mutationsRun": 6
+    },
+    {
+      "ruleId": "ai-surface/mcp-config-present",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 4,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 4
+    },
+    {
+      "ruleId": "ai-surface/shadcn-registry-valid",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 4,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 4
     },
     {
       "ruleId": "tokens/container-query",
@@ -260,6 +325,45 @@
       "youdensJ": 1,
       "metamorphicInconsistencies": [],
       "mutationsRun": 1
+    },
+    {
+      "ruleId": "versioning/deprecation-markers",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "versioning/migration-guide-present",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "versioning/semver-versioning",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
     }
   ]
 }

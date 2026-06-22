@@ -26,22 +26,12 @@ export const ADDRESSABLE_PENDING: Record<string, string> = {
   // Axis E — Documentation / Stories
   "stories/coverage": "construction: story file presence cross-reference injection",
 
-  // Axis F — Versioning / lifecycle
-  "versioning/semver-versioning": "construction: package.json version field SemVer pattern",
-  "versioning/migration-guide-present": "construction: MIGRATION.md file presence injection",
-  "versioning/deprecation-markers": "construction: @deprecated JSDoc marker injection",
-
   // Naming
   "naming/component-pascalcase": "construction: component filename casing injection",
   "naming/hook-prefix": "construction: hook filename prefix injection",
 
-  // Axis L — AI-readiness surface
-  "ai-surface/agents-md-quality": "construction: AGENTS.md structured-content injection",
-  "ai-surface/mcp-config-present": "construction: .mcp.json / mcp-config file presence injection",
-  "ai-surface/component-manifest-json": "construction: component-manifest JSON schema injection",
-  "ai-surface/ds-index-exported": "construction: design-system index export file injection",
-  "ai-surface/shadcn-registry-valid": "construction: shadcn registry JSON schema injection",
-  "ai-surface/agent-instruction-files": "construction: agent instruction file presence injection",
+  // Axis L — AI-readiness surface (ds-index-exported requires ctx.componentsModule — not injectable from fixtures)
+  "ai-surface/ds-index-exported": "construction: design-system index export file injection — blocked: needs ctx.componentsModule workspace config",
 
   // Axis M — AI marking & identity (proxy but structurally injectable)
   "ai-governance/ai-marker-component-present": "proxy: AI-label component vocabulary injection",
