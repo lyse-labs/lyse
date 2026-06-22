@@ -8,20 +8,10 @@ import { adapters } from "./adapters/index.js";
  */
 export const ADDRESSABLE_PENDING: Record<string, string> = {
   // Axis A — Design Tokens (DTCG)
-  "tokens/dtcg-conformance": "construction: DTCG $type/$value schema injection",
-  "tokens/description-coverage": "construction: $description field presence injection",
-  "tokens/deprecated-token-usage": "construction: @deprecated marker injection",
-  "tokens/theme-modes-present": "construction: mode-key file presence injection",
-  "tokens/css-custom-property-export": "construction: CSS custom-property export file presence",
+  // (all 5 structural rules covered by tokensStructuralAdapters)
 
   // Axis B — Token adoption / hardcoded values
-  "tokens/no-hardcoded-typography": "construction: CSS typography literal injection",
-  "tokens/no-hardcoded-shadow": "construction: CSS box-shadow literal injection",
-  "tokens/no-hardcoded-motion": "construction: CSS transition/duration literal injection",
-  "tokens/no-hardcoded-media-query": "construction: CSS media-query breakpoint literal injection",
-  "tokens/no-hardcoded-gradient": "construction: CSS gradient literal injection",
-  "tokens/responsive-breakpoints": "construction: breakpoint token reference injection",
-  "tokens/container-query": "construction: container-query vs media-query pattern injection",
+  // (all 5 hardcoded-value extensions + media-query covered by adapters)
 
   // Axis C — Accessibility
   "a11y/essentials": "construction: static-injectable AST (jsx-a11y subset — img alt, form labels)",

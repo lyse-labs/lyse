@@ -40,4 +40,8 @@ export const hardcodedValueAdapters: OracleAdapter[] = [
   makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-z-index", property: "z-index", cleanValue: "var(--z-modal)", literalValue: "100", altLiteralValue: "999" }),
   makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-opacity", property: "opacity", cleanValue: "var(--opacity-muted)", literalValue: "0.5", altLiteralValue: ".5" }),
   makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-border-width", property: "border-width", cleanValue: "var(--border-md)", literalValue: "2px", altLiteralValue: "0.125rem" }),
+  makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-typography", property: "font-size", cleanValue: "var(--font-size-md)", literalValue: "16px", altLiteralValue: "1rem" }),
+  makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-shadow", property: "box-shadow", cleanValue: "var(--shadow-md)", literalValue: "0 2px 4px rgba(0,0,0,0.1)", altLiteralValue: "0 4px 8px rgba(0,0,0,0.2)" }),
+  makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-motion", property: "transition", cleanValue: "color var(--duration-fast) var(--ease-standard)", literalValue: "color 200ms ease", altLiteralValue: "color 0.2s ease" }),
+  makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-gradient", property: "background", cleanValue: "var(--gradient-brand)", literalValue: "linear-gradient(to right, #ff6b6b, #ffa500)", altLiteralValue: "radial-gradient(circle, #ff0000, #0000ff)" }),
 ];
