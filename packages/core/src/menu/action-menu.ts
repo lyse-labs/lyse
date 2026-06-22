@@ -1,4 +1,5 @@
-import { choice, isInteractive } from "./prompts.js";
+import { isInteractive } from "./prompts.js";
+import { wizardSelect } from "../ui/wizard.js";
 
 export type MenuChoice = "fix" | "mcp-setup" | "exit";
 
@@ -19,5 +20,9 @@ export async function showActionMenu(ctx: MenuContext): Promise<MenuChoice> {
   }
   choices.push({ title: "Exit", value: "exit" });
 
-  return await choice("What now?", choices, ctx.autoFixableCount > 0 ? "fix" : "exit");
+  return await wizardSelect(
+    "What now?",
+    choices.map((c) => ({ value: c.value, label: c.title })),
+    ctx.autoFixableCount > 0 ? "fix" : "exit",
+  );
 }

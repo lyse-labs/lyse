@@ -1,5 +1,5 @@
-import prompts from "prompts";
 import { isInteractive } from "./prompts.js";
+import { wizardSelect } from "../ui/wizard.js";
 import { brandHeader } from "../ui/banner.js";
 
 export type ReplActionId =
@@ -51,15 +51,11 @@ export function renderReplBanner(ctx: ReplContext): string {
 }
 
 export async function promptForAction(): Promise<ReplActionId> {
-  const r = await prompts({
-    type: "select",
-    name: "v",
-    message: "What now?",
-    choices: REPL_ACTIONS.map((a) => ({ title: a.title, description: a.description, value: a.id })),
-    initial: 0,
-  });
-  if (r.v === undefined) return "exit";
-  return r.v as ReplActionId;
+  return wizardSelect(
+    "What now?",
+    REPL_ACTIONS.map((a) => ({ value: a.id, label: a.title, hint: a.description })),
+    "exit",
+  );
 }
 
 export type ReplDispatch = (action: ReplActionId, ctx: ReplContext) => Promise<void>;

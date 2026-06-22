@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { wizardConfirm, wizardIntro, wizardNote, wizardTask } from "../../src/ui/wizard.js";
+import { wizardConfirm, wizardIntro, wizardNote, wizardSelect, wizardTask } from "../../src/ui/wizard.js";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -39,5 +39,20 @@ describe("ui/wizard non-interactive contract", () => {
         throw new Error("boom");
       }),
     ).rejects.toThrow("boom");
+  });
+});
+
+describe("ui/wizard wizardSelect non-interactive contract", () => {
+  const opts = [
+    { value: "a" as const, label: "Alpha" },
+    { value: "b" as const, label: "Bravo" },
+  ];
+
+  it("returns the explicit default without prompting when non-interactive", async () => {
+    await expect(wizardSelect("Pick", opts, "b")).resolves.toBe("b");
+  });
+
+  it("falls back to the first option when no default is given", async () => {
+    await expect(wizardSelect("Pick", opts)).resolves.toBe("a");
   });
 });
