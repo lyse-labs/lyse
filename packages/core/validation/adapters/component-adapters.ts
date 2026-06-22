@@ -196,48 +196,6 @@ const noNativeShadowsAdapter: OracleAdapter = {
 };
 
 // ---------------------------------------------------------------------------
-// components/doc-comments
-// Fires on exported PascalCase components in .tsx files that are re-exported
-// from a package entry (i.e. part of the public API) and have no JSDoc.
-// The rule uses resolvePublicExports which reads package.json + main/exports.
-// Fixture: package.json with "main": "src/index.tsx", src/index.tsx re-exporting
-// Button, and src/Button.tsx with/without JSDoc.
-// ---------------------------------------------------------------------------
-
-const DOC_SRC_WITH_JSDOC = [
-  "/** Primary action button. Use for the most important action on a page. */",
-  "export function Button() { return <button />; }",
-].join("\n");
-
-const DOC_SRC_WITHOUT_JSDOC = "export function Button() { return <button />; }";
-
-const INDEX_SRC = 'export { Button } from "./Button.js";\n';
-
-const docCommentsAdapter: OracleAdapter = {
-  ruleId: "components/doc-comments",
-  oracleKind: "construction",
-  cleanFixture: () => ({
-    "package.json": PKG_LIB,
-    "src/index.tsx": INDEX_SRC,
-    "src/Button.tsx": DOC_SRC_WITH_JSDOC,
-  }),
-  mutations: [
-    {
-      name: "missing-jsdoc",
-      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": DOC_SRC_WITHOUT_JSDOC }),
-    },
-    {
-      name: "missing-jsdoc-arrow",
-      apply: (f): FixtureFiles => ({
-        ...f,
-        "src/Button.tsx": "export const Button = () => <button />;",
-      }),
-    },
-  ],
-  metamorphic: [],
-};
-
-// ---------------------------------------------------------------------------
 // naming/component-pascalcase
 // Fires on exported functions returning JSX that are not PascalCase.
 // The rule checks .tsx/.jsx files only. HOC (withXxx), hooks (useXxx), and

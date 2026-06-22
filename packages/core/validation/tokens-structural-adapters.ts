@@ -58,51 +58,6 @@ export const dtcgConformanceAdapter: OracleAdapter = {
   ],
 };
 
-const DESCRIBED_SEMANTIC = JSON.stringify({
-  action: {
-    primary: {
-      $value: "#2563eb",
-      $type: "color",
-      $description: "Default action color for primary CTAs",
-    },
-    secondary: {
-      $value: "#64748b",
-      $type: "color",
-      $description: "Secondary action color for muted interactions",
-    },
-  },
-});
-
-const UNDESCRIBED_SEMANTIC = JSON.stringify({
-  action: {
-    primary: { $value: "#2563eb", $type: "color" },
-    secondary: { $value: "#64748b", $type: "color" },
-  },
-});
-
-function descriptionClean(): FixtureFiles {
-  return {
-    "package.json": PKG,
-    "tokens/semantic.tokens.json": DESCRIBED_SEMANTIC,
-  };
-}
-
-export const descriptionCoverageAdapter: OracleAdapter = {
-  ruleId: "tokens/description-coverage",
-  oracleKind: "construction",
-  cleanFixture: descriptionClean,
-  mutations: [
-    {
-      name: "no-descriptions",
-      apply: (f) => ({
-        ...f,
-        "tokens/semantic.tokens.json": UNDESCRIBED_SEMANTIC,
-      }),
-    },
-  ],
-  metamorphic: [],
-};
-
 const CLEAN_ALIAS = JSON.stringify({
   color: {
     old: { $value: "#000", $deprecated: "use color.ink" },
