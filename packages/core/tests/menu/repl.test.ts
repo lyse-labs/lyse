@@ -48,8 +48,8 @@ describe("renderReplBanner", () => {
     const out = renderReplBanner({ cwd: "/tmp/demo", quiet: false, version: "9.9.9" });
     expect(out).toMatchInlineSnapshot(`
       "
-        lyse 9.9.9 — interactive menu
-        cwd: /tmp/demo
+        lyse  interactive menu   9.9.9
+        /tmp/demo
 
         Tip: pass --no-menu (or set LYSE_NO_MENU=1) to skip the menu.
         Or invoke a subcommand directly (lyse audit, lyse fix, …).
