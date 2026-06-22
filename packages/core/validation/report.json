@@ -15,6 +15,71 @@
       "mutationsRun": 6
     },
     {
+      "ruleId": "tokens/container-query",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "tokens/css-custom-property-export",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "tokens/deprecated-token-usage",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "tokens/description-coverage",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "tokens/dtcg-conformance",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 3,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 3
+    },
+    {
       "ruleId": "tokens/no-hardcoded-border-radius",
       "oracleKind": "construction",
       "matrix": {
@@ -54,7 +119,59 @@
       "mutationsRun": 4
     },
     {
+      "ruleId": "tokens/no-hardcoded-gradient",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-media-query",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-motion",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
       "ruleId": "tokens/no-hardcoded-opacity",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-shadow",
       "oracleKind": "construction",
       "matrix": {
         "tp": 2,
@@ -80,6 +197,19 @@
       "mutationsRun": 2
     },
     {
+      "ruleId": "tokens/no-hardcoded-typography",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
       "ruleId": "tokens/no-hardcoded-z-index",
       "oracleKind": "construction",
       "matrix": {
@@ -91,6 +221,32 @@
       "youdensJ": 1,
       "metamorphicInconsistencies": [],
       "mutationsRun": 2
+    },
+    {
+      "ruleId": "tokens/responsive-breakpoints",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "tokens/theme-modes-present",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
     },
     {
       "ruleId": "versioning/changelog-present",
