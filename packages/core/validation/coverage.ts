@@ -14,7 +14,7 @@ export const ADDRESSABLE_PENDING: Record<string, string> = {
   "a11y/prefers-reduced-motion": "construction: @media prefers-reduced-motion guard injection",
   "a11y/forced-colors": "construction: @media forced-colors guard injection",
   "a11y/focus-visible": "construction: :focus-visible CSS selector injection",
-  "a11y/inclusive-language": "construction: banned-word vocabulary injection",
+  "a11y/inclusive-language": "construction: info-only advisory rule — not validatable by the recall/mutation oracle (emits no violation severity)",
 
   // Axis L — AI-readiness surface (ds-index-exported requires ctx.componentsModule — not injectable from fixtures)
   "ai-surface/ds-index-exported": "construction: design-system index export file injection — blocked: needs ctx.componentsModule workspace config",
