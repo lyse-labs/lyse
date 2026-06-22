@@ -1,4 +1,4 @@
-export type OracleKind = "construction" | "metamorphic" | "cross-tool";
+export type OracleKind = "construction" | "metamorphic" | "cross-tool" | "execution";
 
 export type FixtureFiles = Record<string, string>;
 

@@ -96,6 +96,13 @@ export interface RuleContext {
    * DS-self rule semantics planned for v0.2.
    */
   dsSelfMode?: boolean;
+  /**
+   * Computed token readings from the opt-in render layer. Present only when
+   * `lyse audit --render` ran and the browser was available; absent otherwise.
+   * Rules that need rendered data (tokens/rendered-token-fidelity) return N/A
+   * (opportunities 0) when this is undefined.
+   */
+  rendered?: import("./render/types.js").ComputedTokenReading[];
 }
 
 export interface TokenMap {
