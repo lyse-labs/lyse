@@ -1,4 +1,4 @@
-import { intro, outro, note, log, confirm, spinner, isCancel, cancel } from "@clack/prompts";
+import { intro, outro, note, log, confirm, select, spinner, isCancel, cancel } from "@clack/prompts";
 import { isInteractive } from "../menu/prompts.js";
 
 export function wizardIntro(title: string): void {
@@ -61,4 +61,33 @@ export async function wizardTask<T>(startLabel: string, stopLabel: string, fn: (
     s.stop(`${stopLabel} — failed`);
     throw err;
   }
+}
+
+export async function wizardSelect<T extends string>(
+  message: string,
+  options: { value: T; label: string; hint?: string }[],
+  defaultValue?: T,
+): Promise<T> {
+  const fallback = defaultValue ?? options[0]?.value;
+  if (fallback === undefined) {
+    throw new Error("wizardSelect requires at least one option");
+  }
+  if (!isInteractive()) return fallback;
+  const clackOptions = options.map((o) => {
+    const opt: { value: T; label: string; hint?: string } = { value: o.value, label: o.label };
+    if (o.hint !== undefined) {
+      opt.hint = o.hint;
+    }
+    return opt;
+  });
+  const answer = await select({
+    message,
+    options: clackOptions as Parameters<typeof select>[0]["options"],
+    initialValue: fallback,
+  });
+  if (isCancel(answer)) {
+    cancel("Aborted.");
+    return fallback;
+  }
+  return answer as T;
 }
