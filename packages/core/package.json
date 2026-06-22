@@ -61,7 +61,8 @@
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "docs:reliability": "tsx ../../scripts/render-coverage.ts",
-    "mutation": "stryker run"
+    "mutation": "stryker run",
+    "validate:autonomous": "pnpm build && tsx validation/run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
