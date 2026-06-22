@@ -3,7 +3,19 @@ import { evaluateRenderAdapter } from "../../validation/render-adapters.js";
 import { RenderUnavailableError } from "../../src/render/types.js";
 
 describe("render execution-oracle adapter", () => {
-  it("recall: an injected override drift is caught (fn=0); clean not flagged (fp=0)", async () => {
+  // Empirical finding (verified with real Chromium):
+  //   getPropertyValue("--color-bg") for `:root{--brand:#ff0000;--color-bg:var(--brand)}`
+  //   returns "#ff0000" — the browser RESOLVES var() references for custom properties.
+  //
+  // Faithful model:
+  //   CANONICAL: buildDtcgCanonicalMap({ color: { bg: { $value: "#ffffff" } } })
+  //              → Map { "color/bg" → "#ffffff" }
+  //   TN (label=false): CLEAN_CSS = `:root { --color-bg: #ffffff; }`
+  //                     computed "#ffffff" == canonical "#ffffff" → not flagged ✓
+  //   TP (label=true):  DRIFT_CSS = `:root { --brand: #ff0000; --color-bg: var(--brand); }`
+  //                     computed "#ff0000" ≠ canonical "#ffffff" → flagged ✓
+  //                     (var-indirection: static-invisible, genuine browser-only mismatch)
+  it("J=1: var-indirection drift is caught (fn=0); clean literal not flagged (fp=0)", async () => {
     try {
       const score = await evaluateRenderAdapter();
       expect(score.matrix.fn).toBe(0);

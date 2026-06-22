@@ -1,37 +1,54 @@
 import { withChromium } from "../src/render/browser.js";
+import { buildDtcgCanonicalMap, cssVarToTokenPath } from "../src/render/dtcg-canonical-map.js";
 import { probeComputedTokens } from "../src/render/token-probe.js";
 import { detectModeSelectors } from "../src/render/token-source-map.js";
 import { detectRenderDrift } from "../src/rules/tokens-rendered-token-fidelity.js";
 import { emptyMatrix, addObservation, youdensJ } from "./score.js";
 import type { OracleAdapter, RuleScore } from "./types.js";
 
-// Clean fixture: single canonical declaration — computed value matches source.
+// Canonical map: DTCG JSON with color/bg = #ffffff.
+// cssVarToTokenPath("--color-bg") → "color/bg", so probed readings for
+// "--color-bg" will be compared against "#ffffff" in the canonical map.
+const DTCG_JSON = { color: { bg: { $value: "#ffffff" } } };
+const CANONICAL_MAP = buildDtcgCanonicalMap(DTCG_JSON);
+
+// Clean fixture: single :root declaration — browser computes #ffffff for
+// --color-bg, which matches the canonical #ffffff → TN (not flagged).
 const CLEAN_CSS = `:root { --color-bg: #ffffff; }`;
 
-// Drift fixture: a later :root block overrides the token.
-// The browser cascade resolves to #ff0000 (later decl wins), while the
-// canonical source (CLEAN_CSS) declares #ffffff — detectRenderDrift sees
-// the mismatch and emits a warning.
-const DRIFT_CSS = `:root { --color-bg: #ffffff; } :root { --color-bg: #ff0000; }`;
+// Drift fixture (var-indirection): --brand is set to #ff0000 and --color-bg
+// is set to var(--brand). The browser resolves var() at computed-style time,
+// so getPropertyValue("--color-bg") returns "#ff0000" — different from the
+// canonical "#ffffff". Static analysis cannot see this mismatch because the
+// source declaration is syntactically correct; only a real browser reveals it.
+//
+// Empirically verified: Chromium resolves var() references for custom
+// properties, so getPropertyValue returns the computed value "#ff0000",
+// not the raw "var(--brand)".
+const DRIFT_CSS = `:root { --brand: #ff0000; --color-bg: var(--brand); }`;
 
-async function probe(renderedCss: string): Promise<ReturnType<typeof detectRenderDrift>> {
+async function probe(css: string): Promise<ReturnType<typeof detectRenderDrift>> {
   const readings = await withChromium((page) =>
-    probeComputedTokens(page, renderedCss, ["--color-bg"], detectModeSelectors(renderedCss)),
+    probeComputedTokens(page, css, ["--color-bg"], detectModeSelectors(css)),
   );
-  // Canonical source is always the clean single-declaration CSS so that the
-  // drift case (DRIFT_CSS) produces a genuine mismatch vs the source map.
-  return detectRenderDrift(CLEAN_CSS, readings);
+  return detectRenderDrift(CANONICAL_MAP, readings, cssVarToTokenPath);
 }
 
 /**
  * Execution-oracle for tokens/rendered-token-fidelity.
  *
- * Constructs two HTML fixtures and drives them through the real Chromium
- * browser to obtain computed custom-property values, then runs detectRenderDrift
- * to classify each observation:
+ * Drives two HTML fixtures through real Chromium to obtain computed
+ * custom-property values, then runs detectRenderDrift to classify each:
  *
- *   TN — CLEAN_CSS: computed #ffffff matches canonical #ffffff → not flagged.
- *   TP — DRIFT_CSS: computed #ff0000 differs from canonical #ffffff → flagged.
+ *   TN — CLEAN_CSS: browser computes #ffffff for --color-bg, matches
+ *        canonical → not flagged (label=false, predicted=false).
+ *   TP — DRIFT_CSS: browser resolves var(--brand) to #ff0000, which
+ *        differs from canonical #ffffff → flagged (label=true, predicted=true).
+ *
+ * The var-indirection drift is genuinely static-invisible: the source
+ * declaration is syntactically valid; only the browser-computed value
+ * reveals the mismatch. This is the exact failure mode the rule is designed
+ * to catch (design→CSS drift via cascade/override/alias).
  *
  * Throws RenderUnavailableError when Playwright/Chromium is absent; callers
  * (tests) catch this and skip.
@@ -39,11 +56,11 @@ async function probe(renderedCss: string): Promise<ReturnType<typeof detectRende
 export async function evaluateRenderAdapter(): Promise<RuleScore> {
   let matrix = emptyMatrix();
 
-  // TN: clean fixture — no drift expected, must not be flagged (label=false).
+  // TN: clean fixture — computed #ffffff matches canonical #ffffff → not flagged.
   const cleanFindings = await probe(CLEAN_CSS);
   matrix = addObservation(matrix, false, cleanFindings.length > 0);
 
-  // TP: drift fixture — override drift expected, must be flagged (label=true).
+  // TP: drift fixture — computed #ff0000 ≠ canonical #ffffff → flagged.
   const driftFindings = await probe(DRIFT_CSS);
   matrix = addObservation(matrix, true, driftFindings.length > 0);
 
