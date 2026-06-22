@@ -16,4 +16,22 @@ describe("token source map", () => {
   it("detects non-root mode selectors that declare tokens", () => {
     expect(detectModeSelectors(CSS)).toEqual([".dark"]);
   });
+
+  it("ignores CSS comments that contain braces or custom properties", () => {
+    const css = `/* { --x: red } */ :root { --color-bg: #fff; }`;
+    const m = buildTokenSourceMap(css);
+    expect(m.get("--color-bg")!.get("root")).toBe("#fff");
+    expect(m.size).toBe(1);
+  });
+
+  it("maps @media-nested :root tokens to root mode, not a garbage @media key", () => {
+    const css = `@media (prefers-color-scheme: dark) { :root { --color-bg: #111; } }`;
+    const m = buildTokenSourceMap(css);
+    expect(m.get("--color-bg")?.get("root")).toBe("#111");
+    for (const [, byMode] of m) {
+      for (const mode of byMode.keys()) {
+        expect(mode).not.toMatch(/@media/);
+      }
+    }
+  });
 });
