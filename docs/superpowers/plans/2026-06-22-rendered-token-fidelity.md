@@ -2,7 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add an opt-in render layer that detects cascade/override drift on the token layer — a `--token` whose browser-computed value differs from its canonical source declaration — and validate it with an execution-oracle adapter in the existing mutation+oracle engine.
+**Goal:** Add an opt-in render layer that detects drift between a design system's **DTCG token source-of-truth** and the **browser-computed value** of the corresponding CSS custom property — and validate it with an execution-oracle adapter.
+
+> **⚠️ REVISION 2026-06-22 (supersedes the original comparison model in Tasks 6-8).** A keystone review proved the original model (compare browser-computed vs the *re-parsed same CSS*) is an artifact: the real pipeline feeds the same CSS to both sides, so it catches nothing real (or flags its own flat-resolution errors). The corrected model uses an **independent canonical source: the DTCG JSON token definitions**, compared against the browser-computed CSS-custom-property values (which resolve `var()` chains + cascade). See **"## REVISION: DTCG canonical model"** at the end of this file for the revised tasks R5b/R6′/R7′/R8′. Tasks R1-R5 stand unchanged. Original R6/R7 commits get *modified* by R6′/R7′; the flawed R8 adapter (commit 8022abd) is *replaced* by R8′.
 
 **Architecture:** A new opt-in `packages/core/src/render/` layer (mirroring the opt-in LLM layer) renders the repo's CSS in pinned headless Chromium (Playwright, optional peerDep) and reads computed `--token` values under `:root` + detected mode selectors. A new rule `tokens/rendered-token-fidelity` compares computed values to the canonical source declarations and flags drift. Default `lyse audit` is unchanged (zero-config, offline, no browser).
 
@@ -892,3 +894,28 @@ git commit -m "feat(validation): execution-oracle render adapter + completeness-
 **Placeholder scan:** Two deliberate, flagged forward-references: (a) Task 6's `(ctx as …)` cast for `renderedSourceCss`, explicitly resolved in Task 7; (b) Task 8's execution-oracle running outside the static runner, with a design note. Both are called out for the implementer, not silent. The `skipped` counter wiring in Task 7 is marked as tracked-in-rule. No "TODO/TBD" placeholders.
 
 **Type consistency:** `ComputedTokenReading`, `RenderMeta`, `RenderUnavailableError`, `OracleKind "execution"`, `RuleContext.rendered`/`renderedSourceCss`, `withChromium`, `probeComputedTokens`, `buildTokenSourceMap`/`detectModeSelectors`, `canonicalize`, `detectRenderDrift`, `evaluateRenderAdapter` are defined once and used with identical signatures across tasks.
+
+---
+
+## REVISION: DTCG canonical model (supersedes R6-R8)
+
+**Revised comparison model:** canonical = DTCG JSON token values (`Map<tokenPath, canonicalValue>`, forward, built ONLY from DTCG-JSON sources — not css-vars/Tailwind, where token≡css and there is no independence). CSS var ↔ token path via the loader's prefix conventions (`--color-bg` ↔ `color/bg`). Rendered = browser-computed value of each CSS custom property that maps to a canonical token (the browser resolves `var()` chains + cascade). Drift = `canonicalize(computed) !== canonicalize(canonical)`. N/A when no DTCG source OR no renderable CSS var layer. **What it catches (static-invisible):** the shipped/generated CSS resolves a token to something other than its DTCG source-of-truth (stale build, hand-edit, a `var()` indirection or override that diverges).
+
+### Task R5b: DTCG canonical map (NEW)
+**Files:** Create `packages/core/src/render/dtcg-canonical-map.ts`; Test `packages/core/tests/render/dtcg-canonical-map.test.ts`.
+**Produces:** `buildDtcgCanonicalMap(dtcgJson: unknown): Map<string,string>` (tokenPath `a/b/c` → canonical `$value`, flattening nested groups, resolving `{alias}` refs within the DTCG); `cssVarToTokenPath(varName: string): string | null` (reuse loaders/tokens.ts prefix table: `--color-X`→`color/X`, `--spacing-X`→`spacing/X`, `--radius-X`→`radii/X`, etc.).
+**Pre-step:** read `packages/core/src/loaders/tokens.ts` for the DTCG `$value` parse + the `--color-`/`--spacing-`/… prefix conventions; reuse them.
+**TDD:** DTCG `{ "color": { "bg": { "$value": "#ffffff", "$type": "color" } } }` → map `color/bg`→`#ffffff`; alias `{color.fg:{$value:"{color.bg}"}}` resolves `color/fg`→`#ffffff`; `cssVarToTokenPath("--color-bg")`→`"color/bg"`. Strict TS, `.js` specifiers. Commit `feat(render): DTCG canonical forward map + css-var↔token-path mapping`.
+
+### Task R6′: revise the rule (MODIFY R6 file)
+Change pure helper to `detectRenderDrift(canonical: Map<string,string>, readings: ComputedTokenReading[], varToPath: (v: string) => string | null): Finding[]`. Per reading: `path = varToPath(r.token)`; skip if null/no canonical entry; `want = canonicalize(canonical.get(path)!)`, `got = canonicalize(r.computed)`; skip if either kind==="skip"; flag if `want.canonical !== got.canonical`. Rule `evaluate`: N/A (opportunities:0) when `ctx.rendered` empty OR `ctx.canonicalTokens` absent; else `detectRenderDrift(ctx.canonicalTokens, ctx.rendered, cssVarToTokenPath)`. Remove `renderedSourceCss` usage. Update tests to canonical-map signature. Commit `refactor(rules): compare vs DTCG canonical not re-parsed CSS`.
+
+### Task R7′: revise pipeline (MODIFY R7)
+`src/types.ts`: replace `RuleContext.renderedSourceCss?: string` with `canonicalTokens?: Map<string,string>`. `audit-pipeline.ts` render stage: build the DTCG canonical map (R5b) from the repo's DTCG source; if no DTCG source → `meta.render.error="no DTCG token source"`, skip browser (N/A); else render CSS var layer + attach `ctx.rendered` + `ctx.canonicalTokens`. Drop `renderedSourceCss`. Default audit unaffected. Update audit-render.test (drift case = DTCG json + CSS resolving a token away from canonical). Commit `refactor(render): pipeline passes DTCG canonical map`.
+
+### Task R8′: faithful execution-oracle adapter (REPLACES flawed adapter)
+Rewrite `evaluateRenderAdapter` to ONE coherent model (no string-replace):
+- canonical (both obs): `new Map([["color/bg","#ffffff"]])`, `varToPath = cssVarToTokenPath`.
+- **Clean (TN):** `:root { --color-bg: #ffffff; }` → browser computes `#ffffff` → matches → not flagged.
+- **Drift (TP):** `:root { --brand: #ff0000; --color-bg: var(--brand); }` → browser RESOLVES `--color-bg` to `#ff0000` ≠ canonical `#ffffff` → flagged (genuine + static-invisible: needs var-chain resolution).
+Same canonical map both observations; drift = browser resolving CSS away from DTCG canonical = what the real pipeline catches. Verify empirically (clean #ffffff TN, drift #ff0000 TP, J=1 faithful). Keep coverage.ts EXECUTION_COVERED (gate green), renderAdapters=[] (static unaffected). Commit `feat(validation): faithful execution-oracle render adapter (DTCG canonical vs resolved CSS)`.

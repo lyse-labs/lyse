@@ -1,6 +1,11 @@
 # Rendered Token Fidelity — design
 
-> **Status:** design / spec (approved in brainstorming 2026-06-22). Next: implementation plan.
+> **Status:** design / spec (approved 2026-06-22). **REVISED 2026-06-22:** a keystone review proved the
+> original comparison model (browser-computed vs *re-parsed same CSS*) is an artifact with no independent
+> value. Corrected model: canonical = **DTCG JSON** token source-of-truth, compared against the
+> browser-**resolved** CSS-custom-property value (resolving `var()` chains + cascade). Drift = the shipped
+> CSS resolves a token away from its DTCG definition. Rule is N/A when no DTCG source. See the plan's
+> "## REVISION: DTCG canonical model" for the revised tasks.
 > Companion to `docs/architecture/coverage-universe.md` (Axis J — visual/rendered-value drift) and
 > `docs/architecture/autonomous-engine.md` (the mutation+oracle validation engine).
 
