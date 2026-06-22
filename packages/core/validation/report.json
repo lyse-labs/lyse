@@ -70,12 +70,12 @@
       "ruleId": "ai-governance/ai-tokens-reserved",
       "oracleKind": "construction",
       "matrix": {
-        "tp": 1,
+        "tp": 0,
         "fp": 0,
         "tn": 1,
-        "fn": 0
+        "fn": 1
       },
-      "youdensJ": 1,
+      "youdensJ": 0,
       "metamorphicInconsistencies": [],
       "mutationsRun": 1
     },
@@ -133,7 +133,7 @@
     },
     {
       "ruleId": "ai-governance/interaction-pattern-docs",
-      "oracleKind": "construction",
+      "oracleKind": "metamorphic",
       "matrix": {
         "tp": 1,
         "fp": 0,
@@ -172,7 +172,7 @@
     },
     {
       "ruleId": "ai-governance/value-gate-doc-present",
-      "oracleKind": "construction",
+      "oracleKind": "metamorphic",
       "matrix": {
         "tp": 1,
         "fp": 0,
@@ -200,12 +200,12 @@
       "ruleId": "ai-surface/agents-md-quality",
       "oracleKind": "construction",
       "matrix": {
-        "tp": 4,
+        "tp": 3,
         "fp": 0,
         "tn": 1,
-        "fn": 0
+        "fn": 1
       },
-      "youdensJ": 1,
+      "youdensJ": 0.75,
       "metamorphicInconsistencies": [],
       "mutationsRun": 4
     },
@@ -213,12 +213,12 @@
       "ruleId": "ai-surface/component-manifest-json",
       "oracleKind": "construction",
       "matrix": {
-        "tp": 4,
+        "tp": 3,
         "fp": 0,
         "tn": 1,
-        "fn": 0
+        "fn": 1
       },
-      "youdensJ": 1,
+      "youdensJ": 0.75,
       "metamorphicInconsistencies": [],
       "mutationsRun": 4
     },
@@ -265,12 +265,12 @@
       "ruleId": "components/doc-comments",
       "oracleKind": "construction",
       "matrix": {
-        "tp": 2,
+        "tp": 0,
         "fp": 0,
         "tn": 1,
-        "fn": 0
+        "fn": 2
       },
-      "youdensJ": 1,
+      "youdensJ": 0,
       "metamorphicInconsistencies": [],
       "mutationsRun": 2
     },
@@ -408,12 +408,12 @@
       "ruleId": "tokens/description-coverage",
       "oracleKind": "construction",
       "matrix": {
-        "tp": 1,
+        "tp": 0,
         "fp": 0,
         "tn": 1,
-        "fn": 0
+        "fn": 1
       },
-      "youdensJ": 1,
+      "youdensJ": 0,
       "metamorphicInconsistencies": [],
       "mutationsRun": 1
     },

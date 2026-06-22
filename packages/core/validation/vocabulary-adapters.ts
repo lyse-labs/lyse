@@ -58,87 +58,58 @@ export function makeVocabularyAdapter(spec: VocabularySpec): OracleAdapter {
   };
 }
 
-// For all co-presence rules (AI marker + affordance → info; AI marker alone → warning;
-// no AI marker → no finding), the only valid clean state is NO AI SURFACE.
-// That is the only state that produces zero findings for the rule.
-// A plain button-only file has no AI surface → rule emits nothing.
-const PLAIN_BUTTON_FILE = `export const Button = () => null;`;
-
-// ai-governance/ai-marker-component-present
-// No AI surface → no finding (clean). Add reserved tokens without marker → warning fires.
-// isReservedTokenName("dragon-fruit") = true (unambiguous Carbon vendor signature).
-const AI_MARKER_COMPONENT_RESERVED_TOKENS = JSON.stringify({
-  gradient: { "dragon-fruit": "#ff6b6b" },
-});
-
 const aiMarkerComponentPresentAdapter: OracleAdapter = {
   ruleId: "ai-governance/ai-marker-component-present",
   oracleKind: "construction",
   cleanFixture: () => ({
     "package.json": PKG,
-    "src/Button.tsx": PLAIN_BUTTON_FILE,
+    "src/AILabel.tsx": `export const AILabel = () => null;`,
   }),
   mutations: [
     {
-      name: "add-reserved-tokens-no-marker-should-flag",
+      name: "reserved-tokens-no-marker-should-flag",
       apply: () => ({
         "package.json": PKG,
-        "src/Button.tsx": PLAIN_BUTTON_FILE,
-        "tokens.json": AI_MARKER_COMPONENT_RESERVED_TOKENS,
+        "src/Button.tsx": `export const Button = () => null;`,
+        "tokens.json": JSON.stringify({ gradient: { "dragon-fruit": "#ff6b6b" } }),
       }),
     },
   ],
   metamorphic: [],
 };
 
-// ai-governance/bot-identity-labeling
-// Gate: at least one component file has an AI marker (fileHasAiMarker).
-// Outcomes: AI marker + bot-identity in same file → info (flagged).
-//           AI marker, no bot-identity → warning (flagged).
-//           No AI marker → no finding (NOT flagged) ← clean state.
-// cleanFixture: no AI marker → no finding.
-// mutation: AI marker present, no bot-identity → warning fires.
-// Metamorphic: both mutation variants should flag (both warnings → expectViolation: true).
-const BOT_IDENTITY_BARE_MARKER = `export const AILabel = () => null;`;
-
 const botIdentityAdapter: OracleAdapter = {
   ruleId: "ai-governance/bot-identity-labeling",
   oracleKind: "construction",
   cleanFixture: () => ({
     "package.json": PKG,
-    "src/Chat.tsx": PLAIN_BUTTON_FILE,
+    "src/Chat.tsx": `export const AILabel = () => null;\nexport const AiAvatar = () => null;`,
   }),
   mutations: [
     {
       name: "ai-marker-no-identity-should-flag",
       apply: () => ({
         "package.json": PKG,
-        "src/Chat.tsx": BOT_IDENTITY_BARE_MARKER,
+        "src/Chat.tsx": `export const AILabel = () => null;`,
       }),
     },
   ],
-  // Metamorphic: AiAvatar vs BotAvatar both suppress the warning (but produce info = still flagged).
-  // Since info IS a finding, we cannot use expectViolation: false for the suppressed case.
-  // An honest metamorphic pair for this rule: two bare-marker fixtures that both produce a warning.
   metamorphic: [
     {
-      name: "both-bare-markers-both-flag",
-      a: { "package.json": PKG, "src/Chat.tsx": BOT_IDENTITY_BARE_MARKER },
-      b: { "package.json": PKG, "src/Chat.tsx": `export const AIBadge = () => null;` },
-      expectViolation: true,
+      name: "ailabel-vs-aibadge-both-clean-with-identity",
+      a: { "package.json": PKG, "src/Chat.tsx": `export const AILabel = () => null;\nexport const AiAvatar = () => null;` },
+      b: { "package.json": PKG, "src/Chat.tsx": `export const AIBadge = () => null;\nexport const BotAvatar = () => null;` },
+      expectViolation: false,
     },
   ],
 };
 
-// ai-governance/source-attribution-present
-// Gate: any component file has AI marker. No AI surface → no finding (clean).
-// mutation: AI marker with no attribution → warning fires.
 const sourceAttributionAdapter: OracleAdapter = {
   ruleId: "ai-governance/source-attribution-present",
   oracleKind: "construction",
   cleanFixture: () => ({
     "package.json": PKG,
-    "src/AiAnswer.tsx": PLAIN_BUTTON_FILE,
+    "src/AiAnswer.tsx": `export const AILabel = () => null;\nexport const Citations = () => null;`,
   }),
   mutations: [
     {
@@ -151,24 +122,20 @@ const sourceAttributionAdapter: OracleAdapter = {
   ],
   metamorphic: [
     {
-      // Two bare-AI-marker fixtures both produce a warning (consistent behaviour).
-      name: "both-bare-markers-both-flag",
-      a: { "package.json": PKG, "src/AiAnswer.tsx": `export const AILabel = () => null;` },
-      b: { "package.json": PKG, "src/AiAnswer.tsx": `export const AIBadge = () => null;` },
-      expectViolation: true,
+      name: "citations-vs-provenance-both-clean",
+      a: { "package.json": PKG, "src/AiAnswer.tsx": `export const AILabel = () => null;\nexport const Citations = () => null;` },
+      b: { "package.json": PKG, "src/AiAnswer.tsx": `export const AIBadge = () => null;\nexport const SourceAttribution = () => null;` },
+      expectViolation: false,
     },
   ],
 };
 
-// ai-governance/confidence-indicator-present
-// Gate: any component file has AI marker. No AI surface → no finding (clean).
-// mutation: AI marker with no confidence indicator → warning fires.
 const confidenceIndicatorAdapter: OracleAdapter = {
   ruleId: "ai-governance/confidence-indicator-present",
   oracleKind: "construction",
   cleanFixture: () => ({
     "package.json": PKG,
-    "src/AiOutput.tsx": PLAIN_BUTTON_FILE,
+    "src/AiOutput.tsx": `export const AILabel = () => null;\nexport const ConfidenceBadge = () => null;`,
   }),
   mutations: [
     {
@@ -181,93 +148,82 @@ const confidenceIndicatorAdapter: OracleAdapter = {
   ],
   metamorphic: [
     {
-      name: "both-bare-markers-both-flag",
-      a: { "package.json": PKG, "src/AiOutput.tsx": `export const AILabel = () => null;` },
-      b: { "package.json": PKG, "src/AiOutput.tsx": `export const AIBadge = () => null;` },
-      expectViolation: true,
+      name: "confidence-badge-vs-uncertainty-indicator-both-clean",
+      a: { "package.json": PKG, "src/AiOutput.tsx": `export const AILabel = () => null;\nexport const ConfidenceBadge = () => null;` },
+      b: { "package.json": PKG, "src/AiOutput.tsx": `export const AIBadge = () => null;\nexport const UncertaintyIndicator = () => null;` },
+      expectViolation: false,
     },
   ],
 };
 
-// ai-governance/feedback-control-present
-// Gate: any component file has AI marker. No AI surface → no finding (clean).
-// mutation: AI marker with no feedback control → warning fires.
 const feedbackControlAdapter: OracleAdapter = {
   ruleId: "ai-governance/feedback-control-present",
   oracleKind: "construction",
   cleanFixture: () => ({
     "package.json": PKG,
-    "src/AiFeedback.tsx": PLAIN_BUTTON_FILE,
+    "src/AiReview.tsx": `export const AILabel = () => null;\nexport const ThumbsUp = () => null;`,
   }),
   mutations: [
     {
       name: "ai-marker-no-feedback-should-flag",
       apply: () => ({
         "package.json": PKG,
-        "src/AiFeedback.tsx": `export const AILabel = () => null;`,
+        "src/AiReview.tsx": `export const AILabel = () => null;`,
       }),
     },
   ],
   metamorphic: [
     {
-      name: "both-bare-markers-both-flag",
-      a: { "package.json": PKG, "src/AiFeedback.tsx": `export const AILabel = () => null;` },
-      b: { "package.json": PKG, "src/AiFeedback.tsx": `export const AIBadge = () => null;` },
-      expectViolation: true,
+      name: "thumbs-vs-helpful-both-clean",
+      a: { "package.json": PKG, "src/AiReview.tsx": `export const AILabel = () => null;\nexport const ThumbsUp = () => null;` },
+      b: { "package.json": PKG, "src/AiReview.tsx": `export const AIBadge = () => null;\nexport const WasThisHelpful = () => null;` },
+      expectViolation: false,
     },
   ],
 };
-
-// ai-governance/product-analytics
-// Gate: file has AI marker AND has onAccept/onReject/etc handlers.
-// Rule fires when: AI surface has interaction handler BUT NO analytics.
-// cleanFixture: AILabel + onAccept handler + analytics.track() call → no finding.
-// mutation: remove analytics.track() → warning fires.
-const PRODUCT_ANALYTICS_SURFACE_INSTRUMENTED = `
-export const AILabel = () => null;
-export function AiSuggestion({ onAccept }: { onAccept: () => void }) {
-  return <div onAccept={onAccept} />;
-}
-analytics.track('ai_accepted');
-`.trim();
-
-const PRODUCT_ANALYTICS_SURFACE_BARE = `
-export const AILabel = () => null;
-export function AiSuggestion({ onAccept }: { onAccept: () => void }) {
-  return <div onAccept={onAccept} />;
-}
-`.trim();
 
 const productAnalyticsAdapter: OracleAdapter = {
   ruleId: "ai-governance/product-analytics",
   oracleKind: "construction",
   cleanFixture: () => ({
     "package.json": PKG,
-    "src/AiSuggestion.tsx": PRODUCT_ANALYTICS_SURFACE_INSTRUMENTED,
+    "src/AiSuggestion.tsx": `
+export const AILabel = () => null;
+export function AiSuggestion({ onAccept }: { onAccept: () => void }) {
+  return <div onAccept={onAccept} />;
+}
+analytics.track('ai_accepted');
+`.trim(),
   }),
   mutations: [
     {
       name: "remove-analytics-should-flag",
       apply: () => ({
         "package.json": PKG,
-        "src/AiSuggestion.tsx": PRODUCT_ANALYTICS_SURFACE_BARE,
+        "src/AiSuggestion.tsx": `
+export const AILabel = () => null;
+export function AiSuggestion({ onAccept }: { onAccept: () => void }) {
+  return <div onAccept={onAccept} />;
+}
+`.trim(),
       }),
     },
   ],
   metamorphic: [],
 };
 
-// ai-governance/ai-loading-error-states
-// Gate: hasAiSurface = any component file has an AI marker name (isAiMarkerName).
-// Needs BOTH: (a) named loading state AND (b) AI-specific error state.
-// Clean = no AI surface → no finding.
-// mutation: AI marker + Generating (no AIError) → warning fires for missing AIError.
-const AI_LOADING_BARE_MARKER_WITH_LOADING_ONLY = `
+const AI_LOADING_BOTH_PRESENT = `
+export const AILabel = () => null;
+export const Generating = () => null;
+export const AIError = () => null;
+`.trim();
+
+const AI_LOADING_ONLY = `
 export const AILabel = () => null;
 export const Generating = () => null;
 `.trim();
 
-const AI_LOADING_WITH_ERROR_ONLY = `
+const AI_ERROR_ONLY = `
 export const AILabel = () => null;
 export const AIError = () => null;
 `.trim();
@@ -275,37 +231,39 @@ export const AIError = () => null;
 const aiLoadingErrorStatesAdapter: OracleAdapter = {
   ruleId: "ai-governance/ai-loading-error-states",
   oracleKind: "construction",
-  // clean = no AI surface → no finding
   cleanFixture: () => ({
     "package.json": PKG,
-    "src/AiStates.tsx": PLAIN_BUTTON_FILE,
+    "src/AiStates.tsx": AI_LOADING_BOTH_PRESENT,
   }),
   mutations: [
     {
-      // AI marker + loading only (no error state) → warning fires for missing AIError
       name: "ai-marker-with-loading-no-error-should-flag",
       apply: () => ({
         "package.json": PKG,
-        "src/AiStates.tsx": AI_LOADING_BARE_MARKER_WITH_LOADING_ONLY,
+        "src/AiStates.tsx": AI_LOADING_ONLY,
       }),
     },
   ],
   metamorphic: [
     {
-      // Both loading-only and error-only variants produce warnings (different missing affordances).
-      // Both violate (both missing one of the two required affordances).
       name: "loading-only-and-error-only-both-flag",
-      a: { "package.json": PKG, "src/AiStates.tsx": AI_LOADING_BARE_MARKER_WITH_LOADING_ONLY },
-      b: { "package.json": PKG, "src/AiStates.tsx": AI_LOADING_WITH_ERROR_ONLY },
+      a: { "package.json": PKG, "src/AiStates.tsx": AI_LOADING_ONLY },
+      b: { "package.json": PKG, "src/AiStates.tsx": AI_ERROR_ONLY },
       expectViolation: true,
     },
   ],
 };
 
-// ai-governance/ai-content-live-region
-// Gate: detectAiOutputSurface = file has AI marker tag, AIResponse/ChatMessage, or isStreaming/isGenerating.
-// Proximity: live-region must WRAP the AI output (appear before it in same return slot).
-// Clean = no AI surface → no finding. mutation: <AILabel/> tag without live region → warning fires.
+const LIVE_REGION_COMPLIANT = `
+export function AiAnswer() {
+  return (
+    <div role="status">
+      <AILabel />
+    </div>
+  );
+}
+`.trim();
+
 const LIVE_REGION_MISSING_AILABEL = `
 export function AiAnswer() {
   return (
@@ -329,10 +287,9 @@ export function AiAnswer() {
 const aiContentLiveRegionAdapter: OracleAdapter = {
   ruleId: "ai-governance/ai-content-live-region",
   oracleKind: "construction",
-  // clean = no AI surface → no finding
   cleanFixture: () => ({
     "package.json": PKG,
-    "src/AiAnswer.tsx": PLAIN_BUTTON_FILE,
+    "src/AiAnswer.tsx": LIVE_REGION_COMPLIANT,
   }),
   mutations: [
     {
@@ -345,8 +302,7 @@ const aiContentLiveRegionAdapter: OracleAdapter = {
   ],
   metamorphic: [
     {
-      // AILabel and AIBadge both trigger the AI-output-surface gate → both produce warnings.
-      name: "ailabel-and-aibadge-both-flag",
+      name: "ailabel-and-aibadge-both-flag-without-live-region",
       a: { "package.json": PKG, "src/AiAnswer.tsx": LIVE_REGION_MISSING_AILABEL },
       b: { "package.json": PKG, "src/AiAnswer.tsx": LIVE_REGION_MISSING_AIBADGE },
       expectViolation: true,
@@ -354,76 +310,36 @@ const aiContentLiveRegionAdapter: OracleAdapter = {
   ],
 };
 
-// ai-governance/value-gate-doc-present
-// Gate: hasAiSurface = scanForMarkerComponents OR detectReservedAiTokens.
-// Clean = no AI surface → no finding. mutation: AILabel + no AI_GOVERNANCE.md → warning fires.
-const valueGateDocAdapter: OracleAdapter = {
+const VALUE_GATE_DOC_CONTENT = `# AI Value Gate
+
+- [ ] Is AI needed for this feature?
+- [ ] Is AI the right tool?
+- [ ] What is the deterministic fallback?
+`;
+
+const valueGateDocAdapter: OracleAdapter = makeVocabularyAdapter({
   ruleId: "ai-governance/value-gate-doc-present",
-  oracleKind: "construction",
-  cleanFixture: () => ({
-    "package.json": PKG,
-    "src/Button.tsx": PLAIN_BUTTON_FILE,
-  }),
-  mutations: [
-    {
-      name: "ai-surface-no-gate-doc-should-flag",
-      apply: () => ({
-        "package.json": PKG,
-        "src/AILabel.tsx": `export const AILabel = () => null;`,
-      }),
-    },
-  ],
-  metamorphic: [
-    {
-      // Reserved tokens alone also trigger the gate → both flag without the doc.
-      name: "marker-component-and-reserved-tokens-both-flag",
-      a: {
-        "package.json": PKG,
-        "src/AILabel.tsx": `export const AILabel = () => null;`,
-      },
-      b: {
-        "package.json": PKG,
-        "src/Button.tsx": PLAIN_BUTTON_FILE,
-        "tokens.json": JSON.stringify({ gradient: { "dragon-fruit": "#ff6b6b" } }),
-      },
-      expectViolation: true,
-    },
-  ],
-};
+  aiSurface: `export const AILabel = () => null;`,
+  affordanceSnippet: VALUE_GATE_DOC_CONTENT,
+  affordanceFile: "AI_GOVERNANCE.md",
+});
 
-// ai-governance/interaction-pattern-docs
-// Gate: any component file has AI marker (fileHasAiMarker).
-// Clean = no AI surface → no finding. mutation: AILabel + no .md pattern docs → warning fires.
-const interactionPatternDocsAdapter: OracleAdapter = {
+const INTERACTION_PATTERN_DOC_CONTENT = `# AI Assistant Patterns
+
+## Suggestions
+How AI suggestion UI works.
+
+## Generation
+How AI content generation works.
+`;
+
+const interactionPatternDocsAdapter: OracleAdapter = makeVocabularyAdapter({
   ruleId: "ai-governance/interaction-pattern-docs",
-  oracleKind: "construction",
-  cleanFixture: () => ({
-    "package.json": PKG,
-    "src/Button.tsx": PLAIN_BUTTON_FILE,
-  }),
-  mutations: [
-    {
-      name: "ai-surface-no-pattern-docs-should-flag",
-      apply: () => ({
-        "package.json": PKG,
-        "src/AILabel.tsx": `export const AILabel = () => null;`,
-      }),
-    },
-  ],
-  metamorphic: [
-    {
-      // AILabel and AIBadge both trigger the gate → both warn without pattern docs.
-      name: "ailabel-and-aibadge-both-flag",
-      a: { "package.json": PKG, "src/AILabel.tsx": `export const AILabel = () => null;` },
-      b: { "package.json": PKG, "src/AIBadge.tsx": `export const AIBadge = () => null;` },
-      expectViolation: true,
-    },
-  ],
-};
+  aiSurface: `export const AILabel = () => null;`,
+  affordanceSnippet: INTERACTION_PATTERN_DOC_CONTENT,
+  affordanceFile: "docs/ai-patterns.md",
+});
 
-// ai-governance/ai-tokens-reserved
-// No reserved tokens → no finding (clean). Add reserved tokens → info fires.
-// isReservedTokenName("dragon-fruit") = true (unambiguous Carbon vendor signature).
 const AI_TOKENS_RESERVED_TOKENS_JSON = JSON.stringify({
   gradient: { "dragon-fruit": "#ff6b6b" },
 });
@@ -447,11 +363,6 @@ const aiTokensReservedAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
-// ai-governance/ai-token-misuse
-// Rule fires when reserved AI tokens are USED in a NON-AI-context file.
-// AI context: (1) has AI marker, (2) AI-named path, or (3) defines reserved tokens.
-// cleanFixture: AILabel export + var(--ai-aura-start) → AI context, no finding.
-// mutation: remove AILabel → non-AI context using reserved token → warning fires.
 const AI_TOKEN_MISUSE_SURFACE_WITH_MARKER = `
 export const AILabel = () => null;
 export const Panel = () => <div style={{ background: 'var(--ai-aura-start)' }} />;
@@ -480,10 +391,18 @@ const aiTokenMisuseAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
-// ai-governance/disclaimer-present
-// Per-file: detectAiMarkerInSource checks JSX TAGS (<AILabel>) not exported names.
-// Gate: file has an AI marker tag. Clean = no AI marker JSX tag → no finding.
-// mutation: <AILabel/> JSX tag with no disclaimer → warning fires.
+const DISCLAIMER_COMPLIANT = `
+export function AISummary() {
+  return (
+    <div>
+      <AILabel />
+      <p>Some content here.</p>
+      <p>AI-generated content may be inaccurate. Always check important information.</p>
+    </div>
+  );
+}
+`.trim();
+
 const DISCLAIMER_BARE_AILABEL = `
 export function AISummary() {
   return (
@@ -509,10 +428,9 @@ export function AISummary() {
 const disclaimerPresentAdapter: OracleAdapter = {
   ruleId: "ai-governance/disclaimer-present",
   oracleKind: "construction",
-  // clean = no AI marker JSX tag → no finding
   cleanFixture: () => ({
     "package.json": PKG,
-    "src/AISummary.tsx": PLAIN_BUTTON_FILE,
+    "src/AISummary.tsx": DISCLAIMER_COMPLIANT,
   }),
   mutations: [
     {
@@ -525,8 +443,7 @@ const disclaimerPresentAdapter: OracleAdapter = {
   ],
   metamorphic: [
     {
-      // AILabel and AIBadge JSX tags both trigger the gate → both warn without disclaimer.
-      name: "ailabel-and-aibadge-both-flag",
+      name: "ailabel-and-aibadge-both-flag-without-disclaimer",
       a: { "package.json": PKG, "src/AISummary.tsx": DISCLAIMER_BARE_AILABEL },
       b: { "package.json": PKG, "src/AISummary.tsx": DISCLAIMER_BARE_AIBADGE },
       expectViolation: true,
@@ -534,11 +451,6 @@ const disclaimerPresentAdapter: OracleAdapter = {
   ],
 };
 
-// ai-governance/ai-marker-anti-patterns
-// Anti-pattern A (sparkle-only): fires when sparkle + AI context (exported AI marker name) + no AI-marker TAG.
-// cleanFixture: sparkle + <AILabel/> JSX tag → detectSparkleOnlyMarker = false (tag suppresses it).
-// mutation: remove <AILabel/> tag but keep export + sparkle → sparkle-only anti-pattern fires.
-// Metamorphic: AILabel tag vs AIBadge tag — both suppress the sparkle warning (expectViolation: false).
 const ANTI_PATTERN_CLEAN_WITH_AILABEL_TAG = `
 export const AILabel = () => null;
 export function SparkleAI() {
@@ -563,7 +475,6 @@ export function SparkleAI() {
 }
 `.trim();
 
-// Export AILabel (context) + sparkle + no AI-marker JSX tag → fires.
 const ANTI_PATTERN_FLAGGED = `
 export const AILabel = () => null;
 export function SparkleOnly() {
@@ -589,7 +500,6 @@ const aiMarkerAntiPatternsAdapter: OracleAdapter = {
   ],
   metamorphic: [
     {
-      // AILabel tag vs AIBadge tag — both suppress sparkle anti-pattern (both clean, not flagged).
       name: "ailabel-tag-vs-aibadge-tag-both-clean",
       a: { "package.json": PKG, "src/SparkleAI.tsx": ANTI_PATTERN_CLEAN_WITH_AILABEL_TAG },
       b: { "package.json": PKG, "src/SparkleAI.tsx": ANTI_PATTERN_CLEAN_WITH_AIBADGE_TAG },
