@@ -9,6 +9,8 @@ import { buildComponentInventory } from "./loaders/components.js";
 import { renderJson } from "./reporters/json.js";
 import { renderSarif } from "./reporters/sarif.js";
 import { renderHtml } from "./reporters/html.js";
+import { renderTsv } from "./reporters/tsv.js";
+import { renderTable } from "./reporters/table.js";
 import { renderTerminal } from "./reporters/terminal.js";
 import { formatCoverageFooter } from "./reporters/coverage-footer.js";
 import { renderAgentsMd } from "./reporters/markdown.js";
@@ -184,7 +186,7 @@ const auditCommand = defineCommand({
   args: {
     root: { type: "positional", required: false, default: ".", description: "repository root (defaults to current working directory)" },
     output: { type: "string", description: "output directory (default: stdout)" },
-    format: { type: "string", description: "json | text | eslint | legacy | sarif | html (default: text → ESLint-style for tty, json otherwise)" },
+    format: { type: "string", description: "json | text | table | tsv | eslint | legacy | sarif | html (default: text for tty, json otherwise)" },
     "include-timestamps": { type: "boolean", default: false, description: "include timestamp in JSON output (breaks determinism)" },
     quiet: { type: "boolean", default: false, description: "suppress all stdout except score" },
     verbose: { type: "boolean", default: false, description: "show all findings (default: top 5)" },
@@ -320,7 +322,7 @@ const auditCommand = defineCommand({
     const formatForSpinner = args.format ?? (isTTYForSpinner ? "text" : "json");
     const isQuiet = args.quiet === true;
     const isMachineFormatForSpinner =
-      formatForSpinner === "json" || formatForSpinner === "sarif" || formatForSpinner === "html";
+      formatForSpinner === "json" || formatForSpinner === "sarif" || formatForSpinner === "html" || formatForSpinner === "tsv";
 
     let result: AuditResult, fileCount: number, hasTokenRegistry: boolean;
     let tokens: AuditOutcome["tokens"], config: AuditOutcome["config"];
@@ -396,7 +398,7 @@ const auditCommand = defineCommand({
     //                 pass --limit=N to truncate.
     let textFindingsLimit: number | null | undefined;
     try {
-      textFindingsLimit = resolveLimit(args, format === "eslint" ? null : undefined);
+      textFindingsLimit = resolveLimit(args, format === "eslint" || format === "table" ? null : undefined);
     } catch (err) {
       console.error(`[lyse] ${(err as Error).message}`);
       process.exit(64); // EX_USAGE
@@ -420,16 +422,28 @@ const auditCommand = defineCommand({
       } else {
         process.stdout.write(htmlContent);
       }
+    } else if (format === "tsv") {
+      const tsvContent = renderTsv(result);
+      if (args.output) {
+        const outDir = resolve(args.output);
+        mkdirSync(outDir, { recursive: true });
+        writeFileSync(join(outDir, "lyse.tsv"), tsvContent);
+      } else {
+        process.stdout.write(tsvContent);
+      }
     } else {
       const jsonContent = renderJson(result, { includeTimestamp: !!args["include-timestamps"] });
 
-      const isTextFormat = format === "text" || format === "eslint" || format === "legacy";
+      const isTextFormat = format === "text" || format === "eslint" || format === "legacy" || format === "table";
 
       const renderTextForStdout = async (): Promise<string> => {
         if (format === "eslint") {
           return renderEslintStyleAudit(result, textFindingsLimit) + "\n";
         }
         const opts = computeTerminalOpts(args, isTTY, fileCount, Date.now() - startTime, repoRoot, hasTokenRegistry, textFindingsLimit);
+        if (format === "table") {
+          return renderTable(result, opts) + "\n";
+        }
         return (await renderTerminal(result, opts)) + "\n";
       };
 
@@ -456,7 +470,7 @@ const auditCommand = defineCommand({
     // Skip when: --quiet, non-TTY / CI, --format=json|sarif (machine output),
     // --no-prompt (refuse prompts), --yes (accept defaults — auto-skip prompts).
     // ---------------------------------------------------------------------------
-    const isMachineFormat = format === "json" || format === "sarif";
+    const isMachineFormat = format === "json" || format === "sarif" || format === "tsv";
     const promptsAllowed =
       !args.quiet &&
       !isMachineFormat &&
