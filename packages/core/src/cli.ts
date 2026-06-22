@@ -80,8 +80,8 @@ function computeTerminalOpts(
 
 // ---------------------------------------------------------------------------
 // ESLint-style text renderer — problems first, score gauge in the footer.
-// Spec § 9 + T31: defaults to ESLint-style; --format=legacy restores the older
-// gauge-first terminal layout from reporters/terminal.ts.
+// Opt-in via --format=eslint; the default text view is the gauge-first doctor
+// layout from reporters/terminal.ts (also reachable as --format=legacy).
 // ---------------------------------------------------------------------------
 
 function renderEslintStyleAudit(result: AuditResult, limit: number | null | undefined): string {

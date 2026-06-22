@@ -92,7 +92,7 @@ describe("renderTerminal (plain-text mode for snapshot stability)", () => {
     expect(out).not.toMatch(/\x1b\[/);
   });
 
-  it("uses plain ASCII (#-*) when unicode=false", async () => {
+  it("uses plain ASCII (#-o) when unicode=false", async () => {
     const out = await renderTerminal(sample, baseOpts);
     expect(out).not.toContain("█");
     expect(out).not.toContain("░");
