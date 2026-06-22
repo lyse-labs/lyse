@@ -103,8 +103,6 @@ export interface RuleContext {
    * (opportunities 0) when this is undefined.
    */
   rendered?: import("./render/types.js").ComputedTokenReading[];
-  /** Source token CSS the rendered readings were computed from (render mode only). */
-  renderedSourceCss?: string;
   /**
    * DTCG canonical token map (path → resolved value) built from the design
    * system's tokens.json. Present only when `lyse audit --render` loaded a

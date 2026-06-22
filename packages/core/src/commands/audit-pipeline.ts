@@ -38,9 +38,11 @@ import { runLayer4Stage } from "../llm/layer4-stage.js";
 import { runFilterStage } from "../llm/filter-stage.js";
 import { isSuppressed } from "../suppression/inline.js";
 import { loadLyseIgnore } from "../suppression/lyseignore.js";
+import fg from "fast-glob";
 import { withChromium, chromiumVersion } from "../render/browser.js";
 import { buildTokenSourceMap, detectModeSelectors } from "../render/token-source-map.js";
 import { probeComputedTokens } from "../render/token-probe.js";
+import { buildDtcgCanonicalMap } from "../render/dtcg-canonical-map.js";
 import { RenderUnavailableError } from "../render/types.js";
 import type { RenderMeta } from "../render/types.js";
 import type {
@@ -340,25 +342,39 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   let renderMeta: RenderMeta | undefined;
   if (flags?.render) {
     flags.progress?.update("Rendering token layer…");
-    const tokenCss = collectTokenCss(parsed);
-    if (tokenCss.length > 0) {
-      const tokens = [...buildTokenSourceMap(tokenCss).keys()];
-      const modes = detectModeSelectors(tokenCss);
-      try {
-        const version = await chromiumVersion();
-        const readings = await withChromium((page) => probeComputedTokens(page, tokenCss, tokens, modes));
-        ctx.rendered = readings;
-        ctx.renderedSourceCss = tokenCss;
-        renderMeta = { chromiumVersion: version, skippedNonCanonicalizable: 0 };
-      } catch (e) {
-        renderMeta = {
-          chromiumVersion: "n/a",
-          skippedNonCanonicalizable: 0,
-          error: e instanceof RenderUnavailableError ? e.message : String(e),
-        };
-      }
+    const dtcgFiles = await fg(["**/*.tokens.json"], {
+      cwd: absoluteRoot,
+      absolute: true,
+      ignore: ["**/node_modules/**"],
+    });
+    if (dtcgFiles.length === 0) {
+      renderMeta = { chromiumVersion: "n/a", skippedNonCanonicalizable: 0, error: "no DTCG token source" };
     } else {
-      renderMeta = { chromiumVersion: "n/a", skippedNonCanonicalizable: 0 };
+      let dtcgJson: unknown = null;
+      for (const f of dtcgFiles) {
+        try { dtcgJson = JSON.parse(readFileSync(f, "utf8")); break; } catch { /* skip malformed */ }
+      }
+      if (dtcgJson === null) {
+        renderMeta = { chromiumVersion: "n/a", skippedNonCanonicalizable: 0, error: "no DTCG token source" };
+      } else {
+        const canonical = buildDtcgCanonicalMap(dtcgJson);
+        const tokenCss = collectTokenCss(parsed);
+        const tokenKeys = [...buildTokenSourceMap(tokenCss).keys()];
+        const modes = detectModeSelectors(tokenCss);
+        try {
+          const version = await chromiumVersion();
+          const readings = await withChromium((page) => probeComputedTokens(page, tokenCss, tokenKeys, modes));
+          ctx.rendered = readings;
+          ctx.canonicalTokens = canonical;
+          renderMeta = { chromiumVersion: version, skippedNonCanonicalizable: 0 };
+        } catch (e) {
+          renderMeta = {
+            chromiumVersion: "n/a",
+            skippedNonCanonicalizable: 0,
+            error: e instanceof RenderUnavailableError ? e.message : String(e),
+          };
+        }
+      }
     }
   }
 
