@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { evaluateAdapter } from "../../validation/run-adapter.js";
 import {
   dtcgConformanceAdapter,
-  descriptionCoverageAdapter,
   deprecatedTokenUsageAdapter,
   themeModesAdapter,
   cssCustomPropertyExportAdapter,
@@ -14,12 +13,6 @@ import { mediaQueryAdapter } from "../../validation/adapters/tokens-no-hardcoded
 describe("tokens structural adapters end-to-end", () => {
   it("dtcg-conformance: clean passes, injected violations caught (fn=0, fp=0)", async () => {
     const score = await evaluateAdapter(dtcgConformanceAdapter);
-    expect(score.matrix.fn).toBe(0);
-    expect(score.matrix.fp).toBe(0);
-  }, 60_000);
-
-  it("description-coverage: clean passes, missing descriptions caught (fn=0, fp=0)", async () => {
-    const score = await evaluateAdapter(descriptionCoverageAdapter);
     expect(score.matrix.fn).toBe(0);
     expect(score.matrix.fp).toBe(0);
   }, 60_000);

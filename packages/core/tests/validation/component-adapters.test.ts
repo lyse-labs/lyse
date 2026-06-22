@@ -34,12 +34,3 @@ describe("stories/coverage adapter", () => {
   }, 60_000);
 });
 
-describe("components/doc-comments adapter", () => {
-  it("catches exported components without JSDoc (fn=0) and does not flag documented components (fp=0)", async () => {
-    const adapter = adapterMap.get("components/doc-comments")!;
-    const score = await evaluateAdapter(adapter);
-    expect(score.matrix.fn).toBe(0);
-    expect(score.matrix.fp).toBe(0);
-    expect(score.youdensJ).toBe(1);
-  }, 60_000);
-});

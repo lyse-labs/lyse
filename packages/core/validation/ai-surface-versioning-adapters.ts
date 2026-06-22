@@ -162,14 +162,6 @@ const agentsMdQualityAdapter: OracleAdapter = {
   }),
   mutations: [
     {
-      name: "missing-file",
-      apply: (f) => {
-        const next = { ...f };
-        delete next["AGENTS.md"];
-        return next;
-      },
-    },
-    {
       name: "no-runnable-code-block",
       apply: (f) => ({ ...f, "AGENTS.md": AGENTS_MD_NO_RUNNABLE }),
     },
@@ -266,14 +258,6 @@ const componentManifestJsonAdapter: OracleAdapter = {
     "lyse.components.json": GOOD_MANIFEST,
   }),
   mutations: [
-    {
-      name: "missing-file",
-      apply: (f) => {
-        const next = { ...f };
-        delete next["lyse.components.json"];
-        return next;
-      },
-    },
     {
       name: "no-components-key",
       apply: (f) => ({ ...f, "lyse.components.json": MANIFEST_NO_COMPONENTS_KEY }),

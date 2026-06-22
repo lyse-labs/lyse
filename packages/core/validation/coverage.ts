@@ -21,6 +21,11 @@ export const ADDRESSABLE_PENDING: Record<string, string> = {
 
   // Axis R — AI token governance (cross-file AST tracer is recall-failing; injectable only when tracer improved)
   "ai-governance/ai-token-requires-marker": "construction: AST cross-file — recall-failing, needs improved tracer",
+
+  // Info-only rules — severity is intentionally informational; no warning/error path exists, so oracle TPs
+  // are structurally impossible with the current severity-aware probe (ruleFlagged counts error/warning only).
+  "tokens/description-coverage": "construction: info-only rule — absence of $description emits info, not warning; cannot produce oracle TPs",
+  "components/doc-comments": "construction: info-only rule — missing JSDoc emits info, not warning; cannot produce oracle TPs",
 };
 
 /**

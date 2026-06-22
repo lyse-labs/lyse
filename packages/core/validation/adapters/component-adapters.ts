@@ -402,7 +402,6 @@ export const componentAdapters: OracleAdapter[] = [
   iconDecorativeAriaAdapter,
   noIconFontsAdapter,
   noNativeShadowsAdapter,
-  docCommentsAdapter,
   namingPascalCaseAdapter,
   namingHookPrefixAdapter,
   storiesCoverageAdapter,

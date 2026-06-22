@@ -235,7 +235,6 @@ export const containerQueryAdapter: OracleAdapter = {
 
 export const tokensStructuralAdapters = [
   dtcgConformanceAdapter,
-  descriptionCoverageAdapter,
   deprecatedTokenUsageAdapter,
   themeModesAdapter,
   cssCustomPropertyExportAdapter,

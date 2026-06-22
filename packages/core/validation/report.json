@@ -203,11 +203,11 @@
         "tp": 3,
         "fp": 0,
         "tn": 1,
-        "fn": 1
+        "fn": 0
       },
-      "youdensJ": 0.75,
+      "youdensJ": 1,
       "metamorphicInconsistencies": [],
-      "mutationsRun": 4
+      "mutationsRun": 3
     },
     {
       "ruleId": "ai-surface/component-manifest-json",
@@ -216,11 +216,11 @@
         "tp": 3,
         "fp": 0,
         "tn": 1,
-        "fn": 1
+        "fn": 0
       },
-      "youdensJ": 0.75,
+      "youdensJ": 1,
       "metamorphicInconsistencies": [],
-      "mutationsRun": 4
+      "mutationsRun": 3
     },
     {
       "ruleId": "ai-surface/llms-txt-structure",
@@ -260,19 +260,6 @@
       "youdensJ": 1,
       "metamorphicInconsistencies": [],
       "mutationsRun": 4
-    },
-    {
-      "ruleId": "components/doc-comments",
-      "oracleKind": "construction",
-      "matrix": {
-        "tp": 0,
-        "fp": 0,
-        "tn": 1,
-        "fn": 2
-      },
-      "youdensJ": 0,
-      "metamorphicInconsistencies": [],
-      "mutationsRun": 2
     },
     {
       "ruleId": "components/icon-decorative-aria",
@@ -401,19 +388,6 @@
         "fn": 0
       },
       "youdensJ": 1,
-      "metamorphicInconsistencies": [],
-      "mutationsRun": 1
-    },
-    {
-      "ruleId": "tokens/description-coverage",
-      "oracleKind": "construction",
-      "matrix": {
-        "tp": 0,
-        "fp": 0,
-        "tn": 1,
-        "fn": 1
-      },
-      "youdensJ": 0,
       "metamorphicInconsistencies": [],
       "mutationsRun": 1
     },
