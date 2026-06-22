@@ -80,6 +80,110 @@
       "mutationsRun": 4
     },
     {
+      "ruleId": "components/doc-comments",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "components/icon-decorative-aria",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "components/no-icon-fonts",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 3,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 3
+    },
+    {
+      "ruleId": "components/no-native-shadows",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "components/svg-viewbox",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "naming/component-pascalcase",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "naming/hook-prefix",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "stories/coverage",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
       "ruleId": "tokens/container-query",
       "oracleKind": "construction",
       "matrix": {

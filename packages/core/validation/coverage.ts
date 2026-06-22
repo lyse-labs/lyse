@@ -16,20 +16,6 @@ export const ADDRESSABLE_PENDING: Record<string, string> = {
   "a11y/focus-visible": "construction: :focus-visible CSS selector injection",
   "a11y/inclusive-language": "construction: banned-word vocabulary injection",
 
-  // Axis D — Components / API quality
-  "components/doc-comments": "construction: JSDoc comment presence injection",
-  "components/svg-viewbox": "construction: SVG viewBox attribute injection",
-  "components/icon-decorative-aria": "construction: aria-hidden on decorative icon injection",
-  "components/no-icon-fonts": "construction: icon-font class usage injection",
-  "components/no-native-shadows": "construction: CSS box-shadow on native element injection",
-
-  // Axis E — Documentation / Stories
-  "stories/coverage": "construction: story file presence cross-reference injection",
-
-  // Naming
-  "naming/component-pascalcase": "construction: component filename casing injection",
-  "naming/hook-prefix": "construction: hook filename prefix injection",
-
   // Axis L — AI-readiness surface (ds-index-exported requires ctx.componentsModule — not injectable from fixtures)
   "ai-surface/ds-index-exported": "construction: design-system index export file injection — blocked: needs ctx.componentsModule workspace config",
 
