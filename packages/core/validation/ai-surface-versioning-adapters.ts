@@ -5,12 +5,6 @@ const PKG_SEMVER = JSON.stringify({ name: "fx-ai-surface", version: "1.2.0" });
 const PKG_NO_VERSION = JSON.stringify({ name: "fx-ai-surface" });
 const PKG_BAD_VERSION = JSON.stringify({ name: "fx-ai-surface", version: "latest" });
 
-// ---------------------------------------------------------------------------
-// versioning/semver-versioning
-// Rule fires when no package.json (root or workspace) carries a valid-semver
-// version field.
-// ---------------------------------------------------------------------------
-
 const semverVersioningAdapter: OracleAdapter = {
   ruleId: "versioning/semver-versioning",
   oracleKind: "construction",
@@ -28,11 +22,6 @@ const semverVersioningAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
-// ---------------------------------------------------------------------------
-// versioning/migration-guide-present
-// Rule fires when no MIGRATION.md / UPGRADING.md / migration heading exists.
-// ---------------------------------------------------------------------------
-
 const GOOD_MIGRATION_MD = "# Migration Guide\n\n## v2 → v3\n\nChange `Button` to `NewButton`.\n";
 
 const migrationGuidePresentAdapter: OracleAdapter = makePresenceAdapter({
@@ -40,13 +29,6 @@ const migrationGuidePresentAdapter: OracleAdapter = makePresenceAdapter({
   requiredPath: "MIGRATION.md",
   goodContent: GOOD_MIGRATION_MD,
 });
-
-// ---------------------------------------------------------------------------
-// versioning/deprecation-markers
-// Rule scans .ts files for bare @deprecated tags (no guidance).
-// Clean = @deprecated with inline description → no flag.
-// Mutations = bare @deprecated → flags.
-// ---------------------------------------------------------------------------
 
 const GOOD_DEPRECATED_TS = [
   "/** @deprecated Use {@link NewButton} instead. */",
@@ -87,15 +69,6 @@ const deprecationMarkersAdapter: OracleAdapter = {
   ],
   metamorphic: [],
 };
-
-// ---------------------------------------------------------------------------
-// ai-surface/agents-md-quality
-// Rule checks AGENTS.md for:
-//   1. fenced code block with runnable command
-//   2. exit code reference
-//   3. toolchain config file reference
-// Clean = all three present. Each mutation removes one signal.
-// ---------------------------------------------------------------------------
 
 const GOOD_AGENTS_MD = [
   "# Dev Setup",
@@ -177,12 +150,6 @@ const agentsMdQualityAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
-// ---------------------------------------------------------------------------
-// ai-surface/mcp-config-present
-// Rule fires when no .mcp.json / .cursor/mcp.json / claude_desktop_config.json
-// exists, or when the file is malformed.
-// ---------------------------------------------------------------------------
-
 const GOOD_MCP_JSON = JSON.stringify({
   mcpServers: {
     lyse: { command: "npx", args: ["@lyse-labs/lyse", "mcp"] },
@@ -229,12 +196,6 @@ const mcpConfigPresentAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
-// ---------------------------------------------------------------------------
-// ai-surface/component-manifest-json
-// Rule fires when no components.json / lyse.components.json is found,
-// or when the manifest is malformed.
-// ---------------------------------------------------------------------------
-
 const GOOD_MANIFEST = JSON.stringify({
   components: [
     { name: "Button", sourceFile: "src/button.tsx" },
@@ -273,14 +234,6 @@ const componentManifestJsonAdapter: OracleAdapter = {
   ],
   metamorphic: [],
 };
-
-// ---------------------------------------------------------------------------
-// ai-surface/shadcn-registry-valid
-// Rule fires when:
-//   (a) components.json present but no registry.json → warning
-//   (b) registry.json present but malformed → error
-// Clean = valid registry.json (single item shape) + shadcn marker.
-// ---------------------------------------------------------------------------
 
 const SHADCN_COMPONENTS_JSON = JSON.stringify({
   $schema: "https://ui.shadcn.com/schema.json",
@@ -342,13 +295,6 @@ const shadcnRegistryValidAdapter: OracleAdapter = {
   ],
   metamorphic: [],
 };
-
-// ---------------------------------------------------------------------------
-// ai-surface/agent-instruction-files
-// Rule fires when neither .cursor/rules/*.mdc nor .claude/skills/*/SKILL.md
-// is present, or when found files have invalid frontmatter.
-// Clean = valid .cursor/rules/style-guide.mdc with description + globs.
-// ---------------------------------------------------------------------------
 
 const GOOD_CURSOR_RULE = [
   "---",

@@ -28,9 +28,6 @@ export function makePresenceAdapter(spec: PresenceSpec): OracleAdapter {
   };
 }
 
-// Each entry verified against registry.ts and the rule's source before inclusion.
-// requiredPath must be a filename the rule actually checks; goodContent must
-// satisfy the rule's structured-content check (not just file presence).
 export const presenceAdapters: OracleAdapter[] = [
   makePresenceAdapter({
     ruleId: "versioning/changelog-present",

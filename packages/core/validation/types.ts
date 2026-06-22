@@ -1,6 +1,5 @@
 export type OracleKind = "construction" | "metamorphic" | "cross-tool";
 
-/** A map of repo-relative file path → file content. */
 export type FixtureFiles = Record<string, string>;
 
 /**

@@ -26,7 +26,6 @@ describe("evaluateAdapter", () => {
     expect(score.matrix).toEqual({ tp: 1, fp: 0, tn: 1, fn: 0 });
     expect(score.youdensJ).toBe(1);
     expect(score.mutationsRun).toBe(1);
-    // 'broken' pair expects BOTH to flag (expectViolation:true) but b uses var → b not flagged → inconsistency.
     expect(score.metamorphicInconsistencies.map((i) => i.pair)).toEqual(["broken"]);
   });
 });

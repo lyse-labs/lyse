@@ -34,11 +34,9 @@ export function makeVocabularyAdapter(spec: VocabularySpec): OracleAdapter {
   return {
     ruleId: spec.ruleId,
     oracleKind: "metamorphic",
-    // clean = affordance present → rule does NOT flag (negative, correct)
     cleanFixture: withAffordance,
     mutations: [
       {
-        // remove the affordance → rule SHOULD flag (positive, correct)
         name: "remove-affordance-should-flag",
         apply: (f) => {
           const { [spec.affordanceFile]: _removed, ...rest } = f;
@@ -48,7 +46,6 @@ export function makeVocabularyAdapter(spec: VocabularySpec): OracleAdapter {
     ],
     metamorphic: [
       {
-        // Two fixtures that both carry the affordance must both be clean (not flagged).
         name: "affordance-present-both-clean",
         a: withAffordance(),
         b: withAffordance(),

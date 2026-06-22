@@ -4,10 +4,10 @@ import { fileURLToPath } from "node:url";
 import { VERSION } from "../src/index.js";
 import { evaluateAdapter } from "./run-adapter.js";
 import { adapters as allAdapters } from "./adapters/index.js";
-import type { OracleAdapter, EngineReport } from "./types.js";
+import type { OracleAdapter, EngineReport, RuleScore } from "./types.js";
 
 export async function runAll(list: OracleAdapter[] = allAdapters): Promise<EngineReport> {
-  const scores = [];
+  const scores: RuleScore[] = [];
   for (const adapter of list) {
     scores.push(await evaluateAdapter(adapter));
   }

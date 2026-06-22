@@ -1,9 +1,5 @@
 import type { OracleAdapter, FixtureFiles } from "../types.js";
 
-// ---------------------------------------------------------------------------
-// Shared constants
-// ---------------------------------------------------------------------------
-
 const PKG_SIMPLE = JSON.stringify({ name: "fx-components", version: "1.0.0" });
 
 // Package that looks like a consumer-of-DS app (has @acme/ui in deps).
@@ -20,11 +16,6 @@ const PKG_LIB = JSON.stringify({
   version: "1.0.0",
   main: "src/index.tsx",
 });
-
-// ---------------------------------------------------------------------------
-// components/svg-viewbox
-// Fires on any inline <svg> in a .tsx file that lacks a viewBox attribute.
-// ---------------------------------------------------------------------------
 
 const svgViewboxAdapter: OracleAdapter = {
   ruleId: "components/svg-viewbox",
@@ -65,12 +56,6 @@ const svgViewboxAdapter: OracleAdapter = {
   ],
 };
 
-// ---------------------------------------------------------------------------
-// components/icon-decorative-aria
-// Fires on <svg> in .tsx files without aria-hidden / role / aria-label /
-// aria-labelledby and without a <title> child.
-// ---------------------------------------------------------------------------
-
 const iconDecorativeAriaAdapter: OracleAdapter = {
   ruleId: "components/icon-decorative-aria",
   oracleKind: "construction",
@@ -96,12 +81,6 @@ const iconDecorativeAriaAdapter: OracleAdapter = {
   ],
   metamorphic: [],
 };
-
-// ---------------------------------------------------------------------------
-// components/no-icon-fonts
-// Fires when any of: icon-font in package.json deps, icon-font @font-face in CSS,
-// or icon-font ligature class in source. Uses a single repo-level opportunity.
-// ---------------------------------------------------------------------------
 
 const noIconFontsAdapter: OracleAdapter = {
   ruleId: "components/no-icon-fonts",
@@ -135,14 +114,6 @@ const noIconFontsAdapter: OracleAdapter = {
   ],
   metamorphic: [],
 };
-
-// ---------------------------------------------------------------------------
-// components/no-native-shadows
-// Fires when a file imports from the componentsModule AND uses a native <button>,
-// <input>, <select>, <textarea>, or <a>.
-// componentsModule is auto-detected from deps: @acme/ui matches branch 1 of
-// detectComponentsModule (/^@[^/]+\/(ui|components|design)/).
-// ---------------------------------------------------------------------------
 
 const CONSUMER_SRC_CLEAN = [
   'import { Button, Link } from "@acme/ui";',
@@ -195,13 +166,6 @@ const noNativeShadowsAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
-// ---------------------------------------------------------------------------
-// naming/component-pascalcase
-// Fires on exported functions returning JSX that are not PascalCase.
-// The rule checks .tsx/.jsx files only. HOC (withXxx), hooks (useXxx), and
-// factory functions (createXxx) are exempt.
-// ---------------------------------------------------------------------------
-
 const namingPascalCaseAdapter: OracleAdapter = {
   ruleId: "naming/component-pascalcase",
   oracleKind: "construction",
@@ -240,14 +204,6 @@ const namingPascalCaseAdapter: OracleAdapter = {
     },
   ],
 };
-
-// ---------------------------------------------------------------------------
-// naming/hook-prefix
-// Fires on exported functions that call React hooks internally but are not
-// named use<UpperCase>.
-// The rule requires body-call evidence (uses useState/useEffect/etc.) OR
-// path-evidence (file in hooks/ dir + filename matches function name).
-// ---------------------------------------------------------------------------
 
 const HOOK_CLEAN_SRC = [
   "import { useState } from 'react';",
@@ -294,20 +250,11 @@ const namingHookPrefixAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
-// ---------------------------------------------------------------------------
-// stories/coverage
-// Fires when a component from componentInventory has no story.
-// componentInventory is built from imports of the componentsModule (@acme/ui).
-// storyIndex is loaded from *.stories.{ts,tsx,js,jsx} files in the repo.
-//
-// CRITICAL: the rule returns N/A when storyIndex is null (no story files found
-// anywhere). So the mutation cannot simply remove the only story file — that
-// would put the rule into N/A mode instead of finding a violation.
-// Strategy: fixture has TWO components (Button + Card) both imported, stories
-// exist for BOTH (clean). Mutation removes Button's story while keeping Card's
-// story → storyIndex is non-null (Card story found) + Button has no story → fires.
-// ---------------------------------------------------------------------------
-
+// CRITICAL: stories/coverage returns N/A when storyIndex is null (no story
+// files anywhere). Mutation cannot simply remove the only story — that would
+// trigger N/A instead of a violation. Fixture has TWO components (Button + Card)
+// with stories for both. Mutation removes Button's story while keeping Card's →
+// storyIndex stays non-null + Button has no story → rule fires.
 const STORIES_APP_TSX = [
   'import { Button, Card } from "@acme/ui";',
   "export function App() {",
@@ -338,8 +285,6 @@ const storiesCoverageAdapter: OracleAdapter = {
   }),
   mutations: [
     {
-      // Remove Button's story but keep Card's — storyIndex stays non-null,
-      // Button enters componentInventory but has no byTitle entry → fires.
       name: "button-missing-story",
       apply: (f): FixtureFiles => {
         const next = { ...f };
@@ -350,10 +295,6 @@ const storiesCoverageAdapter: OracleAdapter = {
   ],
   metamorphic: [],
 };
-
-// ---------------------------------------------------------------------------
-// Exports
-// ---------------------------------------------------------------------------
 
 export const componentAdapters: OracleAdapter[] = [
   svgViewboxAdapter,
