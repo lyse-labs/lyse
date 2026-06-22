@@ -7,12 +7,6 @@ import { adapters } from "./adapters/index.js";
  * These are a tracked worklist, not silent gaps.
  */
 export const ADDRESSABLE_PENDING: Record<string, string> = {
-  // Axis A — Design Tokens (DTCG)
-  // (all 5 structural rules covered by tokensStructuralAdapters)
-
-  // Axis B — Token adoption / hardcoded values
-  // (all 5 hardcoded-value extensions + media-query covered by adapters)
-
   // Axis C — Accessibility
   "a11y/essentials": "construction: static-injectable AST (jsx-a11y subset — img alt, form labels)",
   "a11y/html-lang": "construction: HTML lang attribute injection",

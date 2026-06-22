@@ -2,13 +2,6 @@ import type { OracleAdapter, FixtureFiles } from "./types.js";
 
 const PKG = JSON.stringify({ name: "fx-struct", version: "1.0.0" });
 
-// ---------------------------------------------------------------------------
-// tokens/dtcg-conformance
-// Rule discovers: **/*.tokens.json, tokens/**/*.json, **/tokens/**/*.json
-// Fires: token has $value but no $type, unresolved alias, invalid typed value.
-// N/A: no DTCG-shaped files found.
-// ---------------------------------------------------------------------------
-
 const VALID_DTCG = JSON.stringify({
   color: { brand: { $value: "#2563eb", $type: "color" } },
 });
@@ -65,13 +58,6 @@ export const dtcgConformanceAdapter: OracleAdapter = {
   ],
 };
 
-// ---------------------------------------------------------------------------
-// tokens/description-coverage
-// Rule: semantic tokens (path segment in action/surface/text/…) with $description
-//       must be ≥80%. Fires one summary finding when below threshold.
-// N/A: no DTCG files, or no semantic tokens.
-// ---------------------------------------------------------------------------
-
 const DESCRIBED_SEMANTIC = JSON.stringify({
   action: {
     primary: {
@@ -117,12 +103,6 @@ export const descriptionCoverageAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
-// ---------------------------------------------------------------------------
-// tokens/deprecated-token-usage
-// Rule: non-deprecated token aliases a deprecated token → fires.
-// N/A: no DTCG files, or no tokens, or no deprecated tokens.
-// ---------------------------------------------------------------------------
-
 const CLEAN_ALIAS = JSON.stringify({
   color: {
     old: { $value: "#000", $deprecated: "use color.ink" },
@@ -161,13 +141,6 @@ export const deprecatedTokenUsageAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
-// ---------------------------------------------------------------------------
-// tokens/theme-modes-present
-// Rule checks files.css for .dark/.light, prefers-color-scheme, [data-theme],
-// or scans token files on disk for "dark"/"light" groups.
-// Fires: no mode signal found anywhere. opportunities=1 (always applicable).
-// ---------------------------------------------------------------------------
-
 function themeModeClean(): FixtureFiles {
   return {
     "package.json": PKG,
@@ -190,13 +163,6 @@ export const themeModesAdapter: OracleAdapter = {
   ],
   metamorphic: [],
 };
-
-// ---------------------------------------------------------------------------
-// tokens/css-custom-property-export
-// Rule: CSS has styling (RE_DECLARATION matches) but no custom-prop definition.
-// Fires when: hasStyling=true AND definesCustomProperty=false.
-// N/A: no CSS at all.
-// ---------------------------------------------------------------------------
 
 function cssCustomPropClean(): FixtureFiles {
   return {
@@ -221,14 +187,6 @@ export const cssCustomPropertyExportAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
-// ---------------------------------------------------------------------------
-// tokens/responsive-breakpoints
-// Rule: CSS has width @media → responsive=true.
-//   hasScale: RE_BP_VAR matches ($bp*, --breakpoint*, --bp*, --screen*), OR ctx.tokens.breakpoints, OR files.ts RE_BP_OBJECT.
-// Clean: @media with --breakpoint-md var defined → clears.
-// Mutation: @media but no breakpoint var anywhere.
-// ---------------------------------------------------------------------------
-
 function responsiveBreakpointsClean(): FixtureFiles {
   return {
     "package.json": PKG,
@@ -251,12 +209,6 @@ export const responsiveBreakpointsAdapter: OracleAdapter = {
   ],
   metamorphic: [],
 };
-
-// ---------------------------------------------------------------------------
-// tokens/container-query
-// Rule: @container is used (usesCq=true) but no container-type/container-name/container: declared.
-// N/A: no @container at all.
-// ---------------------------------------------------------------------------
 
 function containerQueryClean(): FixtureFiles {
   return {

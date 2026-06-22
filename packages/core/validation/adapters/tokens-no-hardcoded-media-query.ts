@@ -2,8 +2,6 @@ import type { OracleAdapter, FixtureFiles } from "../types.js";
 
 const PKG = JSON.stringify({ name: "fx-mq", version: "1.0.0" });
 
-// Clean: @media print has no width feature → rule sees 0 opportunities → N/A.
-// The rule only fires on width/height literals inside @media preludes.
 function clean(): FixtureFiles {
   return {
     "package.json": PKG,
