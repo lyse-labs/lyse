@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { wizardConfirm, wizardIntro, wizardNote, wizardTask } from "../../src/ui/wizard.js";
+import { wizardConfirm, wizardIntro, wizardNote, wizardSelect, wizardTask } from "../../src/ui/wizard.js";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -41,8 +41,6 @@ describe("ui/wizard non-interactive contract", () => {
     ).rejects.toThrow("boom");
   });
 });
-
-import { wizardSelect } from "../../src/ui/wizard.js";
 
 describe("ui/wizard wizardSelect non-interactive contract", () => {
   const opts = [
