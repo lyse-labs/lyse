@@ -58,17 +58,13 @@ export function makeVocabularyAdapter(spec: VocabularySpec): OracleAdapter {
   };
 }
 
-// ─── Shared no-surface clean fixture ──────────────────────────────────────────
-//
 // For all co-presence rules (AI marker + affordance → info; AI marker alone → warning;
 // no AI marker → no finding), the only valid clean state is NO AI SURFACE.
 // That is the only state that produces zero findings for the rule.
-//
 // A plain button-only file has no AI surface → rule emits nothing.
 const PLAIN_BUTTON_FILE = `export const Button = () => null;`;
 
-// ─── ai-governance/ai-marker-component-present ────────────────────────────────
-//
+// ai-governance/ai-marker-component-present
 // No AI surface → no finding (clean). Add reserved tokens without marker → warning fires.
 // isReservedTokenName("dragon-fruit") = true (unambiguous Carbon vendor signature).
 const AI_MARKER_COMPONENT_RESERVED_TOKENS = JSON.stringify({
@@ -95,8 +91,7 @@ const aiMarkerComponentPresentAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
-// ─── ai-governance/bot-identity-labeling ─────────────────────────────────────
-//
+// ai-governance/bot-identity-labeling
 // Gate: at least one component file has an AI marker (fileHasAiMarker).
 // Outcomes: AI marker + bot-identity in same file → info (flagged).
 //           AI marker, no bot-identity → warning (flagged).
@@ -135,8 +130,7 @@ const botIdentityAdapter: OracleAdapter = {
   ],
 };
 
-// ─── ai-governance/source-attribution-present ────────────────────────────────
-//
+// ai-governance/source-attribution-present
 // Gate: any component file has AI marker. No AI surface → no finding (clean).
 // mutation: AI marker with no attribution → warning fires.
 const sourceAttributionAdapter: OracleAdapter = {
@@ -166,8 +160,7 @@ const sourceAttributionAdapter: OracleAdapter = {
   ],
 };
 
-// ─── ai-governance/confidence-indicator-present ───────────────────────────────
-//
+// ai-governance/confidence-indicator-present
 // Gate: any component file has AI marker. No AI surface → no finding (clean).
 // mutation: AI marker with no confidence indicator → warning fires.
 const confidenceIndicatorAdapter: OracleAdapter = {
@@ -196,8 +189,7 @@ const confidenceIndicatorAdapter: OracleAdapter = {
   ],
 };
 
-// ─── ai-governance/feedback-control-present ───────────────────────────────────
-//
+// ai-governance/feedback-control-present
 // Gate: any component file has AI marker. No AI surface → no finding (clean).
 // mutation: AI marker with no feedback control → warning fires.
 const feedbackControlAdapter: OracleAdapter = {
@@ -226,13 +218,11 @@ const feedbackControlAdapter: OracleAdapter = {
   ],
 };
 
-// ─── ai-governance/product-analytics ─────────────────────────────────────────
-//
+// ai-governance/product-analytics
 // Gate: file has AI marker AND has onAccept/onReject/etc handlers.
 // Rule fires when: AI surface has interaction handler BUT NO analytics.
 // cleanFixture: AILabel + onAccept handler + analytics.track() call → no finding.
 // mutation: remove analytics.track() → warning fires.
-// Empty metamorphic: no second meaningful affordance representation.
 const PRODUCT_ANALYTICS_SURFACE_INSTRUMENTED = `
 export const AILabel = () => null;
 export function AiSuggestion({ onAccept }: { onAccept: () => void }) {
@@ -267,16 +257,11 @@ const productAnalyticsAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
-// ─── ai-governance/ai-loading-error-states ────────────────────────────────────
-//
+// ai-governance/ai-loading-error-states
 // Gate: hasAiSurface = any component file has an AI marker name (isAiMarkerName).
 // Needs BOTH: (a) named loading state AND (b) AI-specific error state.
-// cleanFixture: AILabel (gate) + Generating + AIError → info (flagged = "rule fires").
-// Wait — info IS a finding. So clean must be: no AI surface → no finding.
-// mutation: AI marker + Generating (no AIError) → warning fires.
-// A second mutation: AI marker + AIError (no Generating) → different warning.
-// Metamorphic: AIError vs GenerationError — both produce warnings (missing loading).
-// Better: use no-surface as clean, AI marker + Generating (missing error) as mutation.
+// Clean = no AI surface → no finding.
+// mutation: AI marker + Generating (no AIError) → warning fires for missing AIError.
 const AI_LOADING_BARE_MARKER_WITH_LOADING_ONLY = `
 export const AILabel = () => null;
 export const Generating = () => null;
@@ -317,15 +302,10 @@ const aiLoadingErrorStatesAdapter: OracleAdapter = {
   ],
 };
 
-// ─── ai-governance/ai-content-live-region ─────────────────────────────────────
-//
-// Gate: detectAiOutputSurface = file has AI marker tag, AIResponse/ChatMessage, or
-//       isStreaming/isGenerating JSX prop.
+// ai-governance/ai-content-live-region
+// Gate: detectAiOutputSurface = file has AI marker tag, AIResponse/ChatMessage, or isStreaming/isGenerating.
 // Proximity: live-region must WRAP the AI output (appear before it in same return slot).
-// cleanFixture: aria-live="polite" wrapping <AILabel/> in return → info (flagged).
-// Wait — info IS a finding. Same issue. Clean = no AI surface → no finding.
-// mutation: <AILabel/> with no live region wrapper → warning fires.
-// Metamorphic: no-live-region AILabel vs no-live-region AIBadge — both flag consistently.
+// Clean = no AI surface → no finding. mutation: <AILabel/> tag without live region → warning fires.
 const LIVE_REGION_MISSING_AILABEL = `
 export function AiAnswer() {
   return (
@@ -374,12 +354,9 @@ const aiContentLiveRegionAdapter: OracleAdapter = {
   ],
 };
 
-// ─── ai-governance/value-gate-doc-present ─────────────────────────────────────
-//
+// ai-governance/value-gate-doc-present
 // Gate: hasAiSurface = scanForMarkerComponents OR detectReservedAiTokens.
-// No AI surface → no finding (clean). Add AI marker + no gate doc → warning fires.
-// cleanFixture: no AI surface → no finding.
-// mutation: AILabel + no AI_GOVERNANCE.md → warning fires.
+// Clean = no AI surface → no finding. mutation: AILabel + no AI_GOVERNANCE.md → warning fires.
 const valueGateDocAdapter: OracleAdapter = {
   ruleId: "ai-governance/value-gate-doc-present",
   oracleKind: "construction",
@@ -414,12 +391,9 @@ const valueGateDocAdapter: OracleAdapter = {
   ],
 };
 
-// ─── ai-governance/interaction-pattern-docs ────────────────────────────────────
-//
+// ai-governance/interaction-pattern-docs
 // Gate: any component file has AI marker (fileHasAiMarker).
-// No AI surface → no finding (clean). AI marker + no AI pattern docs → warning fires.
-// cleanFixture: no AI surface → no finding.
-// mutation: AILabel + no .md files → warning fires.
+// Clean = no AI surface → no finding. mutation: AILabel + no .md pattern docs → warning fires.
 const interactionPatternDocsAdapter: OracleAdapter = {
   ruleId: "ai-governance/interaction-pattern-docs",
   oracleKind: "construction",
@@ -447,10 +421,8 @@ const interactionPatternDocsAdapter: OracleAdapter = {
   ],
 };
 
-// ─── ai-governance/ai-tokens-reserved ─────────────────────────────────────────
-//
-// No reserved tokens → no finding (clean).
-// Add reserved tokens → info fires.
+// ai-governance/ai-tokens-reserved
+// No reserved tokens → no finding (clean). Add reserved tokens → info fires.
 // isReservedTokenName("dragon-fruit") = true (unambiguous Carbon vendor signature).
 const AI_TOKENS_RESERVED_TOKENS_JSON = JSON.stringify({
   gradient: { "dragon-fruit": "#ff6b6b" },
@@ -475,11 +447,9 @@ const aiTokensReservedAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
-// ─── ai-governance/ai-token-misuse ────────────────────────────────────────────
-//
+// ai-governance/ai-token-misuse
 // Rule fires when reserved AI tokens are USED in a NON-AI-context file.
 // AI context: (1) has AI marker, (2) AI-named path, or (3) defines reserved tokens.
-// "ai-aura-start": segments ["ai","aura","start"] → "ai" + "aura" ∈ AI_DISTINCTIVE → reserved.
 // cleanFixture: AILabel export + var(--ai-aura-start) → AI context, no finding.
 // mutation: remove AILabel → non-AI context using reserved token → warning fires.
 const AI_TOKEN_MISUSE_SURFACE_WITH_MARKER = `
@@ -510,13 +480,10 @@ const aiTokenMisuseAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
-// ─── ai-governance/disclaimer-present ─────────────────────────────────────────
-//
+// ai-governance/disclaimer-present
 // Per-file: detectAiMarkerInSource checks JSX TAGS (<AILabel>) not exported names.
-// Gate: file has an AI marker tag. No AI marker tag → no finding (clean).
-// cleanFixture: no AI marker JSX tag → no finding.
+// Gate: file has an AI marker tag. Clean = no AI marker JSX tag → no finding.
 // mutation: <AILabel/> JSX tag with no disclaimer → warning fires.
-// Metamorphic: AILabel and AIBadge tags both trigger the gate → both flag without disclaimer.
 const DISCLAIMER_BARE_AILABEL = `
 export function AISummary() {
   return (
@@ -567,20 +534,11 @@ const disclaimerPresentAdapter: OracleAdapter = {
   ],
 };
 
-// ─── ai-governance/ai-marker-anti-patterns ────────────────────────────────────
-//
-// Anti-pattern A (sparkle-only): fires when sparkle + AI context (fileHasAiContext
-//   = exported AI marker name) + no text/disclaimer/AI-marker TAG.
-// fileHasAiContext checks EXPORTED names (extractNamesFromSource).
-// detectSparkleOnlyMarker is suppressed when an AI-marker JSX TAG is present.
-//
-// cleanFixture: file with sparkle + <AILabel/> JSX tag + export of AILabel.
-//   → fileHasAiContext(AILabel export) = true, detectSparkleOnlyMarker = false (AILabel tag present).
-//   → no warning fires (clean).
-// mutation: remove <AILabel/> JSX tag but keep export + sparkle.
-//   → fileHasAiContext(AILabel export) = true, detectSparkleOnlyMarker = true (no tag).
-//   → warning fires.
-// Metamorphic: AILabel tag vs AIBadge tag — both suppress the sparkle warning.
+// ai-governance/ai-marker-anti-patterns
+// Anti-pattern A (sparkle-only): fires when sparkle + AI context (exported AI marker name) + no AI-marker TAG.
+// cleanFixture: sparkle + <AILabel/> JSX tag → detectSparkleOnlyMarker = false (tag suppresses it).
+// mutation: remove <AILabel/> tag but keep export + sparkle → sparkle-only anti-pattern fires.
+// Metamorphic: AILabel tag vs AIBadge tag — both suppress the sparkle warning (expectViolation: false).
 const ANTI_PATTERN_CLEAN_WITH_AILABEL_TAG = `
 export const AILabel = () => null;
 export function SparkleAI() {
@@ -640,9 +598,6 @@ const aiMarkerAntiPatternsAdapter: OracleAdapter = {
   ],
 };
 
-// Enable per rule only after confirming the AI-surface trigger + affordance
-// vocabulary against the rule source. These prove the matcher fires/clears
-// correctly — they do NOT prove governance efficacy.
 export const vocabularyAdapters: OracleAdapter[] = [
   aiMarkerComponentPresentAdapter,
   botIdentityAdapter,
