@@ -55,8 +55,14 @@ provides the corpus, the runner, and the baseline.
 | Gate | Fixture type | Guarantee | Mechanism |
 |------|-------------|-----------|-----------|
 | A — synthetic | Construction-set mutations | J=1 proven (recall + no FP on set) | `validation/run.ts` (`validate:autonomous`) |
+| A — render | Real Chromium DOM/CSS | J=1 proven for execution-oracle rules | `validation/render-lane.ts` (`validate:render`) |
 | B — real corpus | 70 real OSS design systems | Firing-rate stable vs baseline | lyse-internal runner (pending) |
 | Coverage | All adapters registered | Every scored rule has an adapter | `validation/coverage.ts` |
+
+The render lane is the execution-oracle half of Gate A: `tokens/rendered-token-fidelity`
+and `a11y/runtime-axe` cannot be validated statically (no browser), so they run through
+real Chromium. The static `engine` CI job has no browser; the `engine-render` job sets
+`LYSE_RENDER_REQUIRED=1` so a missing Chromium hard-fails CI rather than skipping silently.
 
 Neither gate claims 100% real-world precision. Rules that are judgment-scope (e.g.
 `drift/*`) remain report-only and are excluded from Gate A scoring. Gate B complements
@@ -68,6 +74,7 @@ Gate B is **spec-ready**. Implementation is pending in `lyse-labs/lyse-internal`
 
 References:
 - Synthetic gate: `packages/core/validation/run.ts`, script `validate:autonomous`
+- Render (execution-oracle) gate: `packages/core/validation/render-lane.ts`, script `validate:render`
 - Completeness gate: `packages/core/validation/coverage.ts`
 - Calibration methodology: `docs/architecture/calibration.md`
 - Corpus: `lyse-labs/lyse-bench` (public, CC BY 4.0)

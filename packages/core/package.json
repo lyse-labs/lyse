@@ -62,7 +62,8 @@
     "typecheck": "tsc --noEmit",
     "docs:reliability": "tsx ../../scripts/render-coverage.ts",
     "mutation": "stryker run",
-    "validate:autonomous": "pnpm build && tsx validation/run.ts"
+    "validate:autonomous": "pnpm build && tsx validation/run.ts",
+    "validate:render": "pnpm build && tsx validation/render-lane.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",

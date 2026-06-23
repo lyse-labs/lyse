@@ -35,6 +35,28 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @lyse-labs/lyse validate:autonomous
 
+  # Execution-oracle render lane: drives tokens/rendered-token-fidelity and
+  # a11y/runtime-axe through real Chromium and gates on Youden's J = 1. The
+  # static `engine` job has no browser; this is the only lane that genuinely
+  # exercises the execution oracle. LYSE_RENDER_REQUIRED=1 turns a missing
+  # Chromium into a hard failure (off-CI it skips gracefully).
+  engine-render:
+    name: Autonomous validation engine (render lane)
+    runs-on: ubuntu-latest
+    env:
+      LYSE_RENDER_REQUIRED: "1"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with: { version: 9.12.0 }
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @lyse-labs/lyse exec playwright install --with-deps chromium
+      - run: pnpm --filter @lyse-labs/lyse validate:render
+
   # Cross-platform robustness lane (#104): path handling, line endings, FS case
   # sensitivity. Hard-failing as of 2026-06-18 — the full suite is green on
   # windows-latest (the path/separator + shell-harness divergences are fixed).

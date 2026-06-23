@@ -1,5 +1,14 @@
-import * as axe from "axe-core";
+import { createRequire } from "node:module";
 import type { Page } from "playwright";
+
+// axe-core assigns `.source` / `.version` onto module.exports at runtime, which
+// node's cjs-module-lexer cannot see — so `import * as axe` yields a namespace
+// whose `.source` is order-dependently undefined once the full rule graph is
+// loaded first. A CJS require always returns the real module.exports object.
+const axe = createRequire(import.meta.url)("axe-core") as {
+  source: string;
+  version: string;
+};
 
 export interface AxeViolation {
   ruleId: string;
