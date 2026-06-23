@@ -21,6 +21,20 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
 
+  engine:
+    name: Autonomous validation engine
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with: { version: 9.12.0 }
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @lyse-labs/lyse validate:autonomous
+
   # Cross-platform robustness lane (#104): path handling, line endings, FS case
   # sensitivity. Hard-failing as of 2026-06-18 — the full suite is green on
   # windows-latest (the path/separator + shell-harness divergences are fixed).
