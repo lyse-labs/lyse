@@ -15,6 +15,12 @@ export async function runAll(list: OracleAdapter[] = allAdapters): Promise<Engin
   return { lyseVersion: VERSION, scores };
 }
 
+export function engineGateFailures(report: EngineReport): RuleScore[] {
+  return report.scores.filter(
+    (s) => s.youdensJ < 1 || s.metamorphicInconsistencies.length > 0,
+  );
+}
+
 // CLI entry: `tsx validation/run.ts` — deterministic, zero LLM.
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);
 if (isMain) {
@@ -28,6 +34,20 @@ if (isMain) {
     if (s.metamorphicInconsistencies.length) flags.push(`${s.metamorphicInconsistencies.length} inconsistency`);
     process.stdout.write(
       `${s.ruleId.padEnd(40)} J=${s.youdensJ.toFixed(3)}  ${flags.join(", ") || "clean"}\n`,
+    );
+  }
+  const failures = engineGateFailures(report);
+  if (failures.length > 0) {
+    process.stderr.write(
+      `ENGINE GATE FAILED: ${failures.length} rule(s) below J=1 or metamorphically inconsistent\n`,
+    );
+    for (const f of failures) {
+      process.stderr.write(`  ${f.ruleId}  J=${f.youdensJ.toFixed(3)}\n`);
+    }
+    process.exitCode = 1;
+  } else {
+    process.stderr.write(
+      `ENGINE GATE PASS: ${report.scores.length} rules, all J=1, no inconsistencies\n`,
     );
   }
 }
