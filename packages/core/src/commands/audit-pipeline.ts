@@ -38,6 +38,13 @@ import { runLayer4Stage } from "../llm/layer4-stage.js";
 import { runFilterStage } from "../llm/filter-stage.js";
 import { isSuppressed } from "../suppression/inline.js";
 import { loadLyseIgnore } from "../suppression/lyseignore.js";
+import fg from "fast-glob";
+import { withChromium, chromiumVersion } from "../render/browser.js";
+import { buildTokenSourceMap, detectModeSelectors } from "../render/token-source-map.js";
+import { probeComputedTokens } from "../render/token-probe.js";
+import { buildDtcgCanonicalMap } from "../render/dtcg-canonical-map.js";
+import { RenderUnavailableError } from "../render/types.js";
+import type { RenderMeta } from "../render/types.js";
 import type {
   AuditResult,
   Finding,
@@ -66,6 +73,13 @@ export interface AuditPipelineResult {
   componentInventory: ComponentInventoryEntry[];
   /** Number of source files scanned. */
   fileCount: number;
+}
+
+function collectTokenCss(parsed: ParsedFiles): string {
+  return parsed.css
+    .filter((f) => !f.skipped && f.source.includes("--"))
+    .map((f) => f.source)
+    .join("\n");
 }
 
 function maybePrintRefreshHint(repoRoot: string): void {
@@ -322,6 +336,52 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     dsSelfMode,
   };
 
+  // Render stage — opt-in via flags.render. Mirrors the LLM layer degrade
+  // pattern: on RenderUnavailableError (or any error), set meta.render.error
+  // and continue with no render findings. Never crashes the pipeline.
+  let renderMeta: RenderMeta | undefined;
+  if (flags?.render) {
+    flags.progress?.update("Rendering token layer…");
+    const dtcgFiles = await fg(["**/*.tokens.json"], {
+      cwd: absoluteRoot,
+      absolute: true,
+      ignore: ["**/node_modules/**"],
+    });
+    if (dtcgFiles.length === 0) {
+      renderMeta = { chromiumVersion: "n/a", skippedNonCanonicalizable: 0, error: "no DTCG token source" };
+    } else {
+      let dtcgJson: unknown = null;
+      for (const f of dtcgFiles) {
+        try { dtcgJson = JSON.parse(readFileSync(f, "utf8")); break; } catch { /* skip malformed */ }
+      }
+      if (dtcgJson === null) {
+        renderMeta = { chromiumVersion: "n/a", skippedNonCanonicalizable: 0, error: "no DTCG token source" };
+      } else {
+        const canonical = buildDtcgCanonicalMap(dtcgJson);
+        if (canonical.size === 0) {
+          renderMeta = { chromiumVersion: "n/a", skippedNonCanonicalizable: 0, error: "no DTCG token source" };
+        } else {
+        const tokenCss = collectTokenCss(parsed);
+        const tokenKeys = [...buildTokenSourceMap(tokenCss).keys()];
+        const modes = detectModeSelectors(tokenCss);
+        try {
+          const version = await chromiumVersion();
+          const readings = await withChromium((page) => probeComputedTokens(page, tokenCss, tokenKeys, modes));
+          ctx.rendered = readings;
+          ctx.canonicalTokens = canonical;
+          renderMeta = { chromiumVersion: version, skippedNonCanonicalizable: 0 };
+        } catch (e) {
+          renderMeta = {
+            chromiumVersion: "n/a",
+            skippedNonCanonicalizable: 0,
+            error: e instanceof RenderUnavailableError ? e.message : String(e),
+          };
+        }
+        } // end canonical.size > 0
+      }
+    }
+  }
+
   const generated = loadGeneratedPack(absoluteRoot);
   for (const w of generated.warnings) process.stderr.write(`[lyse] ${w}\n`);
   const allRules = [...ruleObjects, ...generated.rules];
@@ -473,6 +533,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     ...(suppressedFindings.length > 0 ? { suppressedFindings } : {}),
     meta: {
       ...(layer4Meta ? { layer4: layer4Meta } : {}),
+      ...(renderMeta !== undefined ? { render: renderMeta } : {}),
       coverage: {
         scannedFiles: files.length,
         durationMs: Date.now() - t0,

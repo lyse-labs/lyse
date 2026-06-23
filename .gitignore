@@ -47,3 +47,6 @@ packages/core/fixtures/**/.lyse/
 # Stryker mutation testing
 .stryker-tmp/
 packages/core/reports/
+
+# SDD scratch (subagent-driven working files)
+.superpowers/

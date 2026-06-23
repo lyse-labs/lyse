@@ -1425,6 +1425,22 @@
         "AI surfaces with no accept/reject/feedback handler — out of scope, rule emits nothing",
         "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
       ]
+    },
+    {
+      "id": "tokens/rendered-token-fidelity",
+      "axis": "tokens",
+      "defaultSeverity": "warning",
+      "shortDescription": "Rendered token value matches its DTCG canonical declaration",
+      "fullDescription": "Detects design→CSS drift: a CSS custom property whose browser-computed value differs from its DTCG canonical token value. Runs only under `lyse audit --render`.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-rendered-token-fidelity.md",
+      "rationale": "A token can be referenced correctly yet render a different value due to cascade, specificity, or a leaked override — drift static analysis cannot see.",
+      "examples": [
+        {
+          "good": ":root { --bg: #fff } /* DTCG declares #fff; element computes rgb(255,255,255) */",
+          "bad": ":root { --bg: #fff } .leak { --bg: #000 } /* DTCG declares #fff; element computes rgb(0,0,0) */"
+        }
+      ],
+      "allowlist": []
     }
   ]
 }

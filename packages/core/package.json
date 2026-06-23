@@ -61,7 +61,8 @@
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "docs:reliability": "tsx ../../scripts/render-coverage.ts",
-    "mutation": "stryker run"
+    "mutation": "stryker run",
+    "validate:autonomous": "pnpm build && tsx validation/run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
@@ -93,6 +94,14 @@
     "yaml": "2.9.0",
     "zod": "^3.23.8"
   },
+  "peerDependencies": {
+    "playwright": "^1.61.0"
+  },
+  "peerDependenciesMeta": {
+    "playwright": {
+      "optional": true
+    }
+  },
   "optionalDependencies": {
     "keytar": "^7.9.0"
   },
@@ -106,6 +115,7 @@
     "ajv-formats": "^3.0.1",
     "fast-check": "^4.8.0",
     "tsx": "^4.22.4",
+    "playwright": "1.61.0",
     "vitest": "4.1.8"
   },
   "engines": {

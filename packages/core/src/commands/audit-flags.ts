@@ -57,4 +57,6 @@ export interface AuditFlags {
    * (fix.ts, MCP, share) to keep stderr quiet.
    */
   progress?: Spinner;
+  /** Opt-in: render the token layer in headless Chromium to detect computed-value drift. */
+  render?: boolean;
 }

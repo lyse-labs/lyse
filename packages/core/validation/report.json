@@ -1,0 +1,616 @@
+{
+  "lyseVersion": "0.2.0-alpha.2",
+  "scores": [
+    {
+      "ruleId": "ai-governance/ai-content-live-region",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "ai-governance/ai-loading-error-states",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "ai-governance/ai-marker-anti-patterns",
+      "oracleKind": "metamorphic",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "ai-governance/ai-marker-component-present",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "ai-governance/ai-token-misuse",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "ai-governance/bot-identity-labeling",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "ai-governance/confidence-indicator-present",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "ai-governance/disclaimer-present",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "ai-governance/feedback-control-present",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "ai-governance/interaction-pattern-docs",
+      "oracleKind": "metamorphic",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "ai-governance/product-analytics",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "ai-governance/source-attribution-present",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "ai-governance/value-gate-doc-present",
+      "oracleKind": "metamorphic",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "ai-surface/agent-instruction-files",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 4,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 4
+    },
+    {
+      "ruleId": "ai-surface/agents-md-quality",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 3,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 3
+    },
+    {
+      "ruleId": "ai-surface/component-manifest-json",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 3,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 3
+    },
+    {
+      "ruleId": "ai-surface/llms-txt-structure",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 6,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 6
+    },
+    {
+      "ruleId": "ai-surface/mcp-config-present",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 4,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 4
+    },
+    {
+      "ruleId": "ai-surface/shadcn-registry-valid",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 4,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 4
+    },
+    {
+      "ruleId": "components/icon-decorative-aria",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "components/no-icon-fonts",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 3,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 3
+    },
+    {
+      "ruleId": "components/no-native-shadows",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "components/svg-viewbox",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "naming/component-pascalcase",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "naming/hook-prefix",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "stories/coverage",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "tokens/container-query",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "tokens/css-custom-property-export",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "tokens/deprecated-token-usage",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "tokens/dtcg-conformance",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 3,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 3
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-border-radius",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-border-width",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-color",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 4,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 4
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-gradient",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-media-query",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-motion",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-opacity",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-shadow",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-spacing",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-typography",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-z-index",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "tokens/responsive-breakpoints",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "tokens/theme-modes-present",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "versioning/changelog-present",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "versioning/deprecation-markers",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    },
+    {
+      "ruleId": "versioning/migration-guide-present",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "versioning/semver-versioning",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 2
+    }
+  ]
+}

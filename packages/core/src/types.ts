@@ -96,6 +96,20 @@ export interface RuleContext {
    * DS-self rule semantics planned for v0.2.
    */
   dsSelfMode?: boolean;
+  /**
+   * Computed token readings from the opt-in render layer. Present only when
+   * `lyse audit --render` ran and the browser was available; absent otherwise.
+   * Rules that need rendered data (tokens/rendered-token-fidelity) return N/A
+   * (opportunities 0) when this is undefined.
+   */
+  rendered?: import("./render/types.js").ComputedTokenReading[];
+  /**
+   * DTCG canonical token map (path → resolved value) built from the design
+   * system's tokens.json. Present only when `lyse audit --render` loaded a
+   * DTCG source; absent otherwise. Consumed by tokens/rendered-token-fidelity.
+   * Populated by R7′ pipeline wiring.
+   */
+  canonicalTokens?: Map<string, string>;
 }
 
 export interface TokenMap {
@@ -341,6 +355,8 @@ export interface AuditResult {
     layer4?: Layer4Meta;
     /** Phase 1 of #156 — audit-perimeter signals so the score has a visible denominator. Includes `parseErrors` (#155) as a deterministic subfield. */
     coverage?: CoverageMeta;
+    /** Render-layer metadata; present only when `lyse audit --render` ran. */
+    render?: import("./render/types.js").RenderMeta;
   };
 }
 
