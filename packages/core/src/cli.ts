@@ -231,6 +231,15 @@ const auditCommand = defineCommand({
       description:
         "Focus the LLM audit on a single axis (tokens, a11y, components, stories, ai-surface).",
     },
+    render: {
+      type: "boolean",
+      default: false,
+      description: "Opt-in: render the design system in headless Chromium (token-fidelity drift + axe-core a11y on a pre-built Storybook). Requires Playwright.",
+    },
+    storybook: {
+      type: "string",
+      description: "Storybook source for runtime a11y: a pre-built static dir (e.g. storybook-static) or a running URL. Used only with --render.",
+    },
     interactive: {
       type: "boolean",
       default: false,
@@ -302,6 +311,10 @@ const auditCommand = defineCommand({
         : {}),
       ...(typeof args["dim"] === "string" && args["dim"]
         ? { llmDimension: (args["dim"] as string).trim().toLowerCase() }
+        : {}),
+      ...(args["render"] === true ? { render: true } : {}),
+      ...(typeof args["storybook"] === "string" && args["storybook"]
+        ? { storybook: args["storybook"] as string }
         : {}),
     };
 

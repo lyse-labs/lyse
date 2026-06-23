@@ -44,6 +44,8 @@ import { buildTokenSourceMap, detectModeSelectors } from "../render/token-source
 import { probeComputedTokens } from "../render/token-probe.js";
 import { buildDtcgCanonicalMap } from "../render/dtcg-canonical-map.js";
 import { RenderUnavailableError } from "../render/types.js";
+import { resolveStorybook, listStories } from "../render/storybook-source.js";
+import { runAxeOnStory, axeVersion } from "../render/axe-runner.js";
 import type { RenderMeta } from "../render/types.js";
 import type {
   AuditResult,
@@ -378,6 +380,41 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
           };
         }
         } // end canonical.size > 0
+      }
+    }
+    // Runtime-axe sub-stage — independent of token-fidelity. Resolves a
+    // pre-built Storybook (never builds the repo) and runs axe-core per story.
+    // Degrades per story: a story that fails to render is skipped, others
+    // continue. No Storybook → leaves axeViolations unset (rule is N/A).
+    const sbOpts: { dir?: string; url?: string } = {};
+    if (flags.storybook !== undefined) {
+      if (/^https?:\/\//.test(flags.storybook)) sbOpts.url = flags.storybook;
+      else sbOpts.dir = flags.storybook;
+    }
+    const storybook = resolveStorybook(absoluteRoot, sbOpts);
+    if (storybook) {
+      try {
+        const stories = await listStories(storybook);
+        const collected = await withChromium(async (page) => {
+          const violations: import("../render/axe-runner.js").AxeViolation[] = [];
+          let probed = 0;
+          for (const story of stories) {
+            try {
+              violations.push(...(await runAxeOnStory(page, story.url)));
+              probed++;
+            } catch {
+              // story failed to render — skip, continue with the rest
+            }
+          }
+          return { violations, probed };
+        });
+        ctx.axeViolations = collected.violations.sort((a, b) => a.ruleId.localeCompare(b.ruleId));
+        ctx.axeStoriesProbed = collected.probed;
+        const base = renderMeta ?? { chromiumVersion: "n/a", skippedNonCanonicalizable: 0 };
+        renderMeta = { ...base, axeVersion: axeVersion(), storiesProbed: collected.probed };
+      } catch (e) {
+        const base = renderMeta ?? { chromiumVersion: "n/a", skippedNonCanonicalizable: 0 };
+        renderMeta = { ...base, error: e instanceof RenderUnavailableError ? e.message : String(e) };
       }
     }
   }
