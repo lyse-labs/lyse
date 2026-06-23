@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`lyse audit --render`** — an opt-in render layer that paints the token layer in headless Chromium (Playwright as an optional peer dependency; the default audit stays offline and browser-free). Ships the experimental rule `tokens/rendered-token-fidelity`, which flags a CSS custom property whose browser-computed value differs from its DTCG canonical token value (cascade / override / alias drift that static analysis cannot see). N/A without `--render` or a DTCG token source; does not affect the default Health Score. Backed by a new mutation + independent-oracle validation engine (Youden's J per rule, with a completeness gate).
+
 - **`lyse audit --format=html`** — a self-contained, shareable HTML report (inline CSS, no external requests; works offline, safe to email/commit) rendering the score gauge, per-axis bars, and findings table. All user-derived strings are HTML-escaped; deterministic (no timestamp unless `--include-timestamps`). Writes `lyse.html` with `--output`, or to stdout (lyse-labs/lyse-internal#207).
 
 - **Verified + documented Svelte coverage.** `.svelte` single-file components route through the SFC extractors (`<style>` → CSS rules, `<script>` → TS rules, line-preserving), so the 45 framework-agnostic rules (tokens, CSS, AI-governance, config) audit Svelte design systems today. Added a `svelte-ds` fixture + a coverage test that locks this, plus a new [framework coverage matrix](docs/guide/frameworks.md). The six JSX-markup component/a11y rules stay React/Vue-oriented (Svelte markup parsing is a separate, larger effort) (lyse-labs/lyse-internal#102).
