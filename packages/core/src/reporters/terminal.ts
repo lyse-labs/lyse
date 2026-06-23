@@ -15,42 +15,35 @@ const AXES_ORDER = ["tokens", "a11y", "components", "stories"] as const;
 
 const AXIS_NAME_WIDTH = 12;
 const AXIS_SCORE_WIDTH = 5;
-const AXIS_FINDINGS_WIDTH = 15;
 const RULE_ID_WIDTH = 34;
 const FINDING_NUM_WIDTH = 2;
 
 function header(result: AuditResult, opts: TerminalOpts): string {
   const ui = { color: opts.color, unicode: opts.unicode };
-  const subtitle = `${opts.fileCount} files · ${(opts.durationMs / 1000).toFixed(1)}s`;
+  const subtitle = opts.fileCount > 0 ? `${opts.fileCount} files · ${(opts.durationMs / 1000).toFixed(1)}s` : "";
   return brandHeader(result.toolVersion, subtitle, ui);
 }
 
 function scoreLine(result: AuditResult, opts: TerminalOpts, deltaSuffix?: string): string {
   const score = result.finalScore;
   const dot = statusDot(score, opts);
-  const suffix = deltaSuffix ? ` ${dim(deltaSuffix, opts)}` : "";
-
+  const sub = dim("design system health", opts);
   if (score === "N/A") {
-    const gradeLabel = bold("Grade N/A", opts);
-    const numLabel = dim("(N/A)", opts);
-    return `  ${dot}  ${gradeLabel}  ${numLabel}${suffix}   ${dim("Health Score", opts)} · ${dim(result.scoringVersion, opts)}`;
+    return `  ${dot}  ${bold("N/A", opts)}   ${sub}`;
   }
-
-  const hasGrade = result.grade && result.grade.grade !== "N/A";
-  const gradeStr = hasGrade ? `Grade ${result.grade!.grade}` : `Grade N/A`;
-  const autoFail = hasGrade && result.grade!.autoFailed ? dim(" (auto-fail)", opts) : "";
-  const gradeLabel = bold(thresholdColor(score, opts)(gradeStr), opts);
-  const numLabel = dim(`(${score} / 100)`, opts);
-  return `  ${dot}  ${gradeLabel}${autoFail}  ${numLabel}${suffix}   ${dim("Health Score", opts)} · ${dim(result.scoringVersion, opts)}`;
+  const grade = result.grade && result.grade.grade !== "N/A" ? `${result.grade.grade}  ` : "";
+  const head = bold(thresholdColor(score, opts)(`${grade}${score}/100`), opts);
+  const autoFail = result.grade?.autoFailed ? `  ${dim("(auto-fail)", opts)}` : "";
+  const delta = deltaSuffix ? `  ${dim(deltaSuffix, opts)}` : "";
+  return `  ${dot}  ${head}${autoFail}${delta}   ${sub}`;
 }
 
 function axisLine(a: AxisScore, opts: TerminalOpts): string {
   const gly = statusGlyph(a.score, { color: opts.color, unicode: opts.unicode });
   const name = visiblePad(a.axis, AXIS_NAME_WIDTH);
+  const scoreText = visiblePad(a.score === "N/A" ? "—" : String(a.score), AXIS_SCORE_WIDTH, "left");
   const barViz = bar(a.score, opts, 20);
-  const scoreText = visiblePad(a.score === "N/A" ? "N/A" : String(a.score), AXIS_SCORE_WIDTH, "left");
-  const findingsText = visiblePad(dim(`${a.findings} findings`, opts), AXIS_FINDINGS_WIDTH, "left");
-  return `  ${gly} ${name}  ${scoreText}  ${barViz}  ${findingsText}`;
+  return `  ${gly} ${name}  ${scoreText}  ${barViz}`;
 }
 
 function findingLines(f: Finding, index: number, opts: TerminalOpts): string[] {
@@ -165,8 +158,10 @@ export async function renderTerminal(result: AuditResult, opts: TerminalOpts): P
           },
           prev
         );
-        const arrow = delta.score > 0 ? "▲" : delta.score < 0 ? "▼" : "=";
-        deltaSuffix = `(${arrow} ${Math.abs(delta.score)} since ${delta.days}d ago)`;
+        if (delta.score !== 0) {
+          const arrow = delta.score > 0 ? "▲" : "▼";
+          deltaSuffix = `${arrow} ${Math.abs(delta.score)}`;
+        }
       }
     }
   } catch {
@@ -183,7 +178,7 @@ export async function renderTerminal(result: AuditResult, opts: TerminalOpts): P
   // but the rendering contract stays in tree for when Layer 4 lands.
   const layer4 = result.meta?.layer4;
   if (layer4) {
-    if (layer4.staticOnly) {
+    if (layer4.staticOnly && !opts.suppressNags) {
       lines.push("");
       lines.push(
         `  ${opts.color ? "\x1b[33m" : ""}⚠ Static-only mode: every LLM path is off. Set ANTHROPIC_API_KEY or OPENAI_API_KEY and remove --static-only to enable optional LLM augmentation.${opts.color ? "\x1b[0m" : ""}`,
@@ -214,14 +209,9 @@ export async function renderTerminal(result: AuditResult, opts: TerminalOpts): P
   // (spec T28 dogfood fix). Shown only when hasTokenRegistry is absent/false,
   // and only in human-readable mode (caller skips this for json/sarif by not
   // calling renderTerminal at all).
-  if (!opts.hasTokenRegistry) {
+  if (!opts.hasTokenRegistry && !opts.suppressNags) {
     lines.push("");
-    const hint = "ℹ No design token registry found (no .lyse.yaml or componentsModule).";
-    const detail = "   Your score reflects a/y + Storybook coverage only.";
-    const action = "   Run `lyse init` to detect your token system and unlock a calibrated score.";
-    lines.push(`  ${dim(hint, opts)}`);
-    lines.push(`  ${dim(detail, opts)}`);
-    lines.push(`  ${dim(action, opts)}`);
+    lines.push(`  ${dim("No token registry detected — run `lyse init` for a calibrated score.", opts)}`);
   }
 
   lines.push("", "");

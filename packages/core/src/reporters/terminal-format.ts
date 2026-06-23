@@ -14,6 +14,8 @@ export interface TerminalOpts {
   cwd: string;
   hasTokenRegistry?: boolean;
   findingsLimit?: number | null;
+  /** Suppress contextual nags (static-only LLM banner, "run lyse init" hint) — set when rendering from inside `lyse init`. */
+  suppressNags?: boolean;
 }
 
 const ui = (opts: TerminalOpts): UiOpts => ({ color: opts.color, unicode: opts.unicode });

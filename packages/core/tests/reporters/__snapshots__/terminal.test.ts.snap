@@ -5,17 +5,15 @@ exports[`renderTerminal (plain-text mode for snapshot stability) > matches snaps
   lyse  247 files · 1.4s   0.1.0-alpha.1
 
 
-  o  Grade N/A  (43 / 100)   Health Score · scoring-v1
+  o  43/100   design system health
 
-  ℹ No design token registry found (no .lyse.yaml or componentsModule).
-     Your score reflects a/y + Storybook coverage only.
-     Run \`lyse init\` to detect your token system and unlock a calibrated score.
+  No token registry detected — run \`lyse init\` for a calibrated score.
 
 
-  x tokens           31  ######--------------     247 findings
-  ! a11y             62  ############--------      41 findings
-  x components       38  ########------------      89 findings
-  ! stories          47  #########-----------      56 findings
+  x tokens           31  ######--------------
+  ! a11y             62  ############--------
+  x components       38  ########------------
+  ! stories          47  #########-----------
 
   Top findings
 

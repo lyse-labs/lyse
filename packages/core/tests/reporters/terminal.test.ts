@@ -40,23 +40,57 @@ const sample: AuditResult = {
 const baseOpts = { mode: "default" as const, color: false, unicode: false, width: 80, outDir: "report", fileCount: 247, durationMs: 1400, cwd: "/tmp/test" };
 
 describe("renderTerminal (plain-text mode for snapshot stability)", () => {
+  it("shows an (auto-fail) indicator when the grade auto-failed", async () => {
+    const out = await renderTerminal(
+      { ...sample, finalScore: 0, grade: { grade: "Fail", autoFailed: true } },
+      baseOpts,
+    );
+    expect(out).toContain("(auto-fail)");
+  });
+
+  it("omits the auto-fail indicator on a normal grade", async () => {
+    const out = await renderTerminal(
+      { ...sample, grade: { grade: "C", autoFailed: false } },
+      baseOpts,
+    );
+    expect(out).not.toContain("(auto-fail)");
+  });
+
+  it("suppressNags hides the static-only banner and the run-lyse-init hint", async () => {
+    const withLayer4: AuditResult = { ...sample, meta: { layer4: { staticOnly: true } } } as AuditResult;
+    const out = await renderTerminal(withLayer4, { ...baseOpts, hasTokenRegistry: false, suppressNags: true });
+    expect(out).not.toContain("Static-only");
+    expect(out).not.toContain("No token registry detected");
+  });
+
+  it("shows the nags by default (suppressNags off)", async () => {
+    const withLayer4: AuditResult = { ...sample, meta: { layer4: { staticOnly: true } } } as AuditResult;
+    const out = await renderTerminal(withLayer4, { ...baseOpts, hasTokenRegistry: false });
+    expect(out).toContain("Static-only");
+    expect(out).toContain("No token registry detected");
+  });
+
   it("matches snapshot for the standard case", async () => {
     const out = await renderTerminal(sample, baseOpts);
     expect(out).toMatchSnapshot();
   });
 
-  it("contains brand, score, all 4 axes, top findings, next steps, and footer", async () => {
+  it("renders the clean report: score line, axes, top findings, no jargon", async () => {
     const out = await renderTerminal(sample, baseOpts);
-    expect(out).toContain("lyse");
-    expect(out).toContain("43");
+    // score line: "● <grade> <score>/100   design system health"
+    expect(out).toContain("43/100");
+    expect(out).toContain("design system health");
+    // axes present, no "findings" suffix clutter on the axis line
     expect(out).toContain("tokens");
     expect(out).toContain("a11y");
     expect(out).toContain("components");
     expect(out).toContain("stories");
-    expect(out).toContain("Top findings");
+    // findings
     expect(out).toContain("tokens/no-hardcoded-color");
-    expect(out).toContain("Next steps");
-    expect(out).toContain("lyse.json");
+    // jargon removed
+    expect(out).not.toContain("scoring-v");
+    expect(out).not.toContain("since");
+    expect(out).not.toContain("Health Score ·");
   });
 
   it("quiet mode omits findings list and Next steps", async () => {
@@ -113,7 +147,8 @@ describe("renderTerminal (plain-text mode for snapshot stability)", () => {
       ],
     };
     const out = await renderTerminal(naResult, baseOpts);
-    expect(out).toContain("N/A");
+    // N/A axes render as em-dash in the clean layout
+    expect(out).toContain("—");
   });
 
   it("handles final score = N/A", async () => {
@@ -125,7 +160,7 @@ describe("renderTerminal (plain-text mode for snapshot stability)", () => {
     };
     const out = await renderTerminal(naResult, baseOpts);
     expect(out).toContain("N/A");
-    expect(out).toContain("Health Score");
+    expect(out).toContain("design system health");
   });
 
   it("renders a status glyph per axis (doctor view, ascii mode)", async () => {
@@ -186,11 +221,10 @@ describe("renderTerminal (plain-text mode for snapshot stability)", () => {
       // Now render with the history directory
       const out = await renderTerminal(sample, { ...baseOpts, cwd: histDir });
 
-      // Should contain "= 0" (equals sign with zero delta)
-      expect(out).toContain("= 0");
-      // Should NOT contain "▲ 0" or "▼ 0"
+      // Zero delta: no delta suffix shown at all (clean score line)
       expect(out).not.toContain("▲ 0");
       expect(out).not.toContain("▼ 0");
+      expect(out).not.toContain("= 0");
     } finally {
       // Clean up - simple recursive delete using rmSync
       const { rmSync } = await import("node:fs");
@@ -223,26 +257,24 @@ describe("renderTerminal — no-token-registry educational hint (T28)", () => {
   it("shows 'no token registry' hint when hasTokenRegistry is absent (undefined)", async () => {
     // opts without hasTokenRegistry — hint should appear
     const out = await renderTerminal(sample, { ...baseOpts, hasTokenRegistry: undefined });
-    expect(out).toContain("No design token registry found");
+    expect(out).toContain("No token registry detected");
     expect(out).toContain("lyse init");
   });
 
   it("shows hint when hasTokenRegistry is explicitly false", async () => {
     const out = await renderTerminal(sample, { ...baseOpts, hasTokenRegistry: false });
-    expect(out).toContain("No design token registry found");
-    expect(out).toContain("componentsModule");
+    expect(out).toContain("No token registry detected");
     expect(out).toContain("lyse init");
   });
 
   it("suppresses hint when hasTokenRegistry is true", async () => {
     const out = await renderTerminal(sample, { ...baseOpts, hasTokenRegistry: true });
-    expect(out).not.toContain("No design token registry found");
+    expect(out).not.toContain("No token registry detected");
     expect(out).not.toContain("lyse init");
   });
 
-  it("hint content: references componentsModule and calibrated score", async () => {
+  it("hint content: references calibrated score", async () => {
     const out = await renderTerminal(sample, { ...baseOpts, hasTokenRegistry: false });
-    expect(out).toContain("componentsModule");
     expect(out).toContain("calibrated score");
   });
 

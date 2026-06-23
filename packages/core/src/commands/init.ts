@@ -1,7 +1,8 @@
 import { writeFile, access } from "node:fs/promises";
 import { join } from "node:path";
 import { runPreFlight, formatDetected } from "../detection/pre-flight.js";
-import { wizardIntro, wizardOutro, wizardNote, wizardStep, wizardConfirm, wizardTask } from "../ui/wizard.js";
+import { wizardIntro, wizardOutro, wizardNote, wizardConfirm, wizardTask } from "../ui/wizard.js";
+import { renderTerminal } from "../reporters/terminal.js";
 import { auditDirectory } from "./audit-pipeline.js";
 import { runFix } from "./fix.js";
 import { runMcpSetup } from "./mcp-setup.js";
@@ -72,7 +73,20 @@ export async function runInit(opt: InitOptions): Promise<void> {
     null,
   );
 
-  wizardStep(`Health Score: ${result.finalScore}/100`);
+  const reportOpts = {
+    mode: "default" as const,
+    color: (process.stdout.isTTY ?? false) && !(typeof process.env["NO_COLOR"] === "string" && process.env["NO_COLOR"] !== ""),
+    unicode: (process.stdout.isTTY ?? false) && process.platform !== "win32",
+    width: Math.min(process.stdout.columns ?? 80, 100),
+    outDir: undefined,
+    fileCount: 0,
+    durationMs: 0,
+    cwd: opt.cwd,
+    hasTokenRegistry: !!pipeline.config.designSystem?.componentsModule,
+    findingsLimit: 5,
+    suppressNags: true,
+  };
+  process.stdout.write((await renderTerminal(result, reportOpts)) + "\n");
 
   // 6b. Bootstrap AI-readiness surface: LYSE.md + AGENTS.md.
   await writeAiReadinessSurface(opt.cwd, pipeline);
