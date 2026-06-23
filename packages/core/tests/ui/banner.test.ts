@@ -14,4 +14,9 @@ describe("ui/banner", () => {
     expect(out).toContain("◈");
     expect(out).toContain("lyse");
   });
+
+  it("renders cleanly with no subtitle (no stray spacing/segment)", () => {
+    const out = brandHeader("0.2.0", "", { color: false, unicode: false });
+    expect(out).toBe("  lyse   0.2.0");
+  });
 });

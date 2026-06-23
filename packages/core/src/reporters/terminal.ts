@@ -20,7 +20,7 @@ const FINDING_NUM_WIDTH = 2;
 
 function header(result: AuditResult, opts: TerminalOpts): string {
   const ui = { color: opts.color, unicode: opts.unicode };
-  const subtitle = `${opts.fileCount} files · ${(opts.durationMs / 1000).toFixed(1)}s`;
+  const subtitle = opts.fileCount > 0 ? `${opts.fileCount} files · ${(opts.durationMs / 1000).toFixed(1)}s` : "";
   return brandHeader(result.toolVersion, subtitle, ui);
 }
 
