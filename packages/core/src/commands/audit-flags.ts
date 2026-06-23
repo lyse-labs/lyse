@@ -59,4 +59,6 @@ export interface AuditFlags {
   progress?: Spinner;
   /** Opt-in: render the token layer in headless Chromium to detect computed-value drift. */
   render?: boolean;
+  /** Optional Storybook source for the runtime-axe sub-stage: a static dir (relative to repo root or absolute) or a running URL. */
+  storybook?: string;
 }

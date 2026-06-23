@@ -8,6 +8,10 @@ export interface RenderMeta {
   chromiumVersion: string;
   skippedNonCanonicalizable: number;
   error?: string;
+  /** axe-core version injected during the runtime-axe sub-stage (render mode + Storybook). */
+  axeVersion?: string;
+  /** Number of Storybook stories successfully probed by axe. */
+  storiesProbed?: number;
 }
 
 /** Thrown when Playwright/Chromium is not installed; caller skips render cleanly. */

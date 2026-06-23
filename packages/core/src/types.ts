@@ -110,6 +110,14 @@ export interface RuleContext {
    * Populated by R7′ pipeline wiring.
    */
   canonicalTokens?: Map<string, string>;
+  /**
+   * Runtime axe-core violations collected per story under `lyse audit --render`
+   * with a resolved Storybook. Present (possibly empty) only when the axe
+   * render sub-stage ran; absent otherwise. Consumed by a11y/runtime-axe.
+   */
+  axeViolations?: import("./render/axe-runner.js").AxeViolation[];
+  /** Number of stories successfully probed by axe — the rule's denominator. */
+  axeStoriesProbed?: number;
 }
 
 export interface TokenMap {

@@ -1,6 +1,6 @@
 # Rules
 
-Lyse ships with 63 rules. Each rule has a stable ID, a version, a severity, an axis, and (optionally) a codemod for auto-fix.
+Lyse ships with 65 rules (63 in the table below, plus 2 render-only experimental rules — see [Render-only and experimental rules](#render-only-and-experimental-rules)). Each rule has a stable ID, a version, a severity, an axis, and (optionally) a codemod for auto-fix.
 
 Rule output appears in:
 - Terminal text (default reporter).
@@ -74,6 +74,17 @@ Rule output appears in:
 | `ai-governance/interaction-pattern-docs` | AI governance | warning | No | [→](./ai-governance-interaction-pattern-docs.md) |
 | `ai-governance/draft-attribution` | AI governance | warning | No | [→](./ai-governance-draft-attribution.md) |
 | `ai-governance/product-analytics` | AI governance | warning | No | [→](./ai-governance-product-analytics.md) |
+
+## Render-only and experimental rules
+
+Some rules require the opt-in render layer (`lyse audit --render`) and do not contribute to the Health Score:
+
+| Rule ID | Requires | Status |
+|---|---|---|
+| `a11y/runtime-axe` | `--render` + pre-built Storybook | experimental |
+| `tokens/rendered-token-fidelity` | `--render` + pre-built Storybook | experimental |
+
+These rules are reported-only until calibration data is available from real design system corpora.
 
 ## How rules score
 

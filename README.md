@@ -34,6 +34,8 @@ Running `lyse` with no subcommand opens an interactive menu and loops back after
 
 A Health Score (0–100) across **6 axes** — tokens, a11y, components, stories, ai-surface, ai-governance — from deterministic static rules. CMMI-style maturity tier (Foundational → Autonomous) mapped from the score. No LLM, no network, fully local by default. Full formula and per-rule docs in [`docs/`](./docs/).
 
+The optional **render layer** (`lyse audit --render`) runs additional checks against a pre-built Storybook (`storybook-static/` or a URL): `tokens/rendered-token-fidelity` (CSS custom property drift) and `a11y/runtime-axe` (axe-core a11y violations). Both are experimental and do not affect the Health Score.
+
 `lyse explain --score` also reports an **AI-Governance Maturity Level** (L0–L5, by presence of AI affordances — marker components, AI tokens, interaction patterns, governance docs). Deterministic by default; an optional LLM tier reads semantic affordances for the harder cases.
 
 ## Privacy
