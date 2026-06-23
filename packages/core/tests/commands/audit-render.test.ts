@@ -45,7 +45,7 @@ describe("audit --render", () => {
     expect(result.meta?.render).toBeDefined();
     expect(result.meta!.render!.error).toBe("no DTCG token source");
     expect(result.meta!.render!.chromiumVersion).toBe("n/a");
-    const renderFindings = result.findings.filter((f) => f.ruleId === "rendered-token-fidelity");
+    const renderFindings = result.findings.filter((f) => f.ruleId === "tokens/rendered-token-fidelity");
     expect(renderFindings).toHaveLength(0);
   });
 
