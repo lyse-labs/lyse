@@ -40,6 +40,22 @@ const sample: AuditResult = {
 const baseOpts = { mode: "default" as const, color: false, unicode: false, width: 80, outDir: "report", fileCount: 247, durationMs: 1400, cwd: "/tmp/test" };
 
 describe("renderTerminal (plain-text mode for snapshot stability)", () => {
+  it("shows an (auto-fail) indicator when the grade auto-failed", async () => {
+    const out = await renderTerminal(
+      { ...sample, finalScore: 0, grade: { grade: "Fail", autoFailed: true } },
+      baseOpts,
+    );
+    expect(out).toContain("(auto-fail)");
+  });
+
+  it("omits the auto-fail indicator on a normal grade", async () => {
+    const out = await renderTerminal(
+      { ...sample, grade: { grade: "C", autoFailed: false } },
+      baseOpts,
+    );
+    expect(out).not.toContain("(auto-fail)");
+  });
+
   it("matches snapshot for the standard case", async () => {
     const out = await renderTerminal(sample, baseOpts);
     expect(out).toMatchSnapshot();

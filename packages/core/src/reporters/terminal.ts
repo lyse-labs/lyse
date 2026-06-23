@@ -33,8 +33,9 @@ function scoreLine(result: AuditResult, opts: TerminalOpts, deltaSuffix?: string
   }
   const grade = result.grade && result.grade.grade !== "N/A" ? `${result.grade.grade}  ` : "";
   const head = bold(thresholdColor(score, opts)(`${grade}${score}/100`), opts);
+  const autoFail = result.grade?.autoFailed ? `  ${dim("(auto-fail)", opts)}` : "";
   const delta = deltaSuffix ? `  ${dim(deltaSuffix, opts)}` : "";
-  return `  ${dot}  ${head}${delta}   ${sub}`;
+  return `  ${dot}  ${head}${autoFail}${delta}   ${sub}`;
 }
 
 function axisLine(a: AxisScore, opts: TerminalOpts): string {
