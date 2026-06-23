@@ -10,6 +10,8 @@ import { adapters } from "./adapters/index.js";
 export const EXECUTION_COVERED: Record<string, string> = {
   "tokens/rendered-token-fidelity":
     "execution: browser-driven oracle via evaluateRenderAdapter() — probes computed custom-property values with real Chromium, validates detectRenderDrift catches cascade/override drift",
+  "a11y/runtime-axe":
+    "execution: browser-driven oracle via evaluateAxeAdapter() — injects axe-core into a minimal DOM with a known image-alt violation (TP) vs a clean DOM (TN), validates the inject→run→map→finding wiring",
 };
 
 /**
