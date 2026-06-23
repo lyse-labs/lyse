@@ -16,7 +16,11 @@ export async function injectAndRunAxe(
   page: Page,
   runOptions?: Record<string, unknown>,
 ): Promise<AxeViolation[]> {
-  await page.addScriptTag({ content: axe.source });
+  // Guard against double-injection on reused pages (axe warns and behaves non-deterministically).
+  const present = await page.evaluate(() => typeof (window as unknown as { axe?: unknown }).axe !== "undefined");
+  if (!present) {
+    await page.addScriptTag({ content: axe.source });
+  }
   const raw = await page.evaluate(async (opts) => {
     const runner = (window as unknown as { axe: { run: (ctx: Document, o?: unknown) => Promise<{ violations: Array<{ id: string; impact: string | null; help: string; nodes: unknown[] }> }> } }).axe;
     const result = await runner.run(document, opts ?? { resultTypes: ["violations"] });
