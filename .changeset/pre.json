@@ -4,5 +4,14 @@
   "initialVersions": {
     "@lyse-labs/lyse": "0.2.0-alpha.2"
   },
-  "changesets": []
+  "changesets": [
+    "lyse-clean-report",
+    "render-lane-axe-require",
+    "rendered-token-fidelity-render",
+    "runtime-axe-storybook",
+    "terminal-ui-formats-table-tsv",
+    "terminal-ui-wave-1",
+    "terminal-ui-wave-2-clack-init",
+    "terminal-ui-wave-2-clack-repl"
+  ]
 }
