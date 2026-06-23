@@ -1,0 +1,31 @@
+{
+  "lyseVersion": "0.2.0-alpha.2",
+  "scores": [
+    {
+      "ruleId": "a11y/runtime-axe",
+      "oracleKind": "execution",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "tokens/rendered-token-fidelity",
+      "oracleKind": "execution",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    }
+  ]
+}
