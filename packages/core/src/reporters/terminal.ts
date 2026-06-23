@@ -211,7 +211,7 @@ export async function renderTerminal(result: AuditResult, opts: TerminalOpts): P
   // calling renderTerminal at all).
   if (!opts.hasTokenRegistry && !opts.suppressNags) {
     lines.push("");
-    lines.push(`  ${dim("No token registry detected — run \`lyse init\` for a calibrated score.", opts)}`);
+    lines.push(`  ${dim("No token registry detected — run `lyse init` for a calibrated score.", opts)}`);
   }
 
   lines.push("", "");
