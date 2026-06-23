@@ -24,8 +24,11 @@ jobs:
       # and publishes (pnpm release) when that PR is merged into main.
       - uses: changesets/action@v1
         with:
-          version: pnpm version
-          publish: pnpm release
+          # `pnpm run`, not `pnpm version`/`pnpm release` — `version` is a pnpm
+          # built-in (prints the version table, never runs the package.json
+          # script), so the bare form silently no-ops the version bump.
+          version: pnpm run version
+          publish: pnpm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

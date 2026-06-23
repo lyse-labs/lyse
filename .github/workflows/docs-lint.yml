@@ -1,10 +1,11 @@
 name: Docs lint
 
 on:
+  # No paths filter on pull_request: "Check markdown links" is a required
+  # status check, and a path-filtered required check is never reported on PRs
+  # that touch no markdown — which deadlocks the merge. lychee scans all *.md
+  # regardless, so it stays cheap (~13s) and trivially green when no docs change.
   pull_request:
-    paths:
-      - "**.md"
-      - ".github/workflows/docs-lint.yml"
   push:
     branches: [main]
     paths:
