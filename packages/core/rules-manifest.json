@@ -524,6 +524,25 @@
       ]
     },
     {
+      "id": "a11y/runtime-axe",
+      "axis": "a11y",
+      "defaultSeverity": "warning",
+      "shortDescription": "Rendered components pass automated axe-core accessibility checks",
+      "fullDescription": "Runs axe-core against a design system's real rendered components, sourced from a pre-built Storybook (`storybook-static/` or a running URL), under `lyse audit --render`. Emits one finding per axe violation (severity from axe impact: critical/serious → error, moderate/minor → warning). N/A when no Storybook is found or `--render` is not set. Covers axe-core's automatable subset (~30% of WCAG criteria) — it complements, never replaces, manual audits.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/a11y-runtime-axe.md",
+      "rationale": "Many a11y defects (color contrast, missing alt text, ARIA misuse) only exist in the rendered DOM and are invisible to static analysis. Running axe-core on the design system's own Storybook stories catches them against the exact markup the DS ships.",
+      "examples": [
+        {
+          "good": "<img src=\"logo.png\" alt=\"Acme logo\">",
+          "bad": "<img src=\"logo.png\">"
+        }
+      ],
+      "allowlist": [
+        "design systems without a pre-built Storybook — the rule is N/A",
+        "runs only under `lyse audit --render`; the default audit never invokes it"
+      ]
+    },
+    {
       "id": "stories/coverage",
       "axis": "stories",
       "defaultSeverity": "warning",
