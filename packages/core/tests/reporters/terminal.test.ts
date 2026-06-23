@@ -56,6 +56,20 @@ describe("renderTerminal (plain-text mode for snapshot stability)", () => {
     expect(out).not.toContain("(auto-fail)");
   });
 
+  it("suppressNags hides the static-only banner and the run-lyse-init hint", async () => {
+    const withLayer4: AuditResult = { ...sample, meta: { layer4: { staticOnly: true } } } as AuditResult;
+    const out = await renderTerminal(withLayer4, { ...baseOpts, hasTokenRegistry: false, suppressNags: true });
+    expect(out).not.toContain("Static-only");
+    expect(out).not.toContain("No token registry detected");
+  });
+
+  it("shows the nags by default (suppressNags off)", async () => {
+    const withLayer4: AuditResult = { ...sample, meta: { layer4: { staticOnly: true } } } as AuditResult;
+    const out = await renderTerminal(withLayer4, { ...baseOpts, hasTokenRegistry: false });
+    expect(out).toContain("Static-only");
+    expect(out).toContain("No token registry detected");
+  });
+
   it("matches snapshot for the standard case", async () => {
     const out = await renderTerminal(sample, baseOpts);
     expect(out).toMatchSnapshot();

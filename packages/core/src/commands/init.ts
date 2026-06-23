@@ -84,6 +84,7 @@ export async function runInit(opt: InitOptions): Promise<void> {
     cwd: opt.cwd,
     hasTokenRegistry: !!pipeline.config.designSystem?.componentsModule,
     findingsLimit: 5,
+    suppressNags: true,
   };
   process.stdout.write((await renderTerminal(result, reportOpts)) + "\n");
 

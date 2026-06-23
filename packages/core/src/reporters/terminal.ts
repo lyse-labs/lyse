@@ -178,7 +178,7 @@ export async function renderTerminal(result: AuditResult, opts: TerminalOpts): P
   // but the rendering contract stays in tree for when Layer 4 lands.
   const layer4 = result.meta?.layer4;
   if (layer4) {
-    if (layer4.staticOnly) {
+    if (layer4.staticOnly && !opts.suppressNags) {
       lines.push("");
       lines.push(
         `  ${opts.color ? "\x1b[33m" : ""}⚠ Static-only mode: every LLM path is off. Set ANTHROPIC_API_KEY or OPENAI_API_KEY and remove --static-only to enable optional LLM augmentation.${opts.color ? "\x1b[0m" : ""}`,
@@ -209,7 +209,7 @@ export async function renderTerminal(result: AuditResult, opts: TerminalOpts): P
   // (spec T28 dogfood fix). Shown only when hasTokenRegistry is absent/false,
   // and only in human-readable mode (caller skips this for json/sarif by not
   // calling renderTerminal at all).
-  if (!opts.hasTokenRegistry) {
+  if (!opts.hasTokenRegistry && !opts.suppressNags) {
     lines.push("");
     lines.push(`  ${dim("No token registry detected — run \`lyse init\` for a calibrated score.", opts)}`);
   }
