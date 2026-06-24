@@ -13,7 +13,6 @@
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
-    "release:check": "pnpm -F lyse exec tsx ../../scripts/release-check.ts",
     "changeset": "changeset",
     "version": "changeset version",
     "release": "pnpm --filter @lyse-labs/lyse build && changeset publish"
