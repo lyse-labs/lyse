@@ -167,7 +167,7 @@ export const rule: Rule = createLyseRule({
 
 Design systems without explicit theme-mode declarations leave consumers to implement their own ad-hoc dark-mode strategies, leading to inconsistent behaviour across products. A repo-level signal — however simple — proves the design system has taken a position on color-scheme support.
 
-The check is intentionally broad: any of the five detection signals (media query, data attribute, class convention, DTCG group, Tailwind v4 variant) counts as "present". The rule is experimental and does not contribute to the health score until calibration data is available.`,
+The check is intentionally broad: any of the five detection signals (media query, data attribute, class convention, DTCG group, Tailwind v4 variant) counts as "present".`,
     examples: [
       {
         good: ":root { --color-bg: #fff; } [data-theme=\"dark\"] { --color-bg: #111; }",

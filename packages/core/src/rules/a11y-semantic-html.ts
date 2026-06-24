@@ -147,7 +147,7 @@ export const rule: Rule = createLyseRule({
 
 A clickable \`<div>\` works for mouse users and no one else: it's not focusable, doesn't fire on Enter/Space, and a screen reader announces nothing actionable. Using the right element — \`<button>\` — gives keyboard operability, focus, and role for free. When a non-semantic element must be interactive, it needs \`role\`, \`tabIndex\`, and a key handler to be equivalent. This rule catches the missing-role case, which is the most common and the most broken.
 
-It is scoped tightly to avoid false positives: only native lowercase elements with a click handler and no role; component props and already-roled elements are left alone. The rule is experimental and does not contribute to the health score until calibration data is available.`,
+It is scoped tightly to avoid false positives: only native lowercase elements with a click handler and no role; component props and already-roled elements are left alone.`,
     examples: [
       {
         good: "<button onClick={save}>Save</button>",

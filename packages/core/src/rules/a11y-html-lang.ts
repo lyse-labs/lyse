@@ -180,7 +180,7 @@ export const rule: Rule = createLyseRule({
 
 WCAG 3.1.1 (Language of Page) requires the document language to be programmatically determinable. The \`lang\` attribute on \`<html>\` is how screen readers pick the right voice and pronunciation, how browsers choose hyphenation and quotation marks, and how language-scoped CSS (\`:lang()\`) and per-locale typography apply. A missing \`lang\` silently degrades the experience for assistive-tech and international users.
 
-The check is repo-level and applies only when the design system actually ships an \`<html>\` root; a component library that never renders \`<html>\` is N/A. The rule is experimental and does not contribute to the health score until calibration data is available.`,
+The check is repo-level and applies only when the design system actually ships an \`<html>\` root; a component library that never renders \`<html>\` is N/A.`,
     examples: [
       {
         good: 'export default function RootLayout({ children }) {\n  return <html lang="en"><body>{children}</body></html>;\n}',

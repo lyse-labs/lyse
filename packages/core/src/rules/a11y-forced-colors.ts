@@ -104,7 +104,7 @@ export const rule: Rule = createLyseRule({
 
 Windows High Contrast Mode (surfaced to CSS as \`forced-colors: active\`) replaces the author's palette with a small user-chosen set. Components that lean on background color alone for shape, on box-shadow for elevation, or on color alone to convey state can become invisible or meaningless. The \`forced-colors\` and \`prefers-contrast\` media features — plus \`forced-color-adjust\` and system color keywords — let a design system stay legible for low-vision users who depend on these modes.
 
-The check is repo-level and broad: a single affordance anywhere clears it. The rule is experimental and does not contribute to the health score until calibration data is available.`,
+The check is repo-level and broad: a single affordance anywhere clears it.`,
     examples: [
       {
         good: ".btn { background: var(--accent); }\n@media (forced-colors: active) { .btn { border: 1px solid ButtonText; } }",

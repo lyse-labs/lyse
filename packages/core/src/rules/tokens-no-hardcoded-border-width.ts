@@ -105,7 +105,7 @@ export const rule: Rule = createLyseRule({
     helpUri: "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-no-hardcoded-border-width.md",
     rationale: `Why it matters
 
-Border thicknesses beyond the default hairline (\`2px\`, \`3px\`, \`0.5px\`) should be deliberate, named choices, not magic numbers sprinkled per component. A small border-width scale keeps emphasis borders consistent. Value-drift rule: experimental, does not contribute to the score until calibrated.`,
+Border thicknesses beyond the default hairline (\`2px\`, \`3px\`, \`0.5px\`) should be deliberate, named choices, not magic numbers sprinkled per component. A small border-width scale keeps emphasis borders consistent. Value-drift rule.`,
     examples: [
       { good: ":root { --border-width-thick: 2px; }\n.active { border: var(--border-width-thick) solid; }", bad: ".active { border: 3px solid; }" },
     ],

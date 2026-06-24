@@ -1,6 +1,6 @@
 # `tokens/no-hardcoded-opacity`
 
-> **Axis:** Tokens · **Severity:** warning · **Auto-fixable:** no · **Status:** experimental (reported-only, not yet scored)
+> **Axis:** Tokens · **Severity:** warning · **Auto-fixable:** no · **Status:** stable (scored)
 
 Flags hardcoded fractional `opacity` values that don't come from an opacity token scale.
 
@@ -33,7 +33,7 @@ lyse-disable tokens/no-hardcoded-opacity
 
 ## Status
 
-Value-drift rule — **experimental** and reported-only; does not contribute to the Health Score until calibrated.
+Value-drift rule — **stable** and **scored**: it contributes to the Health Score.
 
 ## See also
 

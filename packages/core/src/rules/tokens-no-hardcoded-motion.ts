@@ -132,7 +132,7 @@ export const rule: Rule = createLyseRule({
     helpUri: "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-no-hardcoded-motion.md",
     rationale: `Why it matters
 
-Inconsistent durations (180ms here, 240ms there) and ad-hoc bezier curves make a system's motion feel incoherent and untunable. A small motion scale (\`--duration-fast/base/slow\`, \`--easing-standard/emphasized\`) makes timing a deliberate, shared decision. Value-drift rule: experimental, does not contribute to the score until calibrated.`,
+Inconsistent durations (180ms here, 240ms there) and ad-hoc bezier curves make a system's motion feel incoherent and untunable. A small motion scale (\`--duration-fast/base/slow\`, \`--easing-standard/emphasized\`) makes timing a deliberate, shared decision. Value-drift rule.`,
     examples: [
       { good: ":root { --duration-base: 200ms; }\n.x { transition-duration: var(--duration-base); }", bad: ".x { transition: all 0.24s cubic-bezier(0.1, 0.2, 0.3, 0.4); }" },
     ],

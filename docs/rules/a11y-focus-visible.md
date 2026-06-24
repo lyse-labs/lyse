@@ -1,6 +1,6 @@
 # `a11y/focus-visible`
 
-> **Axis:** A11y · **Severity:** warning · **Auto-fixable:** no · **Status:** experimental (reported-only, not yet scored)
+> **Axis:** A11y · **Severity:** warning · **Auto-fixable:** no · **Status:** stable (scored)
 
 Checks, at repo level, whether a design system that removes the focus outline (`outline: none` / `outline: 0`) also adopts `:focus-visible`.
 
@@ -54,7 +54,7 @@ lyse-disable a11y/focus-visible
 
 ## Status
 
-Experimental and **reported-only**: it does not contribute to the Health Score until calibration data is available.
+Stable and **scored**: it contributes to the Health Score.
 
 ## See also
 

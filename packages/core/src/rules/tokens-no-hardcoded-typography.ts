@@ -127,7 +127,7 @@ export const rule: Rule = createLyseRule({
     helpUri: "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-no-hardcoded-typography.md",
     rationale: `Why it matters
 
-A type scale (\`--font-size-sm/md/lg\`, \`--font-weight-regular/semibold\`) is the backbone of a design system's voice. Ad-hoc \`font-size: 13px\` / \`font-weight: 650\` scattered per component erode that scale into dozens of near-duplicates. Value-drift rule: experimental, does not contribute to the score until calibrated.`,
+A type scale (\`--font-size-sm/md/lg\`, \`--font-weight-regular/semibold\`) is the backbone of a design system's voice. Ad-hoc \`font-size: 13px\` / \`font-weight: 650\` scattered per component erode that scale into dozens of near-duplicates. Value-drift rule.`,
     examples: [
       { good: ":root { --font-size-sm: 13px; }\n.label { font-size: var(--font-size-sm); }", bad: ".label { font-size: 13px; font-weight: 650; }" },
     ],

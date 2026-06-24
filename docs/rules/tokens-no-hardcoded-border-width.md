@@ -1,6 +1,6 @@
 # `tokens/no-hardcoded-border-width`
 
-> **Axis:** Tokens · **Severity:** warning · **Auto-fixable:** no · **Status:** experimental (reported-only, not yet scored)
+> **Axis:** Tokens · **Severity:** warning · **Auto-fixable:** no · **Status:** stable (scored)
 
 Flags hardcoded border-width lengths that don't come from a border-width token scale.
 
@@ -33,7 +33,7 @@ lyse-disable tokens/no-hardcoded-border-width
 
 ## Status
 
-Value-drift rule — **experimental** and reported-only; does not contribute to the Health Score until calibrated.
+Value-drift rule — **stable** and **scored**: it contributes to the Health Score.
 
 ## See also
 

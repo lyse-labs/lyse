@@ -1,6 +1,6 @@
 # `a11y/prefers-reduced-motion`
 
-> **Axis:** A11y · **Severity:** warning · **Auto-fixable:** no · **Status:** experimental (reported-only, not yet scored)
+> **Axis:** A11y · **Severity:** warning · **Auto-fixable:** no · **Status:** stable (scored)
 
 Checks, at repo level, whether a design system that uses CSS motion (transitions, animations, or `@keyframes`) also honors the user's `prefers-reduced-motion` setting.
 
@@ -58,7 +58,7 @@ lyse-disable a11y/prefers-reduced-motion
 
 ## Status
 
-Experimental and **reported-only**: it does not contribute to the Health Score until calibration data is available.
+Stable and **scored**: it contributes to the Health Score.
 
 ## See also
 

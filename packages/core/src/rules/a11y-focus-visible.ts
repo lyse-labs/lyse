@@ -89,7 +89,7 @@ export const rule: Rule = createLyseRule({
 
 A visible focus indicator is how keyboard and switch users know where they are. Blanket \`outline: none\` resets — extremely common in design-system base styles — silently delete that indicator for every product downstream. \`:focus-visible\` is the modern fix: it lets you remove the outline for mouse users while keeping it for keyboard users.
 
-The check is repo-level and conservative: it only fires when an outline is explicitly removed AND no \`:focus-visible\` adoption exists anywhere. The rule is experimental and does not contribute to the health score until calibration data is available.`,
+The check is repo-level and conservative: it only fires when an outline is explicitly removed AND no \`:focus-visible\` adoption exists anywhere.`,
     examples: [
       {
         good: "button:focus:not(:focus-visible) { outline: none; }\nbutton:focus-visible { outline: 2px solid; }",

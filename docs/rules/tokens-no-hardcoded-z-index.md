@@ -1,6 +1,6 @@
 # `tokens/no-hardcoded-z-index`
 
-> **Axis:** Tokens · **Severity:** warning · **Auto-fixable:** no · **Status:** experimental (reported-only, not yet scored)
+> **Axis:** Tokens · **Severity:** warning · **Auto-fixable:** no · **Status:** stable (scored)
 
 Flags hardcoded `z-index` values that don't come from a z-index token scale.
 
@@ -40,7 +40,7 @@ lyse-disable tokens/no-hardcoded-z-index
 
 ## Status
 
-This is a value-drift rule; like the other hardcoded-value detectors it is **experimental** and does not contribute to the Health Score until calibration data is available.
+This is a value-drift rule; like the other hardcoded-value detectors it is **stable** and **scored**: it contributes to the Health Score.
 
 ## See also
 

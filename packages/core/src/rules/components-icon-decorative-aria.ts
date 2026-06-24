@@ -137,7 +137,7 @@ export const rule: Rule = createLyseRule({
 
 An icon is either decorative (it repeats adjacent text — should be silent to a screen reader) or meaningful (it stands alone — must be labelled). A bare \`<svg>\` declares neither, so assistive tech guesses: many screen readers announce "graphic" or read raw path data. Marking intent — \`aria-hidden\` for decorative, \`role="img"\` + label for meaningful — is the single most common SVG-accessibility fix.
 
-The rule is conservative: any of \`aria-hidden\` / \`role\` / \`aria-label\` / \`aria-labelledby\` / a \`<title>\` child clears it, so authors who made any accessibility decision are never nagged. It is experimental and does not contribute to the health score until calibration data is available.`,
+The rule is conservative: any of \`aria-hidden\` / \`role\` / \`aria-label\` / \`aria-labelledby\` / a \`<title>\` child clears it, so authors who made any accessibility decision are never nagged.`,
     examples: [
       {
         good: '<svg aria-hidden="true" viewBox="0 0 16 16"><path d="…" /></svg>',
