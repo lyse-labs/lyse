@@ -163,13 +163,14 @@ Request an auto-fix for a specific finding.
 - `medium` — codemod uses heuristics; review before applying.
 - `low` — codemod was unable to produce a fully-resolved fix; the diff is a suggestion.
 
-**Auto-fixable rules:**
+**Auto-fixable rules (via `suggest_fix`):**
 
 - `tokens/no-hardcoded-color`
 - `tokens/no-hardcoded-spacing`
 - `components/no-native-shadows`
-- `naming/component-pascalcase`
-- `naming/hook-prefix`
+- `ai-governance/ai-token-requires-marker`
+
+> `naming/component-pascalcase`, `naming/hook-prefix`, and the other Sprint-1 codemods are auto-fixable via the `lyse fix` CLI but not yet adapted for MCP `suggest_fix` — it returns a structured rationale pointing to the CLI for those.
 
 For non-auto-fixable rules, `suggest_fix` returns a structured error explaining why.
 

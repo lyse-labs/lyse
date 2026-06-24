@@ -629,7 +629,7 @@ const agentsMdCommand = defineCommand({
   },
   async run({ args }) {
     process.stderr.write(
-      "WARNING: `lyse agents-md` is deprecated. Use `lyse agents` instead. (Alias removed in v0.2.)\n"
+      "WARNING: `lyse agents-md` is deprecated. Use `lyse agents` instead. (This alias will be removed in a future release.)\n"
     );
     await agentsHandler({ args });
   },
