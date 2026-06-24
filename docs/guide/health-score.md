@@ -145,7 +145,7 @@ The Health Score is a structural metric for design system adherence. Use it alon
 
 ### Coverage by axis
 
-Lyse ships **53 deterministic static rules across 6 axes**. Default audits are static-only — no LLM, no network.
+Lyse ships **65 deterministic static rules across 6 axes**. Default audits are static-only — no LLM, no network.
 
 | Axis | Rules | Notes |
 |---|---|---|
@@ -155,7 +155,7 @@ Lyse ships **53 deterministic static rules across 6 axes**. Default audits are s
 | Stories | `stories/coverage` | Storybook or alternative documentation per component |
 | AI surface | `ai-surface/agents-md-quality`, `ai-surface/component-manifest-json`, `ai-surface/ds-index-exported` | Machine-readable signals coding agents rely on |
 
-Each rule contributes 1 sub-axis to the reliability catalogue (53 sub-axes total, 43 currently `stable` and scored). The full catalogue lives at [`docs/architecture/sub-axes.md`](../architecture/sub-axes.md); promotion to `stable` requires N ≥ 30 hand-labelled samples + Wilson 95 % LB ≥ 0.90 on recall.
+Each rule contributes 1 sub-axis to the reliability catalogue (65 sub-axes total, 52 currently `stable` and scored). The full catalogue lives at [`docs/architecture/sub-axes.md`](../architecture/sub-axes.md); promotion to `stable` requires N ≥ 30 hand-labelled samples + Wilson 95 % LB ≥ 0.90 on recall.
 
 Known limitations:
 
@@ -177,7 +177,7 @@ You can run `lyse audit --format=json` in a cron job and append to a CSV to trac
 
 ## See also
 
-- [Rules index](../rules/) — the 53 deterministic static rules that compose the audit.
+- [Rules index](../rules/) — the 65 deterministic static rules that compose the audit.
 - [Configuration](./configuration.md) — disable rules, override severities.
 - [Reliability](../architecture/reliability.md) — reliability pillars + version-pinned scoring.
 - [Calibration](../architecture/calibration.md) — calibration corpus and methodology.
