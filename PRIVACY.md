@@ -71,7 +71,7 @@ The full event schema is published at [`schemas/v1/lyse-event.json`](./packages/
 | `event_type` | enum | `"audit.completed"` |
 | `ts` | ISO date | `"<iso-timestamp>"` |
 | `session_id` | string (hex) | `"01HXYZ0123456789ABCDEFGHIJ"` |
-| `repo_bucket` | string (hex, 16 char) | server-derived hash of the repo identifier with a server-side salt rotated daily |
+| `repo_bucket` | string (hex, 16 char) | hash of the repo identifier, computed locally by the CLI with an embedded salt (`BUCKET_SALT`, rotated per minor release) |
 | `sdk_version` | string | `"0.1.0"` |
 | `audit.score` | int 0-100 or `null` | `43` |
 | `audit.axes` | object | `{ tokens: 30, a11y: 60, components: 38, stories: 47 }` |
@@ -84,7 +84,7 @@ The full event schema is published at [`schemas/v1/lyse-event.json`](./packages/
 
 ## 3. What we explicitly DO NOT collect
 
-- **No source code, file paths, or file content.** The `file_hash` field is an 8-character SHA-256 prefix of the file path with a server-side salt — the original path cannot be recovered.
+- **No source code, file paths, or file content.** The `file_hash` field is an 8-character SHA-256 prefix of the file path with an embedded client-side salt (`BUCKET_SALT`) — the original path cannot be recovered.
 - **No IP address.** The Cloudflare Worker handling `/v1/events` drops the `CF-Connecting-IP` header before any storage operation.
 - **No User-Agent.** Same — dropped at the edge.
 - **No GitHub username or actor identifier in stored data.** The OIDC `repository_id` is used transiently for rate-limiting and then discarded; only the salted hash is retained.
