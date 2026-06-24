@@ -193,6 +193,12 @@ lyse audit [path] [options]
 | `--threshold <n>` | integer 0–100 | (none) | Exit code 1 if Health Score is below this value. |
 | `--rules <list>` | comma-separated | all | Only run specific rules. |
 | `--exclude <list>` | comma-separated | (none) | Skip rules. |
+| `--render` | boolean | `false` | Opt-in: render the design system in headless Chromium (token-fidelity drift + axe-core a11y on a pre-built Storybook). Requires Playwright. |
+| `--storybook <dir\|url>` | string | (none) | Storybook source for runtime a11y — a pre-built static dir (e.g. `storybook-static`) or a running URL. Used only with `--render`. |
+| `--llm` / `--no-llm` | boolean | (off) | Enable / disable the LLM precision filter for this run. `--llm` is opt-in and sends source to your configured provider; `--no-llm` forces static-only. |
+| `--llm-provider <name>` | string | (config) | Override the LLM provider (`anthropic` \| `openai` \| `openai-compat` \| `ollama`). |
+| `--llm-model <name>` | string | (config) | Override the LLM model. |
+| `--include-timestamps` | boolean | `false` | Include a timestamp in JSON output. Breaks byte-for-byte determinism. |
 
 ### Examples
 

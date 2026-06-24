@@ -131,7 +131,7 @@ See [`mcp-server.md`](./mcp-server.md) for the full integration guide.
 
 ## 6. Improve the score
 
-Run `lyse fix` to apply codemods in one shot (5 rules are auto-fixable; clean git tree required). The MCP server can also produce per-file patches with `suggest_fix`. The score is the start, not the goal.
+Run `lyse fix` to apply codemods in one shot (6 rules are auto-fixable; clean git tree required). The MCP server can also produce per-file patches with `suggest_fix`. The score is the start, not the goal.
 
 ## 7. Show your score (optional)
 
