@@ -96,7 +96,7 @@ export const rule: Rule = createLyseRule({
 
 When breakpoints live as bare literals scattered across stylesheets (\`600px\` here, \`640px\` there, \`768px\` elsewhere), the design system has no single source of truth for its responsive grid. Layouts break at inconsistent widths and consumers can't reason about the system's breakpoints. A tokenized scale — however expressed — makes the breakpoints explicit and shared.
 
-The check is repo-level and broad: any breakpoint-scale signal anywhere clears it. The rule is experimental and does not contribute to the health score until calibration data is available.`,
+The check is repo-level and broad: any breakpoint-scale signal anywhere clears it.`,
     examples: [
       {
         good: "$breakpoint-md: 768px;\n@media (min-width: $breakpoint-md) { .grid { … } }",

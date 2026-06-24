@@ -1,6 +1,6 @@
 # `a11y/inclusive-language`
 
-> **Axis:** A11y · **Severity:** info · **Auto-fixable:** no · **Status:** experimental (reported-only, not yet scored)
+> **Axis:** A11y · **Severity:** info · **Auto-fixable:** no · **Status:** stable (scored)
 
 Flags a small, high-confidence set of non-inclusive terms in code and docs, with suggested replacements.
 
@@ -48,7 +48,7 @@ lyse-disable a11y/inclusive-language
 
 ## Status
 
-Experimental and **reported-only**: it does not contribute to the Health Score.
+Stable and **scored**: it contributes to the Health Score.
 
 ## See also
 

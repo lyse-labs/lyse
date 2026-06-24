@@ -99,7 +99,7 @@ export const rule: Rule = createLyseRule({
 
 Vestibular and motion-sensitivity disorders make large or fast animations actively harmful — they can trigger nausea, dizziness, and migraines. The \`prefers-reduced-motion\` media feature lets users opt out at the OS level; a design system that animates without honoring it ignores that signal for every product built on it.
 
-The check is repo-level and broad: a single guard anywhere (CSS media query or JS \`matchMedia\`) is enough to clear it. The rule is experimental and does not contribute to the health score until calibration data is available.`,
+The check is repo-level and broad: a single guard anywhere (CSS media query or JS \`matchMedia\`) is enough to clear it.`,
     examples: [
       {
         good: ".btn { transition: transform .2s; }\n@media (prefers-reduced-motion: reduce) { .btn { transition: none; } }",

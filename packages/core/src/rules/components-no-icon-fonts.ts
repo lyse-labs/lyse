@@ -119,7 +119,7 @@ export const rule: Rule = createLyseRule({
 
 Icon fonts map glyphs to private-use Unicode code points. Screen readers announce those code points as meaningless characters, the icons disappear under Windows High Contrast / forced-colors mode, they can't be multi-colored, and they flash-of-unstyled-content until the font loads. SVG icons avoid every one of these: they carry an accessible name (or \`aria-hidden\`), respect forced-colors, and render instantly.
 
-The check is repo-level and broad: any icon-font signal anywhere (dependency, \`@font-face\`, or ligature class) trips it. The rule is experimental and does not contribute to the health score until calibration data is available.`,
+The check is repo-level and broad: any icon-font signal anywhere (dependency, \`@font-face\`, or ligature class) trips it.`,
     examples: [
       {
         good: "import { Home } from \"lucide-react\";\n<Home aria-hidden />",

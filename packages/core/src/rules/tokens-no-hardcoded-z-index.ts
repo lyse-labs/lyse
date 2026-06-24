@@ -107,7 +107,7 @@ export const rule: Rule = createLyseRule({
 
 Z-index without a shared scale is one of the most common sources of UI bugs in a design system: each component picks an arbitrary large number to "win", and overlays, dropdowns, tooltips and modals end up fighting unpredictably. A small, named z-index scale (\`--z-dropdown\`, \`--z-modal\`, \`--z-toast\`) makes stacking order an explicit, reviewable decision.
 
-This is a value-drift rule; like the other hardcoded-value detectors it is experimental and does not contribute to the health score until calibration data is available.`,
+This is a value-drift rule, in the same family as the other hardcoded-value detectors.`,
     examples: [
       {
         good: ":root { --z-modal: 400; }\n.modal { z-index: var(--z-modal); }",

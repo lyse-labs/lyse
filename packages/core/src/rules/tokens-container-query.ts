@@ -98,7 +98,7 @@ export const rule: Rule = createLyseRule({
 
 Container queries let a component respond to the size of its container rather than the viewport — the right primitive for a reusable design system. But an \`@container\` rule only works if some ancestor establishes a containment context with \`container-type\` (or the \`container\` shorthand). Without it, the query silently never matches and the responsive behavior is dead code — a subtle bug that ships unnoticed.
 
-The check is repo-level and broad: a single containment-context declaration anywhere clears it. It is intentionally non-prescriptive — not using container queries at all is fine (N/A). The rule is experimental and does not contribute to the health score until calibration data is available.`,
+The check is repo-level and broad: a single containment-context declaration anywhere clears it. It is intentionally non-prescriptive — not using container queries at all is fine (N/A).`,
     examples: [
       {
         good: ".card-wrap { container-type: inline-size; }\n@container (min-width: 400px) { .card { display: grid; } }",

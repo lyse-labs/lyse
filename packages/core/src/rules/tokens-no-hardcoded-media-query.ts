@@ -140,7 +140,7 @@ export const rule: Rule = createLyseRule({
 
 A design system's breakpoints are a shared vocabulary. When media queries hardcode \`768px\` here and \`760px\` there, layouts break at inconsistent widths and there is no single source of truth for the responsive grid. Referencing a tokenized breakpoint scale keeps every component snapping to the same widths.
 
-A literal that matches a defined breakpoint token value is treated as on-scale (consistent), and \`min-width: 0\` resets are ignored. The rule is experimental and does not contribute to the health score until calibration data is available.`,
+A literal that matches a defined breakpoint token value is treated as on-scale (consistent), and \`min-width: 0\` resets are ignored.`,
     examples: [
       {
         good: "@media (min-width: $breakpoint-md) { .grid { display: grid; } }",

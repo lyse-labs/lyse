@@ -98,7 +98,7 @@ export const rule: Rule = createLyseRule({
     helpUri: "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-no-hardcoded-border-radius.md",
     rationale: `Why it matters
 
-Inconsistent corner radii (4px here, 6px there, 8px elsewhere) make a system feel unpolished. A small named radii scale keeps roundedness consistent across components. Value-drift rule: experimental, does not contribute to the score until calibrated.`,
+Inconsistent corner radii (4px here, 6px there, 8px elsewhere) make a system feel unpolished. A small named radii scale keeps roundedness consistent across components. Value-drift rule.`,
     examples: [
       { good: ":root { --radius-md: 8px; }\n.card { border-radius: var(--radius-md); }", bad: ".card { border-radius: 6px; }" },
     ],

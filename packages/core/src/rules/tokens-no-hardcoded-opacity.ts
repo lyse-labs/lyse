@@ -88,7 +88,7 @@ export const rule: Rule = createLyseRule({
     helpUri: "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-no-hardcoded-opacity.md",
     rationale: `Why it matters
 
-Ad-hoc opacity values (\`0.65\`, \`0.38\`, \`0.87\`) scattered across a system produce subtly inconsistent muted/disabled/overlay states. A small named opacity scale keeps those states coherent. Value-drift rule: experimental, does not contribute to the score until calibrated.`,
+Ad-hoc opacity values (\`0.65\`, \`0.38\`, \`0.87\`) scattered across a system produce subtly inconsistent muted/disabled/overlay states. A small named opacity scale keeps those states coherent. Value-drift rule.`,
     examples: [
       { good: ":root { --opacity-muted: 0.6; }\n.muted { opacity: var(--opacity-muted); }", bad: ".muted { opacity: 0.65; }" },
     ],

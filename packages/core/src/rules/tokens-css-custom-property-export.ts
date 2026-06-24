@@ -98,7 +98,7 @@ export const rule: Rule = createLyseRule({
 
 CSS custom properties are the runtime-themeable surface of a design system: a consumer can read \`--color-primary\` and override it per brand, per mode, or per surface without rebuilding. A design system that locks its tokens in Sass variables or JS objects only — styling everything with literals — can't be re-themed at runtime and gives downstream products nothing to hook into.
 
-The check is repo-level and broad: a single custom-property definition (or a Tailwind \`@theme\` block) anywhere clears it. The rule is experimental and does not contribute to the health score until calibration data is available.`,
+The check is repo-level and broad: a single custom-property definition (or a Tailwind \`@theme\` block) anywhere clears it.`,
     examples: [
       {
         good: ":root { --color-primary: #3b82f6; }\n.btn { color: var(--color-primary); }",

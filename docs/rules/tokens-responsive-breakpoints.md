@@ -1,6 +1,6 @@
 # `tokens/responsive-breakpoints`
 
-> **Axis:** Tokens · **Severity:** warning · **Auto-fixable:** no · **Status:** experimental (reported-only, not yet scored)
+> **Axis:** Tokens · **Severity:** warning · **Auto-fixable:** no · **Status:** stable (scored)
 
 Checks, at repo level, whether a design system that uses width-based `@media` queries also defines a tokenized breakpoint scale.
 
@@ -50,7 +50,7 @@ lyse-disable tokens/responsive-breakpoints
 
 ## Status
 
-Experimental and **reported-only**: it does not contribute to the Health Score until calibration data is available.
+Stable and **scored**: it contributes to the Health Score.
 
 ## See also
 

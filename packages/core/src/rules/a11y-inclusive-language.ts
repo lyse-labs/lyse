@@ -110,7 +110,7 @@ export const rule: Rule = createLyseRule({
 
 A design system's vocabulary propagates into every product and every developer who consumes it. Terms like \`whitelist\`/\`blacklist\` and \`master\`/\`slave\` carry exclusionary connotations and have established, clearer replacements (\`allowlist\`/\`denylist\`, \`primary\`/\`replica\`). Fixing them in the source of truth fixes them everywhere downstream.
 
-The blocklist is intentionally narrow and unambiguous to avoid false positives; the rule is experimental and does not contribute to the health score.`,
+The blocklist is intentionally narrow and unambiguous to avoid false positives.`,
     examples: [
       {
         good: "const allowlist: string[] = [];\nconst denylist: string[] = [];",
