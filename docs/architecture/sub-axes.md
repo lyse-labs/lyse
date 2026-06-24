@@ -4,7 +4,7 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**63 sub-axes total** — stable: 52 · experimental: 11 · disabled: 0
+**65 sub-axes total** — stable: 52 · experimental: 13 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
@@ -22,6 +22,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `tokens.media-query` | `tokens` | Media-query breakpoint drift | **stable** | 0.912 | 0.912 | ✅ |
 | `tokens.motion` | `tokens` | Motion token scale (duration/easing) | **stable** | 0.918 | 0.916 | ✅ |
 | `tokens.opacity` | `tokens` | Opacity token scale | **stable** | 0.989 | 0.916 | ✅ |
+| `tokens.rendered-token-fidelity` | `tokens` | Rendered token fidelity | **experimental** | 0.000 | 0.000 | — |
 | `tokens.responsive-breakpoints` | `tokens` | Responsive breakpoint scale | **stable** | 0.904 | 0.901 | ✅ |
 | `tokens.shadow` | `tokens` | Shadow / elevation token scale | **experimental** | — | — | — |
 | `tokens.spacing` | `tokens` | Spacing tokens | **stable** | 0.985 | 0.904 | ✅ |
@@ -34,6 +35,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `a11y.html-lang` | `a11y` | Document language (html lang) | **stable** | 0.912 | 0.901 | ✅ |
 | `a11y.inclusive-language` | `a11y` | Inclusive language | **stable** | 0.904 | 0.901 | ✅ |
 | `a11y.prefers-reduced-motion` | `a11y` | prefers-reduced-motion compliance | **stable** | 0.904 | 0.901 | ✅ |
+| `a11y.runtime-axe` | `a11y` | Runtime a11y (axe-core on Storybook) | **experimental** | 0.000 | 0.000 | — |
 | `a11y.semantic-html` | `a11y` | Semantic HTML (no static-element interactions) | **stable** | 0.916 | 0.934 | ✅ |
 | `components.contracts-strictness` | `components` | Component prop contract strictness | **experimental** | — | — | — |
 | `components.doc-comments` | `components` | Component doc-comment presence (public API) | **stable** | 0.929 | 0.901 | ✅ |
