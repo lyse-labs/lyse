@@ -2,60 +2,59 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-config.json",
   "title": "Lyse .lyse.yaml config",
+  "description": "Mirrors LyseConfigSchema in src/config/schema.ts (the zod contract that actually validates .lyse.yaml). Kept in sync by tests/config/schema-json-parity.test.ts.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "schemaVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
     "designSystem": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "componentsModule": { "type": "string" },
         "elements": { "type": "object", "additionalProperties": { "type": "string" } },
-        "excludePaths": { "type": "array", "items": { "type": "string" } },
-        "intentMap": { "type": "object", "additionalProperties": { "type": "string" } }
+        "excludePaths": { "type": "array", "items": { "type": "string" } }
       }
     },
     "rules": {
       "type": "object",
       "additionalProperties": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "severity": { "type": "string", "enum": ["error", "warning", "info", "off"] },
-          "ignore": { "type": "array", "items": { "type": "string" } }
+        "oneOf": [
+          { "type": "string", "const": "off" },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "severity": { "type": "string", "enum": ["error", "warning", "info", "off"] },
+              "tolerance": { "type": "number" },
+              "disable": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        ]
+      }
+    },
+    "scoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "aiGovernanceGraceWindow": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "i18n": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "locales": { "type": "array", "items": { "type": "string" } },
+        "vocabulary": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "aiNouns": { "type": "array", "items": { "type": "string" } },
+            "disclaimerPhrases": { "type": "array", "items": { "type": "string" } },
+            "controlLabels": { "type": "array", "items": { "type": "string" } },
+            "gatePhrases": { "type": "array", "items": { "type": "string" } },
+            "loadingPhrases": { "type": "array", "items": { "type": "string" } }
+          }
         }
-      }
-    },
-    "output": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "deterministic": { "type": "boolean" },
-        "format": { "type": "string", "enum": ["json", "sarif", "text"] }
-      }
-    },
-    "license": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "key": { "type": ["string", "null"] }
-      }
-    },
-    "telemetry": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "enabled": { "type": "boolean" },
-        "endpoint": { "type": "string", "format": "uri" }
-      }
-    },
-    "mcp": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "enabled": { "type": "boolean" },
-        "meterPath": { "type": "string" }
       }
     },
     "llm": {
@@ -64,14 +63,14 @@
       "properties": {
         "provider": {
           "type": "string",
-          "enum": ["anthropic", "openai", "openai-compatible", "mcp", "auto"],
-          "description": "LLM provider. Note: 'none' was removed in v0.1 — use staticOnly: true instead."
+          "enum": ["anthropic", "openai", "openai-compatible", "mcp", "none", "auto", "agent-cli"],
+          "description": "LLM provider. 'none' is accepted but deprecated — loadConfig rewrites it to staticOnly: true."
         },
         "model": { "type": "string" },
         "endpoint": { "type": "string" },
         "connector": {
           "type": "string",
-          "enum": ["auto", "mcp-host", "openrouter", "direct-api-key", "ollama"]
+          "enum": ["auto", "mcp-host", "openrouter", "direct-api-key", "ollama", "agent-cli"]
         },
         "costCapUsd": { "type": "number", "exclusiveMinimum": 0 },
         "cacheMaxAgeDays": { "type": "number", "exclusiveMinimum": 0 },
