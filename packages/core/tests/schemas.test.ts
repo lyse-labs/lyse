@@ -20,8 +20,8 @@ function makeAjv(): Ajv2020 {
 describe("JSON Schemas v1 — Draft 2020-12 validity", () => {
   const files = readdirSync(SCHEMAS_DIR);
 
-  it("ships exactly 7 schemas", () => {
-    expect(files).toHaveLength(7);
+  it("ships exactly 4 schemas", () => {
+    expect(files).toHaveLength(4);
   });
 
   it.each(files)("%s compiles without errors", (file) => {

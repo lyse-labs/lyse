@@ -28,10 +28,6 @@ vi.mock("../../src/llm/augmenter.js", () => ({
 vi.mock("../../src/llm/sampler.js", () => ({
   sampleForAudit: vi.fn().mockResolvedValue({ files: [], totalBytes: 0 }),
 }));
-vi.mock("../../src/util/git.js", () => ({
-  gitHeadSha: vi.fn().mockResolvedValue("no-git"),
-  modifiedFilesWithHashes: vi.fn().mockResolvedValue([]),
-}));
 import { gitInit, gitCommitAll } from "../_helpers/git.js";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
