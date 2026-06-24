@@ -5,6 +5,13 @@
     "@lyse-labs/lyse": "0.2.0-alpha.2"
   },
   "changesets": [
+    "chore-dead-code-public",
+    "docs-privacy-bucket-accuracy",
+    "fix-config-schema-parity",
+    "fix-dependency-hygiene",
+    "fix-doc-drift-cli-mcp",
+    "fix-rule-count-drift",
+    "fix-stale-experimental-claims",
     "lyse-clean-report",
     "render-lane-axe-require",
     "rendered-token-fidelity-render",
