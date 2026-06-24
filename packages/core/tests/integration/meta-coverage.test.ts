@@ -14,7 +14,7 @@ describe("auditDirectory — meta.coverage population (Phase 1 of #156)", () => 
     const cov = result.meta!.coverage!;
     expect(typeof cov.scannedFiles).toBe("number");
     expect(cov.scannedFiles).toBeGreaterThan(0);
-    expect(typeof cov.durationMs).toBe("number");
+    expect(Number.isFinite(cov.durationMs)).toBe(true);
     expect(cov.durationMs).toBeGreaterThanOrEqual(0);
     // The full-ds fixture ships a .lyse.yaml; configPath should resolve to it.
     expect(cov.configPath).toMatch(/fixtures\/full-ds\/\.lyse\.yaml$/);

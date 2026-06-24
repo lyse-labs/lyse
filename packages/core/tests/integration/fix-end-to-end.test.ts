@@ -86,7 +86,7 @@ describe("fix-end-to-end integration", () => {
     // Total classified findings: ruleResults count + skipped.medium + skipped.low >= 1
     const applied = result.ruleResults.reduce((s, r) => s + r.count, 0);
     const total = applied + result.skipped.medium + result.skipped.low;
-    expect(total).toBeGreaterThanOrEqual(0); // non-negative
+    expect(total).toBeGreaterThanOrEqual(1); // fixture has at least one classified finding
   });
 
   it("dry-run does not throw", async () => {
