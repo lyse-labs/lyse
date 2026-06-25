@@ -1,8 +1,9 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap } from "../types.js";
+import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap, FixGroup } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
+import { makeFixGroup } from "./_fix-group.js";
 
 const RULE_ID = "tokens/no-hardcoded-typography";
 const MAX_FILE_BYTES = 1_000_000;
@@ -90,6 +91,12 @@ function lineFromIndex(text: string, index: number): number {
   return line;
 }
 
+function typographyFixGroup(ctx: RuleContext, hit: TypoHit): FixGroup | undefined {
+  if (!ctx.tokens) return undefined;
+  const candidates = ctx.tokens.typography.get(hit.scaleKey);
+  return makeFixGroup(RULE_ID, hit.scaleKey, candidates);
+}
+
 const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalResult> => {
   const findings: Finding[] = [];
   if (ctx.repoRoot && isAllowlisted(ctx.repoRoot)) return { findings, opportunities: 0 };
@@ -103,6 +110,7 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
     for (const hit of extractTypography(source)) {
       opportunities++;
       if (scale !== null && scale.has(hit.scaleKey)) continue;
+      const fixGroup = typographyFixGroup(ctx, hit);
       findings.push({
         ruleId: RULE_ID,
         axis: "tokens",
@@ -110,6 +118,7 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
         location: { file: path, line: lineFromIndex(source, hit.index), column: 1 },
         message: `Hardcoded ${hit.prop} \`${hit.raw}\` — typography should come from a type token scale`,
         suggestion: "reference a typography token (e.g. `--font-size-md`, `--font-weight-semibold`) instead of a raw value",
+        ...(fixGroup !== undefined && { fixGroup }),
       });
     }
   }

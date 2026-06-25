@@ -1,8 +1,9 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap } from "../types.js";
+import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap, FixGroup } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
+import { makeFixGroup } from "./_fix-group.js";
 
 const RULE_ID = "tokens/no-hardcoded-shadow";
 const MAX_FILE_BYTES = 1_000_000;
@@ -32,6 +33,13 @@ function extractShadows(text: string): ShadowHit[] {
     hits.push({ raw: value, index });
   }
   return hits;
+}
+
+function shadowFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {
+  if (!ctx.tokens) return undefined;
+  const normed = norm(raw);
+  const candidates = ctx.tokens.shadows.get(normed);
+  return makeFixGroup(RULE_ID, raw, candidates);
 }
 
 function shadowScaleSet(tokens: TokenMap | null): Set<string> {
@@ -78,6 +86,7 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
     for (const hit of extractShadows(source)) {
       opportunities++;
       if (scale.has(norm(hit.raw))) continue;
+      const fixGroup = shadowFixGroup(ctx, hit.raw);
       findings.push({
         ruleId: RULE_ID,
         axis: "tokens",
@@ -85,6 +94,7 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
         location: { file: path, line: lineFromIndex(source, hit.index), column: 1 },
         message: `Hardcoded box-shadow \`${hit.raw}\` — elevation should come from a shadow token scale`,
         suggestion: "reference a shadow token (e.g. `--shadow-sm`, `--elevation-2`) instead of a raw box-shadow",
+        ...(fixGroup !== undefined && { fixGroup }),
       });
     }
   }

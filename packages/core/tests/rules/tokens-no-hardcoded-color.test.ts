@@ -1052,3 +1052,24 @@ describe("isCssCustomPropertyDeclaration — custom-property definitions are not
     expect(result.findings.some((f) => f.message.includes("#ff0000"))).toBe(true);
   });
 });
+
+describe("tokens/no-hardcoded-color fixGroup support", () => {
+  it("attaches a fixGroup resolving the hex to its single token", async () => {
+    const tokens = { source: "dtcg",
+      colors: new Map([["#3b82f6", ["color.brand.primary"]]]),
+      spacing: new Map(), typography: new Map(), radii: new Map(), shadows: new Map(),
+      motion: new Map(), breakpoints: new Map(), zIndex: new Map(), opacity: new Map(), borderWidth: new Map(),
+    } as unknown as TokenMap;
+    const ctxWithTokens = { repoRoot: "/x", tokens, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [] };
+    const parsed: ParsedFiles = {
+      ts: [{ path: "src/A.tsx", source: 'const s = { color: "#3B82F6" };', imports: [], ast: null }],
+      css: [],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctxWithTokens as any, parsed);
+    expect(result.findings[0]!.fixGroup).toEqual({
+      key: "tokens/no-hardcoded-color::#3b82f6", from: "#3b82f6", to: "color.brand.primary",
+    });
+  });
+});
+

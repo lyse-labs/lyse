@@ -1,9 +1,10 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding } from "../types.js";
+import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, FixGroup } from "../types.js";
 import { isInCommentOrUrl, isLowSignalValueFile, isSchemaOrDataFile } from "./_skip-context.js";
 import { isPathExcluded } from "./_exclude.js";
 import { createLyseRule } from "./_rule-module.js";
+import { makeFixGroup } from "./_fix-group.js";
 
 const RULE_ID = "tokens/no-hardcoded-media-query";
 const MAX_FILE_BYTES = 1_000_000;
@@ -56,6 +57,12 @@ function isOnScale(ctx: RuleContext, raw: string): boolean {
   return scale.has(raw);
 }
 
+function mediaQueryFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {
+  if (!ctx.tokens) return undefined;
+  const candidates = ctx.tokens.breakpoints.get(raw);
+  return makeFixGroup(RULE_ID, raw, candidates);
+}
+
 /**
  * Collects the absolute source offsets of every breakpoint literal that lives
  * inside a `@media` prelude. A literal value of `0` (e.g. `min-width: 0`) is a
@@ -97,6 +104,7 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
       opportunities++;
       if (isOnScale(ctx, raw)) continue;
       const loc = blockLine > 0 ? { line: blockLine, column: 1 } : locationFromIndex(source, index);
+      const fixGroup = mediaQueryFixGroup(ctx, raw);
       findings.push({
         ruleId: RULE_ID,
         axis: "tokens",
@@ -105,6 +113,7 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
         message: `Hardcoded media-query breakpoint: ${raw}`,
         suggestion:
           "reference a tokenized breakpoint scale (SCSS `$breakpoint-*`, a custom property, or a JS `breakpoints` map) instead of a raw literal",
+        ...(fixGroup !== undefined && { fixGroup }),
       });
     }
   };

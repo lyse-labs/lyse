@@ -1,8 +1,9 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap } from "../types.js";
+import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap, FixGroup } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
+import { makeFixGroup } from "./_fix-group.js";
 
 const RULE_ID = "tokens/no-hardcoded-motion";
 const MAX_FILE_BYTES = 1_000_000;
@@ -56,6 +57,14 @@ function extractMotion(text: string): MotionHit[] {
 
 const norm = (s: string): string => s.replace(/\s+/g, "").toLowerCase();
 
+function motionFixGroup(ctx: RuleContext, hit: MotionHit): FixGroup | undefined {
+  if (!ctx.tokens) return undefined;
+  const normed = norm(hit.raw);
+  const prefix = hit.kind === "duration" ? "duration/" : "easing/";
+  const candidates = ctx.tokens.motion.get(prefix + normed);
+  return makeFixGroup(RULE_ID, hit.raw, candidates);
+}
+
 function motionScaleSets(tokens: TokenMap | null): { durations: Set<string>; easings: Set<string> } {
   const durations = new Set<string>();
   const easings = new Set<string>();
@@ -108,6 +117,7 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
       const onScale = hit.kind === "duration" ? durations.has(norm(hit.raw)) : easings.has(norm(hit.raw));
       if (onScale) continue;
       const what = hit.kind === "duration" ? "duration" : "easing curve";
+      const fixGroup = motionFixGroup(ctx, hit);
       findings.push({
         ruleId: RULE_ID,
         axis: "tokens",
@@ -115,6 +125,7 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
         location: { file: path, line: lineFromIndex(source, hit.index), column: 1 },
         message: `Hardcoded motion ${what} \`${hit.raw}\` — motion should come from a duration/easing token scale`,
         suggestion: "reference a motion token (e.g. `--duration-fast`, `--easing-standard`) instead of a raw value",
+        ...(fixGroup !== undefined && { fixGroup }),
       });
     }
   }

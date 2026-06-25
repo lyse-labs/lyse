@@ -838,3 +838,31 @@ describe("1px recall regression — spacing context fires, border context does n
     expect(result.findings.some((f) => f.message.includes("13px"))).toBe(true);
   });
 });
+
+it("attaches a fixGroup resolving the spacing value to its single token", async () => {
+  const tmap = { source: "dtcg", colors: new Map(),
+    spacing: new Map([["16px", ["space.4"]]]),
+    typography: new Map(), radii: new Map(), shadows: new Map(), motion: new Map(),
+    breakpoints: new Map(), zIndex: new Map(), opacity: new Map(), borderWidth: new Map(),
+  } as unknown as import("../../src/types.js").TokenMap;
+  const tctx = { repoRoot: "/x", tokens: tmap, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [] };
+  const files: import("../../src/types.js").ParsedFiles = { ts: [], css: [{ path: "a.css", source: ".x { padding: 16px; }", root: null }], cssInJs: [] };
+  const { findings } = await rule.evaluate(tctx as any, files);
+  expect(findings.find((f) => f.fixGroup)?.fixGroup).toMatchObject({ from: "16px", to: "space.4" });
+});
+
+it("two findings for the same spacing value share one fixGroup key", async () => {
+  const tmap = { source: "dtcg", colors: new Map(),
+    spacing: new Map([["16px", ["space.4"]]]),
+    typography: new Map(), radii: new Map(), shadows: new Map(), motion: new Map(),
+    breakpoints: new Map(), zIndex: new Map(), opacity: new Map(), borderWidth: new Map(),
+  } as unknown as import("../../src/types.js").TokenMap;
+  const tctx = { repoRoot: "/x", tokens: tmap, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [] };
+  const files: import("../../src/types.js").ParsedFiles = {
+    ts: [], css: [{ path: "a.css", source: ".x { padding: 16px; margin: 16px; }", root: null }], cssInJs: [],
+  };
+  const { findings } = await rule.evaluate(tctx as any, files);
+  const keys = findings.filter((f) => f.fixGroup).map((f) => f.fixGroup!.key);
+  expect(keys).toHaveLength(2);
+  expect(new Set(keys).size).toBe(1);
+});
