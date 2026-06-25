@@ -69,6 +69,16 @@ export interface LlmJudgement {
   confidence: number;
 }
 
+/** A root-cause fix shared by N findings: one drifted value → one token. */
+export interface FixGroup {
+  /** Grouping key, e.g. "tokens/no-hardcoded-color::#3b82f6". */
+  key: string;
+  /** The drifted literal, e.g. "#3b82f6". */
+  from: string;
+  /** Resolved target token path; omitted when zero or many candidates. */
+  to?: string;
+}
+
 export interface Finding {
   ruleId: RuleId;
   axis: AxisName;
@@ -79,6 +89,7 @@ export interface Finding {
   context?: string; // ≤ 120 chars of code, no secrets
   confidence?: Confidence;
   llmJudgement?: LlmJudgement;
+  fixGroup?: FixGroup;
 }
 
 export interface RuleContext {

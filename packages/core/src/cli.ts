@@ -57,6 +57,7 @@ import {
 import { resolveLlmConsent } from "./llm/consent.js";
 import { runTelemetryOn, runTelemetryOff, runTelemetryStatus } from "./commands/telemetry.js";
 import { runBenchPack } from "./commands/bench-pack.js";
+import { runHandoffCommand } from "./commands/handoff.js";
 
 import type { TerminalOpts } from "./reporters/terminal-format.js";
 
@@ -1002,6 +1003,19 @@ const telemetryCommand = defineCommand({
   },
 });
 
+const handoffCommand = defineCommand({
+  meta: { name: "handoff", description: "Audit then hand findings to your coding agent (Claude Code, Cursor, Codex)" },
+  args: {
+    directory: { type: "positional", required: false, default: ".", description: "repository root (defaults to current working directory)" },
+    ...GLOBAL_FLAGS,
+  },
+  async run({ args }) {
+    applyGlobalFlags(args);
+    const dir = resolve(typeof args.directory === "string" ? args.directory : ".");
+    await runHandoffCommand(dir);
+  },
+});
+
 const benchPackCommand = defineCommand({
   meta: { name: "bench-pack", description: "Emit a deterministic evidence pack (JSON) for submission to the public benchmark" },
   args: {
@@ -1087,7 +1101,7 @@ const main = defineCommand({
     quiet: { type: "boolean", description: "Suppress informational output" },
     "no-menu": { type: "boolean", description: "Skip the interactive menu (print help instead)" },
   },
-  subCommands: { init: initCommand, audit: auditCommand, fix: fixCommand, add: addCommand, share: shareCommand, badge: badgeCommand, agents: agentsCommand, "agents-md": agentsMdCommand, "bench-pack": benchPackCommand, version: versionCommand, explain: explainCommand, mcp: mcpCommand, feedback: feedbackCommand, telemetry: telemetryCommand },
+  subCommands: { init: initCommand, audit: auditCommand, fix: fixCommand, add: addCommand, share: shareCommand, badge: badgeCommand, agents: agentsCommand, "agents-md": agentsMdCommand, handoff: handoffCommand, "bench-pack": benchPackCommand, version: versionCommand, explain: explainCommand, mcp: mcpCommand, feedback: feedbackCommand, telemetry: telemetryCommand },
   async run({ args, cmd, rawArgs }) {
     applyGlobalFlags(args);
 

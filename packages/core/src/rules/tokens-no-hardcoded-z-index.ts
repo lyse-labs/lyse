@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
+import { makeFixGroup } from "./_fix-group.js";
 
 const RULE_ID = "tokens/no-hardcoded-z-index";
 const MAX_FILE_BYTES = 1_000_000;
@@ -77,8 +78,12 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
   for (const { path, source } of sources) {
     for (const hit of extractZIndexValues(source)) {
       opportunities++;
+      const strValue = String(hit.value);
       // On-scale values are compliant (counted as opportunity, not flagged).
-      if (scale !== null && scale.has(String(hit.value))) continue;
+      if (scale !== null && scale.has(strValue)) continue;
+      const fixGroup = ctx.tokens
+        ? makeFixGroup(RULE_ID, strValue, ctx.tokens.zIndex.get(strValue))
+        : undefined;
       findings.push({
         ruleId: RULE_ID,
         axis: "tokens",
@@ -86,6 +91,7 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
         location: { file: path, line: lineFromIndex(source, hit.index), column: 1 },
         message: `Hardcoded z-index \`${hit.value}\` — stacking order should come from a z-index token scale`,
         suggestion: "define a z-index scale (e.g. `--z-modal`, `--z-popover`) and reference it instead of a raw value",
+        ...(fixGroup !== undefined && { fixGroup }),
       });
     }
   }

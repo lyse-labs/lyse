@@ -1,9 +1,10 @@
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, ClassifyContext, Confidence, CodemodContext, CodemodResult } from "../types.js";
+import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, ClassifyContext, Confidence, CodemodContext, CodemodResult, FixGroup } from "../types.js";
 import { isInsideSkippedJsxAttr, isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isNotSpacingPropertyContext, isInCommentOrUrl, isInVarFallback } from "./_skip-context.js";
 import { isPathExcluded } from "./_exclude.js";
 import { fixHardcodedSpacing } from "../codemods/tokens-spacing.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
 import { createLyseRule } from "./_rule-module.js";
+import { makeFixGroup } from "./_fix-group.js";
 
 const PX_REM_EM = /\b(\d+(\.\d+)?)(px|rem|em)\b/g;
 // Only `0` and `100` are unconditionally allowed. `1` (i.e. 1px) is only
@@ -76,6 +77,15 @@ function suggestSpacing(ctx: RuleContext, raw: string): string | undefined {
   return candidates.length === 1 ? `consider token ${candidates[0]!}` : `candidate tokens: ${candidates.join(", ")}`;
 }
 
+function spacingFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {
+  if (!ctx.tokens) return undefined;
+  const m = raw.match(/^(\d+(\.\d+)?)(px|rem|em)$/);
+  if (!m) return undefined;
+  const numKey = m[1]!;
+  const candidates = ctx.tokens.spacing.get(raw) ?? ctx.tokens.spacing.get(numKey);
+  return makeFixGroup("tokens/no-hardcoded-spacing", raw, candidates);
+}
+
 const evaluate = async (
   ctx: RuleContext,
   files: ParsedFiles,
@@ -115,6 +125,7 @@ const evaluate = async (
       if (isNotSpacingPropertyContext(source, m.index)) continue;
       const loc = blockLine > 0 ? { line: blockLine, column: 1 } : locationFromIndex(source, m.index);
       const suggestion = suggestSpacing(ctx, raw);
+      const fixGroup = spacingFixGroup(ctx, raw);
       findings.push({
         ruleId: "tokens/no-hardcoded-spacing",
         axis: "tokens",
@@ -122,6 +133,7 @@ const evaluate = async (
         location: { file: path, line: loc.line, column: loc.column },
         message: `Off-scale spacing: ${raw}`,
         ...(suggestion !== undefined && { suggestion }),
+        ...(fixGroup !== undefined && { fixGroup }),
       });
     }
   };

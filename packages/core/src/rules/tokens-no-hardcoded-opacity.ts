@@ -1,8 +1,9 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding } from "../types.js";
+import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, FixGroup } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
+import { makeFixGroup } from "./_fix-group.js";
 
 const RULE_ID = "tokens/no-hardcoded-opacity";
 const MAX_FILE_BYTES = 1_000_000;
@@ -51,6 +52,12 @@ function extractOpacity(text: string): Hit[] {
   return hits;
 }
 
+function opacityFixGroup(ctx: RuleContext, hit: { raw: string; norm: number }): FixGroup | undefined {
+  if (!ctx.tokens) return undefined;
+  const candidates = ctx.tokens.opacity.get(hit.raw) ?? ctx.tokens.opacity.get(String(hit.norm));
+  return makeFixGroup(RULE_ID, hit.raw, candidates);
+}
+
 const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalResult> => {
   const findings: Finding[] = [];
   if (ctx.repoRoot && isAllowlisted(ctx.repoRoot)) return { findings, opportunities: 0 };
@@ -64,6 +71,7 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
     for (const hit of extractOpacity(source)) {
       opportunities++;
       if (scale !== null && (scale.has(hit.raw) || scale.has(String(hit.norm)))) continue;
+      const fixGroup = opacityFixGroup(ctx, hit);
       findings.push({
         ruleId: RULE_ID,
         axis: "tokens",
@@ -71,6 +79,7 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
         location: { file: path, line: lineFromIndex(source, hit.index), column: 1 },
         message: `Hardcoded opacity \`${hit.raw}\` — opacity should come from a token scale`,
         suggestion: "reference an opacity token (e.g. `--opacity-disabled`) instead of a raw value",
+        ...(fixGroup !== undefined && { fixGroup }),
       });
     }
   }

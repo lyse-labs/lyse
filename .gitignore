@@ -50,3 +50,5 @@ packages/core/reports/
 
 # SDD scratch (subagent-driven working files)
 .superpowers/
+# Backup files
+*.bak

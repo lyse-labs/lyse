@@ -1,8 +1,9 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding } from "../types.js";
+import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, FixGroup } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
+import { makeFixGroup } from "./_fix-group.js";
 
 const RULE_ID = "tokens/no-hardcoded-border-radius";
 const MAX_FILE_BYTES = 1_000_000;
@@ -61,6 +62,12 @@ function extractRadiusLengths(text: string): Hit[] {
   return hits;
 }
 
+function radiusFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {
+  if (!ctx.tokens) return undefined;
+  const candidates = ctx.tokens.radii.get(raw);
+  return makeFixGroup(RULE_ID, raw, candidates);
+}
+
 const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalResult> => {
   const findings: Finding[] = [];
   if (ctx.repoRoot && isAllowlisted(ctx.repoRoot)) return { findings, opportunities: 0 };
@@ -74,6 +81,7 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
     for (const hit of extractRadiusLengths(source)) {
       opportunities++;
       if (scale !== null && scale.has(hit.raw)) continue;
+      const fixGroup = radiusFixGroup(ctx, hit.raw);
       findings.push({
         ruleId: RULE_ID,
         axis: "tokens",
@@ -81,6 +89,7 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
         location: { file: path, line: lineFromIndex(source, hit.index), column: 1 },
         message: `Hardcoded border-radius \`${hit.raw}\` — corner radius should come from a radii token scale`,
         suggestion: "reference a radius token (e.g. `--radius-md`) instead of a raw length",
+        ...(fixGroup !== undefined && { fixGroup }),
       });
     }
   }

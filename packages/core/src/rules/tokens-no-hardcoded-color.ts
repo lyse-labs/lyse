@@ -1,11 +1,12 @@
 import { isAbsolute, join } from "node:path";
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, ClassifyContext, Confidence, CodemodContext, CodemodResult } from "../types.js";
+import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, ClassifyContext, Confidence, CodemodContext, CodemodResult, FixGroup } from "../types.js";
 import { isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile, isInCommentOrUrl } from "./_skip-context.js";
 import { isPathExcluded } from "./_exclude.js";
 import { fixHardcodedColor } from "../codemods/tokens-color.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
 import { createLyseRule } from "./_rule-module.js";
 import { getTsMorphProject } from "../parsers/ts-morph-project.js";
+import { makeFixGroup } from "./_fix-group.js";
 
 // Allow one level of nested parens so hsl(var(--token)) is captured whole.
 // Pattern: (?:[^)(]|\([^)]*\))* matches any mix of non-paren chars and
@@ -198,6 +199,16 @@ function suggestToken(ctx: RuleContext, raw: string): string | undefined {
   return `consider replacing — multiple candidate tokens: ${tokens.join(", ")}`;
 }
 
+function colorFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {
+  if (!ctx.tokens) return undefined;
+  // `from`/`key` use the normalized value (bracket-stripped, lowercased) so
+  // case/Tailwind-bracket variants collapse into one drift-class — this is why
+  // `fixGroup.from` can differ from the finding's raw `message`.
+  const key = raw.replace(/^.*\[(.*)]$/, "$1").toLowerCase();
+  const candidates = ctx.tokens.colors.get(key) ?? ctx.tokens.colors.get(raw.toLowerCase());
+  return makeFixGroup("tokens/no-hardcoded-color", key, candidates);
+}
+
 const evaluate = async (
   ctx: RuleContext,
   files: ParsedFiles,
@@ -218,6 +229,7 @@ const evaluate = async (
       if (isInExampleOrSchemaValuePosition(f.source, h.index)) continue;
       const loc = locationFromIndex(f.source, h.index);
       const suggestion = suggestToken(ctx, h.match);
+      const fixGroup = colorFixGroup(ctx, h.match);
       const lineText = f.source.split("\n")[loc.line - 1]?.trim().slice(0, 120);
       findings.push({
         ruleId: "tokens/no-hardcoded-color",
@@ -226,6 +238,7 @@ const evaluate = async (
         location: { file: f.path, line: loc.line, column: loc.column },
         message: `Hardcoded color value: ${h.match}`,
         ...(suggestion !== undefined && { suggestion }),
+        ...(fixGroup !== undefined && { fixGroup }),
         ...(lineText !== undefined && { context: lineText }),
       });
     }
@@ -244,6 +257,7 @@ const evaluate = async (
       if (isInExampleOrSchemaValuePosition(c.source, h.index)) continue;
       const loc = locationFromIndex(c.source, h.index);
       const suggestion = suggestToken(ctx, h.match);
+      const fixGroup = colorFixGroup(ctx, h.match);
       findings.push({
         ruleId: "tokens/no-hardcoded-color",
         axis: "tokens",
@@ -251,6 +265,7 @@ const evaluate = async (
         location: { file: c.path, line: loc.line, column: loc.column },
         message: `Hardcoded color value: ${h.match}`,
         ...(suggestion !== undefined && { suggestion }),
+        ...(fixGroup !== undefined && { fixGroup }),
       });
     }
   }
@@ -267,6 +282,7 @@ const evaluate = async (
     for (const h of hits) {
       if (isInExampleOrSchemaValuePosition(b.content, h.index)) continue;
       const suggestion = suggestToken(ctx, h.match);
+      const fixGroup = colorFixGroup(ctx, h.match);
       findings.push({
         ruleId: "tokens/no-hardcoded-color",
         axis: "tokens",
@@ -274,6 +290,7 @@ const evaluate = async (
         location: { file: b.path, line: b.line, column: 1 },
         message: `Hardcoded color value in styled-components: ${h.match}`,
         ...(suggestion !== undefined && { suggestion }),
+        ...(fixGroup !== undefined && { fixGroup }),
       });
     }
   }
