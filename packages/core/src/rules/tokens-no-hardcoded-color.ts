@@ -201,6 +201,9 @@ function suggestToken(ctx: RuleContext, raw: string): string | undefined {
 
 function colorFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {
   if (!ctx.tokens) return undefined;
+  // `from`/`key` use the normalized value (bracket-stripped, lowercased) so
+  // case/Tailwind-bracket variants collapse into one drift-class — this is why
+  // `fixGroup.from` can differ from the finding's raw `message`.
   const key = raw.replace(/^.*\[(.*)]$/, "$1").toLowerCase();
   const candidates = ctx.tokens.colors.get(key) ?? ctx.tokens.colors.get(raw.toLowerCase());
   return makeFixGroup("tokens/no-hardcoded-color", key, candidates);

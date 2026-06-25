@@ -1,8 +1,5 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import type { AuditResult, Finding, TokenMap } from "../types.js";
+import type { Finding, TokenMap } from "../types.js";
 import { getRegisteredRuleMeta } from "../rules/_rule-module.js";
-import { renderJson } from "../reporters/json.js";
 
 const SEVERITY_ORDER = { error: 0, warning: 1, info: 2 } as const;
 
@@ -64,13 +61,4 @@ export function serializeTokenMap(tokens: TokenMap | null): Record<string, unkno
   const out: Record<string, unknown> = { source: tokens.source };
   for (const c of cats) out[c] = Object.fromEntries(tokens[c]);
   return out;
-}
-
-export function writeHandoffArtifacts(dir: string, input: { result: AuditResult; tokens: TokenMap | null }): { findingsPath: string; tokensPath: string } {
-  mkdirSync(dir, { recursive: true });
-  const findingsPath = join(dir, "findings.json");
-  const tokensPath = join(dir, "tokens.json");
-  writeFileSync(findingsPath, renderJson(input.result));
-  writeFileSync(tokensPath, JSON.stringify(serializeTokenMap(input.tokens), null, 2) + "\n");
-  return { findingsPath, tokensPath };
 }

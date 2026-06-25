@@ -78,8 +78,8 @@ export async function runHandoff(input: HandoffInput, deps: HandoffDeps): Promis
     }),
   );
 
-  const choices: { value: string; label: string }[] = launchableAgents
-    .filter((s) => s !== null)
+  const launchable = launchableAgents.filter((s) => s !== null);
+  const choices: { value: string; label: string }[] = launchable
     .map((spec) => ({ value: spec.id, label: `Hand off to ${spec.displayName}` }));
 
   choices.push({ value: "copy", label: "Copy prompt to clipboard" });
@@ -97,7 +97,7 @@ export async function runHandoff(input: HandoffInput, deps: HandoffDeps): Promis
   }
 
   const agentId = chosen as AgentId;
-  const agentSpec = launchableAgents.filter((s) => s !== null).find((s) => s.id === agentId);
+  const agentSpec = launchable.find((s) => s.id === agentId);
   if (agentSpec !== undefined) {
     installLyseSkill(agentSpec, root);
   }
