@@ -13,22 +13,26 @@ anticipate. Gate A cannot detect false positives that only appear on real code.
 
 ## Gate B definition
 
-Gate B is a **real-corpus firing-rate regression gate** over the
+Gate B is a **real-corpus firing-regression gate** over the
 [`lyse-labs/lyse-bench`](https://github.com/lyse-labs/lyse-bench) corpus
 (70 curated OSS design systems, CC BY 4.0).
 
-For each rule, Gate B measures:
+For each rule, Gate B tracks the **daily firing count** across the corpus and keeps a
+rolling 28-day history (the `rule-firings:<ruleId>` substrate in lyse-internal). It
+computes a **modified (MAD-based) z-score** of today's count against that history and
+fails any rule whose `|z|` exceeds a threshold (3.5, consistent with the existing
+firing-anomaly detector):
 
-```
-firing_rate(rule, corpus) = files_flagged / files_scanned
-```
+- **Spike** (`today > baseline`) — likely new false positives introduced.
+- **Drop** (`today < baseline`) — likely lost recall on real-world patterns.
 
-A stored baseline holds the last known-good firing rate per rule. Gate B fails if any
-rule's firing rate deviates beyond a configured threshold (e.g. ±0.05 absolute) relative
-to that baseline:
-
-- **Spike** — sudden increase → likely new false positives introduced.
-- **Drop** — sudden decrease → likely lost recall on real-world patterns.
+> **Why count + z-score, not rate + fixed baseline.** An earlier draft of this spec
+> defined Gate B as `firing_rate = files_flagged / files_scanned` against a stored ±0.05
+> baseline. That was reconsidered during implementation: `files_scanned` is not captured
+> per rule, and a fixed absolute-rate baseline is brittle as the corpus grows/shrinks
+> during discovery. A robust z-score over the rolling history needs no manual baseline,
+> tolerates corpus-size drift, and reuses the same `modifiedZScore` already powering the
+> snapshot's firing-anomaly detection.
 
 Gate B is a **regression/sanity gate**, not a labelled-precision oracle. The corpus has
 no per-repo gold labels beyond the calibration subset described in
@@ -56,7 +60,7 @@ provides the corpus, the runner, and the baseline.
 |------|-------------|-----------|-----------|
 | A — synthetic | Construction-set mutations | J=1 proven (recall + no FP on set) | `validation/run.ts` (`validate:autonomous`) |
 | A — render | Real Chromium DOM/CSS | J=1 proven for execution-oracle rules | `validation/render-lane.ts` (`validate:render`) |
-| B — real corpus | 70 real OSS design systems | Firing-rate stable vs baseline | lyse-internal runner (pending) |
+| B — real corpus | 70 real OSS design systems | Firing-count stable vs z-score baseline | lyse-internal verdict (implemented) |
 | Coverage | All adapters registered | Every scored rule has an adapter | `validation/coverage.ts` |
 
 The render lane is the execution-oracle half of Gate A: `tokens/rendered-token-fidelity`
@@ -70,7 +74,10 @@ Gate A by providing empirical grounding on real code.
 
 ## Status
 
-Gate B is **spec-ready**. Implementation is pending in `lyse-labs/lyse-internal`.
+Gate B is **implemented** in `lyse-labs/lyse-internal`: a pure `gateBVerdict()` + a
+`runGateB(env)` reader + a `GET /v1/bench/gate-b` route, running over the live corpus via
+the bench cron. See `internal/bench/GATE-B.md` there for the firing-regression (z-score)
+mechanism and the rationale for diverging from the rate/baseline draft above.
 
 References:
 - Synthetic gate: `packages/core/validation/run.ts`, script `validate:autonomous`
