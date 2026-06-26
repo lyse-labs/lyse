@@ -201,7 +201,7 @@ const auditCommand = defineCommand({
     threshold: { type: "string", description: "fail (exit 1) if final score < threshold", default: "0" },
     scope: {
       type: "string",
-      description: "Limit the audit to git-changed files: `changed` (vs --base) or `staged`. Default: whole tree.",
+      description: "Limit the audit to git-changed files: `changed` (committed vs --base), `staged`, or `uncommitted` (working-tree edits + untracked). Default: whole tree.",
     },
     staged: {
       type: "boolean",
@@ -333,8 +333,8 @@ const auditCommand = defineCommand({
         : {}),
       ...(args["staged"] === true
         ? { scope: "staged" as const }
-        : args["scope"] === "changed" || args["scope"] === "staged"
-          ? { scope: args["scope"] as "changed" | "staged" }
+        : args["scope"] === "changed" || args["scope"] === "staged" || args["scope"] === "uncommitted"
+          ? { scope: args["scope"] as "changed" | "staged" | "uncommitted" }
           : {}),
       ...(typeof args["base"] === "string" && args["base"]
         ? { base: args["base"] as string }

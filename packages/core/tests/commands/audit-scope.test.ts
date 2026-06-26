@@ -61,6 +61,14 @@ describe("auditDirectory — scope filtering", () => {
     expect(files.has("b.tsx")).toBe(false);
   });
 
+  it("--scope uncommitted covers all working-tree changes (staged + unstaged)", async () => {
+    // a.tsx is staged-dirty, b.tsx is unstaged-dirty (both uncommitted vs HEAD).
+    const { result } = await auditDirectory(repo, { staticOnly: true, scope: "uncommitted" });
+    const files = new Set(result.findings.map((f) => f.location.file));
+    expect(files.has("a.tsx")).toBe(true);
+    expect(files.has("b.tsx")).toBe(true);
+  });
+
   it("throws ScopeError when --scope changed base is unresolvable", async () => {
     await expect(
       auditDirectory(repo, { staticOnly: true, scope: "changed", base: "does-not-exist-ref" }),

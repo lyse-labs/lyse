@@ -61,6 +61,19 @@ export async function getChangedFiles(cwd: string, base: string): Promise<string
   return splitGitPaths(await git(["diff", "--name-only", "--diff-filter=ACMR", `${base}...HEAD`], cwd));
 }
 
+/**
+ * Repo-relative (posix) paths of files changed in the working tree but not yet
+ * committed: tracked modifications vs HEAD (staged or not) plus untracked
+ * files. This is the right scope for verifying a coding agent's edits, which
+ * live in the working tree uncommitted. `gitOrNull` on the HEAD diff tolerates
+ * a repo with no commits yet (then only untracked files are reported).
+ */
+export async function getUncommittedFiles(cwd: string): Promise<string[]> {
+  const tracked = await gitOrNull(["diff", "--name-only", "--diff-filter=ACMR", "HEAD"], cwd);
+  const untracked = await git(["ls-files", "--others", "--exclude-standard"], cwd);
+  return [...new Set([...splitGitPaths(tracked ?? ""), ...splitGitPaths(untracked)])];
+}
+
 export async function ensureClean(cwd: string, allowDirty: boolean): Promise<void> {
   const status = await git(["status", "--porcelain"], cwd);
   if (status === "" || allowDirty) return;
