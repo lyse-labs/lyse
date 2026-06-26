@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, writeFileSync, rmSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 
 import { getStagedFiles, getChangedFiles } from "../../src/codemods/git-helpers.js";
 
@@ -32,14 +32,14 @@ describe("getStagedFiles / getChangedFiles", () => {
     rmSync(repo, { recursive: true, force: true });
   });
 
-  it("getStagedFiles returns absolute paths of staged files and excludes unstaged", async () => {
+  it("getStagedFiles returns repo-relative posix paths of staged files and excludes unstaged", async () => {
     writeFileSync(join(repo, "staged.ts"), "export const b = 2;\n");
     writeFileSync(join(repo, "unstaged.ts"), "export const c = 3;\n");
     git(["add", "staged.ts"], repo);
 
     const staged = await getStagedFiles(repo);
-    expect(staged).toContain(resolve(repo, "staged.ts"));
-    expect(staged).not.toContain(resolve(repo, "unstaged.ts"));
+    expect(staged).toContain("staged.ts");
+    expect(staged).not.toContain("unstaged.ts");
   });
 
   it("getStagedFiles returns [] when nothing is staged", async () => {
@@ -52,8 +52,8 @@ describe("getStagedFiles / getChangedFiles", () => {
     git(["commit", "-qm", "change"], repo);
 
     const changed = await getChangedFiles(repo, baseSha);
-    expect(changed).toContain(resolve(repo, "changed.ts"));
-    expect(changed).not.toContain(resolve(repo, "base.ts"));
+    expect(changed).toContain("changed.ts");
+    expect(changed).not.toContain("base.ts");
   });
 
   it("getChangedFiles returns [] when nothing changed since HEAD", async () => {

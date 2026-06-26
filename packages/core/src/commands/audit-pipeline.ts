@@ -15,7 +15,7 @@ import { parseFileOverrides, type FileOverrides } from "../suppression/frontmatt
 import { hashDeps } from "../util/hash-deps.js";
 import { detectFromPackageJson } from "../detection/from-package-json.js";
 import { walk, DEFAULT_EXCLUDE_PATHS } from "../walker.js";
-import { getStagedFiles, getChangedFiles } from "../codemods/git-helpers.js";
+import { getStagedFiles, getChangedFiles, gitToplevel } from "../codemods/git-helpers.js";
 import { parseTs } from "../parsers/ts.js";
 import { parseCss } from "../parsers/css.js";
 import { extractCssInJs } from "../parsers/css-in-js.js";
@@ -250,8 +250,12 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   // `--scope changed/--staged`: intersect the walked tree with the git-changed
   // set so the audit (and its findings) cover only the files under review.
   if (flags?.scope) {
+    // Compare in repo-relative posix space (never absolute) so the filter is
+    // robust to Windows separators / drive-case / 8.3 short names.
+    let top: string;
     let allow: string[];
     try {
+      top = await gitToplevel(absoluteRoot);
       allow = flags.scope === "staged"
         ? await getStagedFiles(absoluteRoot)
         : await getChangedFiles(absoluteRoot, flags.base ?? "origin/main");
@@ -262,8 +266,16 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
           : `--scope changed could not resolve base '${flags.base ?? "origin/main"}'. Pass --base <ref> (e.g. --base HEAD~1).`,
       );
     }
-    const allowSet = new Set(allow.map((p) => resolve(p)));
-    files = files.filter((f) => allowSet.has(resolve(f)));
+    // git paths are relative to the repo toplevel; the audit root may be a
+    // subdir of it. Compute the audit root's path within the repo (posix), then
+    // rebase git paths onto the audit root and drop anything outside it.
+    const topBase = `${toPosix(top).replace(/\/+$/, "")}/`;
+    const rootBase = `${toPosix(absoluteRoot).replace(/\/+$/, "")}/`;
+    const prefix = rootBase.startsWith(topBase) ? rootBase.slice(topBase.length) : "";
+    const allowRel = new Set(
+      allow.filter((r) => prefix === "" || r.startsWith(prefix)).map((r) => r.slice(prefix.length)),
+    );
+    files = files.filter((f) => allowRel.has(posixRelative(absoluteRoot, f)));
   }
   flags?.progress?.update(`Parsing source (${files.length} files)…`);
   const parsed: ParsedFiles = { ts: [], css: [], cssInJs: [] };
