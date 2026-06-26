@@ -2,8 +2,7 @@
  * AI-Governance Maturity Level (Track #72 / Phase D) — a positive 0–5 maturity
  * signal mapped to Kavcic's published AI-readiness ladder. Reported alongside
  * the Health Score, NOT folded into it: the penalty-based score cannot measure
- * maturity (it would rank an AI-mature DS below a no-AI one). See
- * docs/superpowers/specs/2026-06-14-ai-governance-maturity-level-design.md.
+ * maturity (it would rank an AI-mature DS below a no-AI one).
  *
  * Deterministic tier covers L0–L4 by *presence* of affordances; L5 ("AI as
  * system infrastructure") is not statically detectable and is capped out here.
