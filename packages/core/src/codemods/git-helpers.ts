@@ -23,6 +23,34 @@ async function gitOrNull(args: string[], cwd: string): Promise<string | null> {
   }
 }
 
+// git `--name-only` always emits forward-slash, repo-relative paths on every
+// platform. We keep them repo-relative (never reconstruct absolute paths) so
+// the scope filter compares in pure posix-relative space — immune to Windows
+// separators, drive-letter case, and 8.3 short names. `--diff-filter=ACMR`
+// keeps added/copied/modified/renamed and drops deletions (nothing to audit).
+function splitGitPaths(out: string): string[] {
+  return out === "" ? [] : out.split("\n").map((p) => p.trim()).filter(Boolean);
+}
+
+/** Repo toplevel (git's forward-slash absolute path). Throws if not a git repo. */
+export async function gitToplevel(cwd: string): Promise<string> {
+  return git(["rev-parse", "--show-toplevel"], cwd);
+}
+
+/** Repo-relative (posix) paths of files staged in the index. */
+export async function getStagedFiles(cwd: string): Promise<string[]> {
+  return splitGitPaths(await git(["diff", "--cached", "--name-only", "--diff-filter=ACMR"], cwd));
+}
+
+/**
+ * Repo-relative (posix) paths of files changed since `base` (three-dot: changes
+ * on HEAD's side of the merge-base with `base`). Throws if `base` cannot be
+ * resolved — the CLI surfaces a clear error suggesting `--base`.
+ */
+export async function getChangedFiles(cwd: string, base: string): Promise<string[]> {
+  return splitGitPaths(await git(["diff", "--name-only", "--diff-filter=ACMR", `${base}...HEAD`], cwd));
+}
+
 export async function ensureClean(cwd: string, allowDirty: boolean): Promise<void> {
   const status = await git(["status", "--porcelain"], cwd);
   if (status === "" || allowDirty) return;

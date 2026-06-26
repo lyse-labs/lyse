@@ -19,6 +19,15 @@ export class RefuseToRunError extends Error {
 }
 
 /**
+ * Thrown when `--scope changed`/`--staged` cannot resolve the git-changed set
+ * (not a git repo, or an unresolvable base ref). The CLI catches it and exits
+ * with code 64 (EX_USAGE) and a clear message.
+ */
+export class ScopeError extends Error {
+  override name = "ScopeError";
+}
+
+/**
  * CLI-level flags that override config-file values for a single audit run.
  * All fields are optional; omitting a field means "use the config/env value".
  */
@@ -57,6 +66,13 @@ export interface AuditFlags {
    * (fix.ts, MCP, share) to keep stderr quiet.
    */
   progress?: Spinner;
+  /**
+   * Limit the audit to git-changed files: `"changed"` (files changed vs `base`)
+   * or `"staged"` (files in the index). Omitted = audit the whole tree.
+   */
+  scope?: "changed" | "staged";
+  /** Base ref for `scope: "changed"` (default `"origin/main"`). */
+  base?: string;
   /** Opt-in: render the token layer in headless Chromium to detect computed-value drift. */
   render?: boolean;
   /** Optional Storybook source for the runtime-axe sub-stage: a static dir (relative to repo root or absolute) or a running URL. */
