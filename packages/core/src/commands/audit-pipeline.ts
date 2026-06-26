@@ -15,7 +15,7 @@ import { parseFileOverrides, type FileOverrides } from "../suppression/frontmatt
 import { hashDeps } from "../util/hash-deps.js";
 import { detectFromPackageJson } from "../detection/from-package-json.js";
 import { walk, DEFAULT_EXCLUDE_PATHS } from "../walker.js";
-import { getStagedFiles, getChangedFiles, gitToplevel } from "../codemods/git-helpers.js";
+import { getStagedFiles, getChangedFiles, getUncommittedFiles, gitToplevel } from "../codemods/git-helpers.js";
 import { parseTs } from "../parsers/ts.js";
 import { parseCss } from "../parsers/css.js";
 import { extractCssInJs } from "../parsers/css-in-js.js";
@@ -258,12 +258,14 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
       top = await gitToplevel(absoluteRoot);
       allow = flags.scope === "staged"
         ? await getStagedFiles(absoluteRoot)
-        : await getChangedFiles(absoluteRoot, flags.base ?? "origin/main");
+        : flags.scope === "uncommitted"
+          ? await getUncommittedFiles(absoluteRoot)
+          : await getChangedFiles(absoluteRoot, flags.base ?? "origin/main");
     } catch {
       throw new ScopeError(
-        flags.scope === "staged"
-          ? "--staged needs a git repository (no git repo found here)."
-          : `--scope changed could not resolve base '${flags.base ?? "origin/main"}'. Pass --base <ref> (e.g. --base HEAD~1).`,
+        flags.scope === "changed"
+          ? `--scope changed could not resolve base '${flags.base ?? "origin/main"}'. Pass --base <ref> (e.g. --base HEAD~1).`
+          : `--scope ${flags.scope} needs a git repository (no git repo found here).`,
       );
     }
     // git paths are relative to the repo toplevel; the audit root may be a

@@ -67,10 +67,12 @@ export interface AuditFlags {
    */
   progress?: Spinner;
   /**
-   * Limit the audit to git-changed files: `"changed"` (files changed vs `base`)
-   * or `"staged"` (files in the index). Omitted = audit the whole tree.
+   * Limit the audit to git-changed files: `"changed"` (committed vs `base`),
+   * `"staged"` (files in the index), or `"uncommitted"` (working-tree changes
+   * vs HEAD + untracked — the right scope for verifying an agent's edits).
+   * Omitted = audit the whole tree.
    */
-  scope?: "changed" | "staged";
+  scope?: "changed" | "staged" | "uncommitted";
   /** Base ref for `scope: "changed"` (default `"origin/main"`). */
   base?: string;
   /** Opt-in: render the token layer in headless Chromium to detect computed-value drift. */

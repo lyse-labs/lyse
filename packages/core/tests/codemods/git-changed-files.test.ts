@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync, rmSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { getStagedFiles, getChangedFiles } from "../../src/codemods/git-helpers.js";
+import { getStagedFiles, getChangedFiles, getUncommittedFiles } from "../../src/codemods/git-helpers.js";
 
 function git(args: string[], cwd: string): string {
   return execFileSync("git", args, { cwd, stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
@@ -59,5 +59,22 @@ describe("getStagedFiles / getChangedFiles", () => {
   it("getChangedFiles returns [] when nothing changed since HEAD", async () => {
     const head = git(["rev-parse", "HEAD"], repo);
     expect(await getChangedFiles(repo, head)).toEqual([]);
+  });
+
+  it("getUncommittedFiles includes modified, staged, and untracked files; excludes unchanged", async () => {
+    // modify the committed file (unstaged), stage a new file, leave one untracked
+    writeFileSync(join(repo, "base.ts"), "export const a = 2;\n"); // modified, unstaged
+    writeFileSync(join(repo, "staged.ts"), "export const s = 1;\n");
+    git(["add", "staged.ts"], repo); // staged
+    writeFileSync(join(repo, "untracked.ts"), "export const u = 1;\n"); // untracked
+
+    const un = await getUncommittedFiles(repo);
+    expect(un).toContain("base.ts");
+    expect(un).toContain("staged.ts");
+    expect(un).toContain("untracked.ts");
+  });
+
+  it("getUncommittedFiles returns [] on a clean working tree", async () => {
+    expect(await getUncommittedFiles(repo)).toEqual([]);
   });
 });
