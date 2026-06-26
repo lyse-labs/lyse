@@ -191,6 +191,9 @@ lyse audit [path] [options]
 | `--output <path>` | string | stdout | Write output to a file. |
 | `--limit <n>` | integer \| `all` | `10` | Max findings printed by the text/eslint/legacy output. Use `all` or `0` to show every finding. Ignored by `--format=json|sarif` (machine consumers always receive the full report). |
 | `--threshold <n>` | integer 0–100 | (none) | Exit code 1 if Health Score is below this value. |
+| `--scope <mode>` | `changed` \| `staged` | (whole tree) | Limit the audit to git-changed files. `changed` = files changed vs `--base`; `staged` = files in the index. Ideal for reviewing only what a PR introduces. |
+| `--staged` | boolean | `false` | Shortcut for `--scope=staged` (audit only staged files — ideal for pre-commit hooks). |
+| `--base <ref>` | git ref | `origin/main` | Base ref for `--scope=changed`. |
 | `--rules <list>` | comma-separated | all | Only run specific rules. |
 | `--exclude <list>` | comma-separated | (none) | Skip rules. |
 | `--render` | boolean | `false` | Opt-in: render the design system in headless Chromium (token-fidelity drift + axe-core a11y on a pre-built Storybook). Requires Playwright. |

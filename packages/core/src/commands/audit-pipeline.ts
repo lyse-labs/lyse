@@ -15,6 +15,7 @@ import { parseFileOverrides, type FileOverrides } from "../suppression/frontmatt
 import { hashDeps } from "../util/hash-deps.js";
 import { detectFromPackageJson } from "../detection/from-package-json.js";
 import { walk, DEFAULT_EXCLUDE_PATHS } from "../walker.js";
+import { getStagedFiles, getChangedFiles } from "../codemods/git-helpers.js";
 import { parseTs } from "../parsers/ts.js";
 import { parseCss } from "../parsers/css.js";
 import { extractCssInJs } from "../parsers/css-in-js.js";
@@ -59,10 +60,10 @@ import type {
 } from "../types.js";
 
 // Import for local use within this module (function signatures).
-import { RefuseToRunError, type AuditFlags } from "./audit-flags.js";
+import { RefuseToRunError, ScopeError, type AuditFlags } from "./audit-flags.js";
 // Re-export AuditFlags + RefuseToRunError for backward compatibility.
 // External callers (cli.ts, fix.ts, tests) import these from audit-pipeline.
-export { RefuseToRunError, type AuditFlags };
+export { RefuseToRunError, ScopeError, type AuditFlags };
 
 export interface AuditPipelineResult {
   /** Full AuditResult as produced by the audit subcommand. */
@@ -245,7 +246,25 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   // carries the user's additions so they are also respected at the walker layer.
   const excludePaths = [...DEFAULT_EXCLUDE_PATHS, ...userExcludePaths, ...lyseIgnorePatterns];
   flags?.progress?.update("Discovering files…");
-  const files = await walk(absoluteRoot, { extraIgnores: [...userExcludePaths, ...lyseIgnorePatterns] });
+  let files = await walk(absoluteRoot, { extraIgnores: [...userExcludePaths, ...lyseIgnorePatterns] });
+  // `--scope changed/--staged`: intersect the walked tree with the git-changed
+  // set so the audit (and its findings) cover only the files under review.
+  if (flags?.scope) {
+    let allow: string[];
+    try {
+      allow = flags.scope === "staged"
+        ? await getStagedFiles(absoluteRoot)
+        : await getChangedFiles(absoluteRoot, flags.base ?? "origin/main");
+    } catch {
+      throw new ScopeError(
+        flags.scope === "staged"
+          ? "--staged needs a git repository (no git repo found here)."
+          : `--scope changed could not resolve base '${flags.base ?? "origin/main"}'. Pass --base <ref> (e.g. --base HEAD~1).`,
+      );
+    }
+    const allowSet = new Set(allow.map((p) => resolve(p)));
+    files = files.filter((f) => allowSet.has(resolve(f)));
+  }
   flags?.progress?.update(`Parsing source (${files.length} files)…`);
   const parsed: ParsedFiles = { ts: [], css: [], cssInJs: [] };
   // Keep the raw source per relative file path so we can apply inline

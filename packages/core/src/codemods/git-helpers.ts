@@ -23,6 +23,38 @@ async function gitOrNull(args: string[], cwd: string): Promise<string | null> {
   }
 }
 
+/**
+ * Map git's repo-relative `--name-only` output to absolute paths under the repo
+ * toplevel, so callers can intersect with the absolute paths the walker emits.
+ * `--diff-filter=ACMR` keeps added/copied/modified/renamed files and drops
+ * deletions (a deleted file has nothing to audit).
+ */
+async function toAbsolute(relOut: string, cwd: string): Promise<string[]> {
+  if (relOut === "") return [];
+  const top = await git(["rev-parse", "--show-toplevel"], cwd);
+  return relOut
+    .split("\n")
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => join(top, p));
+}
+
+/** Absolute paths of files staged in the index (`git diff --cached`). */
+export async function getStagedFiles(cwd: string): Promise<string[]> {
+  const out = await git(["diff", "--cached", "--name-only", "--diff-filter=ACMR"], cwd);
+  return toAbsolute(out, cwd);
+}
+
+/**
+ * Absolute paths of files changed since `base` (three-dot: changes on HEAD's
+ * side of the merge-base with `base`). Throws if `base` cannot be resolved —
+ * the CLI surfaces a clear error suggesting `--base`.
+ */
+export async function getChangedFiles(cwd: string, base: string): Promise<string[]> {
+  const out = await git(["diff", "--name-only", "--diff-filter=ACMR", `${base}...HEAD`], cwd);
+  return toAbsolute(out, cwd);
+}
+
 export async function ensureClean(cwd: string, allowDirty: boolean): Promise<void> {
   const status = await git(["status", "--porcelain"], cwd);
   if (status === "" || allowDirty) return;

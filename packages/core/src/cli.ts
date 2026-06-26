@@ -30,7 +30,7 @@ import { resolveDryRun, dryRunFlagPresent } from "./commands/dry-run-guard.js";
 import { runExplain } from "./commands/explain.js";
 import { runExplainScore } from "./commands/explain-score.js";
 import { feedbackMissed } from "./commands/feedback.js";
-import { auditDirectory, RefuseToRunError } from "./commands/audit-pipeline.js";
+import { auditDirectory, RefuseToRunError, ScopeError } from "./commands/audit-pipeline.js";
 import type { AuditFlags } from "./commands/audit-pipeline.js";
 import { runShare } from "./commands/share.js";
 import { runBadge } from "./commands/badge.js";
@@ -198,6 +198,19 @@ const auditCommand = defineCommand({
         "Max findings to render in text/eslint/legacy output (default: 10). Use `all` or `0` to show every finding. Ignored by --format=json|sarif.",
     },
     threshold: { type: "string", description: "fail (exit 1) if final score < threshold", default: "0" },
+    scope: {
+      type: "string",
+      description: "Limit the audit to git-changed files: `changed` (vs --base) or `staged`. Default: whole tree.",
+    },
+    staged: {
+      type: "boolean",
+      default: false,
+      description: "Shortcut for --scope=staged (audit only staged files; ideal for pre-commit hooks).",
+    },
+    base: {
+      type: "string",
+      description: "Base ref for --scope=changed (default: origin/main).",
+    },
     "static-only": {
       type: "boolean",
       description: "Skip Layer 4 LLM augmentation; report static-only score (~30% coverage)",
@@ -317,6 +330,14 @@ const auditCommand = defineCommand({
       ...(typeof args["storybook"] === "string" && args["storybook"]
         ? { storybook: args["storybook"] as string }
         : {}),
+      ...(args["staged"] === true
+        ? { scope: "staged" as const }
+        : args["scope"] === "changed" || args["scope"] === "staged"
+          ? { scope: args["scope"] as "changed" | "staged" }
+          : {}),
+      ...(typeof args["base"] === "string" && args["base"]
+        ? { base: args["base"] as string }
+        : {}),
     };
 
     // #115: resolve LLM consent once, in the CLI layer (mirrors telemetry).
@@ -365,6 +386,10 @@ const auditCommand = defineCommand({
       if (err instanceof RefuseToRunError) {
         console.error(`[lyse] ${err.message}`);
         process.exit(1);
+      }
+      if (err instanceof ScopeError) {
+        console.error(`[lyse] ${err.message}`);
+        process.exit(64);
       }
       throw err;
     }
