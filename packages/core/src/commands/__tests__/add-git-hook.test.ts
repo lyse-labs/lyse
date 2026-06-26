@@ -38,7 +38,10 @@ describe("runAddGitHook", () => {
     const body = readFileSync(p, "utf8");
     expect(body).toContain("audit --staged");
     expect(body).toContain("lyse pre-commit (managed)");
-    expect(statSync(p).mode & 0o111).toBeGreaterThan(0); // executable
+    // Unix exec bits don't exist on Windows (chmod is a no-op there).
+    if (process.platform !== "win32") {
+      expect(statSync(p).mode & 0o111).toBeGreaterThan(0); // executable
+    }
   });
 
   it("embeds the requested lyse version in the npx pin", async () => {
