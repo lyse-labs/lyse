@@ -60,10 +60,6 @@ export function getRegisteredRuleMeta(id: string): LyseRuleMeta | undefined {
   return META_REGISTRY.get(id);
 }
 
-export function listRegisteredRuleMetas(): LyseRuleMeta[] {
-  return Array.from(META_REGISTRY.values());
-}
-
 export function toRuleMeta(m: LyseRuleMeta): RuleMeta {
   return {
     id: m.lyseRuleId,

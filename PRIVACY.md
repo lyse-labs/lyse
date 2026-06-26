@@ -72,7 +72,7 @@ The full event schema is published at [`schemas/v1/lyse-event.json`](./packages/
 | `ts` | ISO date | `"<iso-timestamp>"` |
 | `session_id` | string (hex) | `"01HXYZ0123456789ABCDEFGHIJ"` |
 | `repo_bucket` | string (hex, 16 char) | hash of the repo identifier, computed locally by the CLI with an embedded salt (`BUCKET_SALT`, rotated per minor release) |
-| `sdk_version` | string | `"0.1.0"` |
+| `sdk_version` | string | `"0.2.0-alpha.4"` |
 | `audit.score` | int 0-100 or `null` | `43` |
 | `audit.axes` | object | `{ tokens: 30, a11y: 60, components: 38, stories: 47 }` |
 | `audit.violations` | object | `{ error: 0, warning: 433, info: 0 }` |

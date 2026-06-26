@@ -60,7 +60,3 @@ export class ResponseCache {
     writeFileSync(this.entryPath(this.cacheKey(model, messages)), JSON.stringify(entry));
   }
 }
-
-export function defaultResponseCache(maxAgeDays: number): ResponseCache {
-  return new ResponseCache({ cacheDir: DEFAULT_CACHE_DIR, maxAgeDays });
-}

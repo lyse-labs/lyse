@@ -13,8 +13,11 @@ Commands:
 | Command | Description |
 |---|---|
 | `lyse init` | Interactive setup wizard — detect framework, generate `.lyse.yaml`, wire IDE. |
+| `lyse install [path]` | One-command onboarding — install the Lyse skill into every detected coding agent + the advisory pre-commit hook. |
 | `lyse audit [path]` | Audit a repository; output a Health Score and findings. |
 | `lyse fix [path]` | Auto-fix all safe findings (6 safety guards). |
+| `lyse handoff [path]` | Audit, then hand the findings to your coding agent (Claude Code, Cursor, Codex) to fix. |
+| `lyse add ci-gate \| git-hook` | Scaffold a CI gate workflow or an advisory pre-commit hook. |
 | `lyse share` | Copy a Markdown summary of the last audit to the clipboard. |
 | `lyse badge` | Print a shields.io Health Score badge for your README. |
 | `lyse explain <rule-id>` | Print rule rationale, examples, allowlist guidance. |
@@ -91,10 +94,14 @@ Override the confidence threshold with `--confidence=medium` (experts only).
 
 | Flag | Type | Default | Description |
 |---|---|---|---|
-| `--dry-run` | boolean | false (TTY), true (non-TTY) | Print the unified diff without writing files. |
-| `--confidence` | `high` \| `medium` | `high` | Minimum codemod confidence to apply. |
-| `--rules <list>` | comma-separated | all | Only fix specific rules. |
-| `--max-files <n>` | integer | 200 | Abort if more than `n` files would be patched. |
+| `--dry-run` / `--no-dry-run` | boolean | false (TTY), true (non-TTY) | Print the unified diff without writing files. `--no-dry-run` forces application in non-TTY contexts. |
+| `--confidence` | `high` \| `medium` \| `low` | `high` | Minimum codemod confidence to apply. |
+| `--rule <id>` | string | all | Limit fixes to a single rule ID. |
+| `--interactive` | boolean | false | Prompt before applying each fix. |
+| `--force-on-dirty` | boolean | false | Allow running on a dirty working tree (bypasses Guard 1). |
+| `--verify-with-tests` | boolean | false | Run the test suite after each rule batch; revert the commit on failure (Guard 6). |
+| `--scaffold` | boolean | false | Generate missing AI-readiness files (`llms.txt`, `AGENTS.md`, value-gate doc). |
+| `--migrate-tokens` | boolean | false | Migrate legacy (`{ value, type }`) token JSON to DTCG (`{ $value, $type }`); skips non-conformant files. |
 
 ### Examples
 
@@ -105,8 +112,8 @@ lyse fix
 # Preview changes without writing
 lyse fix --dry-run
 
-# Fix only token violations
-lyse fix --rules=tokens/no-hardcoded-color,tokens/no-hardcoded-spacing
+# Fix only one rule's violations
+lyse fix --rule=tokens/no-hardcoded-color
 
 # Include medium-confidence codemods (review carefully)
 lyse fix --confidence=medium
@@ -194,8 +201,12 @@ lyse audit [path] [options]
 | `--scope <mode>` | `changed` \| `staged` \| `uncommitted` | (whole tree) | Limit the audit to git-changed files. `changed` = committed vs `--base` (PR review); `staged` = files in the index (pre-commit); `uncommitted` = working-tree edits + untracked (verify an agent's uncommitted fixes). |
 | `--staged` | boolean | `false` | Shortcut for `--scope=staged` (audit only staged files — ideal for pre-commit hooks). |
 | `--base <ref>` | git ref | `origin/main` | Base ref for `--scope=changed`. |
-| `--rules <list>` | comma-separated | all | Only run specific rules. |
-| `--exclude <list>` | comma-separated | (none) | Skip rules. |
+| `--verbose` | boolean | `false` | Show all findings (default: top 5 in text output). |
+| `--static-only` | boolean | `false` | Skip Layer 4 LLM augmentation; report the static-only score (~30% coverage). |
+| `--dim <axis>` | string | (all) | Focus the LLM audit on a single axis (`tokens`, `a11y`, `components`, `stories`, `ai-surface`). |
+| `--cost-cap-usd <n>` | number | `$5` local / `$1` CI | Abort if projected LLM cost exceeds this amount. |
+| `--no-cache` | boolean | `false` | Ignore the LLM cache; force a fresh LLM call. |
+| `--interactive` | boolean | `false` | After the audit, prompt per finding (`y/n/?/s/q`); verdicts are sent to feedback only with `lyse telemetry on`. |
 | `--render` | boolean | `false` | Opt-in: render the design system in headless Chromium (token-fidelity drift + axe-core a11y on a pre-built Storybook). Requires Playwright. |
 | `--storybook <dir\|url>` | string | (none) | Storybook source for runtime a11y — a pre-built static dir (e.g. `storybook-static`) or a running URL. Used only with `--render`. |
 | `--llm` / `--no-llm` | boolean | (off) | Enable / disable the LLM precision filter for this run. `--llm` is opt-in and sends source to your configured provider; `--no-llm` forces static-only. |
@@ -221,11 +232,8 @@ lyse audit --format=html --output=lyse-report
 # Fail CI if score < 70
 lyse audit --threshold=70
 
-# Only run the tokens-related rules
-lyse audit --rules=tokens/no-hardcoded-color,tokens/no-hardcoded-spacing
-
-# Run everything except Storybook coverage
-lyse audit --exclude=stories/coverage
+# Show every finding (no truncation)
+lyse audit --verbose
 
 # Show the top 50 findings instead of the default 10
 lyse audit --limit=50

@@ -1,4 +1,4 @@
-import { intro, outro, note, log, confirm, select, spinner, isCancel, cancel } from "@clack/prompts";
+import { intro, outro, note, confirm, select, spinner, isCancel, cancel } from "@clack/prompts";
 import { isInteractive } from "../menu/prompts.js";
 
 export function wizardIntro(title: string): void {
@@ -25,14 +25,6 @@ export function wizardNote(body: string, title?: string): void {
     console.log(body);
   } else {
     console.log(`${title}\n${body}`);
-  }
-}
-
-export function wizardStep(message: string): void {
-  if (isInteractive()) {
-    log.step(message);
-  } else {
-    console.log(message);
   }
 }
 

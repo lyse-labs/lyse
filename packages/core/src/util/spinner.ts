@@ -3,8 +3,8 @@
  *
  * Why in-house? `ora` / `nanospinner` / `cli-spinners` would each pull a small
  * dep tree we don't need. The full spec for an audit-time spinner is a redraw
- * loop + ANSI cursor codes — well under 100 LOC. picocolors (already a dep)
- * handles color.
+ * loop + ANSI cursor codes — well under 100 LOC. The shared `ui/tokens` palette
+ * (ansis) handles color.
  *
  * Design contract:
  *   - Always writes to stderr by default. stdout is reserved for the audit

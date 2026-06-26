@@ -236,7 +236,7 @@ Rules must NOT:
 
 ## Generated rule packs
 
-At `lyse init`, an optional BYOK LLM call generates a custom rule pack saved to `.lyse/generated-rules.yaml`. This file is committed to the repo and loaded by `pack-loader.ts` on every audit run, merging with the 12 built-in rules.
+At `lyse init`, an optional BYOK LLM call generates a custom rule pack saved to `.lyse/generated-rules.yaml`. This file is committed to the repo and loaded by `pack-loader.ts` on every audit run, merging with the 65 built-in rules.
 
 The generated pack uses one of **8 rule templates** from `packages/core/src/rules/templates/`:
 
@@ -258,7 +258,7 @@ version: 1
 generated_at: '<iso-timestamp>'
 generated_by: claude-sonnet-4-5
 generated_from:
-  lyse_version: '0.1.0'
+  lyse_version: '0.2.0-alpha.4'
   template_catalog_version: 1
   deps_hash: 'sha256:abc123'
   files_hash: 'sha256:def456'
