@@ -48,7 +48,7 @@ End-to-end walkthrough of what happens when you run `npx @lyse-labs/lyse audit`.
         ┌────────────────────────────────────────────────┐
         │  5. Rule runner                                │
         │     - for each rule × each file → visit AST    │
-        │     5a. Built-in rules (12, all static)        │
+        │     5a. Built-in rules (65, all static)        │
         │     5b. Pack loader (optional generated rules) │
         │         — loads .lyse/generated-rules.yaml     │
         │         — merges with built-in rules           │

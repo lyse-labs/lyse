@@ -58,42 +58,6 @@ export function singleLineDiff(
 }
 
 /**
- * Generate a unified diff that inserts a new line after `afterLine`.
- * afterLine=0 means insert before the first line; afterLine=N means insert after line N (1-based).
- */
-export function prependLineDiff(
-  filePath: string,
-  source: string,
-  newLine: string,
-  afterLine: number = 0, // 0 = before first line, 1 = after line 1, etc.
-): string {
-  const allParts = source.split("\n");
-  const lines =
-    allParts.length > 0 && allParts[allParts.length - 1] === ""
-      ? allParts.slice(0, -1)
-      : allParts;
-  const ctxBefore = Math.max(0, afterLine - 3);
-  const ctxAfter = Math.min(lines.length, afterLine + 3);
-  const hunkLines: string[] = [];
-  for (let i = ctxBefore; i < afterLine; i++) {
-    hunkLines.push(` ${lines[i] ?? ""}`);
-  }
-  hunkLines.push(`+${newLine}`);
-  for (let i = afterLine; i < ctxAfter; i++) {
-    hunkLines.push(` ${lines[i] ?? ""}`);
-  }
-  const oldCount = ctxAfter - ctxBefore;
-  const newCount = oldCount + 1;
-  const header = `@@ -${ctxBefore + 1},${oldCount} +${ctxBefore + 1},${newCount} @@`;
-  return [
-    `--- a/${filePath}`,
-    `+++ b/${filePath}`,
-    header,
-    ...hunkLines,
-  ].join("\n") + "\n";
-}
-
-/**
  * Generate ONE unified diff that both inserts a line (e.g. an import) and
  * substitutes a fragment on another line. Both edits live under a single
  * `--- a/ +++ b/` header in a single hunk spanning them, so the line offsets

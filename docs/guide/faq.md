@@ -58,7 +58,7 @@ Vanilla HTML / web components — partial (a11y rule covers it; tokens require c
 
 ## Can I add my own rules?
 
-The 12 built-in rules are stable, but `lyse init` with a BYOK LLM (Anthropic / OpenAI / Ollama / IDE-MCP) can generate additional rules tailored to your repo. Generated rules live in `.lyse/generated-rules.yaml`, are committed alongside your code, and run as deterministic static analysis on every audit.
+The 65 built-in rules are stable, but `lyse init` with a BYOK LLM (Anthropic / OpenAI / Ollama / IDE-MCP) can generate additional rules tailored to your repo. Generated rules live in `.lyse/generated-rules.yaml`, are committed alongside your code, and run as deterministic static analysis on every audit.
 
 If you want a rule added to the core ruleset, [open an issue](https://github.com/lyse-labs/lyse/issues/new/choose) describing the rule.
 

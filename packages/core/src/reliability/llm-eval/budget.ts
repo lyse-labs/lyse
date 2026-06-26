@@ -43,8 +43,3 @@ export class LLMBudget {
     this.save(s);
   }
 }
-
-export function defaultBudget(): LLMBudget {
-  const cap = Number(process.env["LYSE_LLM_BUDGET_DAILY_USD"] ?? 50);
-  return new LLMBudget({ dailyUsd: cap, statePath: DEFAULT_BUDGET_STATE_PATH });
-}
