@@ -37,6 +37,7 @@ import { runBadge } from "./commands/badge.js";
 import { runInit } from "./commands/init.js";
 import { runAddCiGate, AddCiGateError } from "./commands/add-ci-gate.js";
 import { runAddGitHook, AddGitHookError } from "./commands/add-git-hook.js";
+import { runInstall } from "./commands/install.js";
 import { maybePromptForEmail, syncPendingEmail } from "./commands/email-prompt.js";
 import { runMcpSetup } from "./commands/mcp-setup.js";
 import { appendAuditEvent, appendCommandInvokedEvent } from "./history/ndjson-store.js";
@@ -1013,6 +1014,40 @@ const addCommand = defineCommand({
   },
 });
 
+const installCommand = defineCommand({
+  meta: {
+    name: "install",
+    description: "Set up Lyse in this repo: install the agent skill (for detected coding agents) + an advisory pre-commit hook",
+  },
+  args: {
+    path: { type: "positional", required: false, default: ".", description: "repository root" },
+    "lyse-version": { type: "string", description: "Lyse CLI version the hook should pin (default: the running CLI version)" },
+    force: { type: "boolean", default: false, description: "replace a pre-existing pre-commit hook" },
+    ...GLOBAL_FLAGS,
+  },
+  async run({ args }) {
+    applyGlobalFlags(args);
+    const cwd = resolve(String(args.path ?? "."));
+    const opts: Parameters<typeof runInstall>[0] = { cwd };
+    if (typeof args["lyse-version"] === "string") opts.lyseVersion = args["lyse-version"];
+    if (args.force === true) opts.force = true;
+    const r = await runInstall(opts);
+    if (args.quiet !== true) {
+      for (const s of r.skills) {
+        process.stdout.write(`${s.installed ? "Installed" : "Failed"} skill → ${s.path} (${s.agent})\n`);
+      }
+      if (r.skills.length === 0) {
+        process.stdout.write("No coding agent detected — run `lyse handoff` after an audit to install the skill on demand.\n");
+      }
+      for (const p of r.hook.written) process.stdout.write(`Wrote ${p}\n`);
+      for (const sk of r.hook.skipped) process.stdout.write(`Skipped ${sk.path} — ${sk.reason}\n`);
+      process.stdout.write(
+        "\nNext: run `lyse audit` to see your design-system health, then `lyse handoff` to have your agent fix the issues.\n",
+      );
+    }
+  },
+});
+
 const feedbackCommand = defineCommand({
   meta: {
     name: "feedback",
@@ -1164,7 +1199,7 @@ const main = defineCommand({
     quiet: { type: "boolean", description: "Suppress informational output" },
     "no-menu": { type: "boolean", description: "Skip the interactive menu (print help instead)" },
   },
-  subCommands: { init: initCommand, audit: auditCommand, fix: fixCommand, add: addCommand, share: shareCommand, badge: badgeCommand, agents: agentsCommand, "agents-md": agentsMdCommand, handoff: handoffCommand, "bench-pack": benchPackCommand, version: versionCommand, explain: explainCommand, mcp: mcpCommand, feedback: feedbackCommand, telemetry: telemetryCommand },
+  subCommands: { init: initCommand, audit: auditCommand, fix: fixCommand, add: addCommand, install: installCommand, share: shareCommand, badge: badgeCommand, agents: agentsCommand, "agents-md": agentsMdCommand, handoff: handoffCommand, "bench-pack": benchPackCommand, version: versionCommand, explain: explainCommand, mcp: mcpCommand, feedback: feedbackCommand, telemetry: telemetryCommand },
   async run({ args, cmd, rawArgs }) {
     applyGlobalFlags(args);
 

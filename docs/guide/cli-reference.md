@@ -279,6 +279,17 @@ After a successful audit in an interactive terminal, Lyse shows a quick-action m
 
 This menu is suppressed in CI and non-TTY contexts (`CI=1`, piped output).
 
+## `lyse install [path]`
+
+One-command onboarding. Installs the Lyse skill into every detected coding agent (Claude Code, Cursor, Codex, OpenCode) so it knows how to fix drift, and installs the advisory pre-commit hook (`lyse add git-hook`). Resilient: outside a git repo, the skill still installs and the hook is reported as skipped.
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--lyse-version <v>` | string | running CLI version | Pin the Lyse version the hook uses. |
+| `--force` | boolean | `false` | Replace a pre-existing pre-commit hook. |
+
+Next: `lyse audit` to see your health, then `lyse handoff` to have your agent fix the issues.
+
 ## `lyse add <feature>`
 
 Scaffold a Lyse integration into your repo.
