@@ -174,4 +174,11 @@ describe("runAddCiGate", () => {
     expect(wf).toContain("Fail on regression");
     expect(wf).toContain("Detect fork PR");
   });
+
+  it("includes an advisory scoped step that surfaces new drift on changed files", () => {
+    runAddCiGate({ cwd: tmp });
+    const wf = readFileSync(join(tmp, ".github/workflows/lyse.yml"), "utf8");
+    expect(wf).toContain("--scope changed");
+    expect(wf).toContain("--base origin/main");
+  });
 });
