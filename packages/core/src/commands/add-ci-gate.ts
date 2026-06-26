@@ -180,6 +180,15 @@ jobs:
         working-directory: pr
         run: npx --yes "@lyse-labs/lyse@\${{ env.LYSE_VERSION }}" audit --format=json > ../pr-report.json
 
+      # Advisory: surface design-system drift in only the files this PR changes
+      # (the "only-new-issues" view). Never blocks — the score gate below is the
+      # gate; this just shows reviewers what the change itself introduces.
+      - name: New drift on changed files (advisory)
+        working-directory: pr
+        run: |
+          git fetch --no-tags --depth=1 origin main 2>/dev/null || true
+          npx --yes "@lyse-labs/lyse@\${{ env.LYSE_VERSION }}" audit --scope changed --base origin/main --quiet || true
+
       # Best-effort baseline: if main does not audit (e.g. lockfile is broken
       # or a rule throws), the gate is skipped (not failed) so the PR that
       # would FIX main is not blocked. The PR comment surfaces "baseline

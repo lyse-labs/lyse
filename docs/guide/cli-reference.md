@@ -279,6 +279,29 @@ After a successful audit in an interactive terminal, Lyse shows a quick-action m
 
 This menu is suppressed in CI and non-TTY contexts (`CI=1`, piped output).
 
+## `lyse add <feature>`
+
+Scaffold a Lyse integration into your repo.
+
+### `lyse add ci-gate [path]`
+
+Writes a GitHub Actions workflow (`.github/workflows/lyse.yml` + `.github/scripts/lyse-gate.mjs`) that audits every PR, posts a score-regression comment, and includes an advisory step surfacing the new drift on the PR's changed files (`--scope changed`).
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--threshold <n>` | integer | `0` | Max allowed score drop before the gate fails. |
+| `--lyse-version <v>` | string | running CLI version | Pin the Lyse version the workflow uses. |
+| `--force` | boolean | `false` | Overwrite existing files. |
+
+### `lyse add git-hook [path]`
+
+Installs a pre-commit hook (`.git/hooks/pre-commit`) that runs `lyse audit --staged` to surface design-system drift in staged files before each commit. **Advisory only** — it never blocks the commit (bypass with `git commit --no-verify`). Refuses to overwrite a pre-existing hook unless `--force`.
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--lyse-version <v>` | string | running CLI version | Pin the Lyse version the hook uses. |
+| `--force` | boolean | `false` | Replace a pre-existing pre-commit hook. |
+
 ## `lyse explain <rule-id>`
 
 Print a human-readable explanation of a rule.

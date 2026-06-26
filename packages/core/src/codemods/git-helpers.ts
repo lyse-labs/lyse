@@ -1,7 +1,7 @@
 import { promisify } from "node:util";
 import { exec as execCb, execFile as execFileCb } from "node:child_process";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, isAbsolute } from "node:path";
 
 const exec = promisify(execCb);
 const execFile = promisify(execFileCb);
@@ -35,6 +35,16 @@ function splitGitPaths(out: string): string[] {
 /** Repo toplevel (git's forward-slash absolute path). Throws if not a git repo. */
 export async function gitToplevel(cwd: string): Promise<string> {
   return git(["rev-parse", "--show-toplevel"], cwd);
+}
+
+/**
+ * Absolute path to the repo's git hooks directory. Uses `git rev-parse
+ * --git-path hooks`, which resolves correctly for worktrees and submodules
+ * (where `.git` is a file, not a dir). Throws if not a git repo.
+ */
+export async function gitHooksDir(cwd: string): Promise<string> {
+  const p = await git(["rev-parse", "--git-path", "hooks"], cwd);
+  return isAbsolute(p) ? p : join(cwd, p);
 }
 
 /** Repo-relative (posix) paths of files staged in the index. */

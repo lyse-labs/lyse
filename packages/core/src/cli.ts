@@ -36,6 +36,7 @@ import { runShare } from "./commands/share.js";
 import { runBadge } from "./commands/badge.js";
 import { runInit } from "./commands/init.js";
 import { runAddCiGate, AddCiGateError } from "./commands/add-ci-gate.js";
+import { runAddGitHook, AddGitHookError } from "./commands/add-git-hook.js";
 import { maybePromptForEmail, syncPendingEmail } from "./commands/email-prompt.js";
 import { runMcpSetup } from "./commands/mcp-setup.js";
 import { appendAuditEvent, appendCommandInvokedEvent } from "./history/ndjson-store.js";
@@ -966,6 +967,43 @@ const addCommand = defineCommand({
         } catch (e) {
           if (e instanceof AddCiGateError) {
             process.stderr.write(`lyse add ci-gate: ${e.message}\n`);
+            process.exit(2);
+          }
+          throw e;
+        }
+      },
+    }),
+    "git-hook": defineCommand({
+      meta: {
+        name: "git-hook",
+        description: "Install a pre-commit hook that surfaces design-system drift in staged files (advisory; runs `lyse audit --staged`)",
+      },
+      args: {
+        path: { type: "positional", required: false, default: ".", description: "repository root" },
+        "lyse-version": { type: "string", description: "Lyse CLI version the hook should pin (default: the running CLI version)" },
+        force: { type: "boolean", default: false, description: "replace a pre-existing pre-commit hook" },
+        ...GLOBAL_FLAGS,
+      },
+      async run({ args }) {
+        applyGlobalFlags(args);
+        const cwd = resolve(String(args.path ?? "."));
+        try {
+          const opts: Parameters<typeof runAddGitHook>[0] = { cwd };
+          if (typeof args["lyse-version"] === "string") opts.lyseVersion = args["lyse-version"];
+          if (args.force === true) opts.force = true;
+          const result = await runAddGitHook(opts);
+          if (args.quiet !== true) {
+            for (const p of result.written) process.stdout.write(`Wrote ${p}\n`);
+            for (const s of result.skipped) process.stdout.write(`Skipped ${s.path} — ${s.reason}\n`);
+            if (result.written.length > 0) {
+              process.stdout.write(
+                "\nNext: stage some changes and commit — Lyse will surface drift in the staged files. Bypass with `git commit --no-verify`.\n",
+              );
+            }
+          }
+        } catch (e) {
+          if (e instanceof AddGitHookError) {
+            process.stderr.write(`lyse add git-hook: ${e.message}\n`);
             process.exit(2);
           }
           throw e;
