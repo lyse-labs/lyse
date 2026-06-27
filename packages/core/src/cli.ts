@@ -849,7 +849,6 @@ const initCommand = defineCommand({
       },
       async () => runInit({
         cwd: resolve(args.path ?? "."),
-        firstRun: args["first-run"],
         yes: Boolean(args.yes),
         scaffold: args.scaffold,
         migrateTokens: args["migrate-tokens"],

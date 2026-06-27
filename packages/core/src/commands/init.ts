@@ -17,7 +17,6 @@ import { writeAgentsMd } from "./init-write-agents-md.js";
 
 export interface InitOptions {
   cwd: string;
-  firstRun?: boolean | undefined;
   yes?: boolean | undefined;
   /** Skip Node.js version check (used in tests running on Node < 22). */
   skipNodeCheck?: boolean | undefined;

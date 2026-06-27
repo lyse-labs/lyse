@@ -4,12 +4,10 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   appendAuditEvent,
-  appendFixEvent,
   appendCommandInvokedEvent,
   appendMcpSetupCompletedEvent,
   appendInitStepCompletedEvent,
   readRecent,
-  isFirstAutoFix,
   computeDelta,
 } from "../../src/history/ndjson-store.js";
 import { __setCacheForTest, resetConsentCache } from "../../src/telemetry/consent.js";
@@ -54,19 +52,6 @@ describe("appendAuditEvent", () => {
   });
 });
 
-describe("appendFixEvent", () => {
-  it("appends fix event with rule_id and confidence", async () => {
-    await appendFixEvent(dir, "tokens/no-hardcoded-color", "high", 5, "def456");
-    const raw = readFileSync(join(dir, ".lyse/history.ndjson"), "utf8");
-    const parsed = JSON.parse(raw.trim());
-    expect(parsed.event_type).toBe("auto_fix_applied");
-    expect(parsed.rule_id).toBe("tokens/no-hardcoded-color");
-    expect(parsed.confidence).toBe("high");
-    expect(parsed.count).toBe(5);
-    expect(parsed.commit_sha).toBe("def456");
-  });
-});
-
 describe("readRecent", () => {
   it("returns empty array when no history exists", async () => {
     expect(await readRecent(dir)).toEqual([]);
@@ -79,22 +64,6 @@ describe("readRecent", () => {
     const recent = await readRecent(dir, 2);
     expect(recent).toHaveLength(2);
     expect((recent[1] as any).score).toBe(70);
-  });
-});
-
-describe("isFirstAutoFix", () => {
-  it("returns true when no history at all", async () => {
-    expect(await isFirstAutoFix(dir)).toBe(true);
-  });
-
-  it("returns true after audit but no fix events", async () => {
-    await appendAuditEvent(dir, { score: 50, axes: {} as never, findings_count: 0 }, null);
-    expect(await isFirstAutoFix(dir)).toBe(true);
-  });
-
-  it("returns false after first fix event", async () => {
-    await appendFixEvent(dir, "tokens/no-hardcoded-color", "high", 5, "sha");
-    expect(await isFirstAutoFix(dir)).toBe(false);
   });
 });
 

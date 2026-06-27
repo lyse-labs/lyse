@@ -53,28 +53,6 @@ export function classifyConfidence(finding: Finding, ctx: ClassifyContext): Conf
 }
 
 /**
- * Group findings by confidence level, augmenting each with a `confidence` field.
- * Returns three buckets: high, medium, low (always present, may be empty).
- */
-export function groupByConfidence(
-  findings: Finding[],
-  ctx: ClassifyContext
-): Record<Confidence, Array<Finding & { confidence: Confidence }>> {
-  const groups: Record<Confidence, Array<Finding & { confidence: Confidence }>> = {
-    high: [],
-    medium: [],
-    low: [],
-  };
-
-  for (const f of findings) {
-    const c = classifyConfidence(f, ctx);
-    groups[c].push({ ...f, confidence: c });
-  }
-
-  return groups;
-}
-
-/**
  * Populate `Finding.confidence` on every finding in an AuditResult by running
  * each through the owning rule's `classifyConfidence`. The audit pipeline emits
  * findings without a confidence field (rules don't know their own classification
@@ -94,18 +72,4 @@ export function populateConfidence(result: AuditResult, ctx: ClassifyContext): A
       confidence: classifyConfidence(f, ctx),
     })),
   };
-}
-
-/**
- * Group findings by ruleId.
- * Returns a Map where each key is a ruleId and value is the array of findings for that rule.
- */
-export function groupByRule(findings: Finding[]): Map<string, Finding[]> {
-  const groups = new Map<string, Finding[]>();
-  for (const f of findings) {
-    const arr = groups.get(f.ruleId) ?? [];
-    arr.push(f);
-    groups.set(f.ruleId, arr);
-  }
-  return groups;
 }

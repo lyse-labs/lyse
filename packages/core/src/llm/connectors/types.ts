@@ -32,12 +32,3 @@ export class ConnectorNotImplementedError extends Error {
     super(`Connector "${connector}" is not implemented in this version of Lyse.`);
   }
 }
-
-export class ConnectorBudgetExceededError extends Error {
-  override name = "ConnectorBudgetExceededError";
-  constructor(estimateUsd: number, dailyCap: number) {
-    super(
-      `LLM call refused: estimated cost $${estimateUsd.toFixed(4)} would exceed daily cap $${dailyCap.toFixed(2)}.`,
-    );
-  }
-}
