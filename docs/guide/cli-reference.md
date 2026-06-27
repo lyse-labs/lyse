@@ -125,12 +125,7 @@ Useful for pasting into a Slack message, PR description, or a team retrospective
 
 If no recent audit exists in `.lyse/history.ndjson`, Lyse runs a fresh `lyse audit` before sharing.
 
-### Options
-
-| Flag | Type | Default | Description |
-|---|---|---|---|
-| `--format` | `markdown` \| `plain` | `markdown` | Format of the clipboard content. |
-| `--top <n>` | integer | 5 | Number of top findings to include. |
+`lyse share` takes a `[path]` positional plus the global flags; it has no command-specific options.
 
 ## `lyse badge [path]`
 
@@ -366,12 +361,13 @@ Start the MCP server over stdio. This is normally invoked by your IDE, not direc
 lyse mcp
 ```
 
-The server exposes two tools:
+The server exposes three tools:
 
 | Tool | Use case |
 |---|---|
 | `audit_file(path, content?)` | Audit a single file. `content` lets the agent pass an unsaved buffer. |
 | `suggest_fix(path, rule_id, line)` | Return a unified diff that fixes a finding. |
+| `preflight_diff(path, content)` | Validate a proposed edit *before* it lands, with a block/pass verdict. |
 
 Configure in your IDE's MCP file (`.cursor/mcp.json`, `.mcp.json`). See [`mcp-server.md`](./mcp-server.md) for full setup.
 
@@ -383,15 +379,15 @@ Write the MCP config block to your IDE's config file. This is the one-shot alter
 lyse mcp setup [options]
 ```
 
-Detects your IDE automatically (Cursor, Claude Code, VS Code) and appends or merges the `lyse` server entry into the correct config file.
+Detects your IDE automatically (Cursor, Claude Code, Copilot) and appends or merges the `lyse` server entry into the correct config file.
 
 ### Options
 
 | Flag | Type | Default | Description |
 |---|---|---|---|
-| `--ide <name>` | `cursor` \| `claude-code` \| `vscode` | auto-detected | Target IDE. |
-| `--global` | boolean | false | Write to the user-level config instead of the project-level config. |
-| `--yes` | boolean | false | Overwrite without prompting if conflicting entry exists. |
+| `--target <name>` | `cursor` \| `claude-code` \| `copilot` \| `both` \| `all` | auto-detected | Which IDE config(s) to write. |
+| `--dev` | boolean | auto-detected | Force an absolute-path server entry (auto-detected when running from a local build). |
+| `--yes` | boolean | false | Overwrite without prompting if a conflicting entry exists. |
 
 ### Example
 
@@ -399,8 +395,8 @@ Detects your IDE automatically (Cursor, Claude Code, VS Code) and appends or mer
 # Auto-detect IDE and write config
 lyse mcp setup
 
-# Force Cursor, global config
-lyse mcp setup --ide=cursor --global
+# Force Cursor
+lyse mcp setup --target=cursor
 ```
 
 ## `lyse telemetry`

@@ -62,7 +62,7 @@ import type {
 // Import for local use within this module (function signatures).
 import { RefuseToRunError, ScopeError, type AuditFlags } from "./audit-flags.js";
 // Re-export AuditFlags + RefuseToRunError for backward compatibility.
-// External callers (cli.ts, fix.ts, tests) import these from audit-pipeline.
+// External callers (cli.ts, tests) import these from audit-pipeline.
 export { RefuseToRunError, ScopeError, type AuditFlags };
 
 export interface AuditPipelineResult {

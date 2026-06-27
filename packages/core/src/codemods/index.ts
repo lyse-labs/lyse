@@ -65,14 +65,15 @@ export async function applyCodemod(input: CodemodInput): Promise<CodemodResult> 
   // The shape differs from this module's CodemodResult — the registry returns
   // `{ diff, importsAdded, confidence, warnings? }` while MCP suggest-fix wants
   // `{ patch, alternatives, rationale, ... }`. Adapting cross-shapes is
-  // tracked as a follow-up — for now, the supported surfaces are MCP
-  // `suggest_fix` and the `lyse handoff` payload, which read the registry's
-  // `applyCodemod` directly.
+  // tracked as a follow-up — so this module's `applyCodemod` does not yet wire
+  // those registry codemods into MCP `suggest_fix`; it returns NO_FIX for them
+  // below. (`share.ts` reads `rule.applyCodemod` only to flag a finding as
+  // fixable.)
   const rule = ruleMap.get(input.finding.ruleId);
   if (rule?.applyCodemod) {
     return NO_FIX(
       input.finding.ruleId,
-      `Codemod available via \`lyse fix\` CLI but not yet adapted for MCP suggest-fix. Tracked as follow-up.`,
+      `Codemod available via the rule's \`applyCodemod\` but not yet adapted for MCP suggest-fix. Tracked as follow-up.`,
     );
   }
   return NO_FIX(input.finding.ruleId, `Unknown rule: ${input.finding.ruleId} (no codemod registered)`);

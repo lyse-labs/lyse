@@ -72,6 +72,8 @@ How Lyse fits together. For external contributors who want to understand or exte
 | Scorer (formula, renormalization) | [`scoring.md`](./scoring.md) |
 | LLM judgement layer (Phase D design) | [`llm-judgement-layer.md`](./llm-judgement-layer.md) — semantic scoring, router → specialists → conformal abstention |
 | MCP server design | [`mcp-server.md`](./mcp-server.md) |
+| Gate B (real-FP validation) | [`gate-b-spec.md`](./gate-b-spec.md) — the z-score verdict that gates rule promotion |
+| Governance traceability | [`governance-traceability.md`](./governance-traceability.md) — LLM grader rubric dimensions traced to Microsoft HAX / Google PAIR guidelines |
 | Cloudflare Worker (private) | Receives opt-in telemetry events, serves the daily bucket salt, exposes public bench aggregates. See [`PRIVACY.md`](../../PRIVACY.md). |
 
 ## Top-level directories

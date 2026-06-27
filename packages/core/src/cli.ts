@@ -1069,7 +1069,7 @@ const benchPackCommand = defineCommand({
 
 // ---------------------------------------------------------------------------
 // Root-level REPL dispatch — when `lyse` is invoked without a subcommand on a
-// TTY, an interactive menu lets the user pick an action (audit, fix, mcp-setup,
+// TTY, an interactive menu lets the user pick an action (audit, handoff, mcp-setup,
 // explain, bench-pack, telemetry) and loops back to itself after each run. On
 // non-TTY (CI, pipe) or when `--no-menu` / `LYSE_NO_MENU=1` is set, the menu is
 // skipped and the standard help text is printed instead.

@@ -210,7 +210,7 @@ export const rule: Rule = createLyseRule({
     shortDescription:
       "llms.txt at repo root must follow the llmstxt.org structure",
     fullDescription:
-      "Detects whether a design-system repository ships an `llms.txt` file at the repo root and validates the file's structure against the llmstxt.org specification: a single `# <title>` H1, a `> <summary>` blockquote, and at least one `## <section>` heading whose list items follow `- [<title>](<url>): <description>`. Absence emits a warning. A present-but-malformed `llms.txt` emits one error per structural issue. The optional companion file `llms-full.txt` is detected as a bonus signal but is not required.",
+      "Detects whether a design-system repository ships an `llms.txt` file at the repo root and validates the file's structure against the llmstxt.org specification: a single `# <title>` H1, a `> <summary>` blockquote, and at least one `## <section>` heading whose list items follow `- [<title>](<url>): <description>`. Absence emits a warning. A present-but-malformed `llms.txt` emits one error per structural issue. The optional companion file `llms-full.txt` is neither checked nor required.",
     helpUri:
       "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-surface-llms-txt-structure.md",
     rationale: `Why it matters
@@ -219,7 +219,7 @@ export const rule: Rule = createLyseRule({
 
 Absence is a missed opportunity, not a bug — agents fall back to scanning the README and source tree, which is slower and more expensive. Structural errors (missing H1, missing summary, malformed link rows) are scored as errors because consumers (cursor, claude code, custom agents) parse the file on the assumption it follows the spec, and silent malformations break the contract.
 
-The companion \`llms-full.txt\` — a single-file inlining of every linked document — is a strong bonus signal but is not enforced as a hard requirement.`,
+The companion \`llms-full.txt\` — a single-file inlining of every linked document — is a useful convention, but this rule neither checks for it nor requires it; only \`llms.txt\` is inspected.`,
     examples: [
       {
         good: `# Acme DS

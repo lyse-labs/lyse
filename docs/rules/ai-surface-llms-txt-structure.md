@@ -10,12 +10,11 @@ Detects whether a design-system repository ships a valid `llms.txt` at its root,
 
 Absence is a missed opportunity — agents fall back to scanning the README and source tree, which is slower, less reliable, and burns more tokens. Structural errors are scored harder than absence because consumers parse the file *assuming* it follows the spec; a malformed `llms.txt` silently breaks that contract.
 
-The companion `llms-full.txt` (a single-file inlining of every linked document) is a strong bonus signal but is not enforced as a hard requirement.
+The companion `llms-full.txt` (a single-file inlining of every linked document) is a useful convention to ship alongside, but this rule neither checks for it nor requires it — only `llms.txt` is inspected.
 
 ## Where the rule looks
 
-- `llms.txt` at the repo root (required signal).
-- `llms-full.txt` at the repo root (optional bonus, not enforced).
+- `llms.txt` at the repo root (required signal — the only file this rule reads).
 - README at the repo root for an allowlist directive (`README.md`, `README`, or `readme.md`).
 
 Files larger than 1 MB are skipped to avoid pathological cases.

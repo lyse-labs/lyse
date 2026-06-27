@@ -21,7 +21,7 @@ function emptyTokenMap(): TokenMap {
 /**
  * Build the ClassifyContext that confidence classification needs from audit
  * output. Single source of truth for the token fallback + component-set
- * derivation, shared by `fix` and the post-audit menu count.
+ * derivation, used by the audit pipeline's confidence classification.
  */
 export function buildClassifyContext(
   findings: Finding[],

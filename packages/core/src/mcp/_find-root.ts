@@ -10,7 +10,7 @@ import { dirname, resolve, join } from "node:path";
  * Accepts either a file path (uses its parent directory as the starting
  * point) or a directory path (starts from that directory directly).
  *
- * Shared between MCP tools (audit-file, check-intent, suggest-fix) to avoid
+ * Shared between MCP tools (audit-file, suggest-fix, preflight-diff) to avoid
  * duplication. v0.1.1 ADR 0014 MCP tools will use the same helper.
  */
 export function findProjectRoot(startPath: string): string {

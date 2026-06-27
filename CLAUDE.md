@@ -89,7 +89,7 @@ should not as a routine.
 ## Testing
 
 - `pnpm test` runs vitest with `passWithNoTests: true` in each workspace.
-- Smoke test: `npx @lyse-labs/lyse audit fixtures/full-ds/` must produce a stable, known Health Score.
+- Smoke test: `npx @lyse-labs/lyse audit packages/core/fixtures/full-ds/` must produce a stable, known Health Score.
 - Dogfood: `npx @lyse-labs/lyse audit packages/core/` should also run cleanly.
 
 ## Privacy and security

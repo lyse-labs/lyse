@@ -63,7 +63,7 @@ export interface AuditFlags {
    * the pipeline never owns the outcome label.
    *
    * Pass `undefined` (or a no-op spinner) from non-interactive callers
-   * (fix.ts, MCP, share) to keep stderr quiet.
+   * (MCP, share) to keep stderr quiet.
    */
   progress?: Spinner;
   /**

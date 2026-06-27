@@ -34,7 +34,7 @@ export function renderJson(result: AuditResult, options: JsonRenderOptions = {})
       delete cloned.meta.layer4;
       if (cloned.meta.coverage) {
         // durationMs is wallclock — non-deterministic. Strip in the default
-        // (deterministic) JSON output. Available via --include-timestamp.
+        // (deterministic) JSON output. Available via --include-timestamps.
         delete (cloned.meta.coverage as { durationMs?: number }).durationMs;
       }
       if (Object.keys(cloned.meta).length === 0) {
