@@ -30,6 +30,14 @@ export interface OracleAdapter {
   cleanFixture: () => FixtureFiles;
   mutations: MutationOperator[];
   metamorphic: MetamorphicPair[];
+  /**
+   * Labelled NEGATIVE fixtures — realistic code that resembles a violation but
+   * is legitimate (token definitions, doc/example blocks, var() fallbacks…).
+   * Each MUST NOT flag; each adds one negative observation to the matrix.
+   * Harvested from real OSS code, not invented — this is what makes the
+   * derived precision track reality.
+   */
+  falseFriends?: FixtureFiles[];
 }
 
 export interface ConfusionMatrix {
