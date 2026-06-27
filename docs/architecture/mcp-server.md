@@ -29,7 +29,7 @@ This means:
 
 `packages/core/src/mcp/server.ts` is the entry. It:
 
-1. Registers 2 tools: `audit_file` and `suggest_fix`.
+1. Registers 3 tools: `audit_file`, `suggest_fix`, and `preflight_diff`.
 2. Connects the transport.
 3. Logs errors to stderr (stdout is reserved for JSON-RPC).
 4. Handles SIGTERM / SIGINT gracefully.
@@ -52,13 +52,14 @@ Each tool is implemented in `packages/core/src/mcp/tools/<name>.ts` and register
 
 ```ts
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: TOOL_DEFINITIONS, // auditFileTool, suggestFixTool
+  tools: TOOL_DEFINITIONS, // auditFileTool, suggestFixTool, preflightDiffTool
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
   switch (req.params.name) {
-    case "audit_file":  return await auditFileImpl(req.params.arguments);
-    case "suggest_fix": return await suggestFixImpl(req.params.arguments);
+    case "audit_file":     return await auditFileImpl(req.params.arguments);
+    case "suggest_fix":    return await suggestFixImpl(req.params.arguments);
+    case "preflight_diff": return await preflightDiffImpl(req.params.arguments);
     default: throw new Error(`Unknown tool: ${req.params.name}`);
   }
 });
@@ -111,6 +112,21 @@ If the rule is not auto-fixable, returns a structured error:
   "suggested_action": "Resolve manually based on the help_uri."
 }
 ```
+
+## Tool: `preflight_diff`
+
+`packages/core/src/mcp/tools/preflight.ts`.
+
+Inputs:
+```ts
+{
+  path: string;
+  content: string;        // the full proposed (post-edit) buffer
+  project_root?: string;  // defaults to the dir of `path`
+}
+```
+
+Validates a proposed edit *before* it lands. Lyse audits the proposed `content` and returns a verdict (`pass` | `blocked` | `error`). Only **stable** design-system rules can `block`; experimental-rule violations are returned as `advisory` and never block. Wire it into an agent's pre-write hook as a compiler-style guardrail.
 
 ## Concurrency model
 

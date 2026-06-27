@@ -45,7 +45,7 @@ Rule output appears in:
 | `stories/coverage` | Stories | info | No | [→](./storybook-coverage.md) |
 | `ai-surface/agents-md-quality` | AI surface | warning | No | — |
 | `ai-surface/component-manifest-json` | AI surface | warning | No | — |
-| `ai-surface/ds-index-exported` | AI surface | warning | No | — |
+| `ai-surface/ds-index-exported` | AI surface | warning | No | [→](./ai-surface-ds-index-exported.md) |
 | `ai-surface/mcp-config-present` | AI surface | warning | No | [→](./ai-surface-mcp-config-present.md) |
 | `ai-surface/llms-txt-structure` | AI surface | warning | No | [→](./ai-surface-llms-txt-structure.md) |
 | `ai-surface/shadcn-registry-valid` | AI surface | warning | No | [→](./ai-surface-shadcn-registry-valid.md) |
@@ -79,10 +79,10 @@ Rule output appears in:
 
 Some rules require the opt-in render layer (`lyse audit --render`) and do not contribute to the Health Score:
 
-| Rule ID | Requires | Status |
-|---|---|---|
-| `a11y/runtime-axe` | `--render` + pre-built Storybook | experimental |
-| `tokens/rendered-token-fidelity` | `--render` + pre-built Storybook | experimental |
+| Rule ID | Requires | Status | Doc |
+|---|---|---|---|
+| `a11y/runtime-axe` | `--render` + pre-built Storybook | experimental | [→](./a11y-runtime-axe.md) |
+| `tokens/rendered-token-fidelity` | `--render` + pre-built Storybook | experimental | — |
 
 These rules are reported-only until calibration data is available from real design system corpora.
 

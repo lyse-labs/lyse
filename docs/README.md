@@ -11,6 +11,7 @@ Start here if you want to use Lyse on your codebase.
 - [Health Score](./guide/health-score.md) — the formula, axes, edge cases.
 - [FAQ](./guide/faq.md) — common questions.
 - [Troubleshooting](./guide/troubleshooting.md) — common errors and fixes.
+- [Privacy](./guide/privacy.md) — what Lyse sends, telemetry consent, and the local-first guarantee.
 
 ## Rules
 

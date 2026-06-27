@@ -33,7 +33,7 @@ pnpm -r build
 To run the CLI from source:
 
 ```bash
-pnpm -F lyse build && node packages/core/dist/cli.js audit fixtures/full-ds
+pnpm -F lyse build && node packages/core/dist/cli.js audit packages/core/fixtures/full-ds
 ```
 
 ## Project structure
