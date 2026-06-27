@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added in-repo synthetic measurement for `tokens/no-hardcoded-color`, `tokens/no-hardcoded-shadow`, and `components/contracts-strictness` (precision/recall + N now derived from adversarial fixtures). All remain `experimental` / `contributesToScore: false`; promotion awaits real-world (Bench) validation.
+
 ### Fixed
 
 - `lyse init` no longer hangs after stack detection (#205): the framework-detection spinner ran a redraw loop on top of the interactive "Proceed?" prompt, burying it indefinitely on a TTY. `runInit` now runs without the competing CLI spinner.

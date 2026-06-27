@@ -37,7 +37,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `a11y.prefers-reduced-motion` | `a11y` | prefers-reduced-motion compliance | **stable** | 0.904 | 0.901 | ✅ |
 | `a11y.runtime-axe` | `a11y` | Runtime a11y (axe-core on Storybook) | **experimental** | 0.000 | 0.000 | — |
 | `a11y.semantic-html` | `a11y` | Semantic HTML (no static-element interactions) | **stable** | 0.916 | 0.934 | ✅ |
-| `components.contracts-strictness` | `components` | Component prop contract strictness | **experimental** | — | — | — |
+| `components.contracts-strictness` | `components` | Component prop contract strictness | **experimental** | 0.901 | 0.901 | — |
 | `components.doc-comments` | `components` | Component doc-comment presence (public API) | **stable** | 0.929 | 0.901 | ✅ |
 | `components.icon-decorative-aria` | `components` | Inline SVG accessible treatment | **stable** | 0.916 | 0.901 | ✅ |
 | `components.naming-component-pascalcase` | `components` | Component PascalCase | **stable** | 0.904 | 0.904 | ✅ |

@@ -155,13 +155,13 @@ describe("renderSarif", () => {
       expect(dtcg?.properties.precision).toBe(1);
     });
 
-    it("omits precision for rules with no measured value (contracts-strictness is unmeasured)", () => {
+    it("includes precision for contracts-strictness (now measured, experimental)", () => {
       const sarif = JSON.parse(renderSarif(sample));
       const rules: { id: string; properties: { precision?: number } }[] =
         sarif.runs[0].tool.driver.rules;
-      const noPrecision = rules.find((r) => r.id === "components/contracts-strictness");
-      expect(noPrecision).toBeDefined();
-      expect(noPrecision?.properties).not.toHaveProperty("precision");
+      const rule = rules.find((r) => r.id === "components/contracts-strictness");
+      expect(rule).toBeDefined();
+      expect(rule?.properties).toHaveProperty("precision");
     });
   });
 
