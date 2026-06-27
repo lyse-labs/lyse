@@ -1,4 +1,4 @@
-import { computeRepoBucket } from "./repo-bucket.js";
+import { computeRepoBucketFromUrl as computeRepoBucket } from "../../identity/index.js";
 import { telemetryEnabled } from "../../telemetry/index.js";
 
 export type FeedbackVerdict = "valid" | "invalid" | "skipped";

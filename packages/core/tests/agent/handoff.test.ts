@@ -150,6 +150,27 @@ describe("runHandoff — copy to clipboard", () => {
       clipboardSpy.mockRestore();
     }
   });
+
+  it("returns { action: 'copy-failed' } when the clipboard copy fails", async () => {
+    const root = makeTempRoot();
+
+    const launchModule = await import("../../src/agent/launch.js");
+    const clipboardSpy = vi
+      .spyOn(launchModule, "copyToClipboard")
+      .mockImplementation(async () => false);
+
+    try {
+      const deps = makeDeps({ prompt: vi.fn().mockResolvedValue("copy") });
+      const result = await runHandoff(
+        { findings: baseFindings, tokens: null, root, projectName: "acme" },
+        deps,
+      );
+
+      expect(result).toEqual({ action: "copy-failed" });
+    } finally {
+      clipboardSpy.mockRestore();
+    }
+  });
 });
 
 describe("spawnAgentLauncher — unsupported agent guard", () => {

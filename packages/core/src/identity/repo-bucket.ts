@@ -85,3 +85,19 @@ export function computeRepoBucket(repoRoot: string, options: RepoBucketOptions =
     .digest("hex");
   return hash.slice(0, 16);
 }
+
+/**
+ * Compute a repo_bucket fingerprint from a raw remote URL + salt, without
+ * touching git. Used by the feedback telemetry path, which only has the
+ * remote URL on hand. Uses the same normalization as {@link computeRepoBucket}
+ * so credentials (`user:token@`), scheme, and port never reach the digest.
+ */
+export function computeRepoBucketFromUrl(remoteUrl: string, salt: string): string {
+  const normalized = normalizeRemoteUrl(remoteUrl);
+  return createHash("sha256")
+    .update(normalized)
+    .update("|")
+    .update(salt)
+    .digest("hex")
+    .slice(0, 16);
+}

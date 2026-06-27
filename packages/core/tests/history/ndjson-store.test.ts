@@ -118,6 +118,12 @@ describe("appendCommandInvokedEvent", () => {
     expect(events[0].event_type).toBe("command_invoked");
     expect(events[1].event_type).toBe("command_invoked");
   });
+
+  it("does NOT write on the run that just requested consent (suppress)", async () => {
+    enableConsent();
+    await appendCommandInvokedEvent(dir, "audit", "success", 1234, { suppress: true });
+    expect(existsSync(join(dir, ".lyse/history.ndjson"))).toBe(false);
+  });
 });
 
 describe("appendMcpSetupCompletedEvent", () => {

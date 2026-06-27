@@ -13,7 +13,7 @@ const SCSS_ONLY_AT_RULES = new Set([
  * CRITICAL invariant: the transform is **line-count preserving**. Output line N
  * corresponds to source line N. Downstream rules report findings by line against
  * this output, and those line numbers must match the original `.scss` source —
- * otherwise findings (and `lyse fix` edits, SARIF locations) land on the wrong
+ * otherwise findings (and codemod edits, SARIF locations) land on the wrong
  * line. We therefore neutralize SCSS-only constructs *in place* (blanking their
  * source lines) instead of removing AST nodes and re-stringifying, which would
  * collapse lines and shift everything below.

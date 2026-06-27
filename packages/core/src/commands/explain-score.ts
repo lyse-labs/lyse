@@ -112,6 +112,14 @@ export interface FormatExplainScoreArgs {
 export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreResult {
   const { findings, stableSubAxes, confidenceByAxis } = args;
   const aiGovernanceGrace = args.aiGovernanceGrace ?? 1;
+  // DIVERGENCE (audit sweep, follow-up): `lyse explain --score` computes the
+  // score with formula-v1 (`clamp(100 - penalty × 1.5)`, no auto-fail cap),
+  // while `lyse audit` (commands/audit-pipeline.ts → scorer.ts/scoreFromFindings)
+  // uses the v1.1 rate-based scorer with a log-scaled cap + autoFail. The two can
+  // report DIFFERENT Health Scores for the same repo. Unifying is intentionally
+  // deferred — the formulas take different inputs (formula-v1 has no per-axis
+  // opportunity denominator) and reconciling them changes user-visible output.
+  // Tracked for a dedicated follow-up; do not silently swap one for the other.
   const scoring = computeScoreV1({ findings, stableSubAxes, confidenceByAxis, aiGovernanceGrace });
   const preview =
     args.previewSubAxes !== undefined

@@ -52,3 +52,6 @@ packages/core/reports/
 .superpowers/
 # Backup files
 *.bak
+
+# Wrangler / Miniflare local dev state (regenerable)
+.wrangler/

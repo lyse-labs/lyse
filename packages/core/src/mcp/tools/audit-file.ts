@@ -102,11 +102,12 @@ interface AuditFileResult {
   }>;
 }
 
-const AUTO_FIXABLE_RULES = new Set([
-  "tokens/no-hardcoded-color",
-  "tokens/no-hardcoded-spacing",
-  "components/no-native-shadows",
-]);
+// Single source of truth: a rule is auto-fixable iff it carries a codemod
+// (`applyCodemod`). Derived from the registry so this can never drift from the
+// rules that actually have a deterministic fix.
+export const AUTO_FIXABLE_RULES: ReadonlySet<string> = new Set(
+  ruleObjects.filter((r) => r.applyCodemod !== undefined).map((r) => r.id),
+);
 
 export async function runAuditFile(input: AuditFileInput): Promise<AuditFileResult> {
   if (typeof input.path !== "string") {

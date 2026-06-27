@@ -3,6 +3,7 @@ import { mkdir, writeFile, rm } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { buildEvidencePack } from "../../src/bench/evidence-pack/builder.js";
+import { serializeEvidencePack } from "../../src/commands/bench-pack.js";
 
 const FIXTURE = join(__dirname, "..", "..", ".tmp", "determinism");
 
@@ -32,5 +33,29 @@ describe("EvidencePack determinism", () => {
     const shaA = createHash("sha256").update(jsonA).digest("hex");
     const shaB = createHash("sha256").update(jsonB).digest("hex");
     expect(shaA).toBe(shaB);
+  });
+
+  it("serializes the pack with alphabetically sorted keys (deterministic JSON)", async () => {
+    const pack = await buildEvidencePack({
+      repoRoot: FIXTURE,
+      owner: "o", name: "n", headSha: "deadbeef",
+      lyseCliVersion: "0.1.0-test",
+      extractedAt: "2026-05-26T00:00:00.000Z",
+    });
+    const out = serializeEvidencePack(pack);
+    const parsed = JSON.parse(out) as Record<string, unknown>;
+    const topKeys = Object.keys(parsed);
+    expect(topKeys).toEqual([...topKeys].sort());
+
+    const collectUnsorted = (value: unknown): string[] => {
+      if (Array.isArray(value)) return value.flatMap(collectUnsorted);
+      if (value && typeof value === "object") {
+        const keys = Object.keys(value as Record<string, unknown>);
+        const bad = JSON.stringify(keys) !== JSON.stringify([...keys].sort()) ? keys : [];
+        return [...bad, ...Object.values(value as Record<string, unknown>).flatMap(collectUnsorted)];
+      }
+      return [];
+    };
+    expect(collectUnsorted(parsed)).toEqual([]);
   });
 });
