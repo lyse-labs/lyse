@@ -20,16 +20,6 @@ export interface AuditEvent extends AuditEventInput {
   lyse_version: string;
 }
 
-export interface FixEvent {
-  schema_version: number;
-  event_type: "auto_fix_applied";
-  timestamp: string;
-  rule_id: string;
-  confidence: "high" | "medium" | "low";
-  count: number;
-  commit_sha: string;
-}
-
 export interface CommandInvokedEvent {
   schema_version: number;
   event_type: "command_invoked";
@@ -55,7 +45,6 @@ export interface InitStepCompletedEvent {
 
 export type HistoryEvent =
   | AuditEvent
-  | FixEvent
   | CommandInvokedEvent
   | McpSetupCompletedEvent
   | InitStepCompletedEvent;
@@ -77,18 +66,6 @@ export async function appendAuditEvent(cwd: string, input: AuditEventInput, comm
     ...input,
     commit_sha: commitSha,
     lyse_version: process.env.LYSE_VERSION ?? VERSION,
-  });
-}
-
-export async function appendFixEvent(cwd: string, ruleId: string, confidence: "high" | "medium" | "low", count: number, commitSha: string): Promise<void> {
-  await appendLine(cwd, {
-    schema_version: SCHEMA_VERSION,
-    event_type: "auto_fix_applied",
-    timestamp: new Date().toISOString(),
-    rule_id: ruleId,
-    confidence,
-    count,
-    commit_sha: commitSha,
   });
 }
 
@@ -159,11 +136,6 @@ export async function readRecent(cwd: string, n: number = 10): Promise<HistoryEv
   } catch {
     return [];
   }
-}
-
-export async function isFirstAutoFix(cwd: string): Promise<boolean> {
-  const events = await readRecent(cwd, 10000);
-  return !events.some(e => e.event_type === "auto_fix_applied");
 }
 
 export function computeDelta(current: AuditEventInput, previous: AuditEvent): { score: number; days: number } {

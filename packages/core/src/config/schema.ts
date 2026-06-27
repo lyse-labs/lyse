@@ -84,14 +84,6 @@ export const LyseConfigSchema = z.object({
 export type LyseConfigValidated = z.infer<typeof LyseConfigSchema>;
 
 /**
- * Parse and validate raw YAML output as a LyseConfig.
- * Throws a ZodError with human-readable messages on invalid input.
- */
-export function parseLyseConfig(raw: unknown): LyseConfigValidated {
-  return LyseConfigSchema.parse(raw);
-}
-
-/**
  * Validate raw YAML output as a LyseConfig without throwing.
  * Returns { ok: true, value } on success or { ok: false, error } with a
  * semicolon-separated list of validation issues on failure.

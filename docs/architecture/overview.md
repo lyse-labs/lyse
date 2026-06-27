@@ -118,7 +118,6 @@ packages/core/src/
 │   ├── manifest.ts          # RULE_METADATA — derived from META_REGISTRY
 │   ├── registry.ts          # exports ruleObjects (65 rule instances) + ruleMap (O(1) lookup)
 │   ├── pack-loader.ts       # load .lyse/generated-rules.yaml
-│   ├── pack-validator.ts    # validate rule pack schema
 │   ├── _skip-context.ts     # shared helpers (isInsideCodeDisplay, isInsideSkippedJsxAttr)
 │   ├── _codemod-adapter.ts  # codemod dispatch wrapper
 │   ├── tokens-no-hardcoded-color.ts

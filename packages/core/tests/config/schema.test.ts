@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { safeParseLyseConfig, parseLyseConfig, LyseConfigSchema, loadConfig, resolveConfigPath } from "../../src/config/schema.js";
+import { safeParseLyseConfig, LyseConfigSchema, loadConfig, resolveConfigPath } from "../../src/config/schema.js";
 
 describe("safeParseLyseConfig", () => {
   it("accepts an empty object (minimal valid config)", () => {
@@ -147,17 +147,6 @@ describe("safeParseLyseConfig — i18n block", () => {
       i18n: { vocabulary: { aiNouns: "xai" } },
     });
     expect(r.ok).toBe(false);
-  });
-});
-
-describe("parseLyseConfig", () => {
-  it("returns validated object on valid input", () => {
-    const v = parseLyseConfig({ designSystem: { componentsModule: "@ui/kit" } });
-    expect(v.designSystem?.componentsModule).toBe("@ui/kit");
-  });
-
-  it("throws ZodError on invalid input", () => {
-    expect(() => parseLyseConfig({ designSystem: { componentsModule: 99 } })).toThrow();
   });
 });
 

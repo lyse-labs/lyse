@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyConfidence, groupByConfidence, groupByRule } from "../../src/codemods/safety.js";
+import { classifyConfidence } from "../../src/codemods/safety.js";
 import type { Finding, ClassifyContext, TokenMap } from "../../src/types.js";
 
 const ctx: ClassifyContext = {
@@ -44,38 +44,5 @@ describe("classifyConfidence dispatcher", () => {
   it("returns 'low' for rules without classifyConfidence (e.g., a11y)", () => {
     const finding = f("a11y/essentials");
     expect(classifyConfidence(finding, ctx)).toBe("low");
-  });
-});
-
-describe("groupByConfidence", () => {
-  it("groups findings into high/medium/low buckets", () => {
-    const findings = [
-      f("nonexistent/rule"),
-      f("a11y/essentials"),
-    ];
-    const grouped = groupByConfidence(findings, ctx);
-    expect(grouped).toHaveProperty("high");
-    expect(grouped).toHaveProperty("medium");
-    expect(grouped).toHaveProperty("low");
-    expect(grouped.low.length).toBe(2);
-  });
-
-  it("each finding in a group has confidence field set", () => {
-    const findings = [f("a11y/essentials")];
-    const grouped = groupByConfidence(findings, ctx);
-    expect(grouped.low[0].confidence).toBe("low");
-  });
-});
-
-describe("groupByRule", () => {
-  it("groups findings by ruleId", () => {
-    const findings = [
-      f("tokens/no-hardcoded-color"),
-      f("tokens/no-hardcoded-color"),
-      f("tokens/no-hardcoded-spacing"),
-    ];
-    const grouped = groupByRule(findings);
-    expect(grouped.get("tokens/no-hardcoded-color")?.length).toBe(2);
-    expect(grouped.get("tokens/no-hardcoded-spacing")?.length).toBe(1);
   });
 });
