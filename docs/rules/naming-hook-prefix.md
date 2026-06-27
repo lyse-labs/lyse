@@ -70,7 +70,7 @@ export function makeCallback() {
 
 ## Auto-fix
 
-When confidence is `high`, `lyse fix` renames the declaration and same-file references to `use<CapitalizedName>`. Cross-file callers must be updated separately. Names containing `_` or `-` are classified `medium` confidence and skipped by default.
+When confidence is `high`, the suggested fix renames the declaration and same-file references to `use<CapitalizedName>`; `lyse handoff` passes it to your coding agent to apply (cross-file callers are updated by the agent in the same pass). Names containing `_` or `-` are classified `medium` confidence.
 
 ## Related rules
 

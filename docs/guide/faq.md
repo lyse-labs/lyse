@@ -72,9 +72,9 @@ To prevent AWS-style rebundling of the engine as a hosted service without contri
 
 For everyday OSS use (CLI, CI, internal tooling), AGPLv3 has no practical difference from MIT.
 
-## Is auto-fix safe?
+## How does Lyse fix things?
 
-Yes. `lyse fix` runs 6 safety guards before touching any file: clean git tree, git repo required, token map discoverable, high-confidence codemods only by default, 200-file cap per run, dry-run in non-TTY contexts. Details and overrides in [`cli-reference.md`](./cli-reference.md). Always review the diff — `lyse fix --dry-run` is your friend.
+Lyse never edits your code itself. `lyse handoff` audits, then hands the findings — grouped by drift class, with the resolved token mapping (e.g. `#3b82f6 → color/brand/primary`) and the full token map — to the coding agent you already use (Claude Code, Cursor, Codex). The agent edits the working tree only; it never commits or opens a PR, so you always review the diff before anything is permanent. See [`cli-reference.md`](./cli-reference.md).
 
 ## Will Lyse break my build?
 

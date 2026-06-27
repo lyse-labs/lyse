@@ -38,26 +38,6 @@ export function buildClassifyContext(
 }
 
 /**
- * Count findings that `lyse fix` would auto-apply at the default "high"
- * confidence floor: those whose rule has a codemod AND classify as high
- * confidence. Mirrors `runFix`'s default filter chain (high floor, no
- * `--rule` filter) so the post-audit menu shows a count consistent with what
- * `fix` actually does. `repoRoot` must match `runFix`'s `cwd` — some rules
- * downgrade confidence based on it (e.g. token-definition files), so passing a
- * different value here would desync the menu count from the real fix count.
- */
-export function countAutoFixable(
-  findings: Finding[],
-  tokens: TokenMap | null | undefined,
-  config: LyseConfig,
-  repoRoot?: string,
-): number {
-  const fixable = findings.filter((f) => !!ruleRegistry.get(f.ruleId)?.applyCodemod);
-  const ctx = buildClassifyContext(findings, tokens, config, repoRoot);
-  return groupByConfidence(fixable, ctx).high.length;
-}
-
-/**
  * Dispatcher that delegates classifyConfidence to the rule that owns the finding.
  * Returns "low" (safe default) for unknown rules or rules without classifyConfidence.
  *

@@ -103,7 +103,7 @@ export function getMdxComponents() {
 
 ## Auto-fix
 
-When confidence is `high`, `lyse fix` renames the declaration and intra-file references. Cross-file imports must be updated separately. Names containing `_` or `-` are classified `medium` confidence and skipped by default.
+When confidence is `high`, the suggested fix renames the declaration and intra-file references; `lyse handoff` passes it to your coding agent to apply (cross-file imports are updated by the agent in the same pass). Names containing `_` or `-` are classified `medium` confidence.
 
 ## Known limitations (v0.1)
 

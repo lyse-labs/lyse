@@ -25,8 +25,6 @@ import { RULES_VERSION } from "./rules/manifest.js";
 import { checkEntitlement } from "./entitlement/index.js";
 import { computeRepoBucket, BUCKET_SALT } from "./identity/index.js";
 import { startMcpServer } from "./mcp/server.js";
-import { runFix, type FixOptions } from "./commands/fix.js";
-import { resolveDryRun, dryRunFlagPresent } from "./commands/dry-run-guard.js";
 import { runExplain } from "./commands/explain.js";
 import { runExplainScore } from "./commands/explain-score.js";
 import { feedbackMissed } from "./commands/feedback.js";
@@ -45,7 +43,7 @@ import { ensureGitignoreEntry } from "./util/gitignore.js";
 import { withSpinner } from "./util/with-spinner.js";
 import { showActionMenu } from "./menu/action-menu.js";
 import { runRepl, withExitGuard, type ReplActionId, type ReplContext } from "./menu/repl.js";
-import { countAutoFixable, buildClassifyContext, populateConfidence } from "./codemods/safety.js";
+import { buildClassifyContext, populateConfidence } from "./codemods/safety.js";
 import { isInteractive, confirm } from "./menu/prompts.js";
 import { detectFromFilesystem } from "./detection/from-filesystem.js";
 import {
@@ -362,9 +360,8 @@ const auditCommand = defineCommand({
       formatForSpinner === "json" || formatForSpinner === "sarif" || formatForSpinner === "html" || formatForSpinner === "tsv";
 
     let result: AuditResult, fileCount: number, hasTokenRegistry: boolean;
-    let tokens: AuditOutcome["tokens"], config: AuditOutcome["config"];
     try {
-      ({ result, fileCount, hasTokenRegistry, tokens, config } = await withSpinner<AuditOutcome>(
+      ({ result, fileCount, hasTokenRegistry } = await withSpinner<AuditOutcome>(
         {
           isTTY: isTTYForSpinner,
           quiet: isQuiet,
@@ -532,14 +529,13 @@ const auditCommand = defineCommand({
 
     if (promptsAllowed && !wantsFeedback) {
       // Standard action menu path (no --interactive, or no findings).
-      const autoFixableCount = countAutoFixable(result.findings, tokens, config, repoRoot);
       const fsDetect = await detectFromFilesystem(repoRoot);
       const detectedIDE = !!(fsDetect.cursor.value || fsDetect.claudeCode.value);
 
-      const choice = await showActionMenu({ autoFixableCount, detectedIDE });
+      const choice = await showActionMenu({ findingsCount: result.findings.length, detectedIDE });
 
-      if (choice === "fix") {
-        await runFix({ cwd: repoRoot, autoApprove: Boolean(args.yes) });
+      if (choice === "handoff") {
+        await runHandoffCommand(repoRoot);
       } else if (choice === "mcp-setup") {
         await runMcpSetup({ cwd: repoRoot, autoApprove: Boolean(args.yes) });
       }
@@ -778,91 +774,23 @@ const mcpCommand = defineCommand({
   },
 });
 
+// `lyse fix` is retired: Lyse no longer edits your code — it hands the findings
+// to your coding agent. The old command name redirects to `lyse handoff` so
+// existing muscle memory + scripts land in the right place.
 const fixCommand = defineCommand({
-  meta: { name: "fix", description: "Auto-fix design system violations with confidence gates and safety guards" },
+  meta: { name: "fix", description: "Deprecated — Lyse now hands fixes to your coding agent (see `lyse handoff`)" },
   args: {
     path: { type: "positional", required: false, default: ".", description: "repository root" },
-    "dry-run": { type: "boolean", default: false, description: "preview changes without writing or committing (the default in non-TTY contexts; pass --no-dry-run to apply fixes there)" },
-    interactive: { type: "boolean", default: false, description: "enable interactive prompts" },
-    confidence: { type: "string", default: "high", description: "confidence floor: high | medium | low" },
-    rule: { type: "string", description: "limit fixes to a specific rule ID" },
-    "force-on-dirty": { type: "boolean", default: false, description: "allow running on a dirty working tree" },
-    "verify-with-tests": { type: "boolean", default: false, description: "run tests after each rule batch; revert on failure" },
-    branch: { type: "string", description: "override the branch name (useful for tests)" },
-    scaffold: { type: "boolean", default: false, description: "generate missing AI-readiness files (llms.txt, AGENTS.md, value-gate doc)" },
-    "migrate-tokens": { type: "boolean", default: false, description: "migrate legacy ({ value, type }) token JSON to DTCG ({ $value, $type }); skips files that wouldn't be conformant" },
     ...GLOBAL_FLAGS,
   },
   async run({ args }) {
     applyGlobalFlags(args);
-    const entitlement = await checkEntitlement("fix");
-    if (!entitlement.allowed) {
-      console.error(`Feature 'fix' not available on plan '${entitlement.plan}': ${entitlement.reason}`);
-      process.exit(2);
-    }
-
     const cwd = resolve(args.path ?? ".");
-    // Guard 6: in a non-TTY context (CI, pipe) default to dry-run so an
-    // unattended invocation never mutates + commits the repo. An explicit
-    // --dry-run / --no-dry-run always wins.
-    const isTTY = process.stdout.isTTY ?? false;
-    const flagPresent = dryRunFlagPresent(process.argv);
-    const dryRun = resolveDryRun({ flagPresent, flagValue: args["dry-run"], isTTY });
-    if (dryRun && !flagPresent && !isTTY) {
-      process.stderr.write(
-        "[lyse] Non-interactive context — defaulting to --dry-run (no files written, no commit). Pass --no-dry-run to apply fixes.\n",
-      );
-    }
-    const opts: FixOptions = {
-      cwd,
-      dryRun,
-      interactive: args.interactive,
-      confidence: (args.confidence ?? "high") as "high" | "medium" | "low",
-      rule: args.rule,
-      forceOnDirty: args["force-on-dirty"],
-      verifyWithTests: args["verify-with-tests"],
-      branch: args.branch,
-      scaffold: args.scaffold,
-      migrateTokens: args["migrate-tokens"],
-    };
-
-    const isQuiet = args.quiet === true;
-    const result = await withSpinner(
-      {
-        quiet: isQuiet,
-        startLabel: "Discovering files…",
-        successLabel: () => "Fix complete",
-        failLabel: (m) => `Fix failed: ${m}`,
-      },
-      async () => runFix(opts),
+    process.stderr.write(
+      "[lyse] `lyse fix` is retired — Lyse hands fixes to your coding agent now.\n" +
+        "       Running `lyse handoff`…\n\n",
     );
-    console.log(`✓ Branch: ${result.branch}`);
-    for (const r of result.ruleResults) {
-      const testStatus =
-        r.testsPassed === false ? " (tests failed, reverted)" : r.testsPassed === true ? " (tests passed)" : "";
-      console.log(`✓ ${r.ruleId}: ${r.count} fixes${testStatus}`);
-      if (r.warnings && r.warnings.length > 0) {
-        for (const w of r.warnings) {
-          process.stderr.write(`  ⚠ ${w}\n`);
-        }
-      }
-    }
-    if (result.scaffolds.length > 0) {
-      const verb = args["dry-run"] ? "Would scaffold" : "Scaffolded";
-      console.log(`✓ ${verb} ${result.scaffolds.length} AI-readiness file(s): ${result.scaffolds.join(", ")}`);
-    } else if (args.scaffold) {
-      console.log("✓ Scaffold: all AI-readiness files already present.");
-    }
-    if (result.migratedTokens.length > 0) {
-      const verb = args["dry-run"] ? "Would migrate" : "Migrated";
-      console.log(`✓ ${verb} ${result.migratedTokens.length} token file(s) to DTCG: ${result.migratedTokens.join(", ")}`);
-    } else if (args["migrate-tokens"]) {
-      console.log("✓ Migrate-tokens: no convertible legacy token files found.");
-    }
-    if (result.skipped.medium > 0 || result.skipped.low > 0) {
-      console.log(`  Skipped: ${result.skipped.medium} medium-confidence, ${result.skipped.low} low-confidence findings`);
-      console.log(`  Use --confidence=medium or --interactive to review.`);
-    }
+    await runHandoffCommand(cwd);
   },
 });
 
@@ -904,6 +832,8 @@ const initCommand = defineCommand({
   args: {
     path: { type: "positional", required: false, default: ".", description: "repository root" },
     "first-run": { type: "boolean", description: "mark as first run (used by npm create lyse)" },
+    scaffold: { type: "boolean", default: false, description: "generate missing AI-readiness files (llms.txt, AGENTS.md, value-gate doc)" },
+    "migrate-tokens": { type: "boolean", default: false, description: "migrate legacy ({ value, type }) token JSON to DTCG ({ $value, $type }); skips files that wouldn't be conformant" },
     ...GLOBAL_FLAGS,
   },
   async run({ args }) {
@@ -921,6 +851,8 @@ const initCommand = defineCommand({
         cwd: resolve(args.path ?? "."),
         firstRun: args["first-run"],
         yes: Boolean(args.yes),
+        scaffold: args.scaffold,
+        migrateTokens: args["migrate-tokens"],
       }),
     );
   },
@@ -1149,8 +1081,8 @@ async function dispatchReplAction(action: ReplActionId, ctx: ReplContext): Promi
     case "audit":
       await withExitGuard(() => runCommand(auditCommand, { rawArgs: [ctx.cwd] }));
       return;
-    case "fix":
-      await withExitGuard(() => runCommand(fixCommand, { rawArgs: [ctx.cwd] }));
+    case "handoff":
+      await withExitGuard(() => runCommand(handoffCommand, { rawArgs: [ctx.cwd] }));
       return;
     case "mcp-setup":
       await withExitGuard(() => runCommand(mcpCommand, { rawArgs: ["setup", ctx.cwd] }));

@@ -65,8 +65,9 @@ export async function applyCodemod(input: CodemodInput): Promise<CodemodResult> 
   // The shape differs from this module's CodemodResult — the registry returns
   // `{ diff, importsAdded, confidence, warnings? }` while MCP suggest-fix wants
   // `{ patch, alternatives, rationale, ... }`. Adapting cross-shapes is
-  // tracked as a follow-up — for now, the CLI `lyse fix` path (commands/fix.ts)
-  // dispatches through the registry directly and is the supported surface.
+  // tracked as a follow-up — for now, the supported surfaces are MCP
+  // `suggest_fix` and the `lyse handoff` payload, which read the registry's
+  // `applyCodemod` directly.
   const rule = ruleMap.get(input.finding.ruleId);
   if (rule?.applyCodemod) {
     return NO_FIX(

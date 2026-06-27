@@ -15,8 +15,8 @@ Commands:
 | `lyse init` | Interactive setup wizard — detect framework, generate `.lyse.yaml`, wire IDE. |
 | `lyse install [path]` | One-command onboarding — install the Lyse skill into every detected coding agent + the advisory pre-commit hook. |
 | `lyse audit [path]` | Audit a repository; output a Health Score and findings. |
-| `lyse fix [path]` | Auto-fix all safe findings (6 safety guards). |
 | `lyse handoff [path]` | Audit, then hand the findings to your coding agent (Claude Code, Cursor, Codex) to fix. |
+| `lyse fix [path]` | Deprecated — redirects to `lyse handoff`. |
 | `lyse add ci-gate \| git-hook` | Scaffold a CI gate workflow or an advisory pre-commit hook. |
 | `lyse share` | Copy a Markdown summary of the last audit to the clipboard. |
 | `lyse badge` | Print a shields.io Health Score badge for your README. |
@@ -57,6 +57,14 @@ The wizard:
 
 Accepts `--yes` to skip all confirmation prompts (auto-accept defaults).
 
+### Options
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--yes` | boolean | `false` | Accept all prompts with their defaults (non-interactive). |
+| `--scaffold` | boolean | `false` | Generate missing AI-readiness files (`llms.txt`, `AGENTS.md`, value-gate doc). Idempotent. |
+| `--migrate-tokens` | boolean | `false` | Migrate legacy (`{ value, type }`) token JSON to DTCG (`{ $value, $type }`); skips files that wouldn't be conformant. |
+
 ### Examples
 
 ```bash
@@ -65,66 +73,39 @@ lyse init
 
 # Silent — accept all defaults, no prompts
 lyse init --yes
+
+# Set up + generate any missing AI-readiness files
+lyse init --scaffold
+
+# Set up + convert legacy token JSON to DTCG
+lyse init --migrate-tokens
 ```
 
-## `lyse fix [path]`
+## `lyse handoff [path]`
 
-Auto-fix all findings that have a safe codemod.
+Audit, then hand the findings to your coding agent to fix. **Lyse never edits your code itself** — `handoff` produces the fix payload and launches the agent you already use (Claude Code, Cursor, Codex), which edits the working tree.
 
 ```
-lyse fix [path] [options]
+lyse handoff [path]
 ```
 
-`path` defaults to `.` (current directory).
+`path` defaults to `.` (current directory). Needs an interactive terminal.
 
-### Safety guards
+### What it does
 
-`lyse fix` will abort with an error if any of the following are violated:
+1. **Audits** the repo (same as `lyse audit`).
+2. **Writes the handoff payload** to `.lyse/handoff/` — `findings.json` (every finding) + `tokens.json` (your full token map).
+3. **Groups findings by drift class** with the resolved token mapping (e.g. `#3b82f6 → color/brand/primary`), so the agent applies one consistent decision across every site instead of inventing N divergent ones.
+4. **Prompts you to pick an agent** (or copy the prompt to your clipboard), installs the Lyse skill into it, and **launches it** on the payload. Your choice is remembered for next time.
 
-1. **Uncommitted changes** — the working tree must be clean (`git status` check).
-2. **No git repo** — must be run inside a git repository.
-3. **No token map** — at least one design token must be discoverable (`.lyse.yaml` or auto-detection).
-4. **Confidence threshold** — only applies codemods with `confidence: high`; skips `medium` and `low` by default.
-5. **File count cap** — caps the number of files patched in a single run (default: 200) to avoid runaway changes.
-6. **Dry-run by default in non-TTY** — in CI / piped contexts, prints what would change without writing files.
+The agent edits the **working tree only** — it never commits or opens a PR, so you review the diff before anything is permanent. When it's done, run `lyse audit` (or `lyse handoff` again) to confirm the score went up.
 
-Override the confidence threshold with `--confidence=medium` (experts only).
-
-### Options
-
-| Flag | Type | Default | Description |
-|---|---|---|---|
-| `--dry-run` / `--no-dry-run` | boolean | false (TTY), true (non-TTY) | Print the unified diff without writing files. `--no-dry-run` forces application in non-TTY contexts. |
-| `--confidence` | `high` \| `medium` \| `low` | `high` | Minimum codemod confidence to apply. |
-| `--rule <id>` | string | all | Limit fixes to a single rule ID. |
-| `--interactive` | boolean | false | Prompt before applying each fix. |
-| `--force-on-dirty` | boolean | false | Allow running on a dirty working tree (bypasses Guard 1). |
-| `--verify-with-tests` | boolean | false | Run the test suite after each rule batch; revert the commit on failure (Guard 6). |
-| `--scaffold` | boolean | false | Generate missing AI-readiness files (`llms.txt`, `AGENTS.md`, value-gate doc). |
-| `--migrate-tokens` | boolean | false | Migrate legacy (`{ value, type }`) token JSON to DTCG (`{ $value, $type }`); skips non-conformant files. |
-
-### Examples
-
-```bash
-# Fix everything that has a high-confidence codemod
-lyse fix
-
-# Preview changes without writing
-lyse fix --dry-run
-
-# Fix only one rule's violations
-lyse fix --rule=tokens/no-hardcoded-color
-
-# Include medium-confidence codemods (review carefully)
-lyse fix --confidence=medium
-```
+> **`lyse fix` is retired.** Lyse no longer applies codemods itself — `lyse fix` prints a notice and redirects here. Its two non-fix extras moved to the setup wizard: `lyse init --scaffold` and `lyse init --migrate-tokens`.
 
 ### Exit codes
 
-- `0` — All applicable fixes applied (or `--dry-run` completed).
-- `1` — One or more safety guards blocked the run.
-- `2` — Audit failed to run (invalid config, internal error).
-- `64` — Invalid arguments.
+- `0` — Audit completed; payload written and the agent launched, prompt copied, or handoff skipped.
+- `1` — The audit refused to run (no LLM connector when one was required).
 
 ## `lyse share`
 

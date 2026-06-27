@@ -20,9 +20,8 @@ That's it. `lyse init` detects your framework, writes `.lyse.yaml`, optionally w
 ```bash
 lyse audit        # rerun the audit (text, JSON, or SARIF)
 lyse handoff      # audit, then hand the findings to your coding agent to fix (Claude Code / Cursor / Codex)
-lyse fix          # auto-fix high-confidence findings (clean git tree required)
-lyse fix --scaffold  # generate missing AI-readiness files (llms.txt, AGENTS.md, value-gate doc)
-lyse fix --migrate-tokens  # convert legacy {value,type} token JSON to DTCG ({$value,$type})
+lyse init --scaffold        # generate missing AI-readiness files (llms.txt, AGENTS.md, value-gate doc)
+lyse init --migrate-tokens  # convert legacy {value,type} token JSON to DTCG ({$value,$type})
 lyse explain X    # rationale + examples for a rule
 lyse mcp setup    # wire MCP into Cursor / Claude Code / Codex
 lyse add ci-gate  # install the score-regression CI gate (.github/workflows/lyse.yml)

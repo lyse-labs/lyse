@@ -184,7 +184,6 @@ packages/core/src/
 │       └── mcp.ts           # McpProvider (sentinel — delegates to host LLM via MCP)
 ├── commands/
 │   ├── audit-pipeline.ts    # shared audit pipeline (config → rules → score)
-│   ├── fix.ts               # lyse fix orchestrator (6 safety guards)
 │   ├── share.ts             # lyse share (clipboard)
 │   ├── init.ts              # lyse init wizard
 │   ├── explain.ts           # lyse explain (rule rationale + score breakdown)

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **One door for fixing: `lyse handoff`.** Lyse no longer edits your code itself. The deterministic-codemod command `lyse fix` is retired — it now prints a notice and redirects to `lyse handoff`, which hands the findings (grouped by drift class, with the resolved token mapping + full token map) to the coding agent you already use (Claude Code / Cursor / Codex), which edits the working tree (no commit, no PR). The post-audit menu and the interactive REPL now offer "Hand off to your agent" instead of "Auto-fix". `lyse fix`'s two non-fix extras moved to the setup wizard — `lyse init --scaffold` and `lyse init --migrate-tokens`. The codemod engine (`rule.applyCodemod`) stays and still powers MCP `suggest_fix` + the handoff payload. **Breaking:** the `lyse fix` flags (`--dry-run`, `--confidence`, `--rule`, `--force-on-dirty`, `--verify-with-tests`) are gone.
+
 ### Added
 
 - **`lyse audit --render`** — an opt-in render layer that paints the token layer in headless Chromium (Playwright as an optional peer dependency; the default audit stays offline and browser-free). Ships the experimental rule `tokens/rendered-token-fidelity`, which flags a CSS custom property whose browser-computed value differs from its DTCG canonical token value (cascade / override / alias drift that static analysis cannot see). N/A without `--render` or a DTCG token source; does not affect the default Health Score. Backed by a new mutation + independent-oracle validation engine (Youden's J per rule, with a completeness gate).
