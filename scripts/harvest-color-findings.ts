@@ -141,7 +141,9 @@ export async function collectColorFindings(rootDir: string): Promise<HarvestRow[
         continue;
       }
 
-      const hits = detectInText(source, relPath);
+      const ext = extname(absPath).toLowerCase();
+      const isCssSource = ext === ".css" || ext === ".scss" || ext === ".sass" || ext === ".less";
+      const hits = detectInText(source, relPath, isCssSource);
       for (const hit of hits) {
         if (isInExampleOrSchemaValuePosition(source, hit.index)) continue;
         const line = lineNumberFromIndex(source, hit.index);
