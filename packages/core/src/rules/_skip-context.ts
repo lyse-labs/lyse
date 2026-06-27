@@ -9,6 +9,45 @@
  */
 
 // ---------------------------------------------------------------------------
+// Vendored / browser-reset file detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Basename patterns for browser normalization / reset stylesheets and minified
+ * third-party bundles. These files are never DS-authored — flagging hardcoded
+ * colors in them is a false positive for any design-system rule.
+ *
+ * General signals (no repo-specific names):
+ *   - normalize.{css,scss,sass,less}      — browser normalize (e.g. necolas/normalize.css)
+ *   - _normalize.{css,scss,sass,less}     — Sass partial form
+ *   - reset.{css,scss,sass,less}          — CSS reset
+ *   - _reset.{css,scss,sass,less}         — Sass partial form
+ *   - *.min.css / *.min.scss              — minified bundle (never audit minified code)
+ */
+const VENDORED_RESET_BASENAME_RE =
+  /(?:^|[\\/])_?(?:normalize|reset)\.(?:css|scss|sass|less)$|\.min\.(?:css|scss)$/;
+
+/**
+ * Returns true if the file is a browser-normalize / CSS-reset stylesheet or a
+ * minified CSS bundle — files that are never DS-authored, so hardcoded color
+ * values in them are categorically not design-system drift.
+ *
+ * This complements `isBuiltinExcludedPath` (which covers directory-level
+ * vendoring like `.yarn/`, `vendor/`, `bower_components/`) with basename-level
+ * signals for normalize/reset files that may live inside the repo's own tree
+ * (e.g. `src/base/normalize.scss` in primer-css).
+ */
+export function isVendoredOrResetFile(filePath: string): boolean {
+  const normalised = filePath.replace(/\\/g, "/");
+  // Re-use the directory-level check from _exclude.ts inline to avoid a
+  // circular import (this file is imported by the rule; _exclude.ts is also
+  // imported by the rule — keeping them separate avoids cycles).
+  const BUILTIN_SEGS = [".yarn/", "bower_components/", "/vendor/", "/vendored/", "third_party/"];
+  if (BUILTIN_SEGS.some((seg) => normalised.startsWith(seg) || normalised.includes(seg))) return true;
+  return VENDORED_RESET_BASENAME_RE.test(normalised);
+}
+
+// ---------------------------------------------------------------------------
 // Color token-definition file detection
 // ---------------------------------------------------------------------------
 

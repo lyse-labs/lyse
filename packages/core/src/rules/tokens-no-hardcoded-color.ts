@@ -1,6 +1,6 @@
 import { isAbsolute, join } from "node:path";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, ClassifyContext, Confidence, CodemodContext, CodemodResult, FixGroup } from "../types.js";
-import { isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile, isInCommentOrUrl } from "./_skip-context.js";
+import { isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile, isInCommentOrUrl, isVendoredOrResetFile } from "./_skip-context.js";
 import { isPathExcluded } from "./_exclude.js";
 import { fixHardcodedColor } from "../codemods/tokens-color.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
@@ -265,6 +265,7 @@ const evaluate = async (
 
   for (const f of files.ts) {
     if (isPathExcluded(f.path, ctx.excludePaths)) continue;
+    if (isVendoredOrResetFile(f.path)) continue;
     if (isLowSignalValueFile(f.path)) continue;
     if (isSchemaOrDataFile(f.path)) continue;
     if (isColorTokenDefFile(f.path)) continue;
@@ -293,6 +294,7 @@ const evaluate = async (
 
   for (const c of files.css) {
     if (isPathExcluded(c.path, ctx.excludePaths)) continue;
+    if (isVendoredOrResetFile(c.path)) continue;
     if (isLowSignalValueFile(c.path)) continue;
     if (isSchemaOrDataFile(c.path)) continue;
     if (isColorTokenDefFile(c.path)) continue;
@@ -319,6 +321,7 @@ const evaluate = async (
 
   for (const b of files.cssInJs) {
     if (isPathExcluded(b.path, ctx.excludePaths)) continue;
+    if (isVendoredOrResetFile(b.path)) continue;
     if (isLowSignalValueFile(b.path)) continue;
     if (isSchemaOrDataFile(b.path)) continue;
     if (isColorTokenDefFile(b.path)) continue;
