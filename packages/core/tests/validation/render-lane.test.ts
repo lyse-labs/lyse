@@ -45,7 +45,7 @@ describe("render-lane runner", () => {
     ).rejects.toThrow("boom");
   });
 
-  it("engineGateFailures flags a sub-J=1 execution score", async () => {
+  it("engineGateFailures ignores sub-J=1 for experimental execution rules", async () => {
     const bad: RuleScore = {
       ruleId: "a11y/runtime-axe",
       oracleKind: "execution",
@@ -57,7 +57,7 @@ describe("render-lane runner", () => {
     const outcome = await runRenderLane([() => Promise.resolve(bad)]);
     expect(outcome.status).toBe("ran");
     if (outcome.status !== "ran") throw new Error("unreachable");
-    expect(engineGateFailures(outcome.report)).toHaveLength(1);
+    expect(engineGateFailures(outcome.report)).toHaveLength(0);
   });
 
   it("default adapters cover exactly the EXECUTION_COVERED rules", async () => {
