@@ -4,6 +4,8 @@
 
 Flags components that don't have a corresponding Storybook story file.
 
+> **Scope note.** This axis scores *coverage* — does each component have a story? It does **not** score the contents of story files. Hardcoded values inside `*.stories.*` (and `*.test.*`, `*.demo.*`, `*.example.*`) files are deliberately **not** flagged as token drift: demo/fixture literals are expected there, so the token rules skip them to avoid mass false positives. "Storybook detected" at `lyse init` therefore refers to this coverage check, not to drift-scanning inside stories.
+
 ## Why
 
 A component without a story is a component without a contract. New contributors don't know how to use it, designers can't review it in isolation, visual regression tools can't snapshot it, and the component drifts because nobody's looking at it independently.
