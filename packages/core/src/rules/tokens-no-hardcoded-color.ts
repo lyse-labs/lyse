@@ -1,6 +1,6 @@
 import { isAbsolute, join } from "node:path";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, ClassifyContext, Confidence, CodemodContext, CodemodResult, FixGroup } from "../types.js";
-import { isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile, isInCommentOrUrl, isVendoredOrResetFile, isSvgIconContext } from "./_skip-context.js";
+import { isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile, isInCommentOrUrl, isVendoredOrResetFile, isSvgIconContext, isDataPaletteContext } from "./_skip-context.js";
 import { isPathExcluded } from "./_exclude.js";
 import { fixHardcodedColor } from "../codemods/tokens-color.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
@@ -210,6 +210,11 @@ export function detectInText(source: string, _path?: string): { match: string; i
     // Skip color literals in comments (// /* *) and URL fragments (#anchor).
     if (isInCommentOrUrl(source, m.index)) continue;
     if (isCssCustomPropertyDeclaration(source, m.index)) continue;
+    // Skip color literals that are elements of a multi-color collection
+    // (array or object with ≥3 color literals) — palette/data definitions,
+    // not DS drift. This suppresses syntax-highlight themes, color-preset
+    // arrays, chart color series, etc. without hardcoding library names.
+    if (isDataPaletteContext(source, m.index)) continue;
     hits.push({ match: m[0], index: m.index });
   }
   TW_ARBITRARY.lastIndex = 0;
@@ -217,6 +222,7 @@ export function detectInText(source: string, _path?: string): { match: string; i
     if (isInsideCodeDisplay(source, m.index)) continue;
     if (isInCommentOrUrl(source, m.index)) continue;
     if (isCssCustomPropertyDeclaration(source, m.index)) continue;
+    if (isDataPaletteContext(source, m.index)) continue;
     hits.push({ match: m[0], index: m.index });
   }
   return hits;

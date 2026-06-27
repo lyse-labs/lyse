@@ -436,6 +436,132 @@ export function isInCommentOrUrl(source: string, hitStart: number): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Data-palette / color-collection context detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Matches all color-literal forms: hex, rgb/rgba, hsl/hsla, oklch.
+ * Used only for COUNTING siblings, not for extracting values, so a simple
+ * global regex with no captures is sufficient. Intentionally permissive —
+ * any plausible color literal counts toward the palette threshold.
+ */
+const COLOR_LITERAL_COUNT_RE =
+  /#[0-9a-fA-F]{3,8}\b|rgb[a]?\([^)]*\)|hsl[a]?\([^)]*\)|oklch\([^)]*\)/g;
+
+/**
+ * Minimum number of color literals that must exist inside the same enclosing
+ * block for that block to be treated as a palette/collection definition.
+ *
+ * Arrays (`[ … ]`): threshold = 3. A real palette (color preset, chart series)
+ * always has ≥ 3 entries; a lone or two-item array is still potential drift.
+ *
+ * Objects (`{ … }`): threshold = 5. Component style objects routinely have
+ * 3-4 hardcoded colors (background, color, border, shadow) — these are drift,
+ * not palettes. Palette objects (syntax-highlight themes, color maps) always
+ * have many more. Using 5 avoids suppressing style objects while still
+ * catching genuine palette/data objects.
+ */
+const PALETTE_MIN_COLORS_ARRAY = 3;
+const PALETTE_MIN_COLORS_OBJECT = 5;
+
+/**
+ * Finds the enclosing block (`[ … ]` or `{ … }`) that starts at or before
+ * `searchFrom` in `source`. Returns `{ start, close }` indices of the delimiters,
+ * or null if no enclosing block is found.
+ */
+function findEnclosingBlock(
+  source: string,
+  searchFrom: number,
+): { start: number; close: number; type: "[" | "{" } | null {
+  let squareDepth = 0;
+  let curlyDepth = 0;
+
+  for (let i = searchFrom - 1; i >= 0; i--) {
+    const c = source[i];
+    if (c === "]") { squareDepth++; continue; }
+    if (c === "}") { curlyDepth++; continue; }
+    if (c === "[") {
+      if (squareDepth > 0) { squareDepth--; continue; }
+      // Unmatched [ — enclosing array
+      const blockType = "[" as const;
+      const closeChar = "]";
+      let depth = 0;
+      for (let j = i + 1; j < source.length; j++) {
+        const d = source[j];
+        if (d === blockType) { depth++; continue; }
+        if (d === closeChar) {
+          if (depth > 0) { depth--; continue; }
+          return { start: i, close: j, type: blockType };
+        }
+      }
+      return null; // unclosed
+    }
+    if (c === "{") {
+      if (curlyDepth > 0) { curlyDepth--; continue; }
+      // Unmatched { — enclosing object/block
+      const blockType = "{" as const;
+      const closeChar = "}";
+      let depth = 0;
+      for (let j = i + 1; j < source.length; j++) {
+        const d = source[j];
+        if (d === blockType) { depth++; continue; }
+        if (d === closeChar) {
+          if (depth > 0) { depth--; continue; }
+          return { start: i, close: j, type: blockType };
+        }
+      }
+      return null; // unclosed
+    }
+  }
+  return null;
+}
+
+/**
+ * Returns true when the color literal at `hitStart` in `source` is an
+ * element of a multi-color collection — an array `[ … ]` or an object
+ * `{ … }` whose block contains at least `PALETTE_MIN_COLORS` color literals.
+ *
+ * The check walks outward through up to 2 nesting levels: first the
+ * immediate enclosing block, then one level up if the immediate block does
+ * not qualify. This handles syntax-highlight theme objects where individual
+ * hex values live inside nested `settings: { foreground: '#hex' }` objects
+ * that are themselves elements of a large outer `tokenColors` array or
+ * `colors` object with many color-valued properties.
+ *
+ * Intentionally NOT palette context:
+ *   - Two-color pairs / lone values — below the threshold, always flag.
+ *   - A CSS rule body `{ property: #hex; property2: #hex2 }` with only
+ *     a couple of colors — below the threshold.
+ *
+ * Limit of 2 outer levels: avoids over-suppression of isolated DS-component
+ * colors that happen to be nested deeply inside a large component tree.
+ */
+export function isDataPaletteContext(source: string, hitStart: number): boolean {
+  let searchFrom = hitStart;
+
+  for (let level = 0; level < 2; level++) {
+    const block = findEnclosingBlock(source, searchFrom);
+    if (block === null) return false;
+
+    const minColors =
+      block.type === "[" ? PALETTE_MIN_COLORS_ARRAY : PALETTE_MIN_COLORS_OBJECT;
+
+    const inner = source.slice(block.start + 1, block.close);
+    COLOR_LITERAL_COUNT_RE.lastIndex = 0;
+    let count = 0;
+    while (COLOR_LITERAL_COUNT_RE.exec(inner) !== null) {
+      count++;
+      if (count >= minColors) return true; // early exit
+    }
+
+    // Not enough colors in this block — try the enclosing (outer) block.
+    searchFrom = block.start;
+  }
+
+  return false;
+}
+
+// ---------------------------------------------------------------------------
 // Spacing property-awareness
 // ---------------------------------------------------------------------------
 
