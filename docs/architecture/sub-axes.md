@@ -12,7 +12,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 |---|---|---|---|---|---|---|
 | `tokens.border-radius` | `tokens` | Radii token scale | **stable** | 0.958 | 0.916 | ✅ |
 | `tokens.border-width` | `tokens` | Border-width token scale | **stable** | 0.974 | 0.916 | ✅ |
-| `tokens.color` | `tokens` | Color tokens | **experimental** | 0.339 | 0.904 | — |
+| `tokens.color` | `tokens` | Color tokens | **experimental** | 0.510 | 0.510 | — |
 | `tokens.container-query` | `tokens` | Container-query containment context | **stable** | 0.912 | 0.901 | ✅ |
 | `tokens.css-custom-property-export` | `tokens` | CSS custom-property theme export | **stable** | 0.904 | 0.901 | ✅ |
 | `tokens.deprecated-token-usage` | `tokens` | Deprecated-token aliasing ($deprecated) | **stable** | 0.901 | 0.904 | ✅ |

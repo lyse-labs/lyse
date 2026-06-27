@@ -1,5 +1,4 @@
 import { describe, it, expect } from "vitest";
-import { runAll } from "../../validation/run.js";
 import { adapters } from "../../validation/adapters/index.js";
 import { deriveMeasurement } from "../../src/reliability/catalogue/measure.js";
 import { evaluateAdapter } from "../../validation/run-adapter.js";
@@ -10,7 +9,7 @@ const close = (a: number | null, b: number | null) =>
   a === null || b === null ? a === b : Math.abs(a - b) < EPS;
 
 describe("catalogue coherence", () => {
-  it.skip("published metrics equal in-repo derived metrics for measured rules", async () => {
+  it("published metrics equal in-repo derived metrics for measured rules", async () => {
     const measured = adapters.filter((a) => (a.falseFriends?.length ?? 0) > 0);
     expect(measured.length, "no rule declares a measurement corpus yet").toBeGreaterThan(0);
 

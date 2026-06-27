@@ -130,11 +130,20 @@ export function isInExampleOrSchemaValuePosition(source: string, matchIndex: num
 
 /**
  * Returns true if the byte offset `index` in `source` falls inside a
- * `<code>...</code>` or `<pre>...</pre>` block that opens AND closes on the
- * same line as the match. Useful for skipping display-only CSS examples
- * rendered by shadcn theme customizers.
+ * `<code>...</code>` or `<pre>...</pre>` block — either on the same line or
+ * across multiple lines. Useful for skipping display-only CSS examples in
+ * documentation components (shadcn theme customizer pattern, Storybook docs).
  *
- * Limitation: multi-line code blocks are NOT detected. V1 needs AST context.
+ * Strategy:
+ *   1. Same-line check: if open+close tags bracket the position on the same
+ *      line, return true immediately (fast path, no backtracking needed).
+ *   2. Multi-line check: scan backwards from `index` for the nearest `<code>`
+ *      or `<pre>` opening tag; if found, scan forwards for the matching close
+ *      tag and verify `index` falls between them.
+ *
+ * Limitation: does not handle nested `<code>` inside `<code>`, or tags with
+ * attributes like `<code class="language-css">`. Attributes version is a
+ * common pattern — add attribute-tolerant open-tag matching.
  */
 export function isInsideCodeDisplay(source: string, index: number): boolean {
   const lineStart = source.lastIndexOf("\n", index - 1) + 1;
@@ -144,12 +153,38 @@ export function isInsideCodeDisplay(source: string, index: number): boolean {
   const posInLine = index - lineStart;
 
   for (const tag of ["code", "pre"]) {
+    // ── Same-line fast path ─────────────────────────────────────────────────
     const openTag = `<${tag}>`;
     const closeTag = `</${tag}>`;
     let openIdx = -1;
     while ((openIdx = line.indexOf(openTag, openIdx + 1)) !== -1) {
       const closeIdx = line.indexOf(closeTag, openIdx + openTag.length);
       if (closeIdx !== -1 && openIdx < posInLine && posInLine < closeIdx) {
+        return true;
+      }
+    }
+
+    // ── Multi-line check ────────────────────────────────────────────────────
+    // Accept both bare `<code>` and attribute form `<code ...>` / `<code\n...>`.
+    // Regex: `<tag` followed optionally by whitespace+attrs then `>`.
+    const openTagRe = new RegExp(`<${tag}(?:\\s[^>]*)?>`, "g");
+    // Walk backwards through all open-tag matches that precede `index`.
+    // RegExp.exec scans left-to-right so collect them all then pick the last
+    // one before `index`.
+    openTagRe.lastIndex = 0;
+    let lastOpenBeforeIndex = -1;
+    let lastOpenEnd = -1;
+    let m: RegExpExecArray | null;
+    while ((m = openTagRe.exec(source)) !== null) {
+      if (m.index >= index) break;
+      lastOpenBeforeIndex = m.index;
+      lastOpenEnd = m.index + m[0].length;
+    }
+    if (lastOpenBeforeIndex !== -1) {
+      // Find the matching close tag after the open tag.
+      const closeIdx = source.indexOf(closeTag, lastOpenEnd);
+      if (closeIdx !== -1 && closeIdx > index) {
+        // index falls between <tag...> and </tag> — it's inside a code display block.
         return true;
       }
     }
