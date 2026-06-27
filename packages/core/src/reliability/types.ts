@@ -2,6 +2,19 @@ import type { LlmJudgement } from "../types.js";
 
 export type ScoringVersion = `scoring-v${number}`;
 
+/**
+ * Canonical definition (also in packages/core/validation/types.ts).
+ * Cannot re-export due to tsconfig rootDir constraint: validation/ is
+ * excluded from src/, so importing from ../../validation/types violates
+ * "rootDir": "./src". Duplication is verified as necessary (TS6059 error).
+ */
+export interface ConfusionMatrix {
+  tp: number;
+  fp: number;
+  tn: number;
+  fn: number;
+}
+
 export type SubAxisStatus = "stable" | "experimental" | "disabled";
 
 export type SubAxisId = string;
