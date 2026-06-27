@@ -100,6 +100,8 @@ lyse handoff [path]
 
 The agent edits the **working tree only** — it never commits or opens a PR, so you review the diff before anything is permanent. When it's done, run `lyse audit` (or `lyse handoff` again) to confirm the score went up.
 
+> **Trust boundary.** `lyse handoff` launches your coding agent with its permission prompts bypassed so it can apply fixes unattended. Only run it on repositories you trust.
+
 > **`lyse fix` is retired.** Lyse no longer applies codemods itself — `lyse fix` prints a notice and redirects here. Its two non-fix extras moved to the setup wizard: `lyse init --scaffold` and `lyse init --migrate-tokens`.
 
 ### Exit codes

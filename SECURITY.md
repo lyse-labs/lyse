@@ -21,6 +21,7 @@ Lyse is designed to **minimise the attack surface** by handling everything clien
 |---|---|---|
 | `lyse` (npm CLI) | User's machine / CI runner | Runs entirely locally. No source code leaves the runner. No outbound network calls when `LYSE_TELEMETRY` is unset (default). Verified by [no-leak tests](./packages/core/tests/security/no-leak.test.ts). |
 | `api.getlyse.com` (Cloudflare Worker) | Our infrastructure | Receives ONLY the JSON event payload (see [PRIVACY.md](./PRIVACY.md)). IP/User-Agent dropped at the edge before any storage operation. Rate-limited per anonymous bucket. |
+| `lyse handoff` (agent launch) | The repository you run it in | Launches your coding agent (Claude Code / Cursor / Codex) with its permission prompts **bypassed** so it can apply fixes unattended. The payload is passed as a single argv (no shell interpolation, injection-safe). Run only on repositories you trust. |
 
 ## Cryptographic posture
 

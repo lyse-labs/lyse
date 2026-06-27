@@ -32,7 +32,7 @@ When an LLM-assisted flow does run, what Lyse sends:
 
 What Lyse never sends:
 
-- `.env*`, `*.pem`, `*.key`, `*.p12`, `id_rsa*`, or any file matching the secret-content regex set.
+- `.env*`, `*.pem`, `*.key`, `*.p12`, `id_rsa*` (filename-based exclusion), or any file whose **content** matches a high-confidence secret-content scan (PEM private-key blocks; AWS `AKIA…`, OpenAI `sk-…`, GitHub `ghp_…`, Slack `xox…` token shapes; quoted long `api_key`/`secret`/`token`/`password` assignments) — such a file is dropped from the payload before it is sent.
 - Anything matched by your `.gitignore`.
 - The full source tree at any time.
 
@@ -124,8 +124,10 @@ Files excluded from the data flow:
 
 - `node_modules`, `dist`, `build`, `.git`, `.next`, `coverage`, `.lyse`
 - Everything in `.gitignore`
-- Files containing common secret patterns (`.env*`, `*.pem`, `*.key`, content
-  starting with `-----BEGIN PRIVATE KEY-----` etc.)
+- Files excluded by filename (`.env*`, `*.pem`, `*.key`, `*.p12`, `id_rsa*`)
+- Files whose content matches the high-confidence secret-content scan (PEM
+  private-key blocks, AWS/OpenAI/GitHub/Slack token shapes, quoted long
+  `api_key`/`secret`/`token`/`password` assignments) — dropped before sending
 
 Audit trail: every LLM call is appended to `.lyse/llm-calls.jsonl` (per-repo, git-ignored). Inspect via `cat .lyse/llm-calls.jsonl | jq`.
 
@@ -135,16 +137,26 @@ Permanent opt-out: set `llm: { provider: 'none' }` in `.lyse.yaml`.
 
 ## 5b. Optional email capture (`lyse init`)
 
-At the **end** of the `lyse init` wizard, Lyse asks once whether you'd like
-to be notified of major releases and security disclosures. The prompt is:
+Email is captured **only** during the `lyse init` wizard. `lyse audit` never
+prompts for an email. The init prompt is:
 
 - Strictly opt-in. Pressing Enter (no input) skips it and stores nothing.
 - Suppressed entirely in CI, non-TTY contexts, `--yes` mode, or when
   `LYSE_NO_EMAIL_PROMPT=1` is set.
 - If you type an address, it is validated against an RFC-5322-lite regex,
   then stored locally in `~/.lyse/profile.json` as
-  `{ email, createdAt, lyseVersion }`. The file is never read by `lyse audit`
-  and never transmitted in the same network call as your audit results.
+  `{ email, createdAt, lyseVersion }`.
+
+When you opt in, Lyse POSTs the address to `/v1/profile/email`. That request
+carries **only** `{ email, lyseVersion, capturedAt }` — never your source
+code, findings, scores, or audit results.
+
+If that send fails (e.g. you were offline), the email stays in
+`~/.lyse/profile.json` and a later `lyse audit` will **read the file solely to
+retry delivery** — a standalone POST to `/v1/profile/email` with that same
+`{ email, lyseVersion, capturedAt }` payload. The retry is never bundled with
+audit results and never includes source code or findings. Once delivery
+succeeds the email is dropped locally (only a `sentAt` marker survives).
 
 Delete `~/.lyse/profile.json` to revoke. We will honor a deletion request
 emailed to contact@getlyse.com within 30 days of receipt.

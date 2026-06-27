@@ -10,6 +10,7 @@ import {
   readRecent,
   computeDelta,
 } from "../../src/history/ndjson-store.js";
+import type { AuditEvent } from "../../src/history/ndjson-store.js";
 import { __setCacheForTest, resetConsentCache } from "../../src/telemetry/consent.js";
 import { VERSION } from "../../src/index.js";
 
@@ -63,7 +64,7 @@ describe("readRecent", () => {
     await appendAuditEvent(dir, { score: 70, axes: {} as never, findings_count: 0 }, null);
     const recent = await readRecent(dir, 2);
     expect(recent).toHaveLength(2);
-    expect((recent[1] as any).score).toBe(70);
+    expect((recent[1] as AuditEvent).score).toBe(70);
   });
 });
 

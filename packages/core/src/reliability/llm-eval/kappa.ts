@@ -74,8 +74,8 @@ export function aggregateKappaByDimension(
     for (const p of dimPairs) {
       if (p.staticVerdict === p.llmVerdict) agree++;
       if (p.staticVerdict && p.llmVerdict) tp++;
-      if (!p.staticVerdict && p.llmVerdict) fp++;
-      if (p.staticVerdict && !p.llmVerdict) fn++;
+      if (p.staticVerdict && !p.llmVerdict) fp++;
+      if (!p.staticVerdict && p.llmVerdict) fn++;
     }
 
     const agreement = agree / n;

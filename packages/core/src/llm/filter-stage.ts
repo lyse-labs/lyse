@@ -3,6 +3,7 @@ import type { AuditFlags } from "../commands/audit-flags.js";
 import type { ConnectorClient } from "./connectors/types.js";
 import { resolveConnector } from "./connectors/resolver.js";
 import { extractJson, withTimeout } from "./llm-utils.js";
+import { containsLikelySecret } from "./secret-scan.js";
 
 export interface FilterStageInput {
   repoRoot: string;
@@ -171,6 +172,12 @@ export async function runFilterStage(
 
     // Source too large → keep all
     if (source.length > MAX_FILE_CHARS) {
+      continue;
+    }
+
+    // Source contains a likely secret → never send it to the LLM; keep all
+    // its findings (fail-safe). PRIVACY.md guarantees this exclusion.
+    if (containsLikelySecret(source)) {
       continue;
     }
 

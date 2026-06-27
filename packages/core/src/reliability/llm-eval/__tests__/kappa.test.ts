@@ -102,4 +102,22 @@ describe("aggregateKappaByDimension", () => {
       expect(entry.recallWilsonLb).toBeLessThanOrEqual(entry.recall + 1e-9);
     }
   });
+
+  it("computes precision/recall from an asymmetric fixture (static=prediction, llm=reference)", () => {
+    // staticVerdict = prediction; llmVerdict = reference/ground-truth.
+    //   tp = static && llm                 = 1
+    //   fp = static && !llm (predicted-pos, ref-neg) = 2
+    //   fn = !static && llm (predicted-neg, ref-pos) = 1
+    // precision = tp/(tp+fp) = 1/3 ; recall = tp/(tp+fn) = 1/2
+    const pairs = [
+      { dimensionId: "asym", staticVerdict: true, llmVerdict: true }, // tp
+      { dimensionId: "asym", staticVerdict: true, llmVerdict: false }, // fp
+      { dimensionId: "asym", staticVerdict: true, llmVerdict: false }, // fp
+      { dimensionId: "asym", staticVerdict: false, llmVerdict: true }, // fn
+    ];
+    const [entry] = aggregateKappaByDimension(pairs);
+    expect(entry).toBeDefined();
+    expect(entry!.precision).toBeCloseTo(1 / 3, 10);
+    expect(entry!.recall).toBeCloseTo(1 / 2, 10);
+  });
 });
