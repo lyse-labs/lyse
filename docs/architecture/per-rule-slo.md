@@ -4,7 +4,9 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-This page lists every sub-axis currently promoted to `stable`, with the empirical precision / recall Wilson 95 % lower bound from the latest calibration run against [`github.com/lyse-labs/lyse-bench`](https://github.com/lyse-labs/lyse-bench).
+This page lists every sub-axis currently promoted to `stable`, with precision / recall Wilson 95 % lower bounds and the in-repo sample count (N).
+
+> **N = 0 rows:** Most sub-axes carry Wilson lower bounds retained from the prior fixed-N synthetic recall suite (run against `lyse-bench`). An `N` of 0 means no in-repo adversarial fixture has been exercised for that sub-axis yet; per-rule in-repo sample-count backfill is pending (deferred Task 11). Only rows with `N > 0` — currently `tokens/no-hardcoded-color`, `tokens/no-hardcoded-shadow`, and `components/contracts-strictness` — have an in-repo-derived sample count.
 
 An empty table means no sub-axis has crossed the promotion gate yet. The reliability system seeds the catalogue dormant; sub-axes earn `stable` status by clearing the gate against real labeled data.
 

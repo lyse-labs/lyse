@@ -2,9 +2,10 @@
  * Shared skip-context helpers used by tokens/no-hardcoded-color and
  * tokens/no-hardcoded-spacing to suppress intentional false positives.
  *
- * NOTE: All helpers are SAME-LINE heuristics only. Multi-line <code> / <pre>
- * blocks, or JSX expressions like sizes={"..."}, would require AST traversal
- * — that is V1 work.
+ * Most helpers operate on the source string without an AST. `isInsideCodeDisplay`
+ * handles both same-line and multi-line <code>/<pre> blocks via backward scan.
+ * The `sizes={"..."}` JSX-expression form is still not handled — it requires
+ * AST traversal to detect the expression boundary.
  */
 
 // ---------------------------------------------------------------------------

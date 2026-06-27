@@ -8,6 +8,8 @@
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
+> **Precision / Recall (LB) column note:** Lower bounds are Wilson 95 % estimates. Most rows were calibrated against the fixed-N synthetic recall suite; only `tokens/no-hardcoded-color`, `tokens/no-hardcoded-shadow`, and `components/contracts-strictness` have an in-repo adversarial N (see the [Per-rule SLO](./per-rule-slo.md) page for N values).
+
 | ID | Axis | Name | Status | Precision (LB) | Recall (LB) | In Score |
 |---|---|---|---|---|---|---|
 | `tokens.border-radius` | `tokens` | Radii token scale | **stable** | 0.958 | 0.916 | ✅ |

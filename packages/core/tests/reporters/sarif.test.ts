@@ -147,21 +147,36 @@ describe("renderSarif", () => {
   });
 
   describe("properties.precision", () => {
-    it("stamps measured precision on calibrated rules", () => {
+    it("omits precision for N=0 rules (no in-repo measurement)", () => {
       const sarif = JSON.parse(renderSarif(sample));
       const rules: { id: string; properties: { precision?: number } }[] =
         sarif.runs[0].tool.driver.rules;
+      // tokens/dtcg-conformance has nSamples=0 — no precision should be emitted.
       const dtcg = rules.find((r) => r.id === "tokens/dtcg-conformance");
-      expect(dtcg?.properties.precision).toBe(1);
+      expect(dtcg?.properties.precision).toBeUndefined();
     });
 
-    it("includes precision for contracts-strictness (now measured, experimental)", () => {
+    it("emits Wilson LB (not point estimate) for rules with N > 0", () => {
       const sarif = JSON.parse(renderSarif(sample));
       const rules: { id: string; properties: { precision?: number } }[] =
         sarif.runs[0].tool.driver.rules;
+      // contracts-strictness: nSamples=68, precisionWilsonLowerBound≈0.901, precisionMeasured=1.0
       const rule = rules.find((r) => r.id === "components/contracts-strictness");
       expect(rule).toBeDefined();
-      expect(rule?.properties).toHaveProperty("precision");
+      expect(rule?.properties.precision).toBeDefined();
+      // Must be the LB (~0.901), not the flattering point estimate (1.0).
+      expect(rule!.properties.precision!).toBeLessThan(1);
+      expect(rule!.properties.precision!).toBeGreaterThan(0.89);
+    });
+
+    it("emits Wilson LB for color/shadow (N>0 but thin — LB ~0.51)", () => {
+      const sarif = JSON.parse(renderSarif(sample));
+      const rules: { id: string; properties: { precision?: number } }[] =
+        sarif.runs[0].tool.driver.rules;
+      const colorRule = rules.find((r) => r.id === "tokens/no-hardcoded-color");
+      expect(colorRule?.properties.precision).toBeDefined();
+      // precisionWilsonLowerBound ≈ 0.51, precisionMeasured = 1.0 — must not emit 1.0.
+      expect(colorRule!.properties.precision!).toBeLessThan(0.6);
     });
   });
 

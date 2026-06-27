@@ -32,9 +32,11 @@ describe("runAll", () => {
 
 describe("engineGateFailures", () => {
   it("returns [] when all scores have J=1 and no metamorphic inconsistencies", () => {
+    // Use real STABLE rule IDs so the gate actually exercises the stable-rule path
+    // (not the unknown-rule path, which would return [] trivially).
     const report = makeReport([
-      makeScore({ ruleId: "a/rule", youdensJ: 1, metamorphicInconsistencies: [] }),
-      makeScore({ ruleId: "b/rule", youdensJ: 1, metamorphicInconsistencies: [] }),
+      makeScore({ ruleId: "tokens/no-hardcoded-spacing", youdensJ: 1, metamorphicInconsistencies: [] }),
+      makeScore({ ruleId: "tokens/no-hardcoded-z-index", youdensJ: 1, metamorphicInconsistencies: [] }),
     ]);
     expect(engineGateFailures(report)).toEqual([]);
   });
