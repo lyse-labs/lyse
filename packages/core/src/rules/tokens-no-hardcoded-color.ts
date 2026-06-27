@@ -28,6 +28,49 @@ const ALLOWLIST = new Set(["currentColor", "transparent", "inherit", "initial", 
 const COLOR_VAR_REF =
   /^(?:hsl[a]?|rgb[a]?|oklch)\(\s*var\(--[a-zA-Z0-9_-]+\)(?:\s*,\s*[^)]+)?\s*\)$/;
 
+/**
+ * Returns true when the color function's first argument is a non-literal
+ * (an identifier, member-access expression, function call, or the `from`
+ * keyword used in CSS relative-color syntax like `oklch(from var(--x) l c h)`).
+ *
+ * A literal argument starts with a digit, '+', '-', or '.' (numeric), or '#'
+ * (inline hex, unusual but possible). Any other leading character means the
+ * argument is a JS/TS expression or CSS keyword — the color value comes from
+ * a token/variable reference, so the rule MUST NOT flag it.
+ *
+ * Examples that return true (must skip):
+ *   rgba(theme.colors.blue[6], 0.2)  → first arg starts with 't' → identifier
+ *   rgba(lightParsed.value, 0.07)    → first arg starts with 'l' → identifier
+ *   oklch(from var(--primary) l c h) → first arg starts with 'f' ('from')
+ *
+ * Examples that return false (must flag):
+ *   rgba(255, 255, 255, 0.5)         → first arg '255' → digit → literal
+ *   hsl(217, 83%, 53%)               → first arg '217' → digit → literal
+ *   oklch(0.65 0.2 240)              → first arg '0.65' → digit → literal
+ *
+ * This check is purely syntactic — it never uses file paths, identifier names,
+ * or repo-specific knowledge. It generalises across all codebases.
+ */
+function colorFnHasNonLiteralArg(match: string): boolean {
+  // Hex literals are handled by the COLOR_FUNC regex separately — they have no
+  // parens, so this function is never called for them. Guard anyway.
+  if (match.startsWith("#")) return false;
+
+  const parenOpen = match.indexOf("(");
+  if (parenOpen === -1) return false;
+
+  // Extract content between the outer parens (no inner-paren awareness needed
+  // because we only inspect the first character of the first argument).
+  const inner = match.slice(parenOpen + 1, match.lastIndexOf(")")).trimStart();
+  if (inner.length === 0) return false;
+
+  const firstChar = inner[0]!;
+  // Literals start with a digit, sign, decimal point, or '#' (embedded hex).
+  // Anything else is a letter/underscore → identifier, keyword ('from'),
+  // or function reference — i.e. a non-literal reference expression.
+  return /[a-zA-Z_]/.test(firstChar);
+}
+
 function shouldSkip(value: string): boolean {
   return ALLOWLIST.has(value.trim());
 }
@@ -153,6 +196,10 @@ export function detectInText(source: string, _path?: string): { match: string; i
     // Skip any color function whose entire argument is a CSS variable reference
     // (canonical shadcn / radix-ui theming pattern — NOT hardcoded drift).
     if (COLOR_VAR_REF.test(m[0])) continue;
+    // Skip color functions whose first argument is a non-literal expression
+    // (identifier, member-access, `from var(...)` relative-color syntax, etc.).
+    // The color value comes from a token/variable — not hardcoded drift.
+    if (colorFnHasNonLiteralArg(m[0])) continue;
     // Skip values inside <code>...</code> or <pre>...</pre> on the same line
     // (display-only CSS examples — e.g. shadcn theme customizer).
     // NOTE: multi-line code blocks are not detected here; V1 needs AST context.
