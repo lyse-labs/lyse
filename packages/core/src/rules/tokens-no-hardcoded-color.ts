@@ -187,7 +187,7 @@ export function countCompliantColorUses(source: string, fileExt: string): number
   return count;
 }
 
-export function detectInText(source: string, _path?: string): { match: string; index: number }[] {
+export function detectInText(source: string, _path?: string, isCssSource = false): { match: string; index: number }[] {
   const hits: { match: string; index: number }[] = [];
   COLOR_FUNC.lastIndex = 0;
   let m: RegExpExecArray | null;
@@ -210,11 +210,16 @@ export function detectInText(source: string, _path?: string): { match: string; i
     // Skip color literals in comments (// /* *) and URL fragments (#anchor).
     if (isInCommentOrUrl(source, m.index)) continue;
     if (isCssCustomPropertyDeclaration(source, m.index)) continue;
-    // Skip color literals that are elements of a multi-color collection
+    // Skip color literals that are elements of a JS/TS multi-color collection
     // (array or object with ≥3 color literals) — palette/data definitions,
     // not DS drift. This suppresses syntax-highlight themes, color-preset
     // arrays, chart color series, etc. without hardcoding library names.
-    if (isDataPaletteContext(source, m.index)) continue;
+    // IMPORTANT: must NOT fire on CSS/SCSS sources — a gradient function or a
+    // CSS rule block with multiple color stops is STYLING = drift, not a palette
+    // data structure. Applying the palette guard to CSS caused a recall regression
+    // (7 real-drift findings suppressed: Progress.module.css gradient, SCSS button
+    // rule blocks with multiple stops, etc.).
+    if (!isCssSource && isDataPaletteContext(source, m.index)) continue;
     hits.push({ match: m[0], index: m.index });
   }
   TW_ARBITRARY.lastIndex = 0;
@@ -222,7 +227,7 @@ export function detectInText(source: string, _path?: string): { match: string; i
     if (isInsideCodeDisplay(source, m.index)) continue;
     if (isInCommentOrUrl(source, m.index)) continue;
     if (isCssCustomPropertyDeclaration(source, m.index)) continue;
-    if (isDataPaletteContext(source, m.index)) continue;
+    if (!isCssSource && isDataPaletteContext(source, m.index)) continue;
     hits.push({ match: m[0], index: m.index });
   }
   return hits;
@@ -307,7 +312,7 @@ const evaluate = async (
     if (isColorTokenDefFile(c.path)) continue;
     if (isSvgIconContext(c.path)) continue;
     const fileExt = c.path.match(/\.[^.]+$/)?.[0] ?? ".css";
-    const hits = detectInText(c.source, c.path);
+    const hits = detectInText(c.source, c.path, true);
     const compliantCount = countCompliantColorUses(c.source, fileExt);
     opportunities += hits.length + compliantCount;
     for (const h of hits) {

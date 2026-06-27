@@ -1073,3 +1073,105 @@ describe("tokens/no-hardcoded-color fixGroup support", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Data-palette guard — CSS recall regression (commit 1109dc1 regression fix)
+// ---------------------------------------------------------------------------
+// The data-palette guard must ONLY fire on JS/TS array/object literal contexts.
+// CSS/SCSS multi-color contexts (gradient functions, rule blocks with several
+// color stops) are STYLING = real drift, never palette data structures.
+// These tests are the regression guards for the 7 real-drift findings that were
+// wrongly suppressed after the guard was introduced without a CSS exclusion.
+describe("data-palette guard — CSS multi-color contexts must still flag (recall regression)", () => {
+  // Case 1: CSS linear-gradient with a repeated rgba() stop (≥3 color literals
+  // in the same { } block) — must flag, not be suppressed as a "palette".
+  it("MUST flag rgba() in a CSS linear-gradient even when ≥3 color literals exist in the block", async () => {
+    const source = `.progress {
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.15) 100%
+  );
+}`;
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/Progress.module.css", source, root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    // All three rgba() stops are real CSS drift — palette guard must not suppress them
+    expect(result.findings.length).toBeGreaterThanOrEqual(1);
+    expect(result.findings.some((f) => f.message.includes("rgba(255, 255, 255, 0.15)"))).toBe(true);
+  });
+
+  // Case 2: SCSS rule block with #fff + multiple rgb() color stops — the block
+  // has ≥3 color literals but it is a CSS rule block, not a JS palette object.
+  it("MUST flag #fff and rgb() stops in a SCSS rule block with ≥5 color literals", async () => {
+    const source = `.btn-signup-mktg {
+  color: #fff;
+  background: linear-gradient(
+    to bottom,
+    rgb(40, 167, 69),
+    rgb(30, 130, 54),
+    rgb(24, 105, 43),
+    rgb(18, 80, 32)
+  );
+  border-color: #fff;
+}`;
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/primer-css/button.scss", source, root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    // #fff and the rgb() stops are all real brand-color drift — must not be suppressed
+    expect(result.findings.length).toBeGreaterThanOrEqual(3);
+    expect(result.findings.some((f) => f.message.includes("#fff"))).toBe(true);
+  });
+
+  // Case 3: detectInText with isCssSource=true never suppresses multi-color CSS blocks
+  it("detectInText(css, true) — does NOT suppress ≥3 rgba() in a CSS gradient block", () => {
+    const source = `.x { background: linear-gradient(rgba(255,255,255,0.1), rgba(255,255,255,0.15), rgba(255,255,255,0.2)); }`;
+    const hits = detectInText(source, "x.css", true);
+    expect(hits.length).toBe(3);
+  });
+
+  // Case 4: detectInText with isCssSource=false STILL suppresses JS palette arrays
+  it("detectInText(ts, false) — still suppresses a JS array with ≥3 hex literals (palette guard intact)", () => {
+    const source = `const palette = ['#fff', '#000', '#abc', '#def'];`;
+    const hits = detectInText(source, "palette.ts", false);
+    expect(hits.length).toBe(0);
+  });
+
+  // Case 5: JS object with ≥5 color literals still suppressed (cssInJs/TS path)
+  it("detectInText(ts, false) — still suppresses a JS object with ≥5 hex literals", () => {
+    const source = `const theme = { a: '#111', b: '#222', c: '#333', d: '#444', e: '#555' };`;
+    const hits = detectInText(source, "theme.ts", false);
+    expect(hits.length).toBe(0);
+  });
+
+  // Case 6: rule.evaluate — CSS file with ≥3 rgba() still flagged end-to-end
+  it("rule.evaluate — CSS file with 3 rgba() in gradient is flagged (end-to-end)", async () => {
+    const source = `.card { background: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.2), rgba(0,0,0,0.3)); }`;
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [{ path: "src/Card.module.css", source, root: null }],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.length).toBe(3);
+  });
+
+  // Case 7: rule.evaluate — TS file with a 4-item hex array is NOT flagged (palette guard intact)
+  it("rule.evaluate — TS file with a 4-item hex array is NOT flagged (JS palette guard intact)", async () => {
+    const source = `const chartColors = ['#e74c3c', '#2ecc71', '#3498db', '#9b59b6'];`;
+    const parsed: ParsedFiles = {
+      ts: [{ path: "src/chart-colors.ts", source, imports: [], ast: null }],
+      css: [],
+      cssInJs: [],
+    };
+    const result = await rule.evaluate(ctx, parsed);
+    expect(result.findings.length).toBe(0);
+  });
+});
+
