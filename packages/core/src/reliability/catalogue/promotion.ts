@@ -22,11 +22,14 @@ export interface PromotionInput {
   trials: number;
   minSamples?: number;
   threshold?: number;
+  /** Measured precision; promotion requires it to be >= 0.90. null = unmeasured = never promote. */
+  precisionMeasured?: number | null;
 }
 
 export function shouldPromote(input: PromotionInput): boolean {
   const minSamples = input.minSamples ?? 30;
   const threshold = input.threshold ?? 0.90;
   if (input.trials < minSamples) return false;
+  if (input.precisionMeasured == null || input.precisionMeasured < 0.90) return false;
   return wilsonLowerBound(input.successes, input.trials, 0.95) >= threshold;
 }

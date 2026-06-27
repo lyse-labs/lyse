@@ -13,12 +13,12 @@ describe("Wilson lower-bound", () => {
 });
 
 describe("shouldPromote", () => {
-  it("promotes when Wilson LB ≥ 0.90 AND N ≥ 30 (aligned with public claim)", () => {
-    expect(shouldPromote({ successes: 30, trials: 30 })).toBe(false); // LB ~0.88 < 0.90
-    expect(shouldPromote({ successes: 50, trials: 50 })).toBe(true);  // LB ~0.93
-    expect(shouldPromote({ successes: 100, trials: 100 })).toBe(true);
+  it("promotes when Wilson LB ≥ 0.90 AND N ≥ 30 AND precision ≥ 0.90 (aligned with public claim)", () => {
+    expect(shouldPromote({ successes: 30, trials: 30, precisionMeasured: 0.95 })).toBe(false); // LB ~0.88 < 0.90
+    expect(shouldPromote({ successes: 50, trials: 50, precisionMeasured: 0.95 })).toBe(true);  // LB ~0.93
+    expect(shouldPromote({ successes: 100, trials: 100, precisionMeasured: 0.95 })).toBe(true);
   });
   it("rejects N < 30 even with perfect rate", () => {
-    expect(shouldPromote({ successes: 29, trials: 29 })).toBe(false);
+    expect(shouldPromote({ successes: 29, trials: 29, precisionMeasured: 0.95 })).toBe(false);
   });
 });
