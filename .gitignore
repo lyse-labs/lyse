@@ -55,3 +55,4 @@ packages/core/reports/
 
 # Wrangler / Miniflare local dev state (regenerable)
 .wrangler/
+.color-harvest/
