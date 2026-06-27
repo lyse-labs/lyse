@@ -52,10 +52,10 @@ describe("buildClassifyContext", () => {
     expect("repoRoot" in ctx).toBe(false);
   });
 
-  it("threads repoRoot into the context when provided (keeps menu count in sync with fix)", () => {
+  it("threads repoRoot into the context when provided", () => {
     // Some rules downgrade confidence based on repoRoot (e.g. token-definition
-    // files). The menu must pass the same repoRoot as `runFix` or its count
-    // would desync; guard that the helper forwards it.
+    // files), so consumers (MCP suggest_fix, the handoff payload) must pass the
+    // repo root; guard that the helper forwards it.
     const ctx = buildClassifyContext([], null, EMPTY_CONFIG, "/repo/root");
     expect(ctx.repoRoot).toBe("/repo/root");
   });

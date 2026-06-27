@@ -104,10 +104,8 @@ The agent edits the **working tree only** — it never commits or opens a PR, so
 
 ### Exit codes
 
-- `0` — All applicable fixes applied (or `--dry-run` completed).
-- `1` — One or more safety guards blocked the run.
-- `2` — Audit failed to run (invalid config, internal error).
-- `64` — Invalid arguments.
+- `0` — Audit completed; payload written and the agent launched, prompt copied, or handoff skipped.
+- `1` — The audit refused to run (no LLM connector when one was required).
 
 ## `lyse share`
 

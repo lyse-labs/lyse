@@ -79,6 +79,13 @@ describe("runInit --scaffold writes AI-readiness files", () => {
     expect(existsSync(join(sDir, "llms.txt"))).toBe(true);
     expect(readFileSync(join(sDir, "llms.txt"), "utf8")).toContain("# ui");
   });
+
+  it("is idempotent — a second --scaffold run leaves llms.txt intact", async () => {
+    await runInit({ cwd: sDir, yes: true, skipNodeCheck: true, scaffold: true });
+    const first = readFileSync(join(sDir, "llms.txt"), "utf8");
+    await runInit({ cwd: sDir, yes: true, skipNodeCheck: true, scaffold: true });
+    expect(readFileSync(join(sDir, "llms.txt"), "utf8")).toBe(first);
+  });
 });
 
 describe("runInit --migrate-tokens converts legacy token JSON to DTCG", () => {
@@ -101,6 +108,15 @@ describe("runInit --migrate-tokens converts legacy token JSON to DTCG", () => {
     await runInit({ cwd: mDir, yes: true, skipNodeCheck: true, migrateTokens: true });
     const out = JSON.parse(readFileSync(join(mDir, "tokens.json"), "utf8"));
     expect(out.color.primary).toEqual({ $value: "#2563eb", $type: "color" });
+  });
+
+  it("is idempotent — a second --migrate-tokens run leaves DTCG intact", async () => {
+    writeFileSync(join(mDir, "tokens.json"), JSON.stringify({ color: { primary: { value: "#2563eb", type: "color" } } }, null, 2));
+    gitCommitAll(mDir, "fixtures");
+    await runInit({ cwd: mDir, yes: true, skipNodeCheck: true, migrateTokens: true });
+    const afterFirst = readFileSync(join(mDir, "tokens.json"), "utf8");
+    await runInit({ cwd: mDir, yes: true, skipNodeCheck: true, migrateTokens: true });
+    expect(readFileSync(join(mDir, "tokens.json"), "utf8")).toBe(afterFirst);
   });
 
   it("skips a file that would produce non-conformant DTCG (unitless dimension)", async () => {
