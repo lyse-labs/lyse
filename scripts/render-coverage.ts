@@ -36,6 +36,13 @@ function renderSubAxes(rows: readonly SubAxisRecord[]): string {
   return [...header, ...body].join("\n");
 }
 
+export function renderSloRow(s: SubAxisRecord): string {
+  const ruleColumn = s.ruleIds.length === 0
+    ? "_(LLM-driven, no static rule)_"
+    : s.ruleIds.map((id) => `\`${id}\``).join(", ");
+  return `| ${ruleColumn} | \`${s.id}\` | ${fmtBound(s.precisionWilsonLowerBound)} | ${fmtBound(s.recallWilsonLowerBound)} | ${s.nSamples} | ${fmtDate(s.lastCalibrated)} |`;
+}
+
 function renderPerRuleSlo(rows: readonly SubAxisRecord[]): string {
   const stable = rows.filter((s) => s.status === "stable");
   const header = [
@@ -48,13 +55,7 @@ function renderPerRuleSlo(rows: readonly SubAxisRecord[]): string {
       "| _none yet_ | _no sub-axis is in `stable` status at this time_ | — | — | — | — |",
     ].join("\n");
   }
-  const body = stable.flatMap((s) => {
-    const ruleColumn = s.ruleIds.length === 0 ? "_(LLM-driven, no static rule)_" : s.ruleIds.map((id) => `\`${id}\``).join(", ");
-    return [
-      `| ${ruleColumn} | \`${s.id}\` | ${fmtBound(s.precisionWilsonLowerBound)} | ${fmtBound(s.recallWilsonLowerBound)} | — | ${fmtDate(s.lastCalibrated)} |`,
-    ];
-  });
-  return [...header, ...body].join("\n");
+  return [...header, ...stable.map(renderSloRow)].join("\n");
 }
 
 function header(title: string): string {
