@@ -24,7 +24,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `tokens.opacity` | `tokens` | Opacity token scale | **stable** | 0.989 | 0.916 | ✅ |
 | `tokens.rendered-token-fidelity` | `tokens` | Rendered token fidelity | **experimental** | 0.000 | 0.000 | — |
 | `tokens.responsive-breakpoints` | `tokens` | Responsive breakpoint scale | **stable** | 0.904 | 0.901 | ✅ |
-| `tokens.shadow` | `tokens` | Shadow / elevation token scale | **experimental** | — | — | — |
+| `tokens.shadow` | `tokens` | Shadow / elevation token scale | **experimental** | 0.510 | 0.510 | — |
 | `tokens.spacing` | `tokens` | Spacing tokens | **stable** | 0.985 | 0.904 | ✅ |
 | `tokens.theme-modes` | `tokens` | Theme modes (light/dark) | **stable** | 0.901 | 0.904 | ✅ |
 | `tokens.typography` | `tokens` | Typography token scale (size/weight/letter-spacing) | **stable** | 0.989 | 0.916 | ✅ |
