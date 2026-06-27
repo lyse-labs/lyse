@@ -33,7 +33,7 @@ export function formatDetected(d: Detected): string {
     lines.push(`  ✓ Components module: ${d.componentsModule.value}`);
   }
   if (d.storybook.value) {
-    lines.push("  ✓ Storybook detected");
+    lines.push("  ✓ Storybook detected (stories checked for coverage, not for hardcoded values inside them)");
   }
   if (d.git.value?.initialized) {
     lines.push(`  ✓ Git: ${d.git.value.branch ?? "(no branch)"}, ${d.git.value.isClean ? "clean" : "dirty"}`);
