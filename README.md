@@ -30,6 +30,8 @@ lyse share        # copy a Markdown summary to your clipboard
 
 Running `lyse` with no subcommand opens an interactive menu and loops back after each action.
 
+> **Trust boundary.** `lyse handoff` launches your coding agent with its permission prompts bypassed so it can apply fixes unattended. Only run it on repositories you trust.
+
 ## What it audits
 
 A Health Score (0–100) across **6 axes** — tokens, a11y, components, stories, ai-surface, ai-governance — from deterministic static rules. CMMI-style maturity tier (Foundational → Autonomous) mapped from the score. No LLM, no network, fully local by default. Full formula and per-rule docs in [`docs/`](./docs/).

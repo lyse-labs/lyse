@@ -72,7 +72,7 @@ let originalWrite: typeof process.stdout.write;
 beforeEach(() => {
   stdoutOutput = "";
   originalWrite = process.stdout.write.bind(process.stdout);
-  process.stdout.write = (chunk: string | Uint8Array, ...rest: unknown[]) => {
+  process.stdout.write = (chunk: string | Uint8Array, ..._rest: unknown[]) => {
     stdoutOutput += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
     return true;
   };

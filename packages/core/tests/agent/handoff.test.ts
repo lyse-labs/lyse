@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
 import { mkdtempSync, mkdirSync, readFileSync, existsSync } from "node:fs";
-import { tmpdir, homedir } from "node:os";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Finding, TokenMap } from "../../src/types.js";
 import type { AgentId } from "../../src/agent/registry.js";
-import type { HandoffDeps, HandoffInput } from "../../src/agent/handoff.js";
+import type { HandoffDeps } from "../../src/agent/handoff.js";
 import { runHandoff, spawnAgentLauncher } from "../../src/agent/handoff.js";
 
 const baseFindings: Finding[] = [

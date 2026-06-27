@@ -114,6 +114,49 @@ describe("runFilterStage — staticOnly opt-out", () => {
   });
 });
 
+describe("runFilterStage — secret-content exclusion", () => {
+  it("drops files containing a likely secret from the LLM payload but sends normal files", async () => {
+    const sentPrompts: string[] = [];
+    const connector: ConnectorClient = {
+      complete: async (messages) => {
+        sentPrompts.push(messages.map((m) => m.content).join("\n"));
+        return {
+          text: verdictJson([{ index: 0, keep: true }]),
+          usdSpent: 0,
+          modelUsed: "fake",
+          llmQuality: "higher" as const,
+          cacheHit: false,
+        };
+      },
+    };
+
+    const awsKey = "AKIA0000000000000000";
+    const pemBlock = "-----BEGIN RSA PRIVATE KEY-----\nMIIabc\n-----END RSA PRIVATE KEY-----";
+    const findings = [
+      makeColorFinding("src/Secret.tsx", 1),
+      makeColorFinding("src/Pem.tsx", 1),
+      makeColorFinding("src/Clean.tsx", 1),
+    ];
+    const fileContents = new Map([
+      ["src/Secret.tsx", `const k = "${awsKey}"; const c = '#ff0000';`],
+      ["src/Pem.tsx", `${pemBlock}\nconst c = '#ff0000';`],
+      ["src/Clean.tsx", "const c = '#ff0000';"],
+    ]);
+
+    const result = await runFilterStage(
+      { repoRoot: "/repo", config: MIN_CONFIG, flags: undefined, findings, fileContents },
+      { connector },
+    );
+
+    const allSent = sentPrompts.join("\n");
+    expect(allSent).not.toContain(awsKey);
+    expect(allSent).not.toContain("BEGIN RSA PRIVATE KEY");
+    expect(allSent).toContain("src/Clean.tsx");
+    // Findings from secret-bearing files are kept (fail-safe), never dropped.
+    expect(result.findings).toHaveLength(3);
+  });
+});
+
 describe("runFilterStage — no target findings", () => {
   it("returns unchanged findings and filterRan=false when no target-rule findings exist (no connector call)", async () => {
     const spy = vi.fn();

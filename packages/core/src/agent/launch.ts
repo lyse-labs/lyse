@@ -7,6 +7,10 @@ export interface LaunchArgs {
   launchSupported: boolean;
 }
 
+// `bypassFlags` intentionally disable the agent's permission prompts so it can
+// edit the working tree unattended. This is injection-safe — the handoff
+// payload is passed as a single argv (no shell interpolation) — and is only
+// reached after the user explicitly chose handoff; run on trusted repos only.
 const LAUNCH_MAP: Record<AgentId, LaunchArgs> = {
   "claude-code": { binary: "claude", bypassFlags: ["--dangerously-skip-permissions"], launchSupported: true },
   codex: { binary: "codex", bypassFlags: ["--yolo"], launchSupported: true },

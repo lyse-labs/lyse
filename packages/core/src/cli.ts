@@ -36,7 +36,7 @@ import { runInit } from "./commands/init.js";
 import { runAddCiGate, AddCiGateError } from "./commands/add-ci-gate.js";
 import { runAddGitHook, AddGitHookError } from "./commands/add-git-hook.js";
 import { runInstall } from "./commands/install.js";
-import { maybePromptForEmail, syncPendingEmail } from "./commands/email-prompt.js";
+import { syncPendingEmail } from "./commands/email-prompt.js";
 import { runMcpSetup } from "./commands/mcp-setup.js";
 import { appendAuditEvent, appendCommandInvokedEvent } from "./history/ndjson-store.js";
 import { ensureGitignoreEntry } from "./util/gitignore.js";
@@ -518,13 +518,10 @@ const auditCommand = defineCommand({
     const wantsFeedback =
       args.interactive === true && promptsAllowed && result.findings.length > 0;
 
-    // Once-per-machine opt-in email capture for release & security updates.
-    // Short-circuits on --yes / CI / non-TTY / LYSE_NO_EMAIL_PROMPT=1 / when
-    // ~/.lyse/profile.json already records a decision. `syncPendingEmail`
-    // runs always (incl. non-TTY) to retry any captured-but-undelivered email.
-    if (promptsAllowed) {
-      await maybePromptForEmail({ yes: Boolean(args.yes) });
-    }
+    // Email is captured only by the `lyse init` wizard. On audit we never
+    // prompt; we only run `syncPendingEmail` (always, incl. non-TTY) to retry
+    // delivery of an email the user already opted into during init but whose
+    // earlier send failed (offline).
     await syncPendingEmail();
 
     if (promptsAllowed && !wantsFeedback) {
