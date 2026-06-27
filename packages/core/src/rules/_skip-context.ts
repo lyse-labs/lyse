@@ -52,7 +52,7 @@ export function isVendoredOrResetFile(filePath: string): boolean {
 // ---------------------------------------------------------------------------
 
 const COLOR_DEF_FILE_RE =
-  /(?:^|[\\/])(?:colors|palette)\.(?:ts|js|css|scss)$|(?:^|[\\/])[^/\\]*-colors\.(?:ts|js)$|(?:^|[\\/])_legacy-colors\.(?:ts|js)$|(?:^|[\\/])[^/\\]*\.colors\.(?:ts|css|scss)$|(?:^|[\\/])demos[\\/]|(?:\.demo\.[cm]?[jt]sx?)$|(?:^|[\\/])stories[\\/][^/\\]*\.(?:css|scss)$/;
+  /(?:^|[\\/])(?:colors|palette)\.(?:ts|js|css|scss)$|(?:^|[\\/])[^/\\]*-colors\.(?:ts|js)$|(?:^|[\\/])_legacy-colors\.(?:ts|js)$|(?:^|[\\/])[^/\\]*\.colors\.(?:ts|css|scss)$|(?:^|[\\/])demos[\\/]|(?:\.demo\.[cm]?[jt]sx?)$|(?:^|[\\/])stories[\\/][^/\\]*\.(?:css|scss)$|(?:^|[\\/])_?themes?\.(?:ts|tsx|js|jsx|mjs|cjs)$|(?:^|[\\/])_?variables\.(?:css|scss|sass|less)$|(?:^|[\\/])[^/\\]*-variables\.(?:css|scss|sass|less)$|(?:^|[\\/])[^/\\]*variables[^/\\]*\.(?:css|scss|sass|less)$|(?:^|[\\/])_?tokens\.(?:scss|sass|less)$/;
 
 /**
  * Returns true if the file is a color token definition file, demo, or a CSS/SCSS
@@ -80,11 +80,48 @@ export function isColorTokenDefFile(filePath: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// SVG / icon file detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Path patterns for SVG icon files. Matches:
+ *   - Basename ending in Icon.{tsx,jsx,ts,js,svg} (e.g. CloseIcon.tsx, SearchIcon.jsx)
+ *   - Files with .svg extension (pure SVG assets)
+ *   - Files under /icons/, /icon/, /svg/ directories
+ */
+const SVG_ICON_PATH_RE =
+  /(?:^|[\\/])[^/\\]*Icon\.[cm]?[jt]sx?$|\.svg$|(?:^|[\\/])icons[\\/]|(?:^|[\\/])icon[\\/]|(?:^|[\\/])svg[\\/]/;
+
+/**
+ * Returns true if the file is an SVG icon file based on its path.
+ * Hardcoded color values in these files are vector art, not DS drift.
+ *
+ * Path signals (general — no repo-specific names):
+ *   - *Icon.{tsx,jsx,ts,js}  — named-icon component pattern
+ *   - *.svg                   — pure SVG asset files
+ *   - /icons/, /icon/, /svg/  — icon directory conventions
+ *
+ * The content signal (fill="#hex" / stroke="#hex") was removed: it suppressed
+ * the whole file on any SVG attribute match, causing a recall hole when a
+ * non-icon file mixed decorative SVG markup with real hardcoded DS colors.
+ * dataset id 86 (icon-library-picker.tsx — no icon path signal) is now a
+ * RESIDUAL FP.
+ */
+export function isSvgIconContext(filePath: string): boolean {
+  const normalised = filePath.replace(/\\/g, "/");
+  return SVG_ICON_PATH_RE.test(normalised);
+}
+
+// ---------------------------------------------------------------------------
 // Guard A: Low-signal value file detection
 // ---------------------------------------------------------------------------
 
+// apps/storybook/ is kept: it's a recognised monorepo Storybook app convention.
+// apps/ssr-testing/ was removed (Mantine-repo-specific; dataset id 82 = residual FP).
+// apps/storybook/ was removed (convention-specific, redundant with /.storybook/ +
+//   *.stories.* patterns already above). dataset ids 83-85 = residual FP.
 const LOW_SIGNAL_FILE_RE =
-  /(?:^|[\\/])(?:__tests__|__mocks__|fixtures|demos?|examples?)[\\/]|\.(?:test|spec|stories|story|demo|example|fixture)\.[cm]?[jt]sx?$/;
+  /(?:^|[\\/])(?:__tests__|__mocks__|fixtures|demos?|examples?)[\\/]|\.(?:test|spec|stories|story|demo|example|fixture)\.[cm]?[jt]sx?$|(?:^|[\\/])\.storybook[\\/]|[\\/]\.storybook[\\/]/;
 
 /**
  * Returns true if the file path is a test, story, mock, or fixture file.
