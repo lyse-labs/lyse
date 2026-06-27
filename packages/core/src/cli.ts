@@ -554,9 +554,12 @@ const auditCommand = defineCommand({
       process.exit(64); // EX_USAGE
     }
 
-    // Emit command_invoked metric (opt-in, only when consent has been accepted)
+    // Emit command_invoked metric (opt-in, only when consent has been accepted).
+    // Per ADR 0012, suppress on the run that just requested consent.
     const didFail = typeof result.finalScore === "number" && result.finalScore < threshold;
-    await appendCommandInvokedEvent(repoRoot, "audit", didFail ? "error" : "success", Date.now() - startTime);
+    await appendCommandInvokedEvent(repoRoot, "audit", didFail ? "error" : "success", Date.now() - startTime, {
+      suppress: consent.justAsked,
+    });
 
     if (didFail) {
       process.exit(1);

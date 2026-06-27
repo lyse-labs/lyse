@@ -10,7 +10,7 @@
 // We therefore run scss blocks through the same `transformScssToCss` pass used
 // for `.scss` files (which neutralizes `$`-declarations and `//` comments),
 // and we keep the output LINE-PRESERVING so findings report the correct
-// `.vue`/`.svelte` source line (matters for `lyse fix` + SARIF locations).
+// `.vue`/`.svelte` source line (matters for codemod edits + SARIF locations).
 import { transformScssToCss } from "./scss-transform.js";
 
 const STYLE_BLOCK = /<style([^>]*)>([\s\S]*?)<\/style>/gi;

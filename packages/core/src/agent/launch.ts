@@ -1,5 +1,4 @@
-import { spawn } from "node:child_process";
-import { isCommandAvailable } from "./registry.js";
+import { copyToClipboard as copyToClipboardOrThrow } from "../share/clipboard.js";
 import type { AgentId } from "./registry.js";
 
 export interface LaunchArgs {
@@ -19,24 +18,16 @@ export function launchArgs(agentId: AgentId): LaunchArgs {
   return LAUNCH_MAP[agentId];
 }
 
-const CLIPBOARD_BINARIES: Array<{ bin: string; args: string[] }> = [
-  { bin: "pbcopy", args: [] },
-  { bin: "wl-copy", args: [] },
-  { bin: "xclip", args: ["-selection", "clipboard"] },
-  { bin: "xsel", args: ["--clipboard", "--input"] },
-];
-
+/**
+ * Copy `text` to the system clipboard, returning whether it succeeded.
+ * Delegates to the canonical {@link copyToClipboardOrThrow} (which throws on
+ * failure) and never throws itself — callers branch on the boolean.
+ */
 export async function copyToClipboard(text: string): Promise<boolean> {
-  for (const { bin, args } of CLIPBOARD_BINARIES) {
-    const available = await isCommandAvailable(bin);
-    if (!available) continue;
-    const success = await new Promise<boolean>((resolve) => {
-      const proc = spawn(bin, args, { stdio: ["pipe", "ignore", "ignore"] });
-      proc.on("error", () => resolve(false));
-      proc.on("close", (code) => resolve(code === 0));
-      proc.stdin.end(text);
-    });
-    if (success) return true;
+  try {
+    await copyToClipboardOrThrow(text);
+    return true;
+  } catch {
+    return false;
   }
-  return false;
 }

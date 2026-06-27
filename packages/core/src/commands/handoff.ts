@@ -56,6 +56,11 @@ export async function runHandoffCommand(root: string, deps?: HandoffDeps): Promi
     case "copied":
       process.stdout.write("Prompt copied to clipboard.\n");
       break;
+    case "copy-failed":
+      process.stderr.write(
+        "Clipboard unavailable — the handoff prompt is saved at .lyse/handoff/ (findings.json + tokens.json).\n",
+      );
+      break;
     case "skipped":
       process.stdout.write("Handoff skipped.\n");
       break;

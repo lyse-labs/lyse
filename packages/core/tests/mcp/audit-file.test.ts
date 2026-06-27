@@ -2,7 +2,19 @@ import { describe, it, expect } from "vitest";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runAuditFile } from "../../src/mcp/tools/audit-file.js";
+import { runAuditFile, AUTO_FIXABLE_RULES } from "../../src/mcp/tools/audit-file.js";
+import { ruleObjects } from "../../src/rules/registry.js";
+
+describe("AUTO_FIXABLE_RULES", () => {
+  it("matches exactly the rules carrying a codemod (applyCodemod)", () => {
+    const withCodemod = ruleObjects
+      .filter((r) => r.applyCodemod !== undefined)
+      .map((r) => r.id)
+      .sort();
+    expect([...AUTO_FIXABLE_RULES].sort()).toEqual(withCodemod);
+    expect(withCodemod.length).toBeGreaterThan(0);
+  });
+});
 
 describe("runAuditFile", () => {
   it("audits a TSX file with hardcoded color (real file on disk)", async () => {

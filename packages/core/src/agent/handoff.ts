@@ -24,7 +24,7 @@ export interface HandoffInput {
   topN?: number;
 }
 
-export type HandoffAction = "launched" | "copied" | "skipped" | "none";
+export type HandoffAction = "launched" | "copied" | "copy-failed" | "skipped" | "none";
 
 export interface HandoffResult {
   action: HandoffAction;
@@ -92,8 +92,8 @@ export async function runHandoff(input: HandoffInput, deps: HandoffDeps): Promis
   }
 
   if (chosen === "copy") {
-    await copyToClipboard(payload);
-    return { action: "copied" };
+    const copied = await copyToClipboard(payload);
+    return { action: copied ? "copied" : "copy-failed" };
   }
 
   const agentId = chosen as AgentId;

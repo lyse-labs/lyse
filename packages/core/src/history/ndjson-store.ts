@@ -76,14 +76,19 @@ function telemetryEnabled(): boolean {
 
 /**
  * Append a CommandInvokedEvent to history.
- * Only emitted when consent has been accepted.
+ * Only emitted when consent has been accepted. Pass `suppress: true` on the run
+ * that just requested consent — per ADR 0012, no telemetry is recorded for the
+ * run during which consent is first granted, even though the cache now reads as
+ * accepted.
  */
 export async function appendCommandInvokedEvent(
   cwd: string,
   command: string,
   outcome: "success" | "user_cancelled" | "error",
   durationMs: number,
+  opts: { suppress?: boolean } = {},
 ): Promise<void> {
+  if (opts.suppress) return;
   if (!telemetryEnabled()) return;
   await appendLine(cwd, {
     schema_version: SCHEMA_VERSION,

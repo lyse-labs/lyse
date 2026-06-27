@@ -2,7 +2,18 @@ import { writeFile, mkdir, readFile } from "node:fs/promises";
 import { dirname, basename, join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { buildEvidencePack } from "../bench/evidence-pack/builder.js";
+import type { EvidencePack } from "../bench/evidence-pack/types.js";
+import { sortKeysDeep } from "../json-sort-keys.js";
 import { VERSION } from "../index.js";
+
+/**
+ * Serialize an evidence pack to deterministic, key-sorted JSON (the repo's
+ * deterministic-JSON invariant), so two packs with identical content produce
+ * byte-identical output regardless of property insertion order.
+ */
+export function serializeEvidencePack(pack: EvidencePack): string {
+  return JSON.stringify(sortKeysDeep(pack));
+}
 
 export interface RunBenchPackOptions {
   cwd: string;
@@ -60,6 +71,6 @@ export async function runBenchPack(opts: RunBenchPackOptions): Promise<void> {
   });
 
   await mkdir(dirname(resolve(opts.output)), { recursive: true });
-  await writeFile(resolve(opts.output), JSON.stringify(pack), "utf8");
+  await writeFile(resolve(opts.output), serializeEvidencePack(pack), "utf8");
   console.log(`bench-pack: wrote ${opts.output}`);
 }

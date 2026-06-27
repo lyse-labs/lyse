@@ -1,21 +1,9 @@
 import type { AuditResult } from "../types.js";
 import { sortFindings } from "./finding-order.js";
+import { sortKeysDeep } from "../json-sort-keys.js";
 
 const SCHEMA_URL =
   "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-result.json";
-
-function sortKeysDeep(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(sortKeysDeep);
-  if (value && typeof value === "object") {
-    const obj = value as Record<string, unknown>;
-    const sorted: Record<string, unknown> = {};
-    for (const key of Object.keys(obj).sort()) {
-      sorted[key] = sortKeysDeep(obj[key]);
-    }
-    return sorted;
-  }
-  return value;
-}
 
 export interface JsonRenderOptions {
   includeTimestamp?: boolean;

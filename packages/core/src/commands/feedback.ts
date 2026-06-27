@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { computeRepoBucket } from "../reliability/feedback/repo-bucket.js";
+import { computeRepoBucketFromUrl as computeRepoBucket } from "../identity/index.js";
 import {
   fetchBucketSalt,
   getRemoteOriginUrl,

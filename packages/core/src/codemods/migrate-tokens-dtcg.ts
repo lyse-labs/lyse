@@ -144,7 +144,7 @@ export interface TokenMigrationPlan {
 /**
  * Discovers legacy (`{ value, type }`) token JSON under `repoRoot` and computes
  * the DTCG-migrated content for each. Pure planning — performs NO writes; the
- * caller (`lyse fix --migrate-tokens`) applies the plan behind the safety
+ * caller (`lyse init --migrate-tokens`) applies the plan behind the safety
  * guards. Results are sorted by path for determinism. Already-DTCG and
  * non-conformant-after-conversion files are reported under `skipped`.
  */

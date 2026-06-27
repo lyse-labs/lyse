@@ -79,8 +79,8 @@ function collectBreakpointLiterals(source: string): { index: number; raw: string
       re.lastIndex = 0;
       let m: RegExpExecArray | null;
       while ((m = re.exec(text)) !== null) {
-        const num = m[1] ?? m[3] ?? m[5];
-        const unit = m[2] ?? m[4] ?? m[6];
+        const num = m[1] ?? m[3];
+        const unit = m[2] ?? m[4];
         if (num === undefined || unit === undefined) continue;
         if (parseFloat(num) === 0) continue;
         hits.push({ index: base + m.index, raw: `${num}${unit}` });

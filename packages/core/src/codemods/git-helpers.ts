@@ -78,9 +78,8 @@ export async function ensureClean(cwd: string, allowDirty: boolean): Promise<voi
   const status = await git(["status", "--porcelain"], cwd);
   if (status === "" || allowDirty) return;
   throw new Error(
-    "Cannot auto-fix: uncommitted changes detected.\n" +
-    "  Commit or stash first, then re-run.\n" +
-    "  (Override: lyse fix --force-on-dirty)"
+    "Cannot apply codemod: uncommitted changes detected.\n" +
+    "  Commit or stash first, then re-run."
   );
 }
 
