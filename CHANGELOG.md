@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `lyse init` no longer hangs after stack detection (#205): the framework-detection spinner ran a redraw loop on top of the interactive "Proceed?" prompt, burying it indefinitely on a TTY. `runInit` now runs without the competing CLI spinner.
+- The generated `.lyse.yaml` header now stamps the real Lyse version instead of a hardcoded `0.1.0` (#204).
+
 ### Changed
 
 - **Audit structure sweep (no functional regressions).** Unified the two divergent `repo_bucket` implementations onto the canonical credential-stripping fingerprint — a git credential embedded in a remote URL can no longer leak into the anonymous feedback telemetry fingerprint (the feedback bucket value changes from HMAC to canonical sha256; still anonymous, still opt-in). Deduplicated `copyToClipboard` onto a single platform-aware implementation. The agent handoff clipboard action now reports "copied" only on actual success, pointing to the saved `.lyse/handoff/` payload on failure. Derived the MCP auto-fixable rule set from the codemod registry (single source of truth). Made `lyse bench-pack` output key-sorted (deterministic-JSON invariant). Suppressed the `command_invoked` telemetry event on the run that first requests consent (per ADR 0012). Untracked regenerable `.wrangler/` miniflare dev-state. Removed dead phantom-capture-group reads in the media-query rule and stale `lyse fix` references in comments/error strings.

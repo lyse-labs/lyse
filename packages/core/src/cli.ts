@@ -827,7 +827,7 @@ const badgeCommand = defineCommand({
   },
 });
 
-const initCommand = defineCommand({
+export const initCommand = defineCommand({
   meta: { name: "init", description: "Interactive wizard for first-time setup" },
   args: {
     path: { type: "positional", required: false, default: ".", description: "repository root" },
@@ -839,21 +839,16 @@ const initCommand = defineCommand({
   async run({ args }) {
     applyGlobalFlags(args);
     const { resolve } = await import("node:path");
-    const isQuiet = args.quiet === true;
-    await withSpinner(
-      {
-        quiet: isQuiet,
-        startLabel: "Detecting framework…",
-        successLabel: () => "Initialized .lyse.yaml + AGENTS.md",
-        failLabel: (m) => `Init failed: ${m}`,
-      },
-      async () => runInit({
-        cwd: resolve(args.path ?? "."),
-        yes: Boolean(args.yes),
-        scaffold: args.scaffold,
-        migrateTokens: args["migrate-tokens"],
-      }),
-    );
+    // `runInit` is interactive top-to-bottom (intro → confirm → tasks), and
+    // manages its own clack spinners. A long-lived CLI spinner here would keep
+    // redrawing over the "Proceed?" prompt and bury it forever (#205), so call
+    // runInit directly.
+    await runInit({
+      cwd: resolve(args.path ?? "."),
+      yes: Boolean(args.yes),
+      scaffold: args.scaffold,
+      migrateTokens: args["migrate-tokens"],
+    });
   },
 });
 
