@@ -4,7 +4,7 @@ import { brandHeader } from "../ui/banner.js";
 
 export type ReplActionId =
   | "audit"
-  | "fix"
+  | "handoff"
   | "mcp-setup"
   | "explain"
   | "bench-pack"
@@ -19,7 +19,7 @@ export interface ReplAction {
 
 export const REPL_ACTIONS: readonly ReplAction[] = [
   { id: "audit", title: "Run audit", description: "Scan your design system" },
-  { id: "fix", title: "Apply auto-fixes", description: "Run high-confidence codemods" },
+  { id: "handoff", title: "Hand off to your agent", description: "Send findings to your coding agent to fix" },
   { id: "mcp-setup", title: "Set up MCP for AI", description: "Wire Lyse into Cursor / Claude Code" },
   { id: "explain", title: "Explain a rule", description: "Show the rationale for a rule" },
   { id: "bench-pack", title: "Bench-pack", description: "Emit a deterministic evidence pack" },
@@ -45,7 +45,7 @@ export function renderReplBanner(ctx: ReplContext): string {
     `  ${ctx.cwd}`,
     "",
     "  Tip: pass --no-menu (or set LYSE_NO_MENU=1) to skip the menu.",
-    "  Or invoke a subcommand directly (lyse audit, lyse fix, …).",
+    "  Or invoke a subcommand directly (lyse audit, lyse handoff, …).",
     "",
   ].join("\n");
 }

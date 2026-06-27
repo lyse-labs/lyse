@@ -170,7 +170,7 @@ Request an auto-fix for a specific finding.
 - `components/no-native-shadows`
 - `ai-governance/ai-token-requires-marker`
 
-> `naming/component-pascalcase`, `naming/hook-prefix`, and the other Sprint-1 codemods are auto-fixable via the `lyse fix` CLI but not yet adapted for MCP `suggest_fix` — it returns a structured rationale pointing to the CLI for those.
+> `naming/component-pascalcase`, `naming/hook-prefix`, and the other Sprint-1 codemods carry a deterministic fix but are not yet adapted for MCP `suggest_fix` — it returns a structured rationale for those, and `lyse handoff` passes them to your coding agent to apply.
 
 For non-auto-fixable rules, `suggest_fix` returns a structured error explaining why.
 

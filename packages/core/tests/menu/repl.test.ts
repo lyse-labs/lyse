@@ -13,7 +13,7 @@ describe("REPL_ACTIONS", () => {
     const ids = REPL_ACTIONS.map((a) => a.id);
     expect(ids).toEqual([
       "audit",
-      "fix",
+      "handoff",
       "mcp-setup",
       "explain",
       "bench-pack",
@@ -29,11 +29,11 @@ describe("REPL_ACTIONS", () => {
     }
   });
 
-  it("titles match the spec (Run audit · Apply auto-fixes · Set up MCP for AI · Explain a rule · Bench-pack · Telemetry settings · Exit)", () => {
+  it("titles match the spec (Run audit · Hand off to your agent · Set up MCP for AI · Explain a rule · Bench-pack · Telemetry settings · Exit)", () => {
     const titles = REPL_ACTIONS.map((a) => a.title);
     expect(titles).toEqual([
       "Run audit",
-      "Apply auto-fixes",
+      "Hand off to your agent",
       "Set up MCP for AI",
       "Explain a rule",
       "Bench-pack",
@@ -52,7 +52,7 @@ describe("renderReplBanner", () => {
         /tmp/demo
 
         Tip: pass --no-menu (or set LYSE_NO_MENU=1) to skip the menu.
-        Or invoke a subcommand directly (lyse audit, lyse fix, …).
+        Or invoke a subcommand directly (lyse audit, lyse handoff, …).
       "
     `);
   });
@@ -127,7 +127,7 @@ describe("ReplActionId discriminated union", () => {
     const seen = new Set<ReplActionId>(ids);
     const expected = new Set<ReplActionId>([
       "audit",
-      "fix",
+      "handoff",
       "mcp-setup",
       "explain",
       "bench-pack",

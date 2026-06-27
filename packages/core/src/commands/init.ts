@@ -1,10 +1,11 @@
-import { writeFile, access } from "node:fs/promises";
-import { join } from "node:path";
+import { writeFile, access, mkdir } from "node:fs/promises";
+import { join, dirname } from "node:path";
 import { runPreFlight, formatDetected } from "../detection/pre-flight.js";
 import { wizardIntro, wizardOutro, wizardNote, wizardConfirm, wizardTask } from "../ui/wizard.js";
 import { renderTerminal } from "../reporters/terminal.js";
 import { auditDirectory } from "./audit-pipeline.js";
-import { runFix } from "./fix.js";
+import { computeMissingScaffolds } from "../codemods/scaffold.js";
+import { migrateLegacyTokensToDtcg } from "../codemods/migrate-tokens-dtcg.js";
 import { runMcpSetup } from "./mcp-setup.js";
 import { maybePromptForEmail } from "./email-prompt.js";
 import { appendAuditEvent, appendInitStepCompletedEvent } from "../history/ndjson-store.js";
@@ -20,6 +21,10 @@ export interface InitOptions {
   yes?: boolean | undefined;
   /** Skip Node.js version check (used in tests running on Node < 22). */
   skipNodeCheck?: boolean | undefined;
+  /** Generate missing AI-readiness files (llms.txt, AGENTS.md, value-gate doc). */
+  scaffold?: boolean | undefined;
+  /** Migrate legacy ({ value, type }) token JSON files to DTCG ({ $value, $type }). */
+  migrateTokens?: boolean | undefined;
 }
 
 export async function runInit(opt: InitOptions): Promise<void> {
@@ -91,28 +96,28 @@ export async function runInit(opt: InitOptions): Promise<void> {
   // 6b. Bootstrap AI-readiness surface: LYSE.md + AGENTS.md.
   await writeAiReadinessSurface(opt.cwd, pipeline);
 
-  // 7. Offer auto-fix — findings where the rule has a codemod (no fixable flag on Finding type;
-  // treat all findings as potentially fixable and let runFix decide)
-  const fixableCount = result.findings.length;
-  if (fixableCount > 0) {
-    const doFix =
-      opt.yes || (await wizardConfirm(`Apply ${fixableCount} potentially auto-fixable findings (creates a branch)?`, true));
-    if (doFix) {
-      try {
-        // forceOnDirty: true is intentional — init has just written .lyse.yaml + updated
-        // .gitignore + audit wrote .lyse/history.ndjson. All of these are deterministic
-        // setup artifacts, not user code, so they're safe to fix alongside.
-        const fixResult = await runFix({ cwd: opt.cwd, autoApprove: opt.yes ?? false, forceOnDirty: true });
-        const totalFixed = fixResult.ruleResults.reduce((sum, r) => sum + r.count, 0);
-        if (totalFixed > 0) {
-          console.log(`  ✓ Applied ${totalFixed} fix${totalFixed !== 1 ? "es" : ""} on branch ${fixResult.branch}\n`);
-        } else {
-          console.log("  ✓ No high-confidence fixes available at this time.\n");
-        }
-        await appendInitStepCompletedEvent(opt.cwd, "fix");
-      } catch (err) {
-        console.log(`  ⚠ Auto-fix skipped: ${(err as Error).message}\n`);
-      }
+  // 7. Optional setup extras (not code fixes — those go through `lyse handoff`):
+  //    --scaffold writes missing AI-readiness files; --migrate-tokens converts
+  //    legacy { value, type } token JSON to DTCG. Both write the working tree
+  //    directly (init is setup, not the guarded fix path).
+  if (opt.scaffold) {
+    const missing = computeMissingScaffolds(opt.cwd);
+    for (const s of missing) {
+      const abs = join(opt.cwd, s.path);
+      await mkdir(dirname(abs), { recursive: true });
+      await writeFile(abs, s.content, "utf8");
+    }
+    if (missing.length > 0) {
+      console.log(`  ✓ Scaffolded ${missing.length} AI-readiness file(s): ${missing.map((m) => m.path).join(", ")}\n`);
+    }
+  }
+  if (opt.migrateTokens) {
+    const plan = migrateLegacyTokensToDtcg(opt.cwd);
+    for (const m of plan.migrations) {
+      await writeFile(join(opt.cwd, m.path), m.content, "utf8");
+    }
+    if (plan.migrations.length > 0) {
+      console.log(`  ✓ Migrated ${plan.migrations.length} token file(s) to DTCG: ${plan.migrations.map((m) => m.path).join(", ")}\n`);
     }
   }
 
@@ -136,7 +141,7 @@ export async function runInit(opt: InitOptions): Promise<void> {
 
   // 10. Summary
   wizardNote(
-    "lyse audit   → re-check\nlyse fix     → apply new auto-fixes\n\n⭐ Star the repo: github.com/lyse-labs/lyse",
+    "lyse audit     → re-check the score\nlyse handoff   → have your coding agent fix the findings\n\n⭐ Star the repo: github.com/lyse-labs/lyse",
     "Setup complete",
   );
   wizardOutro("You're set up.");

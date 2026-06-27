@@ -15,7 +15,7 @@ CLI output (terminal-friendly) — or `--format=json` / `--format=sarif` for mac
 - **65 deterministic rules** across 6 axes: tokens, a11y, components, stories, ai-surface, ai-governance
 - **Deterministic, schema-versioned JSON output** (`schemas/v1/lyse-result.json`)
 - **SARIF 2.1.0 output** — wire it into any SARIF-aware viewer (e.g. GitHub's Security tab via `github/codeql-action/upload-sarif`).
-- **CLI commands:** `lyse audit`, `lyse fix`, `lyse explain`, `lyse agents`, `lyse share`, `lyse init`, `lyse mcp [setup|serve]`, `lyse feedback`, `lyse telemetry [on|off|status]`, `lyse bench-pack`, `lyse version`
+- **CLI commands:** `lyse audit`, `lyse handoff`, `lyse explain`, `lyse agents`, `lyse share`, `lyse init`, `lyse install`, `lyse mcp [setup|serve]`, `lyse feedback`, `lyse telemetry [on|off|status]`, `lyse bench-pack`, `lyse version`
 - **Global flags:** `--yes`, `--no-prompt`, `--no-color`, `--quiet`, `--config=<path>`
 - **Identity:** anonymous `repo_bucket` fingerprint
 - **Telemetry:** opt-in only (first-run prompt, default OFF — see [PRIVACY.md](../../PRIVACY.md))

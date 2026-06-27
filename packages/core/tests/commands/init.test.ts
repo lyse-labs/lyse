@@ -5,7 +5,7 @@ vi.mock("../../src/util/git.js", () => ({
   modifiedFilesWithHashes: vi.fn().mockResolvedValue([]),
 }));
 
-import { git, gitInit, gitCommitAll } from "../_helpers/git.js";
+import { gitInit, gitCommitAll } from "../_helpers/git.js";
 import { mkdtempSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -56,43 +56,59 @@ describe("runInit with --yes", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Regression: Critical #3 — runFix must not be silently skipped due to
-// the dirty tree that init itself created (.lyse.yaml, .gitignore, history).
-//
-// Before the fix: runFix threw on dirty tree; the try/catch swallowed it as
-// "⚠ Auto-fix skipped" — no branch was ever created on first-run repos WITH
-// findings. This test uses a file with a real hardcoded-color finding to
-// exercise the auto-fix path, and asserts the lyse/auto-fix-* branch exists.
-// ---------------------------------------------------------------------------
+// Scaffold + token-migration extras moved off `lyse fix` onto `lyse init`
+// (`--scaffold` / `--migrate-tokens`) — covered by init-scaffold.test.ts and
+// init-migrate-tokens.test.ts. `lyse init` no longer auto-applies codemods;
+// code fixes go through `lyse handoff` (the coding agent).
 
-describe("runInit auto-fix with findings doesn't silently skip on dirty tree (Critical #3 regression)", () => {
-  let fixDir: string;
+describe("runInit --scaffold writes AI-readiness files", () => {
+  let sDir: string;
 
   beforeEach(() => {
-    fixDir = mkdtempSync(join(tmpdir(), "lyse-init-fix-"));
-    gitInit(fixDir);
-    writeFileSync(
-      join(fixDir, "package.json"),
-      JSON.stringify({
-        name: "test",
-        version: "1.0.0",
-        dependencies: { react: "^18.0.0" },
-      }),
-    );
-    // A file with a hardcoded color — triggers the auto-fix branch in runInit
-    writeFileSync(
-      join(fixDir, "Sample.tsx"),
-      'export const S = () => <div style={{background:"#3B82F6"}}>x</div>;',
-    );
-    gitCommitAll(fixDir, "init");
+    sDir = mkdtempSync(join(tmpdir(), "lyse-init-scaffold-"));
+    gitInit(sDir);
+    writeFileSync(join(sDir, "package.json"), JSON.stringify({ name: "@acme/ui", version: "1.0.0" }));
+    gitCommitAll(sDir, "init");
   });
 
-  it("creates a lyse/auto-fix-* branch even though init wrote .lyse.yaml + .gitignore first", async () => {
-    await runInit({ cwd: fixDir, yes: true, skipNodeCheck: true });
+  it("generates llms.txt only when --scaffold is passed", async () => {
+    await runInit({ cwd: sDir, yes: true, skipNodeCheck: true });
+    expect(existsSync(join(sDir, "llms.txt"))).toBe(false);
 
-    // The branch should exist (fix actually ran, not silently skipped)
-    const branches = git(fixDir, ["branch"]);
-    expect(branches).toMatch(/lyse\/auto-fix-/);
+    await runInit({ cwd: sDir, yes: true, skipNodeCheck: true, scaffold: true });
+    expect(existsSync(join(sDir, "llms.txt"))).toBe(true);
+    expect(readFileSync(join(sDir, "llms.txt"), "utf8")).toContain("# ui");
+  });
+});
+
+describe("runInit --migrate-tokens converts legacy token JSON to DTCG", () => {
+  let mDir: string;
+
+  beforeEach(() => {
+    mDir = mkdtempSync(join(tmpdir(), "lyse-init-migrate-"));
+    gitInit(mDir);
+    writeFileSync(join(mDir, "package.json"), JSON.stringify({ name: "@acme/ui", version: "1.0.0" }));
+  });
+
+  it("migrates { value, type } → { $value, $type } only with the flag", async () => {
+    const legacy = JSON.stringify({ color: { primary: { value: "#2563eb", type: "color" } } }, null, 2);
+    writeFileSync(join(mDir, "tokens.json"), legacy);
+    gitCommitAll(mDir, "fixtures");
+
+    await runInit({ cwd: mDir, yes: true, skipNodeCheck: true });
+    expect(readFileSync(join(mDir, "tokens.json"), "utf8")).toBe(legacy);
+
+    await runInit({ cwd: mDir, yes: true, skipNodeCheck: true, migrateTokens: true });
+    const out = JSON.parse(readFileSync(join(mDir, "tokens.json"), "utf8"));
+    expect(out.color.primary).toEqual({ $value: "#2563eb", $type: "color" });
+  });
+
+  it("skips a file that would produce non-conformant DTCG (unitless dimension)", async () => {
+    const before = JSON.stringify({ space: { sm: { value: 8, type: "spacing" } } }, null, 2);
+    writeFileSync(join(mDir, "tokens.json"), before);
+    gitCommitAll(mDir, "fixtures");
+
+    await runInit({ cwd: mDir, yes: true, skipNodeCheck: true, migrateTokens: true });
+    expect(readFileSync(join(mDir, "tokens.json"), "utf8")).toBe(before);
   });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { countAutoFixable, buildClassifyContext, populateConfidence } from "./safety.js";
+import { buildClassifyContext, populateConfidence } from "./safety.js";
 import type { AuditResult, Finding, TokenMap, LyseConfig } from "../types.js";
 
 function tokenMapWith(colors: Record<string, string[]>): TokenMap {
@@ -29,33 +29,6 @@ function colorFinding(value: string, file = "src/Button.tsx"): Finding {
 }
 
 const EMPTY_CONFIG: LyseConfig = {};
-
-describe("countAutoFixable", () => {
-  it("counts a hardcoded color mapping to exactly one token as auto-fixable (high)", () => {
-    const tokens = tokenMapWith({ "#fff": ["color.white"] });
-    expect(countAutoFixable([colorFinding("#fff")], tokens, EMPTY_CONFIG)).toBe(1);
-  });
-
-  it("ignores a color with no matching token (low confidence)", () => {
-    const tokens = tokenMapWith({ "#000": ["color.black"] });
-    expect(countAutoFixable([colorFinding("#fff")], tokens, EMPTY_CONFIG)).toBe(0);
-  });
-
-  it("ignores findings whose rule has no codemod", () => {
-    const a11y: Finding = {
-      ruleId: "a11y/essentials",
-      axis: "a11y",
-      severity: "warning",
-      location: { file: "src/x.tsx", line: 1, column: 1 },
-      message: "Anchors must have content",
-    };
-    expect(countAutoFixable([a11y], tokenMapWith({}), EMPTY_CONFIG)).toBe(0);
-  });
-
-  it("falls back to an empty token map when tokens is null (no crash, count 0)", () => {
-    expect(countAutoFixable([colorFinding("#fff")], null, EMPTY_CONFIG)).toBe(0);
-  });
-});
 
 describe("buildClassifyContext", () => {
   it("derives the component-name set from components-axis findings only", () => {

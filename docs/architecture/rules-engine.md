@@ -90,7 +90,7 @@ export const tokensNoHardcodedColor: Rule = {
 };
 ```
 
-`classifyConfidence` and `applyCodemod` are optional. A rule that is not auto-fixable omits them. The rule runner (and `lyse fix` dispatcher) checks for their presence at runtime.
+`classifyConfidence` and `applyCodemod` are optional. A rule that is not auto-fixable omits them. Codemod consumers (the MCP `suggest_fix` tool, the `lyse handoff` payload) check for their presence at runtime.
 
 ## Rule registration
 
