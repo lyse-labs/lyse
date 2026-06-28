@@ -18,14 +18,14 @@
       "ruleId": "a11y/interactive-role-name",
       "oracleKind": "construction",
       "matrix": {
-        "tp": 1,
+        "tp": 36,
         "fp": 0,
-        "tn": 1,
+        "tn": 15,
         "fn": 0
       },
       "youdensJ": 1,
       "metamorphicInconsistencies": [],
-      "mutationsRun": 1
+      "mutationsRun": 36
     },
     {
       "ruleId": "ai-governance/ai-content-live-region",
