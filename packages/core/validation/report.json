@@ -15,6 +15,19 @@
       "mutationsRun": 4
     },
     {
+      "ruleId": "a11y/interactive-role-name",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
       "ruleId": "ai-governance/ai-content-live-region",
       "oracleKind": "construction",
       "matrix": {
@@ -380,6 +393,19 @@
     },
     {
       "ruleId": "stories/coverage",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
+      "ruleId": "stories/props-documented",
       "oracleKind": "construction",
       "matrix": {
         "tp": 1,

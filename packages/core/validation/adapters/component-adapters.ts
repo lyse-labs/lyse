@@ -966,6 +966,49 @@ const noStyleEscapeHatchAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
+// stories/props-documented: clean = both components' stories document props
+// (argTypes or args); mutation = Button's story documents nothing. Two
+// components keep storyIndex non-null even when Button is the violation.
+const PROPS_DOC_APP_TSX = [
+  'import { Button, Card } from "@acme/ui";',
+  "export function App() {",
+  "  return <div><Button>click</Button><Card /></div>;",
+  "}",
+].join("\n");
+
+const propsDocumentedAdapter: OracleAdapter = {
+  ruleId: "stories/props-documented",
+  oracleKind: "construction",
+  cleanFixture: () => ({
+    "package.json": PKG_CONSUMER,
+    "src/App.tsx": PROPS_DOC_APP_TSX,
+    "src/Button.stories.tsx": [
+      'import { Button } from "@acme/ui";',
+      'export default { title: "Button", component: Button, argTypes: { variant: { control: "select" } } };',
+      "export const Primary = {};",
+    ].join("\n"),
+    "src/Card.stories.tsx": [
+      'import { Card } from "@acme/ui";',
+      'export default { title: "Card", component: Card };',
+      'export const Default = { args: { elevated: true } };',
+    ].join("\n"),
+  }),
+  mutations: [
+    {
+      name: "button-story-documents-no-props",
+      apply: (f): FixtureFiles => ({
+        ...f,
+        "src/Button.stories.tsx": [
+          'import { Button } from "@acme/ui";',
+          'export default { title: "Button", component: Button };',
+          "export const Primary = {};",
+        ].join("\n"),
+      }),
+    },
+  ],
+  metamorphic: [],
+};
+
 export const componentAdapters: OracleAdapter[] = [
   svgViewboxAdapter,
   iconDecorativeAriaAdapter,
@@ -974,6 +1017,7 @@ export const componentAdapters: OracleAdapter[] = [
   namingPascalCaseAdapter,
   namingHookPrefixAdapter,
   storiesCoverageAdapter,
+  propsDocumentedAdapter,
   contractsStrictnessAdapter,
   noArbitraryTailwindAdapter,
   noStyleEscapeHatchAdapter,
