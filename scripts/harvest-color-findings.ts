@@ -19,6 +19,8 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { auditDirectory } from "../packages/core/src/commands/audit-pipeline.js";
+import { populateConfidence, buildClassifyContext } from "../packages/core/src/codemods/safety.js";
+import type { Confidence } from "../packages/core/src/types.js";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -35,6 +37,8 @@ export interface HarvestRow {
   snippet: string;
   /** Lowercased file extension, e.g. ".css", ".tsx". */
   fileType: string;
+  /** AST-confidence grade from the safety dispatcher (high/medium/low). */
+  confidence: Confidence;
 }
 
 // ---------------------------------------------------------------------------
@@ -87,7 +91,19 @@ export async function collectColorFindings(rootDir: string): Promise<HarvestRow[
       continue;
     }
 
-    const colorFindings = pipelineResult.result.findings.filter(
+    // Populate confidence on all findings using the safety dispatcher.
+    // auditDirectory does NOT call populateConfidence — that's done downstream
+    // in the CLI. We call it here so each HarvestRow carries the AST-graded
+    // confidence field for measurement.
+    const ctx = buildClassifyContext(
+      pipelineResult.result.findings,
+      pipelineResult.tokens,
+      pipelineResult.config,
+      repoDir,
+    );
+    const enrichedResult = populateConfidence(pipelineResult.result, ctx);
+
+    const colorFindings = enrichedResult.findings.filter(
       (f) => f.ruleId === "tokens/no-hardcoded-color",
     );
 
@@ -107,6 +123,7 @@ export async function collectColorFindings(rootDir: string): Promise<HarvestRow[
         line: f.location.line,
         snippet: snippetAround(source, f.location.line),
         fileType,
+        confidence: f.confidence ?? "high",
       });
     }
   }

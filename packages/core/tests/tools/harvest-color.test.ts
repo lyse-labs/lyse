@@ -24,7 +24,7 @@ beforeAll(() => {
 });
 
 describe("collectColorFindings", () => {
-  it("returns a row per color finding with repo, file, line, snippet, fileType", async () => {
+  it("returns a row per color finding with repo, file, line, snippet, fileType, confidence", async () => {
     const rows = await collectColorFindings(dir);
     const hit = rows.find((r) => r.file.endsWith("Btn.css"));
     expect(hit, "expected a finding in Btn.css").toBeDefined();
@@ -32,6 +32,7 @@ describe("collectColorFindings", () => {
     expect(hit!.fileType).toBe(".css");
     expect(hit!.snippet).toContain("#2563eb");
     expect(hit!.line).toBeGreaterThan(0);
+    expect(["high", "medium", "low"]).toContain(hit!.confidence);
   });
 
   it("suppresses findings in vendored paths (.yarn/releases)", async () => {
