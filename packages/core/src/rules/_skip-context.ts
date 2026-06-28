@@ -44,7 +44,40 @@ export function isVendoredOrResetFile(filePath: string): boolean {
   // imported by the rule — keeping them separate avoids cycles).
   const BUILTIN_SEGS = [".yarn/", "bower_components/", "/vendor/", "/vendored/", "third_party/"];
   if (BUILTIN_SEGS.some((seg) => normalised.startsWith(seg) || normalised.includes(seg))) return true;
+  // Catch bare root-level vendor/ / vendored/ dirs (no leading slash, e.g. "vendor/react-tel-input/styles.css").
+  // Only startsWith is used — includes() would also match "src/thevendor/…" which is not a vendor directory.
+  if (normalised.startsWith("vendor/") || normalised.startsWith("vendored/")) return true;
   return VENDORED_RESET_BASENAME_RE.test(normalised);
+}
+
+// ---------------------------------------------------------------------------
+// Generated CSS file detection (compiled build artifacts)
+// ---------------------------------------------------------------------------
+
+/**
+ * Matches a CSS generator banner in the first ~200 characters of a file.
+ *
+ * Currently recognises:
+ *   `/*! tailwindcss v<semver> … *\/` — the banner injected by Tailwind CSS
+ *     into compiled output (both v3 `npm run build` and v4 CLI outputs).
+ *
+ * The check is content-based, not path-based, so it works regardless of the
+ * output filename (dist/styles.css, public/tw.css, assets/main.css, etc.).
+ * It is intentionally narrow: the banner must appear in the opening comment
+ * of the file (within the first 200 chars) — a mid-file mention of
+ * "tailwindcss" does not trigger suppression.
+ */
+const GENERATED_CSS_BANNER_RE = /\/\*!?\s*tailwindcss\s+v\d/;
+
+/**
+ * Returns true if the CSS source string is a generated build artifact whose
+ * colors were never authored by a design-system contributor.
+ *
+ * Keyed entirely on the generator banner in the file head — no path heuristics.
+ */
+export function isGeneratedCssSource(source: string): boolean {
+  // Only inspect the first 200 characters to avoid scanning the whole file.
+  return GENERATED_CSS_BANNER_RE.test(source.slice(0, 200));
 }
 
 // ---------------------------------------------------------------------------

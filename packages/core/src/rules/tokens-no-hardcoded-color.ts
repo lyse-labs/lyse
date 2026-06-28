@@ -1,6 +1,6 @@
 import { isAbsolute, join } from "node:path";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, ClassifyContext, Confidence, CodemodContext, CodemodResult, FixGroup } from "../types.js";
-import { isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile, isInCommentOrUrl, isVendoredOrResetFile, isSvgIconContext, isDataPaletteContext } from "./_skip-context.js";
+import { isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile, isInCommentOrUrl, isVendoredOrResetFile, isSvgIconContext, isDataPaletteContext, isGeneratedCssSource } from "./_skip-context.js";
 import { isPathExcluded } from "./_exclude.js";
 import { fixHardcodedColor } from "../codemods/tokens-color.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
@@ -118,6 +118,52 @@ function isInsideVarCall(source: string, hitStart: number): boolean {
   return false;
 }
 
+/**
+ * Returns true if the hex hit at `hitStart` in `source` is inside a CSS
+ * attribute selector `[attr="value"]` — i.e. between an unmatched `[` and its
+ * matching `]` before the next `{`.
+ *
+ * Examples that return true (NOT a declared color — suppress):
+ *   [stroke='#ccc'] { ... }
+ *   [data-color="#fff"] { color: inherit; }
+ *   svg [fill='#abc123'] path { opacity: 1; }
+ *
+ * Examples that return false (real declarations — do not suppress):
+ *   .icon { stroke: #ccc; }
+ *   .x { color: #ccc; }
+ *
+ * Strategy: walk backwards from `hitStart`. If we first hit `[` (unmatched)
+ * before hitting `{`, `;`, or end-of-content, and the `]` closing that `[`
+ * appears after `hitStart` (and before any `{`), the hex is selector-internal.
+ */
+function isInsideCssAttributeSelector(source: string, hitStart: number): boolean {
+  let depth = 0;
+  for (let i = hitStart - 1; i >= 0; i--) {
+    const c = source[i];
+    if (c === "]") {
+      depth++;
+      continue;
+    }
+    if (c === "[") {
+      if (depth > 0) {
+        depth--;
+        continue;
+      }
+      // Unmatched `[` found — now verify its `]` comes after hitStart
+      // and before any `{` (confirming this is a selector, not CSS value).
+      for (let j = hitStart; j < source.length; j++) {
+        const d = source[j];
+        if (d === "]") return true;  // closing bracket after our hit → selector
+        if (d === "{") return false; // rule body opened → not in selector
+      }
+      return false;
+    }
+    // Rule body boundary or statement end — we're inside a CSS rule, not a selector.
+    if (c === "{" || c === "}" || c === ";") return false;
+  }
+  return false;
+}
+
 function matchCount(source: string, pattern: RegExp): number {
   pattern.lastIndex = 0;
   const matches = source.match(pattern);
@@ -231,6 +277,11 @@ export function detectInText(source: string, _path?: string, isCssSource = false
     // Skip color literals in comments (// /* *) and URL fragments (#anchor).
     if (isInCommentOrUrl(source, m.index)) continue;
     if (isCssCustomPropertyDeclaration(source, m.index)) continue;
+    // Skip hex literals that appear inside a CSS attribute selector `[attr="#hex"]`.
+    // The hex is matching an attribute VALUE — it is a selector predicate, not a
+    // declared color. Only meaningful in CSS/SCSS sources (in TS/JS, `[` opens an
+    // array, not a selector).
+    if (isCssSource && isInsideCssAttributeSelector(source, m.index)) continue;
     // Skip color literals that are elements of a JS/TS multi-color collection
     // (array or object with ≥3 color literals) — palette/data definitions,
     // not DS drift. This suppresses syntax-highlight themes, color-preset
@@ -328,6 +379,7 @@ const evaluate = async (
   for (const c of files.css) {
     if (isPathExcluded(c.path, ctx.excludePaths)) continue;
     if (isVendoredOrResetFile(c.path)) continue;
+    if (isGeneratedCssSource(c.source)) continue;
     if (isLowSignalValueFile(c.path)) continue;
     if (isSchemaOrDataFile(c.path)) continue;
     if (isColorTokenDefFile(c.path)) continue;
