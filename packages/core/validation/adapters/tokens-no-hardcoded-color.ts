@@ -326,5 +326,7 @@ export const colorAdapter: OracleAdapter = {
       expectViolation: true,
     },
   ],
-  falseFriends: FALSE_FRIENDS,
+  // falseFriends removed: the synthetic corpus (33 samples) was not representative
+  // of real-world FP rates (~65% precision on 8 OSS repos). Catalogue nulled out.
+  // Re-introduce when a labelled real-world corpus is available.
 };

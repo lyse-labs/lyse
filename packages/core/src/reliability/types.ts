@@ -37,7 +37,7 @@ export interface SubAxisRecord {
   precisionWilsonLowerBound: number | null;
   recallWilsonLowerBound: number | null;
   /** Total labelled observations behind the measured metrics (tp+fp+tn+fn). 0 = not yet measured in-repo. */
-  nSamples: number;
+  nSamples?: number;
   lastCalibrated: string | null;
   contributesToScore: boolean;
   ruleIds: string[];

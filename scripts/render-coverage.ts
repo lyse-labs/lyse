@@ -40,7 +40,7 @@ export function renderSloRow(s: SubAxisRecord): string {
   const ruleColumn = s.ruleIds.length === 0
     ? "_(LLM-driven, no static rule)_"
     : s.ruleIds.map((id) => `\`${id}\``).join(", ");
-  return `| ${ruleColumn} | \`${s.id}\` | ${fmtBound(s.precisionWilsonLowerBound)} | ${fmtBound(s.recallWilsonLowerBound)} | ${s.nSamples} | ${fmtDate(s.lastCalibrated)} |`;
+  return `| ${ruleColumn} | \`${s.id}\` | ${fmtBound(s.precisionWilsonLowerBound)} | ${fmtBound(s.recallWilsonLowerBound)} | ${s.nSamples ?? 0} | ${fmtDate(s.lastCalibrated)} |`;
 }
 
 function renderPerRuleSlo(rows: readonly SubAxisRecord[]): string {

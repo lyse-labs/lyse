@@ -151,7 +151,7 @@ describe("renderSarif", () => {
       const sarif = JSON.parse(renderSarif(sample));
       const rules: { id: string; properties: { precision?: number } }[] =
         sarif.runs[0].tool.driver.rules;
-      // tokens/dtcg-conformance has nSamples=0 — no precision should be emitted.
+      // tokens/dtcg-conformance has nSamples undefined/0 — no precision should be emitted.
       const dtcg = rules.find((r) => r.id === "tokens/dtcg-conformance");
       expect(dtcg?.properties.precision).toBeUndefined();
     });
@@ -169,14 +169,23 @@ describe("renderSarif", () => {
       expect(rule!.properties.precision!).toBeGreaterThan(0.89);
     });
 
-    it("emits Wilson LB for color/shadow (N>0 but thin — LB ~0.51)", () => {
+    it("omits precision for color (uncalibrated — null Wilson LB)", () => {
       const sarif = JSON.parse(renderSarif(sample));
       const rules: { id: string; properties: { precision?: number } }[] =
         sarif.runs[0].tool.driver.rules;
+      // tokens/no-hardcoded-color: real-world precision ~65%, but catalogue is null (uncalibrated).
       const colorRule = rules.find((r) => r.id === "tokens/no-hardcoded-color");
-      expect(colorRule?.properties.precision).toBeDefined();
+      expect(colorRule?.properties.precision).toBeUndefined();
+    });
+
+    it("emits Wilson LB for shadow (N>0 but thin — LB ~0.51)", () => {
+      const sarif = JSON.parse(renderSarif(sample));
+      const rules: { id: string; properties: { precision?: number } }[] =
+        sarif.runs[0].tool.driver.rules;
+      const shadowRule = rules.find((r) => r.id === "tokens/no-hardcoded-shadow");
+      expect(shadowRule?.properties.precision).toBeDefined();
       // precisionWilsonLowerBound ≈ 0.51, precisionMeasured = 1.0 — must not emit 1.0.
-      expect(colorRule!.properties.precision!).toBeLessThan(0.6);
+      expect(shadowRule!.properties.precision!).toBeLessThan(0.6);
     });
   });
 

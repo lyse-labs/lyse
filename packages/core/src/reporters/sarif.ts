@@ -15,7 +15,7 @@ const TOOL_INFO_URI = "https://github.com/lyse-labs/lyse";
 // (no in-repo measurement to stand behind).
 const PRECISION_BY_RULE_ID: ReadonlyMap<string, number> = new Map(
   SUB_AXES.flatMap((s) =>
-    s.nSamples === 0 || s.precisionWilsonLowerBound === null
+    (s.nSamples ?? 0) === 0 || s.precisionWilsonLowerBound === null
       ? []
       : s.ruleIds.map((id) => [id, s.precisionWilsonLowerBound!] as const),
   ),
