@@ -32,8 +32,41 @@ contrast-tokens/interactive-role-name — semantic, can't promote this way; the
 LLM-filter is their path = Solution 2). `tokens/no-hardcoded-shadow` is
 semantic-leaning (composite values) — excluded for now.
 
+## Critical refinement: tighten away the residual semantic FP first
+
+The "structural" experimental rules are NOT purely deterministic as written —
+each has a removable semantic FP that makes naive promotion (and a naive
+deterministic re-check) invalid:
+
+- `stories/props-documented` flags ANY component-with-a-story lacking
+  argTypes/args — including PROP-LESS components (a `<Divider/>` with a bare
+  story). "Documents no props" on a component that HAS no props is
+  technically-true-but-not-a-deficiency → a semantic FP. **Fix: consult the
+  inventory's `c.props` and fire only when the component HAS props but the story
+  documents none.** Removes the FP deterministically (the inventory already
+  carries props).
+- `stories/usage-examples` similarly: a trivially-simple component may not need
+  multiple examples. Tighten using available deterministic signals (e.g. only
+  components with ≥1 variant prop / ≥N props).
+- `ai-surface/component-manifest-completeness`: require a field only when it is
+  applicable (e.g. `examples` for a component that has props), not unconditionally.
+
+So step 0 PER RULE is: **tighten the rule to remove the semantic FP using
+deterministic context already available** (the component inventory's `props`/
+`variants`). Only AFTER tightening is the rule genuinely bounded, the
+adversarial validator honest, and the deterministic auto-label re-check
+non-circular (it confirms the tightening holds on real code — e.g. that
+inventory prop-extraction is reliable). A tightening reduces recall slightly
+(prop-less/trivial components no longer flagged) but that is correct — those
+were never real deficiencies.
+
+If a rule's semantic FP CANNOT be removed with deterministic context (the FP is
+genuinely judgment-based), it is NOT promotable via this path → it goes to
+Solution 2 (the LLM filter), recorded honestly.
+
 ## Mechanism (per rule)
 
+0. **Tighten** the rule to remove the deterministic-removable semantic FP (above).
 1. **Harden the adversarial validator** in the rule's oracle adapter: ≥ 35
    distinct POSITIVE cases (so a J=1 run yields precision AND recall Wilson
    LB ≥ 0.90 — Wilson LB at N=35, 0 errors ≈ 0.90) + a `falseFriends` array
