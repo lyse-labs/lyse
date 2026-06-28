@@ -83,6 +83,12 @@ function isVarReference(value: string): boolean {
  * Returns true when the bracket value is a CSS math function (calc/min/max/clamp).
  * These functions are owned by layout math, not the scale bypass concern.
  * e.g. w-[calc(100%-var(--sidebar))], h-[min(50vh,var(--max-h))]
+ *
+ * Known recall gap: a hardcoded literal embedded inside a math function
+ * (e.g. `max(var(--min),320px)`) is exempted whole, so the inner `320px` is
+ * NOT flagged. Accepted for now — the math wrapper signals deliberate layout
+ * intent. Recall against real code is bounded by this; promotion measurement
+ * treats it as a documented limitation, not a false negative to chase.
  */
 function isCssMathFunction(value: string): boolean {
   const v = value.trim();
