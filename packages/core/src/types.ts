@@ -222,7 +222,8 @@ export interface StoryEntry {
   /**
    * True when the story's default-export meta declares an `argTypes` object
    * (the canonical CSF prop-documentation signal). Presence only — the value
-   * is not inspected. Always set by `loadStories`; `false` when absent.
+   * is not inspected. Set by `loadStories` when the story parses (`false` when
+   * the meta has no `argTypes`); absent only when the file failed to parse.
    */
   hasArgTypes?: boolean;
 }
