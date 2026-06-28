@@ -543,6 +543,31 @@
       ]
     },
     {
+      "id": "a11y/contrast-tokens",
+      "axis": "a11y",
+      "defaultSeverity": "warning",
+      "shortDescription": "Static WCAG-AA contrast check on co-applied foreground/background color pairs",
+      "fullDescription": "For each CSS rule, CSS-in-JS block, or inline `style` object that declares BOTH a foreground (`color`) AND a solid background (`background-color` or a solid `background` shorthand), checks WCAG 2.x contrast on literal color values. Emits a warning when the contrast ratio falls below 4.5:1 (normal text) or 3.0:1 (large text: `font-size` ≥ 24px, or ≥ 18.66px with `font-weight` ≥ 700). Skips when: only one of color/background is present; either side is `transparent`, `currentColor`, or `inherit`; the background is a gradient, `url()`, or multi-layer; either value uses `var()` (the DTCG forward map is not available in RuleContext — token-reference pairs are not yet checked); or `contrastRatio` returns null (alpha channel present). Experimental / off-score — not yet calibrated on real repos.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/a11y-contrast-tokens.md",
+      "rationale": "Why it matters\n\nInsufficient text contrast is one of the most common WCAG 2.1 SC 1.4.3 failures (AA level). Design system tokens are the right place to enforce it: a DS that ships a co-applied color pair below threshold silently propagates that failure to every product built on it.\n\nThis rule operates statically — it inspects literal color pairs declared together in the same CSS rule, CSS-in-JS block, or inline style object. `var()` references are skipped: the DTCG forward map (token path → resolved value) is not available in RuleContext, so token-reference pairs are not yet checked.\n\nSkips are aggressive: any ambiguity (var(), alpha, gradient, multi-layer background) → no verdict. The rule never guesses.",
+      "examples": [
+        {
+          "good": ".btn { color: var(--color-fg); background: var(--color-bg-action); } /* 7.5:1 */",
+          "bad": ".btn { color: #999999; background: #ffffff; } /* 2.85:1 — fails AA */"
+        },
+        {
+          "good": ".heading { color: #111111; background: #ffffff; font-size: 24px; } /* 18.9:1 */",
+          "bad": ".caption { color: #aaaaaa; background: #ffffff; } /* 2.32:1 — fails AA */"
+        }
+      ],
+      "allowlist": [
+        "rules where only one of color/background is declared (can't check without both)",
+        "var() references that can't be resolved via the project's DTCG token map",
+        "backgrounds with alpha, gradients, url(), or multi-layer values",
+        "color: transparent / currentColor / inherit (not concrete colors)"
+      ]
+    },
+    {
       "id": "stories/coverage",
       "axis": "stories",
       "defaultSeverity": "warning",

@@ -23,6 +23,7 @@ export type BuiltInRuleId =
   | "naming/hook-prefix"
   | "naming/prop-camelcase"
   | "a11y/essentials"
+  | "a11y/contrast-tokens"
   | "stories/coverage"
   | "stories/variant-coverage"
   | "ai-surface/agents-md-quality"

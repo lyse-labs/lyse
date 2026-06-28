@@ -23,6 +23,7 @@ import { rule as rForcedColors } from "./a11y-forced-colors.js";
 import { rule as rHtmlLang } from "./a11y-html-lang.js";
 import { rule as rSemanticHtml } from "./a11y-semantic-html.js";
 import { rule as rRuntimeAxe } from "./a11y-runtime-axe.js";
+import { rule as rContrastTokens } from "./a11y-contrast-tokens.js";
 import { rule as rStorybook } from "./storybook-coverage.js";
 import { rule as rAgentsMdQuality } from "./ai-surface-agents-md-quality.js";
 import { rule as rComponentManifestJson } from "./ai-surface-component-manifest-json.js";
@@ -94,6 +95,7 @@ export const ruleObjects: Rule[] = [
   rHtmlLang,
   rSemanticHtml,
   rRuntimeAxe,
+  rContrastTokens,
   rStorybook,
   rAgentsMdQuality,
   rComponentManifestJson,

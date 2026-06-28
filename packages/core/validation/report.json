@@ -2,6 +2,19 @@
   "lyseVersion": "0.2.0-alpha.4",
   "scores": [
     {
+      "ruleId": "a11y/contrast-tokens",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 4,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 4
+    },
+    {
       "ruleId": "ai-governance/ai-content-live-region",
       "oracleKind": "construction",
       "matrix": {
