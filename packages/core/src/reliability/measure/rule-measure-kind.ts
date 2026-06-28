@@ -77,24 +77,28 @@ export const RULE_MEASURE_KIND: Record<string, MeasureKind> = {
   // versioning — detection (flag @deprecated tags without guidance in source)
   "versioning/deprecation-markers": "detection",
 
-  // ai-governance — structural (presence checks)
-  "ai-governance/ai-marker-component-present": "structural",
-  "ai-governance/ai-content-live-region": "structural",
-  "ai-governance/ai-loading-error-states": "structural",
-  "ai-governance/feedback-control-present": "structural",
-  "ai-governance/confidence-indicator-present": "structural",
-  "ai-governance/source-attribution-present": "structural",
-  "ai-governance/bot-identity-labeling": "structural",
-  "ai-governance/interaction-pattern-docs": "structural",
-  "ai-governance/draft-attribution": "structural",
-  "ai-governance/product-analytics": "structural",
-  "ai-governance/ai-tokens-reserved": "structural",
-  "ai-governance/ai-token-requires-marker": "structural",
-  "ai-governance/ai-marker-anti-patterns": "structural",
-  "ai-governance/disclaimer-present": "structural",
-  "ai-governance/explainability-affordance": "structural",
-  "ai-governance/human-control-affordances": "structural",
-  "ai-governance/value-gate-doc-present": "structural",
+  // ai-governance — detection. Every ai-governance rule detects an AI
+  // affordance by source heuristics (name vocabulary, ARIA proximity, locale
+  // phrase matching), NOT a deterministic file-presence/structure check.
+  // Whether a flagged component truly is an AI marker / disclaimer / etc. needs
+  // judgement, so these route to the LLM-judge + human packet, never auto-label.
+  "ai-governance/ai-marker-component-present": "detection",
+  "ai-governance/ai-content-live-region": "detection",
+  "ai-governance/ai-loading-error-states": "detection",
+  "ai-governance/feedback-control-present": "detection",
+  "ai-governance/confidence-indicator-present": "detection",
+  "ai-governance/source-attribution-present": "detection",
+  "ai-governance/bot-identity-labeling": "detection",
+  "ai-governance/interaction-pattern-docs": "detection",
+  "ai-governance/draft-attribution": "detection",
+  "ai-governance/product-analytics": "detection",
+  "ai-governance/ai-tokens-reserved": "detection",
+  "ai-governance/ai-token-requires-marker": "detection",
+  "ai-governance/ai-marker-anti-patterns": "detection",
+  "ai-governance/disclaimer-present": "detection",
+  "ai-governance/explainability-affordance": "detection",
+  "ai-governance/human-control-affordances": "detection",
+  "ai-governance/value-gate-doc-present": "detection",
   // ai-governance — detection (flag misuse pattern in source)
   "ai-governance/ai-token-misuse": "detection",
 };
