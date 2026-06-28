@@ -161,7 +161,7 @@ describe("autoLabel (structural)", () => {
       expect(label.verdict).toBe("tp");
     });
 
-    it("labels fp when llms.txt exists at root", () => {
+    it("routes to needs-verifier when llms.txt exists at root", () => {
       const repoDir = tempRepo();
       writeFileSync(join(repoDir, "llms.txt"), "# My DS\n\n> A design system.\n\n## Components\n\n- [Button](./button.md): Main button.\n");
       const label = autoLabel(
@@ -169,6 +169,7 @@ describe("autoLabel (structural)", () => {
         repoDir,
       );
       expect(label.verdict).toBe("fp");
+      expect(label.reason).toBe("needs-verifier");
     });
   });
 
@@ -182,7 +183,7 @@ describe("autoLabel (structural)", () => {
       expect(label.verdict).toBe("tp");
     });
 
-    it("labels fp when AGENTS.md exists at root", () => {
+    it("routes to needs-verifier when AGENTS.md exists at root", () => {
       const repoDir = tempRepo();
       writeFileSync(join(repoDir, "AGENTS.md"), "# Agents\n\nRun:\n\n```sh\npnpm test\n```\n\nExit codes: 0 = success.\n");
       const label = autoLabel(
@@ -190,6 +191,7 @@ describe("autoLabel (structural)", () => {
         repoDir,
       );
       expect(label.verdict).toBe("fp");
+      expect(label.reason).toBe("needs-verifier");
     });
   });
 

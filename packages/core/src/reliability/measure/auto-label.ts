@@ -166,8 +166,10 @@ function agentsMdAbsent(repoDir: string): boolean {
 
 // ── verifier table ───────────────────────────────────────────────────────────
 
-// Each entry: [verifier, tp-reason, fp-reason]
-type VerifierEntry = [Verifier, string, string];
+// Each entry: [verifier, tp-reason, fp-reason, qualityRule?]
+// qualityRule=true: file present does NOT prove fp — quality verdict cannot be
+// independently verified cheaply, so route to needs-verifier instead.
+type VerifierEntry = [Verifier, string, string, true?];
 
 const VERIFIERS: Record<string, VerifierEntry> = {
   "ai-surface/component-manifest-json": [
@@ -178,12 +180,14 @@ const VERIFIERS: Record<string, VerifierEntry> = {
   "ai-surface/agents-md-quality": [
     agentsMdAbsent,
     "presence-check: AGENTS.md absent",
-    "presence-check: AGENTS.md found (rule fired incorrectly on absent-check case)",
+    "needs-verifier",
+    true,
   ],
   "ai-surface/llms-txt-structure": [
     llmsTxtAbsent,
     "presence-check: llms.txt absent",
-    "presence-check: llms.txt found (rule fired incorrectly on absent-check case)",
+    "needs-verifier",
+    true,
   ],
   "ai-surface/mcp-config-present": [
     mcpConfigAbsent,
@@ -222,9 +226,9 @@ export function autoLabel(row: FindingRow, repoDir: string): Label {
     return { verdict: "fp", source: "auto", reason: "needs-verifier" };
   }
 
-  const [verifier, tpReason, fpReason] = entry;
+  const [verifier, tpReason, fpReason, qualityRule] = entry;
   const absent = verifier(repoDir);
-  return absent
-    ? { verdict: "tp", source: "auto", reason: tpReason }
-    : { verdict: "fp", source: "auto", reason: fpReason };
+  if (absent) return { verdict: "tp", source: "auto", reason: tpReason };
+  if (qualityRule) return { verdict: "fp", source: "auto", reason: "needs-verifier" };
+  return { verdict: "fp", source: "auto", reason: fpReason };
 }
