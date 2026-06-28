@@ -36,6 +36,7 @@ const EXPECTED_IDS = [
   "stories/coverage",
   "ai-surface/agents-md-quality",
   "ai-surface/component-manifest-json",
+  "ai-surface/component-manifest-completeness",
   "ai-surface/ds-index-exported",
   "ai-surface/mcp-config-present",
   "ai-surface/llms-txt-structure",

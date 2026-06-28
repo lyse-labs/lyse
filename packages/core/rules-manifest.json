@@ -604,6 +604,27 @@
       ]
     },
     {
+      "id": "ai-surface/component-manifest-completeness",
+      "axis": "ai-surface",
+      "defaultSeverity": "info",
+      "shortDescription": "Component manifest entry completeness (props / variants / examples)",
+      "fullDescription": "For each component entry in a lyse-style component manifest (`components.json` / `lyse.components.json`), checks that the entry documents `props` (non-empty array), `examples` (non-empty array), and — when `variants` is present — that it is not an empty array. Silent when no manifest exists (the `ai-surface/component-manifest-json` rule owns the absence signal). Array-form manifests only (object-form manifests are structure-only in lyse convention).",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-surface-component-manifest-completeness.md",
+      "rationale": "Why it matters\n\nA component manifest that lists only `name` and `sourceFile` tells MCP servers WHERE a component lives but not WHAT it does. Agents still have to read the source file to discover props, variants, and usage examples — negating the 5× cost reduction the manifest is meant to deliver.\n\nThis rule closes the gap: a complete entry lets an MCP tool answer \"how do I use Button?\" with a 50-token lookup instead of a 500-token file read.\n\nSeverity is intentionally informational — the manifest works for discovery without completeness data; completeness is a quality improvement, not a correctness issue.",
+      "examples": [
+        {
+          "good": "{\"components\":[{\"name\":\"Button\",\"sourceFile\":\"src/button.tsx\",\"props\":[{\"name\":\"variant\",\"type\":\"string\"}],\"variants\":[\"primary\",\"secondary\"],\"examples\":[\"<Button variant=\\\"primary\\\">Save</Button>\"]}]}",
+          "bad": "{\"components\":[{\"name\":\"Button\",\"sourceFile\":\"src/button.tsx\"}]}"
+        }
+      ],
+      "allowlist": [
+        "shadcn/ui `components.json` (CLI config) — detected via `$schema` or `aliases` and skipped",
+        "manifests with no `components` array (or empty array) — skipped silently",
+        "object-form manifests (keyed by component name) — not checked for completeness (structure-only convention)",
+        "entries without a `name` field — skipped (manifest-json owns the validation)"
+      ]
+    },
+    {
       "id": "ai-surface/ds-index-exported",
       "axis": "ai-surface",
       "defaultSeverity": "warning",

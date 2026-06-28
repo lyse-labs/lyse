@@ -4,7 +4,7 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**65 sub-axes total** — stable: 52 · experimental: 13 · disabled: 0
+**66 sub-axes total** — stable: 52 · experimental: 14 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
@@ -51,6 +51,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `ai-surface.agent-instruction-files` | `ai-surface` | Agent instruction files (Cursor / Claude) | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-surface.agents-md-quality` | `ai-surface` | AGENTS.md quality | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-surface.changelog-present` | `ai-surface` | Structured CHANGELOG (versioning) | **stable** | 0.901 | 0.904 | ✅ |
+| `ai-surface.component-manifest-completeness` | `ai-surface` | Component manifest completeness (props/variants/examples) | **experimental** | 0.439 | 0.439 | — |
 | `ai-surface.component-manifest-json` | `ai-surface` | Component manifest JSON | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-surface.deprecation-markers` | `ai-surface` | Deprecation marker quality (@deprecated) | **stable** | 0.901 | 0.904 | ✅ |
 | `ai-surface.ds-index-exported` | `ai-surface` | DS index export | **stable** | 0.901 | 0.901 | ✅ |

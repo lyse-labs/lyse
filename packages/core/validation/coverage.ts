@@ -40,6 +40,7 @@ export const ADDRESSABLE_PENDING: Record<string, string> = {
   "tokens/description-coverage": "construction: info-only rule — absence of $description emits info, not warning; cannot produce oracle TPs",
   "components/doc-comments": "construction: info-only rule — missing JSDoc emits info, not warning; cannot produce oracle TPs",
   "ai-governance/ai-tokens-reserved": "construction: info-only inventory rule — not validatable by the recall/mutation oracle (emits no violation severity)",
+  "ai-surface/component-manifest-completeness": "construction: info-only rule — missing props/variants/examples emits info, not warning; cannot produce oracle TPs via ruleFlagged",
 };
 
 /**
