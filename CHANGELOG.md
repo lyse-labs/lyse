@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Internal
+
+- Added a measurement harness (`pnpm measure:rules`) that scores rule precision against a local clone of the lyse-bench tier-1 corpus: it runs the real audit pipeline, auto-labels structural (presence/structure) rules deterministically, and LLM-judges detection rules via the agent-CLI connector (no API key). First-pass report at `docs/superpowers/measurement-report.md`. Dev tooling only — no change to published behavior or the Health Score.
+
 ### Added
 
 - New experimental socle rule (B3 sub-project): `components/standardized-variant-props` — flags a component that encodes mutually-exclusive visual variants as two or more separate `boolean` props (`primary`/`secondary`/`danger`/…, the "boolean explosion" antipattern) instead of a single `variant` union. Only a curated style-modifier vocabulary typed `boolean` counts (generic state booleans are never matched), and the rule fires only at ≥2. Orthogonal to `components/contracts-strictness` (which types an existing `variant` prop). `experimental` / `contributesToScore: false` — no Health Score change; ships unmeasured (real-world precision pending a harvest measurement).
