@@ -26,6 +26,8 @@ export type BuiltInRuleId =
   | "a11y/contrast-tokens"
   | "stories/coverage"
   | "stories/variant-coverage"
+  | "stories/props-documented"
+  | "stories/usage-examples"
   | "ai-surface/agents-md-quality"
   | "ai-surface/component-manifest-json"
   | "ai-surface/ds-index-exported"

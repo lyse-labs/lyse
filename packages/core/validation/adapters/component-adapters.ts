@@ -1009,6 +1009,41 @@ const propsDocumentedAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
+const usageExamplesAdapter: OracleAdapter = {
+  ruleId: "stories/usage-examples",
+  oracleKind: "construction",
+  cleanFixture: () => ({
+    "package.json": PKG_CONSUMER,
+    "src/App.tsx": PROPS_DOC_APP_TSX,
+    "src/Button.stories.tsx": [
+      'import { Button } from "@acme/ui";',
+      'export default { title: "Button", component: Button };',
+      "export const Primary = {};",
+      "export const Secondary = {};",
+    ].join("\n"),
+    "src/Card.stories.tsx": [
+      'import { Card } from "@acme/ui";',
+      'export default { title: "Card", component: Card };',
+      "export const Default = {};",
+      "export const Elevated = {};",
+    ].join("\n"),
+  }),
+  mutations: [
+    {
+      name: "button-story-single-bare-export",
+      apply: (f): FixtureFiles => ({
+        ...f,
+        "src/Button.stories.tsx": [
+          'import { Button } from "@acme/ui";',
+          'export default { title: "Button", component: Button };',
+          "export const Primary = {};",
+        ].join("\n"),
+      }),
+    },
+  ],
+  metamorphic: [],
+};
+
 export const componentAdapters: OracleAdapter[] = [
   svgViewboxAdapter,
   iconDecorativeAriaAdapter,
@@ -1018,6 +1053,7 @@ export const componentAdapters: OracleAdapter[] = [
   namingHookPrefixAdapter,
   storiesCoverageAdapter,
   propsDocumentedAdapter,
+  usageExamplesAdapter,
   contractsStrictnessAdapter,
   noArbitraryTailwindAdapter,
   noStyleEscapeHatchAdapter,

@@ -4,7 +4,7 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**71 sub-axes total** — stable: 52 · experimental: 19 · disabled: 0
+**72 sub-axes total** — stable: 52 · experimental: 20 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
@@ -53,6 +53,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `components.svg-viewbox` | `components` | Inline SVG viewBox (scalable icons) | **stable** | 0.901 | 0.904 | ✅ |
 | `stories.coverage` | `stories` | Storybook coverage | **stable** | 0.901 | 0.901 | ✅ |
 | `stories.props-documented` | `stories` | Story documents component props | **experimental** | — | — | — |
+| `stories.usage-examples` | `stories` | Story shows usage examples | **experimental** | — | — | — |
 | `ai-surface.agent-instruction-files` | `ai-surface` | Agent instruction files (Cursor / Claude) | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-surface.agents-md-quality` | `ai-surface` | AGENTS.md quality | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-surface.changelog-present` | `ai-surface` | Structured CHANGELOG (versioning) | **stable** | 0.901 | 0.904 | ✅ |
