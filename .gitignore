@@ -56,3 +56,6 @@ packages/core/reports/
 # Wrangler / Miniflare local dev state (regenerable)
 .wrangler/
 .color-harvest/
+
+# Measurement campaign — cloned benchmark corpus (pinned SHAs, reproducible)
+.bench-corpus/
