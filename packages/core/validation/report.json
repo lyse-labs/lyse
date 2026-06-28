@@ -353,6 +353,19 @@
       "mutationsRun": 2
     },
     {
+      "ruleId": "components/standardized-variant-props",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 1
+    },
+    {
       "ruleId": "components/svg-viewbox",
       "oracleKind": "construction",
       "matrix": {

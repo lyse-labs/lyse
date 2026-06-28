@@ -1044,6 +1044,31 @@ const usageExamplesAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
+const standardizedVariantPropsAdapter: OracleAdapter = {
+  ruleId: "components/standardized-variant-props",
+  oracleKind: "construction",
+  cleanFixture: () => ({
+    "package.json": PKG_SIMPLE,
+    "src/Button.tsx": [
+      'interface ButtonProps { variant?: "primary" | "secondary" | "danger"; disabled?: boolean }',
+      "export function Button(props: ButtonProps) { return <button />; }",
+    ].join("\n"),
+  }),
+  mutations: [
+    {
+      name: "boolean-variant-explosion",
+      apply: (f): FixtureFiles => ({
+        ...f,
+        "src/Button.tsx": [
+          "interface ButtonProps { primary?: boolean; secondary?: boolean; danger?: boolean }",
+          "export function Button(props: ButtonProps) { return <button />; }",
+        ].join("\n"),
+      }),
+    },
+  ],
+  metamorphic: [],
+};
+
 export const componentAdapters: OracleAdapter[] = [
   svgViewboxAdapter,
   iconDecorativeAriaAdapter,
@@ -1057,4 +1082,5 @@ export const componentAdapters: OracleAdapter[] = [
   contractsStrictnessAdapter,
   noArbitraryTailwindAdapter,
   noStyleEscapeHatchAdapter,
+  standardizedVariantPropsAdapter,
 ];

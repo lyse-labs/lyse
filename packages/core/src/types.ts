@@ -19,6 +19,7 @@ export type BuiltInRuleId =
   | "tokens/deprecated-token-usage"
   | "components/no-native-shadows"
   | "components/contracts-strictness"
+  | "components/standardized-variant-props"
   | "naming/component-pascalcase"
   | "naming/hook-prefix"
   | "naming/prop-camelcase"

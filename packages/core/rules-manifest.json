@@ -315,6 +315,26 @@
       ]
     },
     {
+      "id": "components/standardized-variant-props",
+      "axis": "components",
+      "defaultSeverity": "warning",
+      "shortDescription": "Variants encoded as separate boolean props",
+      "fullDescription": "Flags an exported PascalCase component that declares two or more mutually-exclusive visual-variant flags (primary, secondary, danger, ghost, outline, …) as separate `boolean` props — the 'boolean explosion' antipattern. Such props permit nonsensical combinations (`<Button primary danger>`) and give an AI agent no enumerable vocabulary; the standard is a single `variant` string-literal union. Only names in a curated style-modifier vocabulary, typed `boolean`, count — generic state booleans (`disabled`, `loading`, `fullWidth`, …) are never matched. Orthogonal to `components/contracts-strictness`, which checks the type of an existing `variant` prop.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/components-standardized-variant-props.md",
+      "rationale": "Why it matters\n\nA component with `primary`, `secondary`, and `danger` boolean props lets a caller set several at once and offers an AI agent no closed set of valid values. One `variant` union (`\"primary\" | \"secondary\" | \"danger\"`) is mutually exclusive by construction and self-documenting.\n\nA single style boolean (e.g. just `primary`) is a common, acceptable shorthand, so the rule fires only at two or more.\n\nExperimental and unmeasured: real-world precision is pending a harvest measurement; the rule does not contribute to the Health Score.",
+      "examples": [
+        {
+          "good": "interface ButtonProps { variant?: \"primary\" | \"secondary\" | \"danger\"; disabled?: boolean }",
+          "bad": "interface ButtonProps { primary?: boolean; secondary?: boolean; danger?: boolean }"
+        }
+      ],
+      "allowlist": [
+        "generic state booleans (disabled, loading, active, selected, fullWidth, rounded, …) — not in the style-modifier vocabulary",
+        "a single style-modifier boolean (below the >=2 threshold)",
+        "style-modifier names that are not typed `boolean`"
+      ]
+    },
+    {
       "id": "components/doc-comments",
       "axis": "components",
       "defaultSeverity": "info",
