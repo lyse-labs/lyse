@@ -4,6 +4,10 @@ export interface RuleMeasurement {
   ruleId: string;
   kind: MeasureKind;
   nSamples: number;
+  /** Total findings harvested before the detection sampling cap was applied.
+   * Populated only for detection rules when a cap was applied (nTotal > nSamples).
+   * Absent for structural/render-only rules. */
+  nTotal?: number;
   precisionMeasured: number | null;
   precisionWilsonLowerBound: number | null;
   recallSynthetic: number | null;
@@ -52,19 +56,34 @@ export function buildReport(perRule: RuleMeasurement[]): { md: string; json: Rul
     byVerdict.get(m.verdict)!.push(m);
   }
 
+  const cappedRules = resolved.filter(
+    (m) => m.nTotal !== undefined && m.nTotal > m.nSamples,
+  );
+
   const lines: string[] = ["# Measurement report", ""];
+
+  if (cappedRules.length > 0) {
+    lines.push(
+      "> **Sampling cap applied**: detection precision was measured on a capped sample for " +
+        `${cappedRules.length} rule(s). ` +
+        "The `n` column shows findings judged; `nTotal` shows total harvested. " +
+        "Precision estimates are based on the sampled subset only.",
+    );
+    lines.push("");
+  }
 
   for (const verdict of VERDICT_ORDER) {
     const group = byVerdict.get(verdict)!;
     if (group.length === 0) continue;
     lines.push(`## ${verdict} (${group.length})`);
     lines.push("");
-    lines.push("| ruleId | kind | n | precLB | recallSyn | labelSource |");
-    lines.push("|--------|------|---|--------|-----------|-------------|");
+    lines.push("| ruleId | kind | n | nTotal | precLB | recallSyn | labelSource |");
+    lines.push("|--------|------|---|--------|--------|-----------|-------------|");
     for (const m of group.sort((a, b) => a.ruleId.localeCompare(b.ruleId))) {
       const precLB = m.precisionWilsonLowerBound !== null ? m.precisionWilsonLowerBound.toFixed(3) : "—";
       const rec = m.recallSynthetic !== null ? m.recallSynthetic.toFixed(3) : "—";
-      lines.push(`| ${m.ruleId} | ${m.kind} | ${m.nSamples} | ${precLB} | ${rec} | ${m.labelSource} |`);
+      const nTotal = m.nTotal !== undefined ? String(m.nTotal) : "—";
+      lines.push(`| ${m.ruleId} | ${m.kind} | ${m.nSamples} | ${nTotal} | ${precLB} | ${rec} | ${m.labelSource} |`);
     }
     lines.push("");
   }
