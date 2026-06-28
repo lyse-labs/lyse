@@ -10,7 +10,7 @@ function ctxWith(byTitle: Map<string, StoryEntry>, overrides: Partial<RuleContex
     repoRoot: "/r",
     tokens: null,
     componentsModule: "@acme/ui",
-    componentInventory: [{ name: "Button", module: "@acme/ui", usageCount: 5 }],
+    componentInventory: [{ name: "Button", module: "@acme/ui", usageCount: 5, props: [{ name: "variant" }] }],
     storyIndex,
     excludePaths: [],
     ...overrides,
@@ -31,7 +31,7 @@ describe("rule stories/props-documented", () => {
     expect(res.findings).toHaveLength(0);
   });
 
-  it("flags a story with neither argTypes nor any args", async () => {
+  it("flags a story with neither argTypes nor any args when component has props", async () => {
     const ctx = ctxWith(new Map([["Button", { id: "b", importPath: "src/Button.stories.tsx", hasArgTypes: false, stories: [{ name: "Primary" }] }]]));
     const res = await rule.evaluate(ctx, EMPTY);
     expect(res.opportunities).toBe(1);
@@ -39,7 +39,7 @@ describe("rule stories/props-documented", () => {
   });
 
   it("does not count an inventory component that has no story", async () => {
-    const ctx = ctxWith(new Map(), { componentInventory: [{ name: "Ghost", module: "@acme/ui", usageCount: 2 }] });
+    const ctx = ctxWith(new Map(), { componentInventory: [{ name: "Ghost", module: "@acme/ui", usageCount: 2, props: [{ name: "size" }] }] });
     const res = await rule.evaluate(ctx, EMPTY);
     expect(res.opportunities).toBe(0);
     expect(res.findings).toHaveLength(0);
@@ -55,6 +55,33 @@ describe("rule stories/props-documented", () => {
     const ctx = ctxWith(new Map([["Button", { id: "b", importPath: "x", hasArgTypes: false, stories: [{ name: "Primary" }] }]]), { dsSelfMode: true });
     const res = await rule.evaluate(ctx, EMPTY);
     expect(res.opportunities).toBe(0);
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("does NOT flag a prop-less component (no props to document)", async () => {
+    const ctx = ctxWith(
+      new Map([["Divider", { id: "d", importPath: "x", hasArgTypes: false, stories: [{ name: "Default" }] }]]),
+      { componentInventory: [{ name: "Divider", module: "@acme/ui", usageCount: 2, props: [] }] },
+    );
+    const res = await rule.evaluate(ctx, EMPTY);
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("flags a component WITH props whose story documents none", async () => {
+    const ctx = ctxWith(
+      new Map([["Button", { id: "b", importPath: "x", hasArgTypes: false, stories: [{ name: "Primary" }] }]]),
+      { componentInventory: [{ name: "Button", module: "@acme/ui", usageCount: 5, props: [{ name: "variant" }] }] },
+    );
+    const res = await rule.evaluate(ctx, EMPTY);
+    expect(res.findings).toHaveLength(1);
+  });
+
+  it("does NOT flag when the component's props are unknown (not parsed)", async () => {
+    const ctx = ctxWith(
+      new Map([["Button", { id: "b", importPath: "x", hasArgTypes: false, stories: [{ name: "Primary" }] }]]),
+      { componentInventory: [{ name: "Button", module: "@acme/ui", usageCount: 5 }] },
+    );
+    const res = await rule.evaluate(ctx, EMPTY);
     expect(res.findings).toHaveLength(0);
   });
 });
