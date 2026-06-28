@@ -120,6 +120,22 @@ describe("judgeFindings", () => {
     expect(label!.verdict).toBe("uncertain");
     expect(label!.source).toBe("llm-provisional");
   });
+
+  it("batches across files into ceil(N/BATCH) connector calls, not one per file", async () => {
+    let calls = 0;
+    const fake = {
+      complete: async (msgs: { role: string; content: string }[]) => {
+        calls++;
+        const idxs = [...msgs[0]!.content.matchAll(/^(\d+) —/gm)].map((m) => Number(m[1]));
+        return { text: JSON.stringify({ verdicts: idxs.map((i) => ({ index: i, verdict: "violation", confidence: 0.95 })) }) };
+      },
+    } as any;
+    const rows = Array.from({ length: 25 }, (_, i) => ({ ruleId: "tokens/no-hardcoded-color", repo: "r", file: `f${i}.tsx`, line: 1, snippet: `x${i}`, fileType: ".tsx", confidence: "high" as const }));
+    const out = await judgeFindings(rows, { connector: fake, confThreshold: 0.7 });
+    expect(calls).toBe(2);
+    expect(out.size).toBe(25);
+    for (const [, label] of out) expect(label.verdict).toBe("tp");
+  });
 });
 
 describe("packetFor", () => {

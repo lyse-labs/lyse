@@ -51,6 +51,8 @@ function buildJudgePrompt(rows: FindingRow[]): string {
   ].join("\n");
 }
 
+const BATCH_SIZE = 20;
+
 const UNCERTAIN_FALLBACK: JudgeLabel = {
   verdict: "uncertain",
   source: "llm-provisional",
@@ -85,28 +87,33 @@ export async function judgeFindings(
 
   const connector: ConnectorClient = opts?.connector ?? resolveConnector({}, undefined);
 
-  const byFile = new Map<string, FindingRow[]>();
-  for (const row of rows) {
-    if (!byFile.has(row.file)) byFile.set(row.file, []);
-    byFile.get(row.file)!.push(row);
-  }
+  const sorted = [...rows].sort((a, b) => {
+    const byRule = a.ruleId.localeCompare(b.ruleId);
+    if (byRule !== 0) return byRule;
+    const byRepo = a.repo.localeCompare(b.repo);
+    if (byRepo !== 0) return byRepo;
+    const byFile = a.file.localeCompare(b.file);
+    if (byFile !== 0) return byFile;
+    return a.line - b.line;
+  });
 
-  for (const [, fileRows] of [...byFile.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-    const prompt = buildJudgePrompt(fileRows);
+  for (let i = 0; i < sorted.length; i += BATCH_SIZE) {
+    const chunk = sorted.slice(i, i + BATCH_SIZE);
+    const prompt = buildJudgePrompt(chunk);
 
     let text: string;
     try {
       const res = await connector.complete([{ role: "user", content: prompt }]);
       text = res.text;
     } catch {
-      for (const row of fileRows) {
+      for (const row of chunk) {
         result.set(row, { ...UNCERTAIN_FALLBACK });
       }
       continue;
     }
 
     if (text === "") {
-      for (const row of fileRows) {
+      for (const row of chunk) {
         result.set(row, { ...UNCERTAIN_FALLBACK });
       }
       continue;
@@ -120,7 +127,7 @@ export async function judgeFindings(
       }
       parsed = raw;
     } catch {
-      for (const row of fileRows) {
+      for (const row of chunk) {
         result.set(row, { ...UNCERTAIN_FALLBACK });
       }
       continue;
@@ -133,8 +140,8 @@ export async function judgeFindings(
       }
     }
 
-    fileRows.forEach((row, i) => {
-      const v = verdictMap.get(i);
+    chunk.forEach((row, idx) => {
+      const v = verdictMap.get(idx);
       if (v === undefined) {
         result.set(row, { ...UNCERTAIN_FALLBACK });
       } else {
