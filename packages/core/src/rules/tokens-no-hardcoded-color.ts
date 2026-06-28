@@ -7,6 +7,7 @@ import { adaptOldCodemodResult } from "./_codemod-adapter.js";
 import { createLyseRule } from "./_rule-module.js";
 import { getTsMorphProject } from "../parsers/ts-morph-project.js";
 import { makeFixGroup } from "./_fix-group.js";
+import { classifyColorRole } from "./_color-ast-role.js";
 
 // Allow one level of nested parens so hsl(var(--token)) is captured whole.
 // Pattern: (?:[^)(]|\([^)]*\))* matches any mix of non-paren chars and
@@ -521,6 +522,21 @@ const classifyConfidence: NonNullable<Rule["classifyConfidence"]> = (
   finding: Finding,
   ctx: ClassifyContext,
 ): Confidence => {
+  // AST role: functional roles are not drift — grade them low.
+  // Only demote for the 3 genuine functional roles; unknown/styling/parse-failure
+  // keep existing logic (recall guardrail — never hide real drift).
+  if (ctx.repoRoot) {
+    const role = classifyColorRole({
+      repoRoot: ctx.repoRoot,
+      file: finding.location.file,
+      line: finding.location.line,
+      column: finding.location.column ?? 1,
+    });
+    if (role === "canvas" || role === "default-prop" || role === "svg-art") {
+      return "low";
+    }
+  }
+
   // Extract color value from message — format: "Hardcoded color value: <value>"
   const colorMatch = finding.message.match(/:\s*(.+)$/);
   const raw = colorMatch?.[1]?.trim() ?? "";
