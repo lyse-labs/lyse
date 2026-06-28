@@ -217,6 +217,12 @@ export interface StoryEntry {
    * Absent when no exports were extracted (complex factory patterns, parse errors).
    */
   stories?: StoryExport[];
+  /**
+   * True when the story's default-export meta declares an `argTypes` object
+   * (the canonical CSF prop-documentation signal). Presence only — the value
+   * is not inspected. Always set by `loadStories`; `false` when absent.
+   */
+  hasArgTypes?: boolean;
 }
 
 export interface StoryIndex {

@@ -266,3 +266,29 @@ export const Secondary = { args: { variant: "secondary" } };
     expect(entry!.stories).toBeUndefined();
   });
 });
+
+describe("loadStories — hasArgTypes", () => {
+  it("sets hasArgTypes true when the meta declares argTypes", async () => {
+    const root = makeTempDir();
+    writeSrcFile(
+      root,
+      "Button.stories.tsx",
+      `export default { title: "Button", component: Button, argTypes: { variant: { control: "select" } } };
+export const Primary = {};`
+    );
+    const idx = await loadStories(root);
+    expect(idx!.byTitle.get("Button")!.hasArgTypes).toBe(true);
+  });
+
+  it("sets hasArgTypes false when the meta has no argTypes", async () => {
+    const root = makeTempDir();
+    writeSrcFile(
+      root,
+      "Card.stories.tsx",
+      `export default { title: "Card", component: Card };
+export const Default = {};`
+    );
+    const idx = await loadStories(root);
+    expect(idx!.byTitle.get("Card")!.hasArgTypes).toBe(false);
+  });
+});

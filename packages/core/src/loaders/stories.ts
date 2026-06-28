@@ -68,7 +68,7 @@ function extractArgs(obj: t.ObjectExpression): Record<string, string | number | 
  * are skipped — the function call's args are too varied to safely extract.
  * Cross-file variable references in `component:` are not resolved (v0.2).
  */
-function parseStoryFile(source: string): { componentName?: string; stories: StoryExport[] } | undefined {
+function parseStoryFile(source: string): { componentName?: string; stories: StoryExport[]; hasArgTypes: boolean } | undefined {
   let ast: t.File;
   try {
     ast = parse(source, {
@@ -81,6 +81,7 @@ function parseStoryFile(source: string): { componentName?: string; stories: Stor
   }
 
   let componentName: string | undefined;
+  let hasArgTypes = false;
   const stories: StoryExport[] = [];
 
   try {
@@ -101,6 +102,9 @@ function parseStoryFile(source: string): { componentName?: string; stories: Stor
             if (objProp.value.type === "Identifier") {
               componentName = (objProp.value as t.Identifier).name;
             }
+          }
+          if (keyName === "argTypes") {
+            hasArgTypes = true;
           }
         }
       },
@@ -155,6 +159,7 @@ function parseStoryFile(source: string): { componentName?: string; stories: Stor
   return {
     ...(componentName !== undefined && { componentName }),
     stories,
+    hasArgTypes,
   };
 }
 
@@ -190,6 +195,7 @@ export async function loadStories(root: string): Promise<StoryIndex | null> {
             if (parsed.stories.length > 0) {
               storyEntry.stories = parsed.stories;
             }
+            storyEntry.hasArgTypes = parsed.hasArgTypes;
           }
         }
 
@@ -225,6 +231,7 @@ export async function loadStories(root: string): Promise<StoryIndex | null> {
       if (parsed.stories.length > 0) {
         storyEntry.stories = parsed.stories;
       }
+      storyEntry.hasArgTypes = parsed.hasArgTypes;
     }
 
     byTitle.set(leaf, storyEntry);
