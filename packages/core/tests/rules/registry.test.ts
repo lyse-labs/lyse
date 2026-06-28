@@ -59,6 +59,7 @@ const EXPECTED_IDS = [
   "ai-governance/ai-token-misuse",
   "ai-governance/interaction-pattern-docs",
   "ai-governance/draft-attribution",
+  "components/no-arbitrary-tailwind",
 ];
 
 describe("rules/registry", () => {

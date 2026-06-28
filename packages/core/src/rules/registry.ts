@@ -64,6 +64,7 @@ import { rule as rInteractionPatternDocs } from "./ai-governance-interaction-pat
 import { rule as rDraftAttribution } from "./ai-governance-draft-attribution.js";
 import { rule as rProductAnalytics } from "./ai-governance-product-analytics.js";
 import { rule as rRenderedTokenFidelity } from "./tokens-rendered-token-fidelity.js";
+import { rule as rNoArbitraryTailwind } from "./components-no-arbitrary-tailwind.js";
 import type { Rule } from "../types.js";
 
 export const ruleObjects: Rule[] = [
@@ -133,6 +134,7 @@ export const ruleObjects: Rule[] = [
   rDraftAttribution,
   rProductAnalytics,
   rRenderedTokenFidelity,
+  rNoArbitraryTailwind,
 ];
 
 export const ruleMap = new Map<string, Rule>(ruleObjects.map((r) => [r.id, r]));

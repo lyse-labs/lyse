@@ -859,6 +859,66 @@ export const contractsStrictnessAdapter: OracleAdapter = {
   falseFriends: FALSE_FRIENDS_CS,
 };
 
+const noArbitraryTailwindAdapter: OracleAdapter = {
+  ruleId: "components/no-arbitrary-tailwind",
+  oracleKind: "construction",
+  cleanFixture: () => ({
+    "package.json": PKG_SIMPLE,
+    "src/Button.tsx": 'export const Button = () => <div className="p-4 text-sm rounded-md" />;',
+  }),
+  mutations: [
+    {
+      name: "arbitrary-spacing",
+      apply: (f): FixtureFiles => ({
+        ...f,
+        "src/Button.tsx": 'export const Button = () => <div className="p-[12px]" />;',
+      }),
+    },
+    {
+      name: "arbitrary-font-size",
+      apply: (f): FixtureFiles => ({
+        ...f,
+        "src/Button.tsx": 'export const Button = () => <div className="text-[14px]" />;',
+      }),
+    },
+    {
+      name: "arbitrary-width",
+      apply: (f): FixtureFiles => ({
+        ...f,
+        "src/Button.tsx": 'export const Button = () => <div className="w-[37px]" />;',
+      }),
+    },
+  ],
+  metamorphic: [
+    {
+      // Two different non-color arbitrary values must both flag (same prefix, different value)
+      name: "different-non-color-arbitrary-values-both-flag",
+      a: {
+        "package.json": PKG_SIMPLE,
+        "src/T.tsx": 'export const T = () => <div className="p-[12px]" />;',
+      },
+      b: {
+        "package.json": PKG_SIMPLE,
+        "src/T.tsx": 'export const T = () => <div className="p-[0.75rem]" />;',
+      },
+      expectViolation: true,
+    },
+    {
+      // Color bracket and var() bracket must BOTH be safe (not flagged)
+      name: "color-bracket-and-var-bracket-both-clean",
+      a: {
+        "package.json": PKG_SIMPLE,
+        "src/T.tsx": 'export const T = () => <div className="text-[#111]" />;',
+      },
+      b: {
+        "package.json": PKG_SIMPLE,
+        "src/T.tsx": 'export const T = () => <div className="w-[var(--sidebar)]" />;',
+      },
+      expectViolation: false,
+    },
+  ],
+};
+
 export const componentAdapters: OracleAdapter[] = [
   svgViewboxAdapter,
   iconDecorativeAriaAdapter,
@@ -868,4 +928,5 @@ export const componentAdapters: OracleAdapter[] = [
   namingHookPrefixAdapter,
   storiesCoverageAdapter,
   contractsStrictnessAdapter,
+  noArbitraryTailwindAdapter,
 ];

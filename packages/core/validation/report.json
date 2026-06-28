@@ -275,6 +275,19 @@
       "mutationsRun": 2
     },
     {
+      "ruleId": "components/no-arbitrary-tailwind",
+      "oracleKind": "construction",
+      "matrix": {
+        "tp": 3,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0
+      },
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
+      "mutationsRun": 3
+    },
+    {
       "ruleId": "components/no-icon-fonts",
       "oracleKind": "construction",
       "matrix": {

@@ -1481,6 +1481,30 @@
         }
       ],
       "allowlist": []
+    },
+    {
+      "id": "components/no-arbitrary-tailwind",
+      "axis": "components",
+      "defaultSeverity": "warning",
+      "shortDescription": "Disallow non-color arbitrary Tailwind values",
+      "fullDescription": "Arbitrary Tailwind utilities (e.g. `p-[12px]`, `text-[14px]`, `w-[37px]`) bypass the configured design scale. These literal bracket values embed hardcoded spacing, sizing, or typography outside any token contract — making token-based refactors miss them silently. Color bracket values (e.g. `bg-[#fff]`) are handled by `tokens/no-hardcoded-color`.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/components-no-arbitrary-tailwind.md",
+      "rationale": "Why it matters\n\nArbitrary Tailwind values short-circuit the design system contract the same way inline styles do. A spacing change (4→5px base) or a typography scale update won't catch `text-[14px]` — the drift is invisible to token-based tooling.\n\nThe color variant (`bg-[#fff]`) is already handled by `tokens/no-hardcoded-color`. This rule covers the non-color remainder: spacing, sizing, typography, layout, and any other literal scale bypass.",
+      "examples": [
+        {
+          "good": "<div className=\"p-4 text-sm\">",
+          "bad": "<div className=\"p-[12px] text-[14px]\">"
+        },
+        {
+          "good": "<div className=\"w-full\">",
+          "bad": "<div className=\"w-[37px]\">"
+        },
+        {
+          "good": "<div className=\"gap-4\">",
+          "bad": "<div className=\"gap-[10px]\">"
+        }
+      ],
+      "allowlist": []
     }
   ]
 }
