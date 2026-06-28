@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Two new experimental socle rules (B1 sub-project): `ai-surface/component-manifest-completeness` — deterministic structural check that each component entry in a lyse-style manifest documents `props` (non-empty array), `examples` (non-empty array), and — when `variants` is present — that it is not an empty array; silent when no manifest exists (`ai-surface/component-manifest-json` owns the absence signal). And `components/no-arbitrary-tailwind` — flags non-color arbitrary Tailwind utilities (`p-[12px]`, `text-[14px]`, `w-[37px]`, …) that bypass the design scale; color bracket values remain owned by `tokens/no-hardcoded-color`. Both rules are `experimental` / `contributesToScore: false` — no Health Score change. Real-world precision for `no-arbitrary-tailwind` is pending a harvest measurement (starts unmeasured); `component-manifest-completeness` is a deterministic structural check (Tier B).
 - Added in-repo synthetic measurement for `tokens/no-hardcoded-shadow` and `components/contracts-strictness` (precision/recall + N now derived from adversarial fixtures). Both remain `experimental` / `contributesToScore: false`; promotion awaits real-world (Bench) validation.
 
 ### Changed
