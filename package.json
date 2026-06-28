@@ -16,7 +16,8 @@
     "changeset": "changeset",
     "version": "changeset version",
     "release": "pnpm --filter @lyse-labs/lyse build && changeset publish",
-    "clone:bench": "tsx scripts/clone-bench-corpus.ts"
+    "clone:bench": "tsx scripts/clone-bench-corpus.ts",
+    "measure:rules": "tsx scripts/measure-rules.ts"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
