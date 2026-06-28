@@ -1550,6 +1550,28 @@
         }
       ],
       "allowlist": []
+    },
+    {
+      "id": "a11y/interactive-role-name",
+      "axis": "a11y",
+      "defaultSeverity": "warning",
+      "shortDescription": "Accessible name on interactive controls",
+      "fullDescription": "Wraps `jsx-a11y/control-has-associated-label`: every interactive control (`<button>`, `<input>`, `<select>`, `<textarea>`, `<a>`) must have an accessible name — via visible text, `aria-label`, `aria-labelledby`, or a `<label>`. This is the one accessible-name rule that `a11y/essentials` does not cover.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/a11y-interactive-role-name.md",
+      "rationale": "Why it matters\n\nIcon-only buttons (a close button wrapping only an SVG, a toolbar action with no label) are the most frequent accessible-name omission in AI-generated UI. They block screen-reader users who cannot determine what the control does, violating WCAG 2.1 SC 4.1.2 (Name, Role, Value).\n\n`a11y/essentials` already covers image `alt`, form `<label>`, ARIA role validity, and anchor content. This rule covers the remaining interactive-control gap via the upstream `eslint-plugin-jsx-a11y` `control-has-associated-label` rule.",
+      "examples": [
+        {
+          "good": "<button aria-label=\"Close dialog\"><svg aria-hidden=\"true\" /></button>",
+          "bad": "<button><svg /></button>"
+        },
+        {
+          "good": "<button>Save</button>",
+          "bad": "<button><span class=\"icon-save\" /></button>"
+        }
+      ],
+      "allowlist": [
+        "Decorative controls that are intentionally hidden from assistive technology via aria-hidden=\"true\" on the control itself"
+      ]
     }
   ]
 }

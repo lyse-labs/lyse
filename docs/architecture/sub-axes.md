@@ -4,7 +4,7 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**69 sub-axes total** — stable: 52 · experimental: 17 · disabled: 0
+**70 sub-axes total** — stable: 52 · experimental: 18 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
@@ -37,6 +37,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `a11y.forced-colors` | `a11y` | Forced-colors / high-contrast support | **stable** | 0.916 | 0.901 | ✅ |
 | `a11y.html-lang` | `a11y` | Document language (html lang) | **stable** | 0.912 | 0.901 | ✅ |
 | `a11y.inclusive-language` | `a11y` | Inclusive language | **stable** | 0.904 | 0.901 | ✅ |
+| `a11y.interactive-role-name` | `a11y` | Accessible name on interactive controls | **experimental** | — | — | — |
 | `a11y.prefers-reduced-motion` | `a11y` | prefers-reduced-motion compliance | **stable** | 0.904 | 0.901 | ✅ |
 | `a11y.runtime-axe` | `a11y` | Runtime a11y (axe-core on Storybook) | **experimental** | 0.000 | 0.000 | — |
 | `a11y.semantic-html` | `a11y` | Semantic HTML (no static-element interactions) | **stable** | 0.916 | 0.934 | ✅ |

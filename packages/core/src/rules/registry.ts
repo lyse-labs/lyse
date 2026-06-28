@@ -67,6 +67,7 @@ import { rule as rProductAnalytics } from "./ai-governance-product-analytics.js"
 import { rule as rRenderedTokenFidelity } from "./tokens-rendered-token-fidelity.js";
 import { rule as rNoArbitraryTailwind } from "./components-no-arbitrary-tailwind.js";
 import { rule as rNoStyleEscapeHatch } from "./components-no-style-escape-hatch.js";
+import { rule as rInteractiveRoleName } from "./a11y-interactive-role-name.js";
 import type { Rule } from "../types.js";
 
 export const ruleObjects: Rule[] = [
@@ -139,6 +140,7 @@ export const ruleObjects: Rule[] = [
   rRenderedTokenFidelity,
   rNoArbitraryTailwind,
   rNoStyleEscapeHatch,
+  rInteractiveRoleName,
 ];
 
 export const ruleMap = new Map<string, Rule>(ruleObjects.map((r) => [r.id, r]));

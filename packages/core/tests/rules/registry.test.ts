@@ -60,6 +60,7 @@ const EXPECTED_IDS = [
   "ai-governance/interaction-pattern-docs",
   "ai-governance/draft-attribution",
   "components/no-arbitrary-tailwind",
+  "a11y/interactive-role-name",
 ];
 
 describe("rules/registry", () => {
