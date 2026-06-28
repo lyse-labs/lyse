@@ -4,8 +4,6 @@
 > All detection-rule entries show `not-measured`.
 # Measurement report
 
-> **Sampling cap applied**: detection precision was measured on a capped sample for 23 rule(s). The `n` column shows findings judged; `nTotal` shows total harvested. Precision estimates are based on the sampled subset only.
-
 ## walled (2)
 
 | ruleId | kind | n | nTotal | precLB | recallSyn | labelSource |

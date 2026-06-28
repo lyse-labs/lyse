@@ -56,8 +56,12 @@ export function buildReport(perRule: RuleMeasurement[]): { md: string; json: Rul
     byVerdict.get(m.verdict)!.push(m);
   }
 
+  // nSamples > 0 guard: in structural-only runs detection rules have nSamples 0
+  // (not judged at all) — a cap was NOT applied, so they must not trigger the
+  // "precision measured on a capped sample" banner (which would contradict the
+  // partial-run header and overclaim that detection was measured).
   const cappedRules = resolved.filter(
-    (m) => m.nTotal !== undefined && m.nTotal > m.nSamples,
+    (m) => m.nTotal !== undefined && m.nTotal > m.nSamples && m.nSamples > 0,
   );
 
   const lines: string[] = ["# Measurement report", ""];
