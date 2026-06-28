@@ -79,6 +79,21 @@ function isVarReference(value: string): boolean {
   return value.trim().startsWith("var(");
 }
 
+/**
+ * Returns true when the bracket value is a CSS math function (calc/min/max/clamp).
+ * These functions are owned by layout math, not the scale bypass concern.
+ * e.g. w-[calc(100%-var(--sidebar))], h-[min(50vh,var(--max-h))]
+ */
+function isCssMathFunction(value: string): boolean {
+  const v = value.trim();
+  return (
+    v.startsWith("calc(") ||
+    v.startsWith("min(") ||
+    v.startsWith("max(") ||
+    v.startsWith("clamp(")
+  );
+}
+
 // Matches Tailwind arbitrary utilities: <prefix>-[<value>]
 // e.g. p-[12px], text-[14px], w-[37px], gap-[10px], rounded-[3px], leading-[19px]
 // Requires a word-boundary before the prefix and captures the value inside brackets.
@@ -123,6 +138,8 @@ const evaluate = async (
       if (isColorValue(value)) continue;
       // Skip var() token references (compliant token use)
       if (isVarReference(value)) continue;
+      // Skip CSS math functions (calc/min/max/clamp — layout math, not scale bypass)
+      if (isCssMathFunction(value)) continue;
       // Skip matches inside comments / URLs
       if (isInCommentOrUrl(source, m.index)) continue;
 
@@ -156,6 +173,7 @@ const evaluate = async (
 
       if (isColorValue(value)) continue;
       if (isVarReference(value)) continue;
+      if (isCssMathFunction(value)) continue;
       if (isInCommentOrUrl(source, m.index)) continue;
 
       opportunities++;

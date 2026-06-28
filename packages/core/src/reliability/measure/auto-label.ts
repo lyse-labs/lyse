@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { measureKindOf } from "./rule-measure-kind.js";
-import type { FindingRow } from "../../../../scripts/harvest-findings.js";
+import type { FindingRow } from "./finding-row.js";
 
 export type Label = { verdict: "tp" | "fp"; source: "auto"; reason: string };
 

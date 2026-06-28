@@ -304,14 +304,14 @@
       "ruleId": "components/no-arbitrary-tailwind",
       "oracleKind": "construction",
       "matrix": {
-        "tp": 3,
+        "tp": 37,
         "fp": 0,
-        "tn": 1,
+        "tn": 26,
         "fn": 0
       },
       "youdensJ": 1,
       "metamorphicInconsistencies": [],
-      "mutationsRun": 3
+      "mutationsRun": 37
     },
     {
       "ruleId": "components/no-icon-fonts",

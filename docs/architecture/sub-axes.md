@@ -47,7 +47,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `components.naming-component-pascalcase` | `components` | Component PascalCase | **stable** | 0.904 | 0.904 | ✅ |
 | `components.naming-hook-prefix` | `components` | Hook `use` prefix | **stable** | 0.904 | 0.904 | ✅ |
 | `components.native-shadows` | `components` | Native shadow elements | **stable** | 0.901 | 0.901 | ✅ |
-| `components.no-arbitrary-tailwind` | `components` | No arbitrary Tailwind values (non-color) | **experimental** | — | — | — |
+| `components.no-arbitrary-tailwind` | `components` | No arbitrary Tailwind values (non-color) | **experimental** | 0.906 | 0.906 | — |
 | `components.no-icon-fonts` | `components` | Icon delivery (SVG over icon-font) | **stable** | 0.904 | 0.901 | ✅ |
 | `components.no-style-escape-hatch` | `components` | No inline style on DS components | **experimental** | — | — | — |
 | `components.standardized-variant-props` | `components` | Standardized variant props (no boolean explosion) | **experimental** | — | — | — |

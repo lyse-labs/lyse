@@ -859,6 +859,133 @@ export const contractsStrictnessAdapter: OracleAdapter = {
   falseFriends: FALSE_FRIENDS_CS,
 };
 
+// ---------------------------------------------------------------------------
+// components/no-arbitrary-tailwind — adversarial corpus
+//
+// FP class enumeration (every class where the rule MUST NOT flag):
+//   CLASS 1: var()-based arbitrary values          — isVarReference() skips
+//   CLASS 2: color arbitrary values (hex)          — isColorValue() skips
+//   CLASS 3: color arbitrary values (CSS functions)— isColorValue() skips
+//   CLASS 4: color arbitrary values (named colors) — isColorValue() skips
+//   CLASS 5: CSS math functions (calc/min/max/clamp) — isCssMathFunction() skips
+//   CLASS 6: story / test / fixture files           — isLowSignalValueFile() skips
+//   CLASS 7: vendored files                         — isVendoredOrResetFile() skips
+//   CLASS 8: schema / .d.ts / .config files         — isSchemaOrDataFile() skips
+//   CLASS 9: matches inside line comments or URLs   — isInCommentOrUrl() skips
+// ---------------------------------------------------------------------------
+
+const FALSE_FRIENDS_NAT: FixtureFiles[] = [
+  // ── CLASS 1: var()-based arbitrary values ──────────────────────────────────
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Box.tsx": 'export const Box = () => <div className="w-[var(--sidebar-width)]" />;',
+  },
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Box.tsx": 'export const Box = () => <div className="p-[var(--spacing-4)]" />;',
+  },
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Box.tsx": 'export const Box = () => <div className="text-[var(--font-size-body)]" />;',
+  },
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Box.tsx": 'export const Box = () => <div className="gap-[var(--spacing-2)] h-[var(--hero-height)]" />;',
+  },
+  // ── CLASS 2: color arbitrary values — hex ──────────────────────────────────
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Box.tsx": 'export const Box = () => <div className="bg-[#fff]" />;',
+  },
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Box.tsx": 'export const Box = () => <div className="text-[#111111]" />;',
+  },
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Box.tsx": 'export const Box = () => <div className="border-[#a3b4c5]" />;',
+  },
+  // ── CLASS 3: color arbitrary values — CSS functions ────────────────────────
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Box.tsx": 'export const Box = () => <div className="bg-[rgba(0,0,0,0.5)]" />;',
+  },
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Box.tsx": 'export const Box = () => <div className="text-[oklch(0.5,0.2,180)]" />;',
+  },
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Box.tsx": 'export const Box = () => <div className="bg-[hsl(220,90%,56%)]" />;',
+  },
+  // ── CLASS 4: color arbitrary values — named colors ─────────────────────────
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Box.tsx": 'export const Box = () => <div className="bg-[transparent]" />;',
+  },
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Box.tsx": 'export const Box = () => <div className="text-[currentcolor]" />;',
+  },
+  // ── CLASS 5: CSS math functions (calc/min/max/clamp) ───────────────────────
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Box.tsx": 'export const Box = () => <div className="w-[calc(100%-var(--sidebar))]" />;',
+  },
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Box.tsx": 'export const Box = () => <div className="h-[min(50vh,var(--max-height))]" />;',
+  },
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Box.tsx": 'export const Box = () => <div className="w-[max(var(--min-width),320px)]" />;',
+  },
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Box.tsx": 'export const Box = () => <div className="text-[clamp(1rem,var(--fluid-size),2rem)]" />;',
+  },
+  // ── CLASS 6: story files ───────────────────────────────────────────────────
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Button.stories.tsx": 'export const Primary = () => <div className="p-[12px]" />;',
+  },
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Card.test.tsx": 'test("renders", () => { const c = <div className="w-[37px]" />; });',
+  },
+  {
+    "package.json": PKG_SIMPLE,
+    "src/__stories__/Demo.tsx": 'export const Demo = () => <div className="gap-[7px]" />;',
+  },
+  // ── CLASS 7: vendored files ────────────────────────────────────────────────
+  {
+    "package.json": PKG_SIMPLE,
+    "vendor/ui-lib/Button.tsx": 'export const Button = () => <div className="p-[12px]" />;',
+  },
+  {
+    "package.json": PKG_SIMPLE,
+    ".yarn/cache/some-pkg.tsx": 'export const X = () => <div className="w-[37px]" />;',
+  },
+  // ── CLASS 8: schema / .d.ts / .config files ────────────────────────────────
+  {
+    "package.json": PKG_SIMPLE,
+    "src/types.d.ts": 'export type ClassNames = "p-[12px]" | "text-[14px]";',
+  },
+  {
+    "package.json": PKG_SIMPLE,
+    "tailwind.config.ts": 'export default { safelist: ["p-[12px]", "w-[37px]"] };',
+  },
+  // ── CLASS 9: line comments and URLs ──────────────────────────────────────────
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Button.tsx": '// Use w-[37px] for sidebar width\nexport const Button = () => <div className="p-4" />;',
+  },
+  {
+    "package.json": PKG_SIMPLE,
+    "src/Button.tsx": '/* See docs at https://example.com/w-[37px] */\nexport const Button = () => <div className="p-4" />;',
+  },
+];
+
 const noArbitraryTailwindAdapter: OracleAdapter = {
   ruleId: "components/no-arbitrary-tailwind",
   oracleKind: "construction",
@@ -867,31 +994,175 @@ const noArbitraryTailwindAdapter: OracleAdapter = {
     "src/Button.tsx": 'export const Button = () => <div className="p-4 text-sm rounded-md" />;',
   }),
   mutations: [
+    // ── spacing utilities ──────────────────────────────────────────────────────
     {
-      name: "arbitrary-spacing",
+      name: "p-12px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="p-[12px]" />;' }),
+    },
+    {
+      name: "px-8px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="px-[8px]" />;' }),
+    },
+    {
+      name: "py-6px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="py-[6px]" />;' }),
+    },
+    {
+      name: "m-5px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="m-[5px]" />;' }),
+    },
+    {
+      name: "mt-3px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="mt-[3px]" />;' }),
+    },
+    {
+      name: "mb-10px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="mb-[10px]" />;' }),
+    },
+    {
+      name: "gap-7px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="gap-[7px]" />;' }),
+    },
+    {
+      name: "space-x-9px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="space-x-[9px]" />;' }),
+    },
+    // ── sizing utilities ───────────────────────────────────────────────────────
+    {
+      name: "w-37px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="w-[37px]" />;' }),
+    },
+    {
+      name: "h-42px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="h-[42px]" />;' }),
+    },
+    {
+      name: "min-w-200px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="min-w-[200px]" />;' }),
+    },
+    {
+      name: "max-w-320px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="max-w-[320px]" />;' }),
+    },
+    {
+      name: "w-0.75rem",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="w-[0.75rem]" />;' }),
+    },
+    // ── typography utilities ───────────────────────────────────────────────────
+    {
+      name: "text-14px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="text-[14px]" />;' }),
+    },
+    {
+      name: "text-16px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="text-[16px]" />;' }),
+    },
+    {
+      name: "leading-19px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="leading-[19px]" />;' }),
+    },
+    {
+      name: "tracking-0.02em",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="tracking-[0.02em]" />;' }),
+    },
+    {
+      name: "font-650",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="font-[650]" />;' }),
+    },
+    // ── layout utilities ───────────────────────────────────────────────────────
+    {
+      name: "top-3px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="top-[3px]" />;' }),
+    },
+    {
+      name: "left-2px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="left-[2px]" />;' }),
+    },
+    {
+      name: "right-4px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="right-[4px]" />;' }),
+    },
+    {
+      name: "inset-1px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="inset-[1px]" />;' }),
+    },
+    {
+      name: "z-999",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="z-[999]" />;' }),
+    },
+    {
+      name: "grid-cols-3",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="grid-cols-[1fr_2fr_1fr]" />;' }),
+    },
+    // ── border and radius utilities ────────────────────────────────────────────
+    {
+      name: "rounded-3px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="rounded-[3px]" />;' }),
+    },
+    {
+      name: "border-2px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="border-[2px]" />;' }),
+    },
+    {
+      name: "outline-3px",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="outline-[3px]" />;' }),
+    },
+    // ── opacity and other utilities ───────────────────────────────────────────
+    {
+      name: "opacity-0.85",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="opacity-[0.85]" />;' }),
+    },
+    {
+      name: "duration-350ms",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="duration-[350ms]" />;' }),
+    },
+    {
+      name: "delay-150ms",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="delay-[150ms]" />;' }),
+    },
+    // ── multiple arbitrary values in one className ────────────────────────────
+    {
+      name: "multiple-arbitrary-in-classname",
       apply: (f): FixtureFiles => ({
         ...f,
-        "src/Button.tsx": 'export const Button = () => <div className="p-[12px]" />;',
+        "src/Button.tsx": 'export const Button = () => <div className="p-[12px] text-[14px] w-[37px]" />;',
+      }),
+    },
+    // ── cssInJs context ────────────────────────────────────────────────────────
+    {
+      name: "cssinjs-arbitrary-spacing",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_SIMPLE,
+        "src/styles.ts": "export const cls = { wrapper: 'p-[12px]' };",
       }),
     },
     {
-      name: "arbitrary-font-size",
-      apply: (f): FixtureFiles => ({
-        ...f,
-        "src/Button.tsx": 'export const Button = () => <div className="text-[14px]" />;',
+      name: "cssinjs-arbitrary-width",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_SIMPLE,
+        "src/styles.ts": "export const cls = { panel: 'w-[320px] h-[200px]' };",
       }),
     },
+    // ── rem / em / vh / vw values ─────────────────────────────────────────────
     {
-      name: "arbitrary-width",
-      apply: (f): FixtureFiles => ({
-        ...f,
-        "src/Button.tsx": 'export const Button = () => <div className="w-[37px]" />;',
-      }),
+      name: "h-50vh",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="h-[50vh]" />;' }),
+    },
+    {
+      name: "w-100vw",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="w-[100vw]" />;' }),
+    },
+    {
+      name: "mt-1.5rem",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="mt-[1.5rem]" />;' }),
+    },
+    {
+      name: "text-1.25em",
+      apply: (f): FixtureFiles => ({ ...f, "src/Button.tsx": 'export const Button = () => <div className="text-[1.25em]" />;' }),
     },
   ],
   metamorphic: [
     {
-      // Two different non-color arbitrary values must both flag (same prefix, different value)
       name: "different-non-color-arbitrary-values-both-flag",
       a: {
         "package.json": PKG_SIMPLE,
@@ -904,7 +1175,6 @@ const noArbitraryTailwindAdapter: OracleAdapter = {
       expectViolation: true,
     },
     {
-      // Color bracket and var() bracket must BOTH be safe (not flagged)
       name: "color-bracket-and-var-bracket-both-clean",
       a: {
         "package.json": PKG_SIMPLE,
@@ -917,6 +1187,7 @@ const noArbitraryTailwindAdapter: OracleAdapter = {
       expectViolation: false,
     },
   ],
+  falseFriends: FALSE_FRIENDS_NAT,
 };
 
 // ---------------------------------------------------------------------------

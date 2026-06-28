@@ -1,7 +1,7 @@
 import type { ConnectorClient } from "../../llm/connectors/types.js";
 import { resolveConnector } from "../../llm/connectors/resolver.js";
 import { extractJson } from "../../llm/llm-utils.js";
-import type { FindingRow } from "../../../../scripts/harvest-findings.js";
+import type { FindingRow } from "./finding-row.js";
 
 export type JudgeLabel =
   | { verdict: "tp"; source: "llm-provisional"; confidence: number }
