@@ -172,6 +172,9 @@ async function main(): Promise<void> {
         // autoLabel needs a real repoDir — derive from the corpus
         const repoDir = join(corpusDir, row.repo);
         const label = autoLabel(row, repoDir);
+        // Exclude needs-verifier labels from precision counts — these findings
+        // have no real verifier so they are UNMEASURED, not false-positives.
+        if (label.reason === "needs-verifier") continue;
         if (label.verdict === "tp") tp++;
         else fp++;
       }

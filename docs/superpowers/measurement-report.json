@@ -289,22 +289,22 @@
   {
     "ruleId": "ai-surface/agent-instruction-files",
     "kind": "structural",
-    "nSamples": 11,
-    "precisionMeasured": 0,
-    "precisionWilsonLowerBound": 0,
+    "nSamples": 0,
+    "precisionMeasured": null,
+    "precisionWilsonLowerBound": null,
     "recallSynthetic": 1,
-    "labelSource": "auto",
-    "verdict": "walled"
+    "labelSource": "none",
+    "verdict": "not-measured"
   },
   {
     "ruleId": "ai-surface/agents-md-quality",
     "kind": "structural",
-    "nSamples": 16,
-    "precisionMeasured": 0,
-    "precisionWilsonLowerBound": 0,
+    "nSamples": 0,
+    "precisionMeasured": null,
+    "precisionWilsonLowerBound": null,
     "recallSynthetic": 1,
-    "labelSource": "auto",
-    "verdict": "walled"
+    "labelSource": "none",
+    "verdict": "not-measured"
   },
   {
     "ruleId": "ai-surface/component-manifest-completeness",
@@ -329,12 +329,12 @@
   {
     "ruleId": "ai-surface/ds-index-exported",
     "kind": "structural",
-    "nSamples": 2,
-    "precisionMeasured": 0,
-    "precisionWilsonLowerBound": 0,
+    "nSamples": 0,
+    "precisionMeasured": null,
+    "precisionWilsonLowerBound": null,
     "recallSynthetic": null,
-    "labelSource": "auto",
-    "verdict": "walled"
+    "labelSource": "none",
+    "verdict": "not-measured"
   },
   {
     "ruleId": "ai-surface/llms-txt-structure",
@@ -380,12 +380,12 @@
   {
     "ruleId": "components/doc-comments",
     "kind": "structural",
-    "nSamples": 50,
-    "precisionMeasured": 0,
-    "precisionWilsonLowerBound": 0,
+    "nSamples": 0,
+    "precisionMeasured": null,
+    "precisionWilsonLowerBound": null,
     "recallSynthetic": null,
-    "labelSource": "auto",
-    "verdict": "walled"
+    "labelSource": "none",
+    "verdict": "not-measured"
   },
   {
     "ruleId": "components/icon-decorative-aria",
@@ -463,22 +463,22 @@
   {
     "ruleId": "naming/component-pascalcase",
     "kind": "structural",
-    "nSamples": 30,
-    "precisionMeasured": 0,
-    "precisionWilsonLowerBound": 0,
+    "nSamples": 0,
+    "precisionMeasured": null,
+    "precisionWilsonLowerBound": null,
     "recallSynthetic": 1,
-    "labelSource": "auto",
-    "verdict": "walled"
+    "labelSource": "none",
+    "verdict": "not-measured"
   },
   {
     "ruleId": "naming/hook-prefix",
     "kind": "structural",
-    "nSamples": 14,
-    "precisionMeasured": 0,
-    "precisionWilsonLowerBound": 0,
+    "nSamples": 0,
+    "precisionMeasured": null,
+    "precisionWilsonLowerBound": null,
     "recallSynthetic": 1,
-    "labelSource": "auto",
-    "verdict": "walled"
+    "labelSource": "none",
+    "verdict": "not-measured"
   },
   {
     "ruleId": "stories/coverage",
