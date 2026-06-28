@@ -120,8 +120,11 @@ export function isSvgIconContext(filePath: string): boolean {
 // apps/ssr-testing/ was removed (Mantine-repo-specific; dataset id 82 = residual FP).
 // apps/storybook/ was removed (convention-specific, redundant with /.storybook/ +
 //   *.stories.* patterns already above). dataset ids 83-85 = residual FP.
+// __stories__/ added: canonical double-underscore convention (same family as
+// __tests__ / __mocks__). Observed in the wild (e.g. twenty: src/__stories__/)
+// with 23 FPs from the app-repo harvest.
 const LOW_SIGNAL_FILE_RE =
-  /(?:^|[\\/])(?:__tests__|__mocks__|fixtures|demos?|examples?)[\\/]|\.(?:test|spec|stories|story|demo|example|fixture)\.[cm]?[jt]sx?$|(?:^|[\\/])\.storybook[\\/]|[\\/]\.storybook[\\/]/;
+  /(?:^|[\\/])(?:__tests__|__mocks__|__stories__|fixtures|demos?|examples?)[\\/]|\.(?:test|spec|stories|story|demo|example|fixture)\.[cm]?[jt]sx?$|(?:^|[\\/])\.storybook[\\/]|[\\/]\.storybook[\\/]/;
 
 /**
  * Returns true if the file path is a test, story, mock, or fixture file.

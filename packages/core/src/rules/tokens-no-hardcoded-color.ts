@@ -187,12 +187,33 @@ export function countCompliantColorUses(source: string, fileExt: string): number
   return count;
 }
 
+/**
+ * Returns true if the hex match at `hitIndex` in `source` is actually an HTML
+ * numeric character entity (`&#NNN;` or `&#xNN;`). These look like `#NNN` to
+ * the COLOR_FUNC hex regex but are NOT CSS color values — they are HTML escape
+ * sequences (e.g. `&#039;` = apostrophe, `&#8203;` = zero-width space).
+ *
+ * The check is purely syntactic: the character immediately before the `#` must
+ * be `&`. This is the canonical signal — general across all codebases, with no
+ * path or content-name heuristics.
+ *
+ * Recall guard: a standalone `#039` or `#039000` in styling (where the char
+ * before `#` is a space, `:`, `'`, etc.) is NOT preceded by `&`, so it still
+ * flags normally.
+ */
+function isHtmlNumericEntity(source: string, hitIndex: number): boolean {
+  return hitIndex > 0 && source[hitIndex - 1] === "&";
+}
+
 export function detectInText(source: string, _path?: string, isCssSource = false): { match: string; index: number }[] {
   const hits: { match: string; index: number }[] = [];
   COLOR_FUNC.lastIndex = 0;
   let m: RegExpExecArray | null;
   while ((m = COLOR_FUNC.exec(source)) !== null) {
     if (shouldSkip(m[0])) continue;
+    // Skip HTML numeric character entities (&#NNN; / &#xNN;) — the hex-like
+    // portion is not a color value; it is an HTML escape sequence.
+    if (isHtmlNumericEntity(source, m.index)) continue;
     // Skip any color function whose entire argument is a CSS variable reference
     // (canonical shadcn / radix-ui theming pattern — NOT hardcoded drift).
     if (COLOR_VAR_REF.test(m[0])) continue;
