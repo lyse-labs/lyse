@@ -18,14 +18,14 @@
       "ruleId": "a11y/interactive-role-name",
       "oracleKind": "construction",
       "matrix": {
-        "tp": 36,
+        "tp": 1,
         "fp": 0,
-        "tn": 15,
+        "tn": 1,
         "fn": 0
       },
       "youdensJ": 1,
       "metamorphicInconsistencies": [],
-      "mutationsRun": 36
+      "mutationsRun": 1
     },
     {
       "ruleId": "ai-governance/ai-content-live-region",
@@ -304,14 +304,14 @@
       "ruleId": "components/no-arbitrary-tailwind",
       "oracleKind": "construction",
       "matrix": {
-        "tp": 37,
+        "tp": 3,
         "fp": 0,
-        "tn": 26,
+        "tn": 1,
         "fn": 0
       },
       "youdensJ": 1,
       "metamorphicInconsistencies": [],
-      "mutationsRun": 37
+      "mutationsRun": 3
     },
     {
       "ruleId": "components/no-icon-fonts",

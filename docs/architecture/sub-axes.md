@@ -37,7 +37,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `a11y.forced-colors` | `a11y` | Forced-colors / high-contrast support | **stable** | 0.916 | 0.901 | ✅ |
 | `a11y.html-lang` | `a11y` | Document language (html lang) | **stable** | 0.912 | 0.901 | ✅ |
 | `a11y.inclusive-language` | `a11y` | Inclusive language | **stable** | 0.904 | 0.901 | ✅ |
-| `a11y.interactive-role-name` | `a11y` | Accessible name on interactive controls | **experimental** | 0.904 | 0.904 | — |
+| `a11y.interactive-role-name` | `a11y` | Accessible name on interactive controls | **experimental** | — | — | — |
 | `a11y.prefers-reduced-motion` | `a11y` | prefers-reduced-motion compliance | **stable** | 0.904 | 0.901 | ✅ |
 | `a11y.runtime-axe` | `a11y` | Runtime a11y (axe-core on Storybook) | **experimental** | 0.000 | 0.000 | — |
 | `a11y.semantic-html` | `a11y` | Semantic HTML (no static-element interactions) | **stable** | 0.916 | 0.934 | ✅ |
@@ -47,7 +47,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `components.naming-component-pascalcase` | `components` | Component PascalCase | **stable** | 0.904 | 0.904 | ✅ |
 | `components.naming-hook-prefix` | `components` | Hook `use` prefix | **stable** | 0.904 | 0.904 | ✅ |
 | `components.native-shadows` | `components` | Native shadow elements | **stable** | 0.901 | 0.901 | ✅ |
-| `components.no-arbitrary-tailwind` | `components` | No arbitrary Tailwind values (non-color) | **experimental** | 0.906 | 0.906 | — |
+| `components.no-arbitrary-tailwind` | `components` | No arbitrary Tailwind values (non-color) | **experimental** | — | — | — |
 | `components.no-icon-fonts` | `components` | Icon delivery (SVG over icon-font) | **stable** | 0.904 | 0.901 | ✅ |
 | `components.no-style-escape-hatch` | `components` | No inline style on DS components | **experimental** | — | — | — |
 | `components.standardized-variant-props` | `components` | Standardized variant props (no boolean explosion) | **experimental** | — | — | — |
