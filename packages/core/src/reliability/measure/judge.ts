@@ -2,6 +2,7 @@ import type { ConnectorClient } from "../../llm/connectors/types.js";
 import { resolveConnector } from "../../llm/connectors/resolver.js";
 import { extractJson } from "../../llm/llm-utils.js";
 import type { FindingRow } from "./finding-row.js";
+import { findRuleMeta } from "../../rules/manifest.js";
 
 export type JudgeLabel =
   | { verdict: "tp"; source: "llm-provisional"; confidence: number }
@@ -23,20 +24,41 @@ function isVerdictsResponse(v: unknown): v is VerdictsResponse {
   return Array.isArray((v as Record<string, unknown>)["verdicts"]);
 }
 
-function buildJudgePrompt(rows: FindingRow[]): string {
+export function buildJudgePrompt(rows: FindingRow[]): string {
   const findingLines = rows.map((r, i) => {
     return `${i} — ${r.file}:${r.line} — ${r.ruleId} — ${JSON.stringify(r.snippet)}`;
   });
 
+  const distinctRuleIds = [...new Set(rows.map((r) => r.ruleId))].sort();
+
+  const rubricBlocks: string[] = [];
+  for (const ruleId of distinctRuleIds) {
+    const meta = findRuleMeta(ruleId);
+    if (meta === undefined) {
+      rubricBlocks.push(`Rubric for ${ruleId}:`, `  - Judge whether this is a real violation of the ${ruleId} rule.`);
+    } else {
+      const lines: string[] = [`Rubric for ${ruleId} — ${meta.shortDescription}:`];
+      for (const ex of meta.examples) {
+        lines.push(`  - GOOD (not a violation): ${ex.good}`);
+        lines.push(`  - BAD (violation): ${ex.bad}`);
+      }
+      for (const entry of meta.allowlist) {
+        lines.push(`  - NOT a violation (allowlisted): ${entry}`);
+      }
+      rubricBlocks.push(...lines);
+    }
+    rubricBlocks.push("");
+  }
+
   return [
     "You are a design-system lint auditor. Below is a list of candidate drift findings from a design-system codebase. For each finding, judge whether it is a true violation (tp), a false positive (fp), or genuinely uncertain.",
     "",
-    "Corpus-validated rubric:",
-    "  - A hardcoded color in an inline style/css/sx prop IS a violation (inline CSS drift), NOT a theming-API surface.",
-    "  - A color that is subject data of a color-picker / swatch / palette component IS palette data, NOT drift — fp.",
-    "  - Hardcoded values in demo / story / Storybook / example / playground files are low-signal — fp.",
-    "  - A hardcoded value already sourced from a token (via var() or token reference) is fp.",
+    "General heuristics (apply to all rules):",
+    "  - Findings in demo / story / Storybook / example / playground files are low-signal — fp.",
+    "  - A value already sourced from a token (via var() or a token reference) is fp.",
     "",
+    "Rule-specific rubrics:",
+    ...rubricBlocks,
     'For EACH finding return a verdict and your confidence in it:',
     '  - "violation" — a real design-system violation worth flagging (maps to tp).',
     '  - "fp" — a false positive that should be dropped.',

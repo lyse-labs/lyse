@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { judgeFindings, packetFor } from "../../../src/reliability/measure/judge.js";
+import { judgeFindings, packetFor, buildJudgePrompt } from "../../../src/reliability/measure/judge.js";
 import type { ConnectorClient, ConnectorResult } from "../../../src/llm/connectors/types.js";
 import type { FindingRow } from "../../../../scripts/harvest-findings.js";
 
@@ -178,5 +178,51 @@ describe("packetFor", () => {
   it("returns empty string when no rows provided", () => {
     const md = packetFor("tokens/no-hardcoded-color", []);
     expect(md).toBe("");
+  });
+});
+
+describe("buildJudgePrompt", () => {
+  it("includes rule shortDescription and examples for a11y/interactive-role-name", () => {
+    const row = makeRow({ ruleId: "a11y/interactive-role-name", snippet: "<button><svg /></button>" });
+    const prompt = buildJudgePrompt([row]);
+    expect(prompt).toContain("a11y/interactive-role-name");
+    expect(prompt).toContain("Accessible name on interactive controls");
+    expect(prompt).toContain("aria-label");
+  });
+
+  it("does not include color-picker rubric for a11y/interactive-role-name", () => {
+    const row = makeRow({ ruleId: "a11y/interactive-role-name", snippet: "<button><svg /></button>" });
+    const prompt = buildJudgePrompt([row]);
+    expect(prompt).not.toContain("color-picker");
+    expect(prompt).not.toContain("palette");
+  });
+
+  it("includes rule shortDescription and examples for components/no-arbitrary-tailwind", () => {
+    const row = makeRow({ ruleId: "components/no-arbitrary-tailwind", snippet: '<div className="p-[12px]">' });
+    const prompt = buildJudgePrompt([row]);
+    expect(prompt).toContain("components/no-arbitrary-tailwind");
+    expect(prompt).toContain("Disallow non-color arbitrary Tailwind values");
+    expect(prompt).toContain("p-[12px]");
+  });
+
+  it("does not include color-picker rubric for components/no-arbitrary-tailwind", () => {
+    const row = makeRow({ ruleId: "components/no-arbitrary-tailwind", snippet: '<div className="p-[12px]">' });
+    const prompt = buildJudgePrompt([row]);
+    expect(prompt).not.toContain("color-picker");
+    expect(prompt).not.toContain("palette");
+  });
+
+  it("keeps general heuristics (storybook fp, token fp)", () => {
+    const row = makeRow({ ruleId: "a11y/interactive-role-name", snippet: "<button><svg /></button>" });
+    const prompt = buildJudgePrompt([row]);
+    expect(prompt).toContain("Storybook");
+    expect(prompt).toContain("var()");
+  });
+
+  it("falls back to generic rubric for unknown ruleId without crashing", () => {
+    const row = makeRow({ ruleId: "unknown/nonexistent-rule" as any, snippet: "x" });
+    const prompt = buildJudgePrompt([row]);
+    expect(prompt).toContain("unknown/nonexistent-rule");
+    expect(prompt).not.toContain("color-picker");
   });
 });
