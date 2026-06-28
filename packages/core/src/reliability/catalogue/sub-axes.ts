@@ -1,4 +1,4 @@
-// 68 sub-axes, 1:1 mapped to the 68 shipped rules.
+// 70 sub-axes, 1:1 mapped to the 70 shipped rules.
 // Each sub-axis declares the scoring axis it reports under (6 total per
 // AxisName in packages/core/src/types.ts: tokens, a11y, components, stories,
 // ai-surface, ai-governance). Naming rules report under the components axis.
