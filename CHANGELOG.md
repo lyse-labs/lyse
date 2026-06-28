@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added in-repo synthetic measurement for `tokens/no-hardcoded-color`, `tokens/no-hardcoded-shadow`, and `components/contracts-strictness` (precision/recall + N now derived from adversarial fixtures). All remain `experimental` / `contributesToScore: false`; promotion awaits real-world (Bench) validation.
+- Added in-repo synthetic measurement for `tokens/no-hardcoded-shadow` and `components/contracts-strictness` (precision/recall + N now derived from adversarial fixtures). Both remain `experimental` / `contributesToScore: false`; promotion awaits real-world (Bench) validation.
+
+### Changed
+
+- **`tokens/no-hardcoded-color` reliability: honest uncalibrated state.** The synthetic construction-oracle numbers (precision: 0.44 from an underpowered corpus) are replaced with null — uncalibrated. Real-world precision is ~65% across 8 OSS repos (1256 findings), rising to ~88.9% on medium-confidence findings; recall is ~100%. The rule stays `experimental` / `contributesToScore: false`. Promotion to 90% is not honestly reachable with lexical detection alone (ceiling ~85–88%); the `confidence` field measures fix-confidence, not drift-confidence. Rule doc updated with an honest Reliability section.
 
 ### Fixed
 

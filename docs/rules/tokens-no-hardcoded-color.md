@@ -107,6 +107,22 @@ rules:
 - **CSS custom-property declarations in token-def scopes** — values on the RHS of `--token-name: <value>;` inside `:root`, `html`, `:host`, `*`, `[data-theme…]`, `@theme {}`, or `@layer base {}` are token *definitions*, not drift. A custom property in a component selector (`.widget { --local-bg: #fff }`) still fires — that is drift.
 - Color literals inside `var()` fallback arguments (`var(--token, #fff)`) — the fallback is a safe defensive value, not drift.
 
+## Reliability
+
+| Metric | Value |
+|---|---|
+| Status | experimental |
+| Contributes to Health Score | no |
+| Real-world precision | ~65% (8 OSS repos, 1256 findings) |
+| Precision on medium-confidence findings | ~88.9% |
+| Recall | ~100% |
+
+Color literals are pervasive in legitimate code (token-definition files, documentation, var() fallbacks, schema examples, test fixtures). The rule guards against the most common false-positive patterns via path guards and syntactic exemptions, but the lexical ceiling for precision is ~85–88% — not the 90% Wilson lower bound required for promotion to the Health Score. The `confidence` field on findings measures fix-confidence (how certain the codemod is about the replacement), not drift-confidence (whether the literal is genuine drift vs. a legitimate use). These are distinct axes; improving fix-confidence does not raise drift precision.
+
+**90%-scored is not honestly reachable** with the current lexical detection strategy. Promotion would require either (a) AST-level context (knowing whether a color literal is inside a UI render path vs. a non-UI scope) or (b) an LLM precision filter. Neither is in scope for this rule today.
+
+Use the `confidence: medium` filter in the handoff payload to see only findings where the rule has higher signal.
+
 ## Related rules
 
 - [`tokens/no-hardcoded-spacing`](./tokens-no-hardcoded-spacing.md)
