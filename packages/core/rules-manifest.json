@@ -1505,6 +1505,26 @@
         }
       ],
       "allowlist": []
+    },
+    {
+      "id": "components/no-style-escape-hatch",
+      "axis": "components",
+      "defaultSeverity": "warning",
+      "shortDescription": "Disallow inline `style` prop on DS components",
+      "fullDescription": "An inline `style` prop on a design-system component bypasses the component's own prop API (variant/size/color props, CSS-variable theming). It makes one-off overrides invisible to token tooling, breaks dark-mode propagation, and forks the component's visual contract silently.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/components-no-style-escape-hatch.md",
+      "rationale": "Why it matters\n\nDS components expose a deliberate prop API precisely so that consumers never need to reach for `style`. An inline `style` prop is the runtime equivalent of !important: it bypasses variant tokens, breaks dark-mode cascade, and survives token renames silently.\n\nThe rule is value-agnostic: `style={{ color: \"red\" }}` and `style={{ margin: 0 }}` are equally flagged. The fix is always to use the component's intended API (`variant`, `size`, `color`, `sx`, etc.) or a global token instead.",
+      "examples": [
+        {
+          "good": "<Button variant=\"primary\" size=\"md\">Save</Button>",
+          "bad": "<Button style={{ color: \"#2563eb\" }}>Save</Button>"
+        },
+        {
+          "good": "<Badge color=\"success\" />",
+          "bad": "<Badge style={{ background: \"green\" }} />"
+        }
+      ],
+      "allowlist": []
     }
   ]
 }

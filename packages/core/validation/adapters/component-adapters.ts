@@ -919,6 +919,53 @@ const noArbitraryTailwindAdapter: OracleAdapter = {
   ],
 };
 
+// ---------------------------------------------------------------------------
+// components/no-style-escape-hatch — construction oracle
+// ---------------------------------------------------------------------------
+//
+// Clean:   <Button variant="x"/> from @org/ui — no inline style, no flag.
+// Mutations:
+//   1. DS component WITH style prop — must flag.
+//   2. DS component with opening (non-self-closing) element + style — must flag.
+// False-friends:
+//   - <div style={{}}/>         raw HTML, not DS — must NOT flag.
+//   - <Button variant="x"/>     DS component, no style — must NOT flag.
+//   - <Button style={{}} /> but dsSelfMode=true — skipped entirely (N/A).
+
+const PKG_CONSUMER_STYLE = JSON.stringify({
+  name: "fx-style-consumer",
+  version: "1.0.0",
+  dependencies: { "@org/ui": "^1.0.0", react: "^18.0.0" },
+});
+
+const noStyleEscapeHatchAdapter: OracleAdapter = {
+  ruleId: "components/no-style-escape-hatch",
+  oracleKind: "construction",
+  cleanFixture: () => ({
+    "package.json": PKG_CONSUMER_STYLE,
+    "src/Page.tsx": 'import { Button } from "@org/ui";\nexport const Page = () => <Button variant="primary" />;',
+  }),
+  mutations: [
+    {
+      name: "ds-component-self-closing-with-style",
+      apply: (f): FixtureFiles => ({
+        ...f,
+        "src/Page.tsx":
+          'import { Button } from "@org/ui";\nexport const Page = () => <Button style={{ color: "red" }} />;',
+      }),
+    },
+    {
+      name: "ds-component-opening-element-with-style",
+      apply: (f): FixtureFiles => ({
+        ...f,
+        "src/Page.tsx":
+          'import { Button } from "@org/ui";\nexport const Page = () => <Button style={{ margin: 0 }}>Save</Button>;',
+      }),
+    },
+  ],
+  metamorphic: [],
+};
+
 export const componentAdapters: OracleAdapter[] = [
   svgViewboxAdapter,
   iconDecorativeAriaAdapter,
@@ -929,4 +976,5 @@ export const componentAdapters: OracleAdapter[] = [
   storiesCoverageAdapter,
   contractsStrictnessAdapter,
   noArbitraryTailwindAdapter,
+  noStyleEscapeHatchAdapter,
 ];
