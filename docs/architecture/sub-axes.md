@@ -53,7 +53,7 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `components.standardized-variant-props` | `components` | Standardized variant props (no boolean explosion) | **experimental** | — | — | — |
 | `components.svg-viewbox` | `components` | Inline SVG viewBox (scalable icons) | **stable** | 0.901 | 0.904 | ✅ |
 | `stories.coverage` | `stories` | Storybook coverage | **stable** | 0.901 | 0.901 | ✅ |
-| `stories.props-documented` | `stories` | Story documents component props | **experimental** | — | — | — |
+| `stories.props-documented` | `stories` | Story documents component props | **experimental** | 0.901 | 0.901 | — |
 | `stories.usage-examples` | `stories` | Story shows usage examples | **experimental** | — | — | — |
 | `ai-surface.agent-instruction-files` | `ai-surface` | Agent instruction files (Cursor / Claude) | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-surface.agents-md-quality` | `ai-surface` | AGENTS.md quality | **stable** | 0.901 | 0.901 | ✅ |

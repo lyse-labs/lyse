@@ -421,14 +421,14 @@
       "ruleId": "stories/props-documented",
       "oracleKind": "construction",
       "matrix": {
-        "tp": 1,
+        "tp": 35,
         "fp": 0,
-        "tn": 1,
+        "tn": 11,
         "fn": 0
       },
       "youdensJ": 1,
       "metamorphicInconsistencies": [],
-      "mutationsRun": 1
+      "mutationsRun": 35
     },
     {
       "ruleId": "stories/usage-examples",

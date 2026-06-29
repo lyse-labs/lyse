@@ -357,8 +357,14 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   flags?.progress?.update("Loading tokens + components + stories…");
   const tokens = await loadTokens(absoluteRoot);
   const storyIndex = await loadStories(absoluteRoot);
+  const componentSources = new Map<string, string>();
+  for (const [rel, src] of fileContents) {
+    const base = rel.split("/").pop() ?? rel;
+    const name = base.replace(/\.(tsx?|jsx?)$/, "");
+    if (/^[A-Z]/.test(name)) componentSources.set(name, src);
+  }
   const componentInventory = componentsModule
-    ? buildComponentInventory(componentsModule, parsed.ts)
+    ? buildComponentInventory(componentsModule, parsed.ts, componentSources)
     : [];
 
   const ctx: RuleContext = {
