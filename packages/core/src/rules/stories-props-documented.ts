@@ -19,7 +19,6 @@ const evaluate = async (
   _files: ParsedFiles,
 ): Promise<RuleEvalResult> => {
   const findings: Finding[] = [];
-  if (ctx.dsSelfMode) return { findings, opportunities: 0 };
   if (!ctx.storyIndex) return { findings, opportunities: 0 };
 
   let opportunities = 0;

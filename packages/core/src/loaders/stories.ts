@@ -173,7 +173,7 @@ export async function loadStories(root: string): Promise<StoryIndex | null> {
       const titleToEntries = new Map<string, SbEntry[]>();
       for (const e of Object.values(data.entries)) {
         if (e.type !== "story") continue;
-        const leaf = e.title.split("/").pop() ?? e.title;
+        const leaf = (e.title.split("/").pop() ?? e.title).trim();
         if (!titleToEntries.has(leaf)) titleToEntries.set(leaf, []);
         titleToEntries.get(leaf)!.push(e);
       }
@@ -212,7 +212,7 @@ export async function loadStories(root: string): Promise<StoryIndex | null> {
     const src = readFileSync(f, "utf8");
     const titleMatch = src.match(/title\s*:\s*["'`]([^"'`]+)["'`]/);
     if (!titleMatch || !titleMatch[1]) continue;
-    const leaf = titleMatch[1].split("/").pop() ?? titleMatch[1];
+    const leaf = (titleMatch[1].split("/").pop() ?? titleMatch[1]).trim();
     // Normalize to a posix-style import path: fast-glob returns "/" paths but
     // `root` uses the OS separator, so a naive `replace(root + "/")` leaves the
     // path absolute on Windows. `relative` + "/"-join is cross-platform.

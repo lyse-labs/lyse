@@ -51,11 +51,12 @@ describe("rule stories/props-documented", () => {
     expect(res.findings).toHaveLength(0);
   });
 
-  it("returns opportunities 0 in dsSelfMode", async () => {
+  it("fires in dsSelfMode when a DS component has props but its story documents none", async () => {
     const ctx = ctxWith(new Map([["Button", { id: "b", importPath: "x", hasArgTypes: false, stories: [{ name: "Primary" }] }]]), { dsSelfMode: true });
     const res = await rule.evaluate(ctx, EMPTY);
-    expect(res.opportunities).toBe(0);
-    expect(res.findings).toHaveLength(0);
+    expect(res.opportunities).toBe(1);
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.message).toContain("Button");
   });
 
   it("does NOT flag a prop-less component (no props to document)", async () => {
