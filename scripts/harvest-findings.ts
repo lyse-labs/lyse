@@ -31,6 +31,8 @@ export interface FindingRow {
   snippet: string;
   fileType: string;
   confidence: Confidence;
+  /** Original finding message — required by row-aware verifiers (e.g. stories/props-documented). */
+  message?: string;
 }
 
 function snippetAround(source: string, lineNum: number): string {
@@ -75,12 +77,18 @@ export async function collectAllFindings(rootDir: string): Promise<FindingRow[]>
     const enrichedResult = populateConfidence(pipelineResult.result, ctx);
 
     for (const f of enrichedResult.findings) {
-      const absPath = join(repoDir, f.location.file);
-      let source: string;
-      try {
-        source = readFileSync(absPath, "utf8");
-      } catch {
-        continue;
+      // Virtual files (e.g. "(inventory)") have no on-disk source — emit the
+      // row with an empty snippet instead of skipping the finding entirely.
+      const isVirtual = f.location.file.startsWith("(");
+      let snippet = "";
+      if (!isVirtual) {
+        const absPath = join(repoDir, f.location.file);
+        try {
+          const source = readFileSync(absPath, "utf8");
+          snippet = snippetAround(source, f.location.line);
+        } catch {
+          continue;
+        }
       }
 
       const fileType = f.location.file.match(/\.[^.]+$/)?.[0]?.toLowerCase() ?? "";
@@ -89,9 +97,10 @@ export async function collectAllFindings(rootDir: string): Promise<FindingRow[]>
         repo,
         file: f.location.file,
         line: f.location.line,
-        snippet: snippetAround(source, f.location.line),
+        snippet,
         fileType,
         confidence: f.confidence ?? "high",
+        message: f.message,
       });
     }
   }

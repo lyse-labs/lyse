@@ -54,7 +54,7 @@
 | components/contracts-strictness | detection | 0 | 221 | — | 1.000 | none |
 | components/doc-comments | structural | 0 | — | — | — | none |
 | components/icon-decorative-aria | detection | 0 | 200 | — | 1.000 | none |
-| components/no-arbitrary-tailwind | detection | 0 | 13539 | — | 1.000 | none |
+| components/no-arbitrary-tailwind | detection | 0 | 12999 | — | 1.000 | none |
 | components/no-icon-fonts | detection | 0 | — | — | 1.000 | none |
 | components/no-native-shadows | detection | 0 | — | — | 1.000 | none |
 | components/no-style-escape-hatch | detection | 0 | — | — | 1.000 | none |

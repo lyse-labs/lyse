@@ -247,4 +247,160 @@ describe("autoLabel (structural)", () => {
       ).toThrow();
     });
   });
+
+  describe("stories/props-documented — row-aware verifier", () => {
+    const COMPONENT_NAME = "Button";
+    const PROPS_DOCUMENTED_MSG = `DS component <${COMPONENT_NAME}> has a story that documents no props (no argTypes and no args)`;
+
+    function pdRow(repoDir: string, overrides: Partial<FindingRow> = {}): FindingRow {
+      return row({
+        ruleId: "stories/props-documented",
+        file: "(inventory)",
+        line: 0,
+        snippet: "",
+        message: PROPS_DOCUMENTED_MSG,
+        ...overrides,
+      });
+    }
+
+    function writeComponentWithProps(repoDir: string): void {
+      mkdirSync(join(repoDir, "src"), { recursive: true });
+      writeFileSync(
+        join(repoDir, "src", "Button.tsx"),
+        `
+import React from "react";
+
+interface ButtonProps {
+  variant: "primary" | "secondary";
+  size?: "sm" | "md" | "lg";
+}
+
+export function Button({ variant, size = "md" }: ButtonProps) {
+  return <button className={\`btn-\${variant} btn-\${size}\`} />;
+}
+        `.trim(),
+      );
+    }
+
+    function writeComponentWithoutProps(repoDir: string): void {
+      mkdirSync(join(repoDir, "src"), { recursive: true });
+      writeFileSync(
+        join(repoDir, "src", "Button.tsx"),
+        `
+import React from "react";
+
+export function Button() {
+  return <button />;
+}
+        `.trim(),
+      );
+    }
+
+    function writeStoryWithoutDocumentation(repoDir: string): void {
+      mkdirSync(join(repoDir, "src"), { recursive: true });
+      writeFileSync(
+        join(repoDir, "src", "Button.stories.tsx"),
+        `
+import { Button } from "./Button";
+
+export default { component: Button, title: "Button" };
+
+export const Primary = {};
+export const Secondary = {};
+        `.trim(),
+      );
+    }
+
+    function writeStoryWithArgTypes(repoDir: string): void {
+      mkdirSync(join(repoDir, "src"), { recursive: true });
+      writeFileSync(
+        join(repoDir, "src", "Button.stories.tsx"),
+        `
+import { Button } from "./Button";
+
+export default {
+  component: Button,
+  title: "Button",
+  argTypes: {
+    variant: { control: "select", options: ["primary", "secondary"] },
+  },
+};
+
+export const Primary = {};
+        `.trim(),
+      );
+    }
+
+    function writeStoryWithArgs(repoDir: string): void {
+      mkdirSync(join(repoDir, "src"), { recursive: true });
+      writeFileSync(
+        join(repoDir, "src", "Button.stories.tsx"),
+        `
+import { Button } from "./Button";
+
+export default { component: Button, title: "Button" };
+
+export const Primary = { args: { variant: "primary" } };
+        `.trim(),
+      );
+    }
+
+    it("tp: component has props AND story documents none — genuine deficiency", () => {
+      const repoDir = tempRepo();
+      writeComponentWithProps(repoDir);
+      writeStoryWithoutDocumentation(repoDir);
+      const label = autoLabel(pdRow(repoDir), repoDir);
+      expect(label.verdict).toBe("tp");
+      expect(label.source).toBe("auto");
+      expect(label.reason).toContain("props-documented");
+    });
+
+    it("fp: story has argTypes — rule mis-fired", () => {
+      const repoDir = tempRepo();
+      writeComponentWithProps(repoDir);
+      writeStoryWithArgTypes(repoDir);
+      const label = autoLabel(pdRow(repoDir), repoDir);
+      expect(label.verdict).toBe("fp");
+      expect(label.reason).toContain("argTypes");
+    });
+
+    it("fp: story has args on a named export — rule mis-fired", () => {
+      const repoDir = tempRepo();
+      writeComponentWithProps(repoDir);
+      writeStoryWithArgs(repoDir);
+      const label = autoLabel(pdRow(repoDir), repoDir);
+      expect(label.verdict).toBe("fp");
+      expect(label.reason).toContain("args");
+    });
+
+    it("fp: component has no props — exclusion condition not met", () => {
+      const repoDir = tempRepo();
+      writeComponentWithoutProps(repoDir);
+      writeStoryWithoutDocumentation(repoDir);
+      const label = autoLabel(pdRow(repoDir), repoDir);
+      expect(label.verdict).toBe("fp");
+      expect(label.reason).toContain("prop-less");
+    });
+
+    it("needs-verifier: no story file found in repo", () => {
+      const repoDir = tempRepo();
+      writeComponentWithProps(repoDir);
+      // No story file written
+      const label = autoLabel(pdRow(repoDir), repoDir);
+      expect(label.verdict).toBe("fp");
+      expect(label.reason).toBe("needs-verifier");
+    });
+
+    it("needs-verifier: no component name in message", () => {
+      const repoDir = tempRepo();
+      writeComponentWithProps(repoDir);
+      writeStoryWithoutDocumentation(repoDir);
+      const label = autoLabel(
+        pdRow(repoDir, { message: "unexpected message format" }),
+        repoDir,
+      );
+      expect(label.verdict).toBe("fp");
+      expect(label.reason).toBe("needs-verifier");
+    });
+  });
 });

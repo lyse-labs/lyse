@@ -10,4 +10,6 @@ export interface FindingRow {
   snippet: string;
   fileType: string;
   confidence: Confidence;
+  /** Original finding message — required by row-aware verifiers (e.g. stories/props-documented). */
+  message?: string;
 }

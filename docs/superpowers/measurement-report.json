@@ -402,7 +402,7 @@
     "ruleId": "components/no-arbitrary-tailwind",
     "kind": "detection",
     "nSamples": 0,
-    "nTotal": 13539,
+    "nTotal": 12999,
     "precisionMeasured": null,
     "precisionWilsonLowerBound": null,
     "recallSynthetic": 1,
