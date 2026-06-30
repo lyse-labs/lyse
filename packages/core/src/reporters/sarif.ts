@@ -7,12 +7,17 @@ const SARIF_VERSION = "2.1.0";
 const SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json";
 const TOOL_INFO_URI = "https://github.com/lyse-labs/lyse";
 
-// Measured precision per rule, sourced from the calibrated sub-axis catalogue.
-// Surfaced as `properties.precision` so GitHub code-scanning consumers can
-// triage by reliability. Omitted for rules whose precision is not yet measured.
+// Conservative Wilson 95 % lower bound on precision, sourced from the sub-axis
+// catalogue. Emitted as `properties.precision` for GitHub code-scanning consumers.
+// We emit the lower bound (not the point estimate) to avoid overstating reliability
+// for thin samples (e.g. color/shadow have precisionMeasured=1.0 on 4 positives,
+// but a Wilson LB of only ~0.51). Omitted entirely for sub-axes with nSamples === 0
+// (no in-repo measurement to stand behind).
 const PRECISION_BY_RULE_ID: ReadonlyMap<string, number> = new Map(
   SUB_AXES.flatMap((s) =>
-    s.precisionMeasured === null ? [] : s.ruleIds.map((id) => [id, s.precisionMeasured!] as const),
+    (s.nSamples ?? 0) === 0 || s.precisionWilsonLowerBound === null
+      ? []
+      : s.ruleIds.map((id) => [id, s.precisionWilsonLowerBound!] as const),
   ),
 );
 

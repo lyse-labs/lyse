@@ -68,7 +68,7 @@ function extractArgs(obj: t.ObjectExpression): Record<string, string | number | 
  * are skipped — the function call's args are too varied to safely extract.
  * Cross-file variable references in `component:` are not resolved (v0.2).
  */
-function parseStoryFile(source: string): { componentName?: string; stories: StoryExport[] } | undefined {
+function parseStoryFile(source: string): { componentName?: string; stories: StoryExport[]; hasArgTypes: boolean } | undefined {
   let ast: t.File;
   try {
     ast = parse(source, {
@@ -81,6 +81,7 @@ function parseStoryFile(source: string): { componentName?: string; stories: Stor
   }
 
   let componentName: string | undefined;
+  let hasArgTypes = false;
   const stories: StoryExport[] = [];
 
   try {
@@ -101,6 +102,9 @@ function parseStoryFile(source: string): { componentName?: string; stories: Stor
             if (objProp.value.type === "Identifier") {
               componentName = (objProp.value as t.Identifier).name;
             }
+          }
+          if (keyName === "argTypes") {
+            hasArgTypes = true;
           }
         }
       },
@@ -155,6 +159,7 @@ function parseStoryFile(source: string): { componentName?: string; stories: Stor
   return {
     ...(componentName !== undefined && { componentName }),
     stories,
+    hasArgTypes,
   };
 }
 
@@ -168,7 +173,7 @@ export async function loadStories(root: string): Promise<StoryIndex | null> {
       const titleToEntries = new Map<string, SbEntry[]>();
       for (const e of Object.values(data.entries)) {
         if (e.type !== "story") continue;
-        const leaf = e.title.split("/").pop() ?? e.title;
+        const leaf = (e.title.split("/").pop() ?? e.title).trim();
         if (!titleToEntries.has(leaf)) titleToEntries.set(leaf, []);
         titleToEntries.get(leaf)!.push(e);
       }
@@ -190,6 +195,7 @@ export async function loadStories(root: string): Promise<StoryIndex | null> {
             if (parsed.stories.length > 0) {
               storyEntry.stories = parsed.stories;
             }
+            storyEntry.hasArgTypes = parsed.hasArgTypes;
           }
         }
 
@@ -206,7 +212,7 @@ export async function loadStories(root: string): Promise<StoryIndex | null> {
     const src = readFileSync(f, "utf8");
     const titleMatch = src.match(/title\s*:\s*["'`]([^"'`]+)["'`]/);
     if (!titleMatch || !titleMatch[1]) continue;
-    const leaf = titleMatch[1].split("/").pop() ?? titleMatch[1];
+    const leaf = (titleMatch[1].split("/").pop() ?? titleMatch[1]).trim();
     // Normalize to a posix-style import path: fast-glob returns "/" paths but
     // `root` uses the OS separator, so a naive `replace(root + "/")` leaves the
     // path absolute on Windows. `relative` + "/"-join is cross-platform.
@@ -225,6 +231,7 @@ export async function loadStories(root: string): Promise<StoryIndex | null> {
       if (parsed.stories.length > 0) {
         storyEntry.stories = parsed.stories;
       }
+      storyEntry.hasArgTypes = parsed.hasArgTypes;
     }
 
     byTitle.set(leaf, storyEntry);

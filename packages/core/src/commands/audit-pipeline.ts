@@ -23,7 +23,7 @@ import { extractSfcStyleCss } from "../parsers/sfc-styles.js";
 import { extractSfcScript } from "../parsers/sfc-script.js";
 import { loadTokens } from "../loaders/tokens.js";
 import { loadStories } from "../loaders/stories.js";
-import { buildComponentInventory } from "../loaders/components.js";
+import { buildComponentInventory, extractComponentProps } from "../loaders/components.js";
 import { ruleObjects } from "../rules/registry.js";
 import { loadGeneratedPack } from "../rules/pack-loader.js";
 import { runRules } from "../rule-runner.js";
@@ -357,9 +357,30 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   flags?.progress?.update("Loading tokens + components + stories…");
   const tokens = await loadTokens(absoluteRoot);
   const storyIndex = await loadStories(absoluteRoot);
-  const componentInventory = componentsModule
-    ? buildComponentInventory(componentsModule, parsed.ts)
-    : [];
+  const componentSources = new Map<string, string>();
+  for (const [rel, src] of fileContents) {
+    const base = rel.split("/").pop() ?? rel;
+    const name = base.replace(/\.(tsx?|jsx?)$/, "");
+    if (/^[A-Z]/.test(name)) componentSources.set(name, src);
+  }
+  // In dsSelfMode the DS audits its own components: they import each other via
+  // relative paths so import-counting yields nothing. Build inventory directly
+  // from the in-tree PascalCase source files instead (props are still extracted
+  // via extractComponentProps so rules like stories/props-documented can fire).
+  const componentInventory = dsSelfMode && componentsModule
+    ? [...componentSources.entries()].map(([name, src]) => {
+        const entry: ComponentInventoryEntry = {
+          name,
+          module: componentsModule as string,
+          usageCount: 0,
+        };
+        const props = extractComponentProps(name, src);
+        if (props !== undefined) entry.props = props;
+        return entry;
+      })
+    : componentsModule
+      ? buildComponentInventory(componentsModule, parsed.ts, componentSources)
+      : [];
 
   const ctx: RuleContext = {
     repoRoot: absoluteRoot,

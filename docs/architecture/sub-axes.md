@@ -4,15 +4,17 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**65 sub-axes total** — stable: 52 · experimental: 13 · disabled: 0
+**73 sub-axes total** — stable: 52 · experimental: 21 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
+
+> **Precision / Recall (LB) column note:** Lower bounds are Wilson 95 % estimates. Most rows were calibrated against the fixed-N synthetic recall suite; only `tokens/no-hardcoded-color`, `tokens/no-hardcoded-shadow`, and `components/contracts-strictness` have an in-repo adversarial N (see the [Per-rule SLO](./per-rule-slo.md) page for N values).
 
 | ID | Axis | Name | Status | Precision (LB) | Recall (LB) | In Score |
 |---|---|---|---|---|---|---|
 | `tokens.border-radius` | `tokens` | Radii token scale | **stable** | 0.958 | 0.916 | ✅ |
 | `tokens.border-width` | `tokens` | Border-width token scale | **stable** | 0.974 | 0.916 | ✅ |
-| `tokens.color` | `tokens` | Color tokens | **experimental** | 0.339 | 0.904 | — |
+| `tokens.color` | `tokens` | Color tokens | **experimental** | — | — | — |
 | `tokens.container-query` | `tokens` | Container-query containment context | **stable** | 0.912 | 0.901 | ✅ |
 | `tokens.css-custom-property-export` | `tokens` | CSS custom-property theme export | **stable** | 0.904 | 0.901 | ✅ |
 | `tokens.deprecated-token-usage` | `tokens` | Deprecated-token aliasing ($deprecated) | **stable** | 0.901 | 0.904 | ✅ |
@@ -24,31 +26,39 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `tokens.opacity` | `tokens` | Opacity token scale | **stable** | 0.989 | 0.916 | ✅ |
 | `tokens.rendered-token-fidelity` | `tokens` | Rendered token fidelity | **experimental** | 0.000 | 0.000 | — |
 | `tokens.responsive-breakpoints` | `tokens` | Responsive breakpoint scale | **stable** | 0.904 | 0.901 | ✅ |
-| `tokens.shadow` | `tokens` | Shadow / elevation token scale | **experimental** | — | — | — |
+| `tokens.shadow` | `tokens` | Shadow / elevation token scale | **experimental** | 0.510 | 0.510 | — |
 | `tokens.spacing` | `tokens` | Spacing tokens | **stable** | 0.985 | 0.904 | ✅ |
 | `tokens.theme-modes` | `tokens` | Theme modes (light/dark) | **stable** | 0.901 | 0.904 | ✅ |
 | `tokens.typography` | `tokens` | Typography token scale (size/weight/letter-spacing) | **stable** | 0.989 | 0.916 | ✅ |
 | `tokens.z-index` | `tokens` | Z-index token scale | **stable** | 0.988 | 0.916 | ✅ |
+| `a11y.contrast-tokens` | `a11y` | Static WCAG-AA contrast (co-applied fg/bg pairs) | **experimental** | — | — | — |
 | `a11y.essentials` | `a11y` | jsx-a11y essentials | **stable** | 0.908 | 0.904 | ✅ |
 | `a11y.focus-visible` | `a11y` | focus-visible adoption | **stable** | 0.904 | 0.901 | ✅ |
 | `a11y.forced-colors` | `a11y` | Forced-colors / high-contrast support | **stable** | 0.916 | 0.901 | ✅ |
 | `a11y.html-lang` | `a11y` | Document language (html lang) | **stable** | 0.912 | 0.901 | ✅ |
 | `a11y.inclusive-language` | `a11y` | Inclusive language | **stable** | 0.904 | 0.901 | ✅ |
+| `a11y.interactive-role-name` | `a11y` | Accessible name on interactive controls | **experimental** | — | — | — |
 | `a11y.prefers-reduced-motion` | `a11y` | prefers-reduced-motion compliance | **stable** | 0.904 | 0.901 | ✅ |
 | `a11y.runtime-axe` | `a11y` | Runtime a11y (axe-core on Storybook) | **experimental** | 0.000 | 0.000 | — |
 | `a11y.semantic-html` | `a11y` | Semantic HTML (no static-element interactions) | **stable** | 0.916 | 0.934 | ✅ |
-| `components.contracts-strictness` | `components` | Component prop contract strictness | **experimental** | — | — | — |
+| `components.contracts-strictness` | `components` | Component prop contract strictness | **experimental** | 0.901 | 0.901 | — |
 | `components.doc-comments` | `components` | Component doc-comment presence (public API) | **stable** | 0.929 | 0.901 | ✅ |
 | `components.icon-decorative-aria` | `components` | Inline SVG accessible treatment | **stable** | 0.916 | 0.901 | ✅ |
 | `components.naming-component-pascalcase` | `components` | Component PascalCase | **stable** | 0.904 | 0.904 | ✅ |
 | `components.naming-hook-prefix` | `components` | Hook `use` prefix | **stable** | 0.904 | 0.904 | ✅ |
 | `components.native-shadows` | `components` | Native shadow elements | **stable** | 0.901 | 0.901 | ✅ |
+| `components.no-arbitrary-tailwind` | `components` | No arbitrary Tailwind values (non-color) | **experimental** | — | — | — |
 | `components.no-icon-fonts` | `components` | Icon delivery (SVG over icon-font) | **stable** | 0.904 | 0.901 | ✅ |
+| `components.no-style-escape-hatch` | `components` | No inline style on DS components | **experimental** | — | — | — |
+| `components.standardized-variant-props` | `components` | Standardized variant props (no boolean explosion) | **experimental** | — | — | — |
 | `components.svg-viewbox` | `components` | Inline SVG viewBox (scalable icons) | **stable** | 0.901 | 0.904 | ✅ |
 | `stories.coverage` | `stories` | Storybook coverage | **stable** | 0.901 | 0.901 | ✅ |
+| `stories.props-documented` | `stories` | Story documents component props | **experimental** | 0.901 | 0.901 | — |
+| `stories.usage-examples` | `stories` | Story shows usage examples | **experimental** | — | — | — |
 | `ai-surface.agent-instruction-files` | `ai-surface` | Agent instruction files (Cursor / Claude) | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-surface.agents-md-quality` | `ai-surface` | AGENTS.md quality | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-surface.changelog-present` | `ai-surface` | Structured CHANGELOG (versioning) | **stable** | 0.901 | 0.904 | ✅ |
+| `ai-surface.component-manifest-completeness` | `ai-surface` | Component manifest completeness (props/variants/examples) | **experimental** | 0.439 | 0.439 | — |
 | `ai-surface.component-manifest-json` | `ai-surface` | Component manifest JSON | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-surface.deprecation-markers` | `ai-surface` | Deprecation marker quality (@deprecated) | **stable** | 0.901 | 0.904 | ✅ |
 | `ai-surface.ds-index-exported` | `ai-surface` | DS index export | **stable** | 0.901 | 0.901 | ✅ |

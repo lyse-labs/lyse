@@ -20,6 +20,11 @@ export async function evaluateAdapter(
   const clean = adapter.cleanFixture();
   matrix = addObservation(matrix, false, await probe(clean, adapter.ruleId));
 
+  // Negative observations: each false-friend must NOT flag.
+  for (const friend of adapter.falseFriends ?? []) {
+    matrix = addObservation(matrix, false, await probe(friend, adapter.ruleId));
+  }
+
   // Positive observations: each mutation injects a known violation that MUST flag.
   for (const mutation of adapter.mutations) {
     const mutated = mutation.apply(adapter.cleanFixture());

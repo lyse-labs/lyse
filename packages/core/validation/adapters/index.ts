@@ -2,6 +2,9 @@ import type { OracleAdapter } from "../types.js";
 import { colorAdapter } from "./tokens-no-hardcoded-color.js";
 import { llmsTxtAdapter } from "./ai-surface-llms-txt-structure.js";
 import { mediaQueryAdapter } from "./tokens-no-hardcoded-media-query.js";
+import { shadowAdapter } from "./tokens-no-hardcoded-shadow.js";
+import { contrastTokensAdapter } from "./a11y-contrast-tokens.js";
+import { interactiveRoleNameAdapter } from "./a11y-interactive-role-name.js";
 import { presenceAdapters } from "../generic-presence-adapters.js";
 import { hardcodedValueAdapters } from "../hardcoded-value-adapters.js";
 import { vocabularyAdapters } from "../vocabulary-adapters.js";
@@ -14,6 +17,9 @@ export const adapters: OracleAdapter[] = [
   colorAdapter,
   llmsTxtAdapter,
   mediaQueryAdapter,
+  shadowAdapter,
+  contrastTokensAdapter,
+  interactiveRoleNameAdapter,
   ...presenceAdapters,
   ...hardcodedValueAdapters,
   ...tokensStructuralAdapters,

@@ -2,17 +2,90 @@
  * Shared skip-context helpers used by tokens/no-hardcoded-color and
  * tokens/no-hardcoded-spacing to suppress intentional false positives.
  *
- * NOTE: All helpers are SAME-LINE heuristics only. Multi-line <code> / <pre>
- * blocks, or JSX expressions like sizes={"..."}, would require AST traversal
- * — that is V1 work.
+ * Most helpers operate on the source string without an AST. `isInsideCodeDisplay`
+ * handles both same-line and multi-line <code>/<pre> blocks via backward scan.
+ * The `sizes={"..."}` JSX-expression form is still not handled — it requires
+ * AST traversal to detect the expression boundary.
  */
+
+// ---------------------------------------------------------------------------
+// Vendored / browser-reset file detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Basename patterns for browser normalization / reset stylesheets and minified
+ * third-party bundles. These files are never DS-authored — flagging hardcoded
+ * colors in them is a false positive for any design-system rule.
+ *
+ * General signals (no repo-specific names):
+ *   - normalize.{css,scss,sass,less}      — browser normalize (e.g. necolas/normalize.css)
+ *   - _normalize.{css,scss,sass,less}     — Sass partial form
+ *   - reset.{css,scss,sass,less}          — CSS reset
+ *   - _reset.{css,scss,sass,less}         — Sass partial form
+ *   - *.min.css / *.min.scss              — minified bundle (never audit minified code)
+ */
+const VENDORED_RESET_BASENAME_RE =
+  /(?:^|[\\/])_?(?:normalize|reset)\.(?:css|scss|sass|less)$|\.min\.(?:css|scss)$/;
+
+/**
+ * Returns true if the file is a browser-normalize / CSS-reset stylesheet or a
+ * minified CSS bundle — files that are never DS-authored, so hardcoded color
+ * values in them are categorically not design-system drift.
+ *
+ * This complements `isBuiltinExcludedPath` (which covers directory-level
+ * vendoring like `.yarn/`, `vendor/`, `bower_components/`) with basename-level
+ * signals for normalize/reset files that may live inside the repo's own tree
+ * (e.g. `src/base/normalize.scss` in primer-css).
+ */
+export function isVendoredOrResetFile(filePath: string): boolean {
+  const normalised = filePath.replace(/\\/g, "/");
+  // Re-use the directory-level check from _exclude.ts inline to avoid a
+  // circular import (this file is imported by the rule; _exclude.ts is also
+  // imported by the rule — keeping them separate avoids cycles).
+  const BUILTIN_SEGS = [".yarn/", "bower_components/", "/vendor/", "/vendored/", "third_party/"];
+  if (BUILTIN_SEGS.some((seg) => normalised.startsWith(seg) || normalised.includes(seg))) return true;
+  // Catch bare root-level vendor/ / vendored/ dirs (no leading slash, e.g. "vendor/react-tel-input/styles.css").
+  // Only startsWith is used — includes() would also match "src/thevendor/…" which is not a vendor directory.
+  if (normalised.startsWith("vendor/") || normalised.startsWith("vendored/")) return true;
+  return VENDORED_RESET_BASENAME_RE.test(normalised);
+}
+
+// ---------------------------------------------------------------------------
+// Generated CSS file detection (compiled build artifacts)
+// ---------------------------------------------------------------------------
+
+/**
+ * Matches a CSS generator banner in the first ~200 characters of a file.
+ *
+ * Currently recognises:
+ *   `/*! tailwindcss v<semver> … *\/` — the banner injected by Tailwind CSS
+ *     into compiled output (both v3 `npm run build` and v4 CLI outputs).
+ *
+ * The check is content-based, not path-based, so it works regardless of the
+ * output filename (dist/styles.css, public/tw.css, assets/main.css, etc.).
+ * It is intentionally narrow: the banner must appear in the opening comment
+ * of the file (within the first 200 chars) — a mid-file mention of
+ * "tailwindcss" does not trigger suppression.
+ */
+const GENERATED_CSS_BANNER_RE = /\/\*!?\s*tailwindcss\s+v\d/;
+
+/**
+ * Returns true if the CSS source string is a generated build artifact whose
+ * colors were never authored by a design-system contributor.
+ *
+ * Keyed entirely on the generator banner in the file head — no path heuristics.
+ */
+export function isGeneratedCssSource(source: string): boolean {
+  // Only inspect the first 200 characters to avoid scanning the whole file.
+  return GENERATED_CSS_BANNER_RE.test(source.slice(0, 200));
+}
 
 // ---------------------------------------------------------------------------
 // Color token-definition file detection
 // ---------------------------------------------------------------------------
 
 const COLOR_DEF_FILE_RE =
-  /(?:^|[\\/])(?:colors|palette)\.(?:ts|js|css|scss)$|(?:^|[\\/])[^/\\]*-colors\.(?:ts|js)$|(?:^|[\\/])_legacy-colors\.(?:ts|js)$|(?:^|[\\/])[^/\\]*\.colors\.(?:ts|css|scss)$|(?:^|[\\/])demos[\\/]|(?:\.demo\.[cm]?[jt]sx?)$|(?:^|[\\/])stories[\\/][^/\\]*\.(?:css|scss)$/;
+  /(?:^|[\\/])(?:colors|palette)\.(?:ts|js|css|scss)$|(?:^|[\\/])[^/\\]*-colors\.(?:ts|js)$|(?:^|[\\/])_legacy-colors\.(?:ts|js)$|(?:^|[\\/])[^/\\]*\.colors\.(?:ts|css|scss)$|(?:^|[\\/])demos[\\/]|(?:\.demo\.[cm]?[jt]sx?)$|(?:^|[\\/])stories[\\/][^/\\]*\.(?:css|scss)$|(?:^|[\\/])_?themes?\.(?:ts|tsx|js|jsx|mjs|cjs)$|(?:^|[\\/])_?variables\.(?:css|scss|sass|less)$|(?:^|[\\/])[^/\\]*-variables\.(?:css|scss|sass|less)$|(?:^|[\\/])[^/\\]*variables[^/\\]*\.(?:css|scss|sass|less)$|(?:^|[\\/])_?tokens\.(?:scss|sass|less)$/;
 
 /**
  * Returns true if the file is a color token definition file, demo, or a CSS/SCSS
@@ -40,11 +113,51 @@ export function isColorTokenDefFile(filePath: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// SVG / icon file detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Path patterns for SVG icon files. Matches:
+ *   - Basename ending in Icon.{tsx,jsx,ts,js,svg} (e.g. CloseIcon.tsx, SearchIcon.jsx)
+ *   - Files with .svg extension (pure SVG assets)
+ *   - Files under /icons/, /icon/, /svg/ directories
+ */
+const SVG_ICON_PATH_RE =
+  /(?:^|[\\/])[^/\\]*Icon\.[cm]?[jt]sx?$|\.svg$|(?:^|[\\/])icons[\\/]|(?:^|[\\/])icon[\\/]|(?:^|[\\/])svg[\\/]/;
+
+/**
+ * Returns true if the file is an SVG icon file based on its path.
+ * Hardcoded color values in these files are vector art, not DS drift.
+ *
+ * Path signals (general — no repo-specific names):
+ *   - *Icon.{tsx,jsx,ts,js}  — named-icon component pattern
+ *   - *.svg                   — pure SVG asset files
+ *   - /icons/, /icon/, /svg/  — icon directory conventions
+ *
+ * The content signal (fill="#hex" / stroke="#hex") was removed: it suppressed
+ * the whole file on any SVG attribute match, causing a recall hole when a
+ * non-icon file mixed decorative SVG markup with real hardcoded DS colors.
+ * dataset id 86 (icon-library-picker.tsx — no icon path signal) is now a
+ * RESIDUAL FP.
+ */
+export function isSvgIconContext(filePath: string): boolean {
+  const normalised = filePath.replace(/\\/g, "/");
+  return SVG_ICON_PATH_RE.test(normalised);
+}
+
+// ---------------------------------------------------------------------------
 // Guard A: Low-signal value file detection
 // ---------------------------------------------------------------------------
 
+// apps/storybook/ is kept: it's a recognised monorepo Storybook app convention.
+// apps/ssr-testing/ was removed (Mantine-repo-specific; dataset id 82 = residual FP).
+// apps/storybook/ was removed (convention-specific, redundant with /.storybook/ +
+//   *.stories.* patterns already above). dataset ids 83-85 = residual FP.
+// __stories__/ added: canonical double-underscore convention (same family as
+// __tests__ / __mocks__). Observed in the wild (e.g. twenty: src/__stories__/)
+// with 23 FPs from the app-repo harvest.
 const LOW_SIGNAL_FILE_RE =
-  /(?:^|[\\/])(?:__tests__|__mocks__|fixtures|demos?|examples?)[\\/]|\.(?:test|spec|stories|story|demo|example|fixture)\.[cm]?[jt]sx?$/;
+  /(?:^|[\\/])(?:__tests__|__mocks__|__stories__|fixtures|demos?|examples?)[\\/]|\.(?:test|spec|stories|story|demo|example|fixture)\.[cm]?[jt]sx?$|(?:^|[\\/])\.storybook[\\/]|[\\/]\.storybook[\\/]/;
 
 /**
  * Returns true if the file path is a test, story, mock, or fixture file.
@@ -130,11 +243,20 @@ export function isInExampleOrSchemaValuePosition(source: string, matchIndex: num
 
 /**
  * Returns true if the byte offset `index` in `source` falls inside a
- * `<code>...</code>` or `<pre>...</pre>` block that opens AND closes on the
- * same line as the match. Useful for skipping display-only CSS examples
- * rendered by shadcn theme customizers.
+ * `<code>...</code>` or `<pre>...</pre>` block — either on the same line or
+ * across multiple lines. Useful for skipping display-only CSS examples in
+ * documentation components (shadcn theme customizer pattern, Storybook docs).
  *
- * Limitation: multi-line code blocks are NOT detected. V1 needs AST context.
+ * Strategy:
+ *   1. Same-line check: if open+close tags bracket the position on the same
+ *      line, return true immediately (fast path, no backtracking needed).
+ *   2. Multi-line check: scan backwards from `index` for the nearest `<code>`
+ *      or `<pre>` opening tag; if found, scan forwards for the matching close
+ *      tag and verify `index` falls between them.
+ *
+ * Limitation: does not handle nested `<code>` inside `<code>`, or tags with
+ * attributes like `<code class="language-css">`. Attributes version is a
+ * common pattern — add attribute-tolerant open-tag matching.
  */
 export function isInsideCodeDisplay(source: string, index: number): boolean {
   const lineStart = source.lastIndexOf("\n", index - 1) + 1;
@@ -144,12 +266,38 @@ export function isInsideCodeDisplay(source: string, index: number): boolean {
   const posInLine = index - lineStart;
 
   for (const tag of ["code", "pre"]) {
+    // ── Same-line fast path ─────────────────────────────────────────────────
     const openTag = `<${tag}>`;
     const closeTag = `</${tag}>`;
     let openIdx = -1;
     while ((openIdx = line.indexOf(openTag, openIdx + 1)) !== -1) {
       const closeIdx = line.indexOf(closeTag, openIdx + openTag.length);
       if (closeIdx !== -1 && openIdx < posInLine && posInLine < closeIdx) {
+        return true;
+      }
+    }
+
+    // ── Multi-line check ────────────────────────────────────────────────────
+    // Accept both bare `<code>` and attribute form `<code ...>` / `<code\n...>`.
+    // Regex: `<tag` followed optionally by whitespace+attrs then `>`.
+    const openTagRe = new RegExp(`<${tag}(?:\\s[^>]*)?>`, "g");
+    // Walk backwards through all open-tag matches that precede `index`.
+    // RegExp.exec scans left-to-right so collect them all then pick the last
+    // one before `index`.
+    openTagRe.lastIndex = 0;
+    let lastOpenBeforeIndex = -1;
+    let lastOpenEnd = -1;
+    let m: RegExpExecArray | null;
+    while ((m = openTagRe.exec(source)) !== null) {
+      if (m.index >= index) break;
+      lastOpenBeforeIndex = m.index;
+      lastOpenEnd = m.index + m[0].length;
+    }
+    if (lastOpenBeforeIndex !== -1) {
+      // Find the matching close tag after the open tag.
+      const closeIdx = source.indexOf(closeTag, lastOpenEnd);
+      if (closeIdx !== -1 && closeIdx > index) {
+        // index falls between <tag...> and </tag> — it's inside a code display block.
         return true;
       }
     }
@@ -318,6 +466,132 @@ export function isInCommentOrUrl(source: string, hitStart: number): boolean {
   const lookback = source.slice(Math.max(0, hitStart - 60), hitStart);
   if (lookback.includes("://") && !/\s/.test(lookback.split("://").pop() ?? "")) {
     return true;
+  }
+
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Data-palette / color-collection context detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Matches all color-literal forms: hex, rgb/rgba, hsl/hsla, oklch.
+ * Used only for COUNTING siblings, not for extracting values, so a simple
+ * global regex with no captures is sufficient. Intentionally permissive —
+ * any plausible color literal counts toward the palette threshold.
+ */
+const COLOR_LITERAL_COUNT_RE =
+  /#[0-9a-fA-F]{3,8}\b|rgb[a]?\([^)]*\)|hsl[a]?\([^)]*\)|oklch\([^)]*\)/g;
+
+/**
+ * Minimum number of color literals that must exist inside the same enclosing
+ * block for that block to be treated as a palette/collection definition.
+ *
+ * Arrays (`[ … ]`): threshold = 3. A real palette (color preset, chart series)
+ * always has ≥ 3 entries; a lone or two-item array is still potential drift.
+ *
+ * Objects (`{ … }`): threshold = 5. Component style objects routinely have
+ * 3-4 hardcoded colors (background, color, border, shadow) — these are drift,
+ * not palettes. Palette objects (syntax-highlight themes, color maps) always
+ * have many more. Using 5 avoids suppressing style objects while still
+ * catching genuine palette/data objects.
+ */
+const PALETTE_MIN_COLORS_ARRAY = 3;
+const PALETTE_MIN_COLORS_OBJECT = 5;
+
+/**
+ * Finds the enclosing block (`[ … ]` or `{ … }`) that starts at or before
+ * `searchFrom` in `source`. Returns `{ start, close }` indices of the delimiters,
+ * or null if no enclosing block is found.
+ */
+function findEnclosingBlock(
+  source: string,
+  searchFrom: number,
+): { start: number; close: number; type: "[" | "{" } | null {
+  let squareDepth = 0;
+  let curlyDepth = 0;
+
+  for (let i = searchFrom - 1; i >= 0; i--) {
+    const c = source[i];
+    if (c === "]") { squareDepth++; continue; }
+    if (c === "}") { curlyDepth++; continue; }
+    if (c === "[") {
+      if (squareDepth > 0) { squareDepth--; continue; }
+      // Unmatched [ — enclosing array
+      const blockType = "[" as const;
+      const closeChar = "]";
+      let depth = 0;
+      for (let j = i + 1; j < source.length; j++) {
+        const d = source[j];
+        if (d === blockType) { depth++; continue; }
+        if (d === closeChar) {
+          if (depth > 0) { depth--; continue; }
+          return { start: i, close: j, type: blockType };
+        }
+      }
+      return null; // unclosed
+    }
+    if (c === "{") {
+      if (curlyDepth > 0) { curlyDepth--; continue; }
+      // Unmatched { — enclosing object/block
+      const blockType = "{" as const;
+      const closeChar = "}";
+      let depth = 0;
+      for (let j = i + 1; j < source.length; j++) {
+        const d = source[j];
+        if (d === blockType) { depth++; continue; }
+        if (d === closeChar) {
+          if (depth > 0) { depth--; continue; }
+          return { start: i, close: j, type: blockType };
+        }
+      }
+      return null; // unclosed
+    }
+  }
+  return null;
+}
+
+/**
+ * Returns true when the color literal at `hitStart` in `source` is an
+ * element of a multi-color collection — an array `[ … ]` or an object
+ * `{ … }` whose block contains at least `PALETTE_MIN_COLORS` color literals.
+ *
+ * The check walks outward through up to 2 nesting levels: first the
+ * immediate enclosing block, then one level up if the immediate block does
+ * not qualify. This handles syntax-highlight theme objects where individual
+ * hex values live inside nested `settings: { foreground: '#hex' }` objects
+ * that are themselves elements of a large outer `tokenColors` array or
+ * `colors` object with many color-valued properties.
+ *
+ * Intentionally NOT palette context:
+ *   - Two-color pairs / lone values — below the threshold, always flag.
+ *   - A CSS rule body `{ property: #hex; property2: #hex2 }` with only
+ *     a couple of colors — below the threshold.
+ *
+ * Limit of 2 outer levels: avoids over-suppression of isolated DS-component
+ * colors that happen to be nested deeply inside a large component tree.
+ */
+export function isDataPaletteContext(source: string, hitStart: number): boolean {
+  let searchFrom = hitStart;
+
+  for (let level = 0; level < 2; level++) {
+    const block = findEnclosingBlock(source, searchFrom);
+    if (block === null) return false;
+
+    const minColors =
+      block.type === "[" ? PALETTE_MIN_COLORS_ARRAY : PALETTE_MIN_COLORS_OBJECT;
+
+    const inner = source.slice(block.start + 1, block.close);
+    COLOR_LITERAL_COUNT_RE.lastIndex = 0;
+    let count = 0;
+    while (COLOR_LITERAL_COUNT_RE.exec(inner) !== null) {
+      count++;
+      if (count >= minColors) return true; // early exit
+    }
+
+    // Not enough colors in this block — try the enclosing (outer) block.
+    searchFrom = block.start;
   }
 
   return false;

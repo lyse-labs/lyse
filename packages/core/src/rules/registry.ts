@@ -12,6 +12,7 @@ import { rule as rNoIconFonts } from "./components-no-icon-fonts.js";
 import { rule as rSvgViewbox } from "./components-svg-viewbox.js";
 import { rule as rIconDecorativeAria } from "./components-icon-decorative-aria.js";
 import { rule as rContractsStrictness } from "./components-contracts-strictness.js";
+import { rule as rStandardizedVariantProps } from "./components-standardized-variant-props.js";
 import { rule as rDocComments } from "./components-doc-comments.js";
 import { rule as rNamingPascalCase } from "./naming-component-pascalcase.js";
 import { rule as rNamingHookPrefix } from "./naming-hook-prefix.js";
@@ -23,9 +24,13 @@ import { rule as rForcedColors } from "./a11y-forced-colors.js";
 import { rule as rHtmlLang } from "./a11y-html-lang.js";
 import { rule as rSemanticHtml } from "./a11y-semantic-html.js";
 import { rule as rRuntimeAxe } from "./a11y-runtime-axe.js";
+import { rule as rContrastTokens } from "./a11y-contrast-tokens.js";
 import { rule as rStorybook } from "./storybook-coverage.js";
+import { rule as rStoriesPropsDocumented } from "./stories-props-documented.js";
+import { rule as rStoriesUsageExamples } from "./stories-usage-examples.js";
 import { rule as rAgentsMdQuality } from "./ai-surface-agents-md-quality.js";
 import { rule as rComponentManifestJson } from "./ai-surface-component-manifest-json.js";
+import { rule as rComponentManifestCompleteness } from "./ai-surface-component-manifest-completeness.js";
 import { rule as rDsIndexExported } from "./ai-surface-ds-index-exported.js";
 import { rule as rMcpConfigPresent } from "./ai-surface-mcp-config-present.js";
 import { rule as rLlmsTxtStructure } from "./ai-surface-llms-txt-structure.js";
@@ -63,6 +68,9 @@ import { rule as rInteractionPatternDocs } from "./ai-governance-interaction-pat
 import { rule as rDraftAttribution } from "./ai-governance-draft-attribution.js";
 import { rule as rProductAnalytics } from "./ai-governance-product-analytics.js";
 import { rule as rRenderedTokenFidelity } from "./tokens-rendered-token-fidelity.js";
+import { rule as rNoArbitraryTailwind } from "./components-no-arbitrary-tailwind.js";
+import { rule as rNoStyleEscapeHatch } from "./components-no-style-escape-hatch.js";
+import { rule as rInteractiveRoleName } from "./a11y-interactive-role-name.js";
 import type { Rule } from "../types.js";
 
 export const ruleObjects: Rule[] = [
@@ -80,6 +88,7 @@ export const ruleObjects: Rule[] = [
   rSvgViewbox,
   rIconDecorativeAria,
   rContractsStrictness,
+  rStandardizedVariantProps,
   rDocComments,
   rNamingPascalCase,
   rNamingHookPrefix,
@@ -91,9 +100,13 @@ export const ruleObjects: Rule[] = [
   rHtmlLang,
   rSemanticHtml,
   rRuntimeAxe,
+  rContrastTokens,
   rStorybook,
+  rStoriesPropsDocumented,
+  rStoriesUsageExamples,
   rAgentsMdQuality,
   rComponentManifestJson,
+  rComponentManifestCompleteness,
   rDsIndexExported,
   rMcpConfigPresent,
   rLlmsTxtStructure,
@@ -131,6 +144,9 @@ export const ruleObjects: Rule[] = [
   rDraftAttribution,
   rProductAnalytics,
   rRenderedTokenFidelity,
+  rNoArbitraryTailwind,
+  rNoStyleEscapeHatch,
+  rInteractiveRoleName,
 ];
 
 export const ruleMap = new Map<string, Rule>(ruleObjects.map((r) => [r.id, r]));

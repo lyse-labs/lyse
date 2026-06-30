@@ -12,6 +12,7 @@ function makeSubAxis(partial: Partial<SubAxisRecord> & { id: string }): SubAxisR
     recallMeasured: null,
     precisionWilsonLowerBound: null,
     recallWilsonLowerBound: null,
+    nSamples: 0,
     lastCalibrated: null,
     contributesToScore: false,
     ruleIds: [],

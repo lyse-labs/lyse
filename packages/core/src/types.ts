@@ -19,12 +19,16 @@ export type BuiltInRuleId =
   | "tokens/deprecated-token-usage"
   | "components/no-native-shadows"
   | "components/contracts-strictness"
+  | "components/standardized-variant-props"
   | "naming/component-pascalcase"
   | "naming/hook-prefix"
   | "naming/prop-camelcase"
   | "a11y/essentials"
+  | "a11y/contrast-tokens"
   | "stories/coverage"
   | "stories/variant-coverage"
+  | "stories/props-documented"
+  | "stories/usage-examples"
   | "ai-surface/agents-md-quality"
   | "ai-surface/component-manifest-json"
   | "ai-surface/ds-index-exported"
@@ -216,6 +220,13 @@ export interface StoryEntry {
    * Absent when no exports were extracted (complex factory patterns, parse errors).
    */
   stories?: StoryExport[];
+  /**
+   * True when the story's default-export meta declares an `argTypes` object
+   * (the canonical CSF prop-documentation signal). Presence only — the value
+   * is not inspected. Set by `loadStories` when the story parses (`false` when
+   * the meta has no `argTypes`); absent only when the file failed to parse.
+   */
+  hasArgTypes?: boolean;
 }
 
 export interface StoryIndex {

@@ -147,21 +147,45 @@ describe("renderSarif", () => {
   });
 
   describe("properties.precision", () => {
-    it("stamps measured precision on calibrated rules", () => {
+    it("omits precision for N=0 rules (no in-repo measurement)", () => {
       const sarif = JSON.parse(renderSarif(sample));
       const rules: { id: string; properties: { precision?: number } }[] =
         sarif.runs[0].tool.driver.rules;
+      // tokens/dtcg-conformance has nSamples undefined/0 — no precision should be emitted.
       const dtcg = rules.find((r) => r.id === "tokens/dtcg-conformance");
-      expect(dtcg?.properties.precision).toBe(1);
+      expect(dtcg?.properties.precision).toBeUndefined();
     });
 
-    it("omits precision for rules with no measured value", () => {
+    it("emits Wilson LB (not point estimate) for rules with N > 0", () => {
       const sarif = JSON.parse(renderSarif(sample));
       const rules: { id: string; properties: { precision?: number } }[] =
         sarif.runs[0].tool.driver.rules;
-      const noPrecision = rules.find((r) => r.id === "tokens/no-hardcoded-shadow");
-      expect(noPrecision).toBeDefined();
-      expect(noPrecision?.properties).not.toHaveProperty("precision");
+      // contracts-strictness: nSamples=68, precisionWilsonLowerBound≈0.901, precisionMeasured=1.0
+      const rule = rules.find((r) => r.id === "components/contracts-strictness");
+      expect(rule).toBeDefined();
+      expect(rule?.properties.precision).toBeDefined();
+      // Must be the LB (~0.901), not the flattering point estimate (1.0).
+      expect(rule!.properties.precision!).toBeLessThan(1);
+      expect(rule!.properties.precision!).toBeGreaterThan(0.89);
+    });
+
+    it("omits precision for color (uncalibrated — null Wilson LB)", () => {
+      const sarif = JSON.parse(renderSarif(sample));
+      const rules: { id: string; properties: { precision?: number } }[] =
+        sarif.runs[0].tool.driver.rules;
+      // tokens/no-hardcoded-color: real-world precision ~65%, but catalogue is null (uncalibrated).
+      const colorRule = rules.find((r) => r.id === "tokens/no-hardcoded-color");
+      expect(colorRule?.properties.precision).toBeUndefined();
+    });
+
+    it("emits Wilson LB for shadow (N>0 but thin — LB ~0.51)", () => {
+      const sarif = JSON.parse(renderSarif(sample));
+      const rules: { id: string; properties: { precision?: number } }[] =
+        sarif.runs[0].tool.driver.rules;
+      const shadowRule = rules.find((r) => r.id === "tokens/no-hardcoded-shadow");
+      expect(shadowRule?.properties.precision).toBeDefined();
+      // precisionWilsonLowerBound ≈ 0.51, precisionMeasured = 1.0 — must not emit 1.0.
+      expect(shadowRule!.properties.precision!).toBeLessThan(0.6);
     });
   });
 

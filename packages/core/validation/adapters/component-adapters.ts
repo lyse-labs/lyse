@@ -296,6 +296,1164 @@ const storiesCoverageAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
+// ---------------------------------------------------------------------------
+// contracts-strictness — adversarial corpus
+// ---------------------------------------------------------------------------
+//
+// Rule flags three violation classes:
+//   A: props typed `any`       → error
+//   B: props typed `unknown`   → error
+//   C: variant-like props (variant/size/intent/color/tone/appearance/kind)
+//      typed plain `string` instead of a string-literal union → warning
+//   D: publishable package.json missing `types`/`typings` field → warning
+//
+// False-friend classes (legitimate code that must NOT flag):
+//   1. Variant props typed with proper string-literal unions
+//   2. Non-variant string props (label, title, id, name, href, placeholder, …)
+//   3. Private packages (private: true)
+//   4. Non-publishable packages (no main/module/exports/types)
+//   5. Framework-allowed props typed any (children/ref/key/as/asChild)
+//   6. Non-PascalCase function exports with `any` params (utilities)
+//   7. Test files (.test.tsx, .spec.tsx)
+//   8. Components with no type annotation on params
+//   9. Callback / function-type props
+//  10. Inline object-pattern params without TSTypeAnnotation
+//  11. Cross-file type references (skipped in v0.1)
+//  12. Publishable packages WITH a valid `types` field
+//  13. Non-component TSX files (no exported PascalCase component)
+
+const PKG_PUB = JSON.stringify({
+  name: "@acme/ui",
+  version: "1.0.0",
+  main: "./dist/index.js",
+  types: "./dist/index.d.ts",
+});
+
+const PKG_SIMPLE_CS = JSON.stringify({ name: "fx-cs", version: "1.0.0" });
+
+// Clean fixture: a well-typed component + publishable package with types field.
+// This is the negative baseline (must not flag).
+const CS_CLEAN_TSX = [
+  'type ButtonVariant = "primary" | "secondary" | "ghost";',
+  "interface ButtonProps {",
+  "  variant: ButtonVariant;",
+  '  size: "sm" | "md" | "lg";',
+  "  label: string;",
+  "  onClick?: () => void;",
+  "  children?: React.ReactNode;",
+  "}",
+  "export function Button(props: ButtonProps) { return <button />; }",
+].join("\n");
+
+const FALSE_FRIENDS_CS: FixtureFiles[] = [
+  // ── CLASS 1: variant prop typed as proper string-literal union ─────────────
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Button.tsx":
+      'type V = "primary" | "secondary" | "ghost"; interface P { variant: V; } export const Button = (p: P) => <button />;',
+  },
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Badge.tsx":
+      'interface P { size: "sm" | "md" | "lg"; intent: "success" | "error" | "warning"; } export const Badge = (p: P) => <span />;',
+  },
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Tag.tsx":
+      'type Intent = "positive" | "negative" | "neutral"; type Color = "blue" | "red" | "green"; interface P { intent: Intent; color: Color; } export const Tag = (p: P) => <span />;',
+  },
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Chip.tsx":
+      'type Tone = "loud" | "muted"; type Appearance = "filled" | "outlined" | "ghost"; interface P { tone: Tone; appearance: Appearance; } export const Chip = (p: P) => <span />;',
+  },
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Pill.tsx":
+      'type K = "action" | "status" | "filter"; interface P { kind: K; } export const Pill = (p: P) => <span />;',
+  },
+  // ── CLASS 2: non-variant string props ──────────────────────────────────────
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Input.tsx":
+      "interface P { label: string; placeholder: string; id: string; } export const Input = (p: P) => <input />;",
+  },
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Link.tsx":
+      "interface P { href: string; title: string; rel?: string; } export const Link = (p: P) => <a href={p.href} />;",
+  },
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Heading.tsx":
+      "interface P { text: string; htmlFor?: string; ariaLabel?: string; } export const Heading = (p: P) => <h2>{p.text}</h2>;",
+  },
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Avatar.tsx":
+      "interface P { name: string; src: string; alt: string; } export const Avatar = (p: P) => <img src={p.src} alt={p.alt} />;",
+  },
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Tooltip.tsx":
+      "interface P { content: string; className?: string; } export const Tooltip = (p: P) => <div title={p.content} />;",
+  },
+  // ── CLASS 3: private packages ───────────────────────────────────────────────
+  {
+    "package.json": JSON.stringify({
+      name: "design-system-internal",
+      private: true,
+      main: "./dist/index.js",
+    }),
+  },
+  {
+    "package.json": JSON.stringify({
+      name: "@acme/private-ui",
+      private: true,
+      main: "./dist/index.js",
+      module: "./dist/index.esm.js",
+    }),
+  },
+  // ── CLASS 4: non-publishable packages ──────────────────────────────────────
+  {
+    "package.json": JSON.stringify({ name: "dev-app", scripts: { test: "vitest" } }),
+  },
+  {
+    "package.json": JSON.stringify({ name: "monorepo-root", workspaces: ["packages/*"] }),
+  },
+  {
+    "package.json": JSON.stringify({ name: "config-pkg", devDependencies: { typescript: "^5.0.0" } }),
+  },
+  // ── CLASS 5: framework-allowed props typed any ─────────────────────────────
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Slot.tsx":
+      "interface P { children: any; ref: any; } export const Slot = (p: P) => <>{p.children}</>;",
+  },
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Polymorphic.tsx":
+      "interface P { as: any; asChild: any; key: any; } export const Polymorphic = (p: P) => <div />;",
+  },
+  // ── CLASS 6: non-PascalCase exports with any params ────────────────────────
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/utils.tsx":
+      "interface P { data: any; } export function renderItem(p: P) { return <li>{p.data}</li>; }",
+  },
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/helpers.tsx":
+      "interface P { payload: unknown; } export const formatEntry = (p: P) => String(p.payload);",
+  },
+  // ── CLASS 7: test files ─────────────────────────────────────────────────────
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Button.test.tsx":
+      "interface P { data: any; } export function TestBox(p: P) { return <div />; }",
+  },
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Card.spec.tsx":
+      "interface P { payload: unknown; } export function SpecCard(p: P) { return <div />; }",
+  },
+  // ── CLASS 8: component with no type annotation on params ───────────────────
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Divider.tsx": "export const Divider = () => <hr />;",
+  },
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Spacer.tsx": "export function Spacer() { return <div />; }",
+  },
+  // ── CLASS 9: callback / function-type props ─────────────────────────────────
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Trigger.tsx":
+      "interface P { onClick: () => void; onChange: (val: string) => void; } export const Trigger = (p: P) => <button onClick={p.onClick} />;",
+  },
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Form.tsx":
+      "interface P { onSubmit: (e: React.FormEvent) => void; onReset?: () => void; } export const Form = (p: P) => <form onSubmit={p.onSubmit} />;",
+  },
+  // ── CLASS 10: object-pattern params without TSTypeAnnotation ───────────────
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/Card.tsx":
+      "export function Card({ title, body }: { title: string; body: string }) { return <div>{title}</div>; }",
+  },
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/List.tsx":
+      'export const List = ({ items }: { items: string[] }) => <ul>{items.map(i => <li key={i}>{i}</li>)}</ul>;',
+  },
+  // ── CLASS 11: cross-file type reference (skipped by v0.1 scanner) ──────────
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/types.ts": 'export type ButtonProps = { variant: "primary" | "secondary"; size: "sm" | "lg"; };',
+    "src/Button.tsx":
+      'import type { ButtonProps } from "./types.js"; export const Button = (p: ButtonProps) => <button />;',
+  },
+  // ── CLASS 12: publishable package WITH valid types field ───────────────────
+  {
+    "package.json": PKG_PUB,
+    "dist/index.d.ts": "export {};",
+  },
+  {
+    "package.json": JSON.stringify({
+      name: "@acme/tokens",
+      version: "1.0.0",
+      main: "./dist/index.js",
+      typings: "./dist/index.d.ts",
+    }),
+    "dist/index.d.ts": "export const colors: Record<string, string>;",
+  },
+  // ── CLASS 13: non-component TSX (no exported PascalCase component) ──────────
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/constants.tsx":
+      "export const defaultVariant: string = 'primary'; export const DEFAULT_SIZE: string = 'md';",
+  },
+  {
+    "package.json": PKG_SIMPLE_CS,
+    "src/icons/index.tsx":
+      "import React from 'react'; export const arrowIcon = () => <svg viewBox='0 0 24 24'><path d='M0 0'/></svg>;",
+  },
+];
+
+export const contractsStrictnessAdapter: OracleAdapter = {
+  ruleId: "components/contracts-strictness",
+  oracleKind: "construction",
+  cleanFixture: () => ({
+    "package.json": PKG_PUB,
+    "dist/index.d.ts": "export {};",
+    "src/Button.tsx": CS_CLEAN_TSX,
+  }),
+  mutations: [
+    // ── CLASS A: any-typed props ─────────────────────────────────────────────
+    {
+      name: "any-prop-inline-type",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Box.tsx":
+          "type P = { data: any }; export const Box = (p: P) => <div>{p.data}</div>;",
+      }),
+    },
+    {
+      name: "any-prop-interface",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Card.tsx":
+          "interface CardProps { payload: any; } export function Card(props: CardProps) { return <div />; }",
+      }),
+    },
+    {
+      name: "any-prop-function-decl",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Panel.tsx":
+          "interface P { content: any; } export function Panel(p: P) { return <section>{p.content}</section>; }",
+      }),
+    },
+    {
+      name: "any-prop-arrow-destructured",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Alert.tsx":
+          "export const Alert = ({ message }: { message: any }) => <div role='alert'>{message}</div>;",
+      }),
+    },
+    {
+      name: "any-prop-export-default",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Modal.tsx":
+          "interface ModalProps { body: any; footer: any; } export default function Modal(props: ModalProps) { return <dialog />; }",
+      }),
+    },
+    {
+      name: "multiple-any-props",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Table.tsx":
+          "interface P { rows: any; columns: any; sort: any; } export const Table = (p: P) => <table />;",
+      }),
+    },
+    {
+      name: "any-on-icon-component",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Icon.tsx":
+          "interface P { icon: any; } export const Icon = (p: P) => <svg viewBox='0 0 24 24'>{p.icon}</svg>;",
+      }),
+    },
+    {
+      name: "any-on-context-provider",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Provider.tsx":
+          "interface P { value: any; } export const Provider = (p: P) => <div>{p.value}</div>;",
+      }),
+    },
+    {
+      name: "any-on-menu-item",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/MenuItem.tsx":
+          "interface P { action: any; } export function MenuItem(p: P) { return <li>{p.action}</li>; }",
+      }),
+    },
+    {
+      name: "any-on-form-field",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Field.tsx":
+          "interface P { control: any; error: any; } export const Field = (p: P) => <div />;",
+      }),
+    },
+    {
+      name: "any-mixed-with-typed",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Tabs.tsx":
+          "interface P { label: string; selected: boolean; value: any; } export const Tab = (p: P) => <button>{p.label}</button>;",
+      }),
+    },
+    {
+      name: "any-on-skeleton",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Skeleton.tsx":
+          "type P = { config: any }; export const Skeleton = (p: P) => <div aria-hidden />;",
+      }),
+    },
+    // ── CLASS B: unknown-typed props ─────────────────────────────────────────
+    {
+      name: "unknown-prop-interface",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/DataGrid.tsx":
+          "interface P { row: unknown; } export const DataGrid = (p: P) => <table />;",
+      }),
+    },
+    {
+      name: "unknown-prop-inline",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Tile.tsx":
+          "type P = { metadata: unknown }; export const Tile = (p: P) => <article />;",
+      }),
+    },
+    {
+      name: "unknown-prop-function-decl",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Drawer.tsx":
+          "interface P { config: unknown; } export function Drawer(p: P) { return <aside />; }",
+      }),
+    },
+    {
+      name: "multiple-unknown-props",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Widget.tsx":
+          "interface P { state: unknown; dispatch: unknown; } export const Widget = (p: P) => <div />;",
+      }),
+    },
+    {
+      name: "unknown-mixed-with-any",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Container.tsx":
+          "interface P { data: any; meta: unknown; } export const Container = (p: P) => <section />;",
+      }),
+    },
+    {
+      name: "unknown-on-dialog",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Dialog.tsx":
+          "interface P { result: unknown; } export const Dialog = (p: P) => <dialog />;",
+      }),
+    },
+    {
+      name: "unknown-on-notification",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Toast.tsx":
+          "type P = { payload: unknown }; export function Toast(p: P) { return <div role='status' />; }",
+      }),
+    },
+    {
+      name: "unknown-on-stepper",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Stepper.tsx":
+          "interface P { step: unknown; } export const Stepper = (p: P) => <ol />;",
+      }),
+    },
+    // ── CLASS C: variant-like props typed plain string ────────────────────────
+    {
+      name: "variant-string-button",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Btn.tsx":
+          "interface P { variant: string; } export const Btn = (p: P) => <button />;",
+      }),
+    },
+    {
+      name: "size-string-badge",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Badge.tsx":
+          "interface P { size: string; } export const Badge = (p: P) => <span />;",
+      }),
+    },
+    {
+      name: "intent-string-alert",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Alert.tsx":
+          "interface P { intent: string; } export const Alert = (p: P) => <div role='alert' />;",
+      }),
+    },
+    {
+      name: "color-string-icon",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/IconWrap.tsx":
+          "interface P { color: string; } export const IconWrap = (p: P) => <span style={{ color: p.color }} />;",
+      }),
+    },
+    {
+      name: "tone-string-text",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Text.tsx":
+          "interface P { tone: string; } export const Text = (p: P) => <p />;",
+      }),
+    },
+    {
+      name: "appearance-string-chip",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Chip.tsx":
+          "interface P { appearance: string; } export const Chip = (p: P) => <span />;",
+      }),
+    },
+    {
+      name: "kind-string-tag",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Tag.tsx":
+          "interface P { kind: string; } export const Tag = (p: P) => <span />;",
+      }),
+    },
+    {
+      name: "variant-and-size-string",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Pill.tsx":
+          "interface P { variant: string; size: string; } export const Pill = (p: P) => <span />;",
+      }),
+    },
+    {
+      name: "intent-string-toast",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Toast.tsx":
+          "interface P { intent: string; } export function Toast(p: P) { return <div role='status' />; }",
+      }),
+    },
+    {
+      name: "color-and-tone-string",
+      apply: (): FixtureFiles => ({
+        "package.json": PKG_PUB,
+        "dist/index.d.ts": "export {};",
+        "src/Label.tsx":
+          "interface P { color: string; tone: string; } export const Label = (p: P) => <label />;",
+      }),
+    },
+    // ── CLASS D: publishable package.json missing types ───────────────────────
+    {
+      name: "missing-types-simple",
+      apply: (): FixtureFiles => ({
+        "package.json": JSON.stringify({ name: "@acme/core", version: "1.0.0", main: "./dist/index.js" }),
+      }),
+    },
+    {
+      name: "missing-types-with-module",
+      apply: (): FixtureFiles => ({
+        "package.json": JSON.stringify({
+          name: "@acme/utils",
+          version: "1.0.0",
+          main: "./dist/index.cjs",
+          module: "./dist/index.esm.js",
+        }),
+      }),
+    },
+    {
+      name: "missing-types-with-exports",
+      apply: (): FixtureFiles => ({
+        "package.json": JSON.stringify({
+          name: "@acme/icons",
+          version: "1.0.0",
+          exports: { ".": { import: "./dist/index.js" } },
+        }),
+      }),
+    },
+    {
+      name: "types-points-to-missing-dist",
+      apply: (): FixtureFiles => ({
+        "package.json": JSON.stringify({
+          name: "@acme/theme",
+          version: "1.0.0",
+          main: "./dist/index.js",
+          types: "./dist/index.d.ts",
+        }),
+        // no dist/index.d.ts file written → file doesn't exist → rule flags it
+      }),
+    },
+    {
+      name: "missing-types-scoped-package",
+      apply: (): FixtureFiles => ({
+        "package.json": JSON.stringify({
+          name: "@design-system/button",
+          version: "2.1.0",
+          main: "./dist/Button.js",
+        }),
+      }),
+    },
+  ],
+  metamorphic: [],
+  falseFriends: FALSE_FRIENDS_CS,
+};
+
+const noArbitraryTailwindAdapter: OracleAdapter = {
+  ruleId: "components/no-arbitrary-tailwind",
+  oracleKind: "construction",
+  cleanFixture: () => ({
+    "package.json": PKG_SIMPLE,
+    "src/Button.tsx": 'export const Button = () => <div className="p-4 text-sm rounded-md" />;',
+  }),
+  mutations: [
+    {
+      name: "arbitrary-spacing",
+      apply: (f): FixtureFiles => ({
+        ...f,
+        "src/Button.tsx": 'export const Button = () => <div className="p-[12px]" />;',
+      }),
+    },
+    {
+      name: "arbitrary-font-size",
+      apply: (f): FixtureFiles => ({
+        ...f,
+        "src/Button.tsx": 'export const Button = () => <div className="text-[14px]" />;',
+      }),
+    },
+    {
+      name: "arbitrary-width",
+      apply: (f): FixtureFiles => ({
+        ...f,
+        "src/Button.tsx": 'export const Button = () => <div className="w-[37px]" />;',
+      }),
+    },
+  ],
+  metamorphic: [
+    {
+      // Two different non-color arbitrary values must both flag (same prefix, different value)
+      name: "different-non-color-arbitrary-values-both-flag",
+      a: {
+        "package.json": PKG_SIMPLE,
+        "src/T.tsx": 'export const T = () => <div className="p-[12px]" />;',
+      },
+      b: {
+        "package.json": PKG_SIMPLE,
+        "src/T.tsx": 'export const T = () => <div className="p-[0.75rem]" />;',
+      },
+      expectViolation: true,
+    },
+    {
+      // Color bracket and var() bracket must BOTH be safe (not flagged)
+      name: "color-bracket-and-var-bracket-both-clean",
+      a: {
+        "package.json": PKG_SIMPLE,
+        "src/T.tsx": 'export const T = () => <div className="text-[#111]" />;',
+      },
+      b: {
+        "package.json": PKG_SIMPLE,
+        "src/T.tsx": 'export const T = () => <div className="w-[var(--sidebar)]" />;',
+      },
+      expectViolation: false,
+    },
+  ],
+};
+
+// ---------------------------------------------------------------------------
+// components/no-style-escape-hatch — construction oracle
+// ---------------------------------------------------------------------------
+//
+// Clean:   <Button variant="x"/> from @org/ui — no inline style, no flag.
+// Mutations:
+//   1. DS component WITH style prop — must flag.
+//   2. DS component with opening (non-self-closing) element + style — must flag.
+// False-friends:
+//   - <div style={{}}/>         raw HTML, not DS — must NOT flag.
+//   - <Button variant="x"/>     DS component, no style — must NOT flag.
+//   - <Button style={{}} /> but dsSelfMode=true — skipped entirely (N/A).
+
+const PKG_CONSUMER_STYLE = JSON.stringify({
+  name: "fx-style-consumer",
+  version: "1.0.0",
+  dependencies: { "@org/ui": "^1.0.0", react: "^18.0.0" },
+});
+
+const noStyleEscapeHatchAdapter: OracleAdapter = {
+  ruleId: "components/no-style-escape-hatch",
+  oracleKind: "construction",
+  cleanFixture: () => ({
+    "package.json": PKG_CONSUMER_STYLE,
+    "src/Page.tsx": 'import { Button } from "@org/ui";\nexport const Page = () => <Button variant="primary" />;',
+  }),
+  mutations: [
+    {
+      name: "ds-component-self-closing-with-style",
+      apply: (f): FixtureFiles => ({
+        ...f,
+        "src/Page.tsx":
+          'import { Button } from "@org/ui";\nexport const Page = () => <Button style={{ color: "red" }} />;',
+      }),
+    },
+    {
+      name: "ds-component-opening-element-with-style",
+      apply: (f): FixtureFiles => ({
+        ...f,
+        "src/Page.tsx":
+          'import { Button } from "@org/ui";\nexport const Page = () => <Button style={{ margin: 0 }}>Save</Button>;',
+      }),
+    },
+  ],
+  metamorphic: [],
+};
+
+// stories/props-documented — each probe is a minimal 3-4 file fixture so the
+// coherence test stays well within the 15s vitest timeout when run in parallel
+// with the full suite. The audit pipeline derives componentSources from
+// fileContents basenames (PascalCase .tsx files), enabling props extraction.
+
+const PD_PKG = JSON.stringify({
+  name: "fx-props-doc-app",
+  version: "1.0.0",
+  dependencies: { "@acme/ui": "^1.0.0", react: "^18.0.0" },
+});
+
+function pdApp(name: string): string {
+  return `import { ${name} } from "@acme/ui";\nexport const App = () => <${name} />;`;
+}
+
+function pdBareStory(name: string): string {
+  return (
+    `import { ${name} } from "@acme/ui";\n` +
+    `export default { title: "${name}", component: ${name} };\n` +
+    `export const Default = {};`
+  );
+}
+
+function pdArgTypesStory(name: string, argType: string): string {
+  return (
+    `import { ${name} } from "@acme/ui";\n` +
+    `export default { title: "${name}", component: ${name}, argTypes: { ${argType}: { control: "text" } } };\n` +
+    `export const Default = {};`
+  );
+}
+
+function pdArgsStory(name: string, argsLiteral: string): string {
+  return (
+    `import { ${name} } from "@acme/ui";\n` +
+    `export default { title: "${name}", component: ${name} };\n` +
+    `export const Default = { args: { ${argsLiteral} } };`
+  );
+}
+
+function pdFixture(componentName: string, componentSrc: string, storySrc: string): FixtureFiles {
+  return {
+    "package.json": PD_PKG,
+    "src/App.tsx": pdApp(componentName),
+    [`src/${componentName}.tsx`]: componentSrc,
+    [`src/${componentName}.stories.tsx`]: storySrc,
+  };
+}
+
+const PD_BUTTON_SRC =
+  'interface ButtonProps { variant?: "primary" | "secondary" | "danger"; disabled?: boolean }\n' +
+  "export function Button(props: ButtonProps) { return <button />; }";
+
+const PD_CARD_SRC =
+  "interface CardProps { elevated?: boolean; padding?: number }\n" +
+  "export function Card(props: CardProps) { return <div />; }";
+
+const PD_BADGE_SRC =
+  'interface BadgeProps { label: string; color?: "red" | "green" | "blue" }\n' +
+  "export function Badge(props: BadgeProps) { return <span />; }";
+
+const PD_INPUT_SRC =
+  "interface InputProps { value: string; placeholder?: string; disabled?: boolean }\n" +
+  "export function Input(props: InputProps) { return <input />; }";
+
+const PD_SELECT_SRC =
+  'interface SelectProps { options: string[]; value?: string; size?: "sm" | "md" | "lg" }\n' +
+  "export function Select(props: SelectProps) { return <select />; }";
+
+const PD_MODAL_SRC =
+  "interface ModalProps { open: boolean; title?: string }\n" +
+  "export function Modal(props: ModalProps) { return <div />; }";
+
+const PD_CHECKBOX_SRC =
+  "interface CheckboxProps { checked: boolean; label?: string }\n" +
+  "export function Checkbox(props: CheckboxProps) { return <input type=\"checkbox\" />; }";
+
+const PD_AVATAR_SRC =
+  'interface AvatarProps { src?: string; alt?: string; size?: "xs" | "sm" | "md" | "lg" | "xl" }\n' +
+  "export function Avatar(props: AvatarProps) { return <img />; }";
+
+const PD_TOOLTIP_SRC =
+  'interface TooltipProps { content: string; placement?: "top" | "bottom" | "left" | "right" }\n' +
+  "export function Tooltip(props: TooltipProps) { return <div />; }";
+
+const PD_SPINNER_SRC =
+  'interface SpinnerProps { size?: "sm" | "md" | "lg"; color?: string }\n' +
+  "export function Spinner(props: SpinnerProps) { return <div />; }";
+
+const PD_TAG_SRC =
+  'interface TagProps { children: string; variant?: "outline" | "solid" }\n' +
+  "export function Tag(props: TagProps) { return <span />; }";
+
+const PD_LINK_SRC =
+  'interface LinkProps { href: string; children: string; external?: boolean }\n' +
+  "export function Link(props: LinkProps) { return <a />; }";
+
+const PD_MENU_SRC =
+  "interface MenuProps { items: string[]; open?: boolean }\n" +
+  "export function Menu(props: MenuProps) { return <ul />; }";
+
+const PD_TABS_SRC =
+  "interface TabsProps { tabs: string[]; activeIndex?: number }\n" +
+  "export function Tabs(props: TabsProps) { return <div />; }";
+
+const PD_ACCORDION_SRC =
+  "interface AccordionProps { title: string; expanded?: boolean }\n" +
+  "export function Accordion(props: AccordionProps) { return <div />; }";
+
+const PD_SLIDER_SRC =
+  "interface SliderProps { min: number; max: number; step?: number; value?: number }\n" +
+  "export function Slider(props: SliderProps) { return <input type=\"range\" />; }";
+
+const PD_SWITCH_SRC =
+  "interface SwitchProps { checked: boolean; disabled?: boolean }\n" +
+  "export function Switch(props: SwitchProps) { return <input type=\"checkbox\" />; }";
+
+const PD_ALERT_SRC =
+  'interface AlertProps { message: string; severity?: "info" | "warning" | "error" | "success" }\n' +
+  "export function Alert(props: AlertProps) { return <div />; }";
+
+const PD_PAGINATION_SRC =
+  "interface PaginationProps { page: number; total: number; pageSize?: number }\n" +
+  "export function Pagination(props: PaginationProps) { return <nav />; }";
+
+const PD_BREADCRUMB_SRC =
+  "interface BreadcrumbProps { items: string[]; separator?: string }\n" +
+  "export function Breadcrumb(props: BreadcrumbProps) { return <nav />; }";
+
+const PD_PROGRESS_SRC =
+  'interface ProgressProps { value: number; max?: number; color?: "primary" | "secondary" }\n' +
+  "export function Progress(props: ProgressProps) { return <progress />; }";
+
+const propsDocumentedAdapter: OracleAdapter = {
+  ruleId: "stories/props-documented",
+  oracleKind: "construction",
+  cleanFixture: () => pdFixture("Button", PD_BUTTON_SRC, pdArgTypesStory("Button", "variant")),
+  mutations: [
+    {
+      name: "button-bare-story",
+      apply: (): FixtureFiles => pdFixture("Button", PD_BUTTON_SRC, pdBareStory("Button")),
+    },
+    {
+      name: "card-bare-story",
+      apply: (): FixtureFiles => pdFixture("Card", PD_CARD_SRC, pdBareStory("Card")),
+    },
+    {
+      name: "badge-bare-story",
+      apply: (): FixtureFiles => pdFixture("Badge", PD_BADGE_SRC, pdBareStory("Badge")),
+    },
+    {
+      name: "input-bare-story",
+      apply: (): FixtureFiles => pdFixture("Input", PD_INPUT_SRC, pdBareStory("Input")),
+    },
+    {
+      name: "select-bare-story",
+      apply: (): FixtureFiles => pdFixture("Select", PD_SELECT_SRC, pdBareStory("Select")),
+    },
+    {
+      name: "modal-bare-story",
+      apply: (): FixtureFiles => pdFixture("Modal", PD_MODAL_SRC, pdBareStory("Modal")),
+    },
+    {
+      name: "checkbox-bare-story",
+      apply: (): FixtureFiles => pdFixture("Checkbox", PD_CHECKBOX_SRC, pdBareStory("Checkbox")),
+    },
+    {
+      name: "avatar-bare-story",
+      apply: (): FixtureFiles => pdFixture("Avatar", PD_AVATAR_SRC, pdBareStory("Avatar")),
+    },
+    {
+      name: "tooltip-bare-story",
+      apply: (): FixtureFiles => pdFixture("Tooltip", PD_TOOLTIP_SRC, pdBareStory("Tooltip")),
+    },
+    {
+      name: "spinner-bare-story",
+      apply: (): FixtureFiles => pdFixture("Spinner", PD_SPINNER_SRC, pdBareStory("Spinner")),
+    },
+    {
+      name: "tag-bare-story",
+      apply: (): FixtureFiles => pdFixture("Tag", PD_TAG_SRC, pdBareStory("Tag")),
+    },
+    {
+      name: "link-bare-story",
+      apply: (): FixtureFiles => pdFixture("Link", PD_LINK_SRC, pdBareStory("Link")),
+    },
+    {
+      name: "menu-bare-story",
+      apply: (): FixtureFiles => pdFixture("Menu", PD_MENU_SRC, pdBareStory("Menu")),
+    },
+    {
+      name: "tabs-bare-story",
+      apply: (): FixtureFiles => pdFixture("Tabs", PD_TABS_SRC, pdBareStory("Tabs")),
+    },
+    {
+      name: "accordion-bare-story",
+      apply: (): FixtureFiles => pdFixture("Accordion", PD_ACCORDION_SRC, pdBareStory("Accordion")),
+    },
+    {
+      name: "slider-bare-story",
+      apply: (): FixtureFiles => pdFixture("Slider", PD_SLIDER_SRC, pdBareStory("Slider")),
+    },
+    {
+      name: "switch-bare-story",
+      apply: (): FixtureFiles => pdFixture("Switch", PD_SWITCH_SRC, pdBareStory("Switch")),
+    },
+    {
+      name: "alert-bare-story",
+      apply: (): FixtureFiles => pdFixture("Alert", PD_ALERT_SRC, pdBareStory("Alert")),
+    },
+    {
+      name: "pagination-bare-story",
+      apply: (): FixtureFiles => pdFixture("Pagination", PD_PAGINATION_SRC, pdBareStory("Pagination")),
+    },
+    {
+      name: "breadcrumb-bare-story",
+      apply: (): FixtureFiles => pdFixture("Breadcrumb", PD_BREADCRUMB_SRC, pdBareStory("Breadcrumb")),
+    },
+    {
+      name: "progress-bare-story",
+      apply: (): FixtureFiles => pdFixture("Progress", PD_PROGRESS_SRC, pdBareStory("Progress")),
+    },
+    {
+      name: "button-empty-args-object",
+      apply: (): FixtureFiles => pdFixture(
+        "Button",
+        PD_BUTTON_SRC,
+        'import { Button } from "@acme/ui";\n' +
+        'export default { title: "Button", component: Button };\n' +
+        "export const Primary = { args: {} };",
+      ),
+    },
+    {
+      name: "card-render-key-not-args",
+      apply: (): FixtureFiles => pdFixture(
+        "Card",
+        PD_CARD_SRC,
+        'import { Card } from "@acme/ui";\n' +
+        'export default { title: "Card", component: Card };\n' +
+        "export const Default = { render: () => null };",
+      ),
+    },
+    {
+      name: "badge-multiple-bare-exports",
+      apply: (): FixtureFiles => pdFixture(
+        "Badge",
+        PD_BADGE_SRC,
+        'import { Badge } from "@acme/ui";\n' +
+        'export default { title: "Badge", component: Badge };\n' +
+        "export const Sm = {};\nexport const Md = {};\nexport const Lg = {};",
+      ),
+    },
+    {
+      name: "input-parameters-not-argTypes",
+      apply: (): FixtureFiles => pdFixture(
+        "Input",
+        PD_INPUT_SRC,
+        'import { Input } from "@acme/ui";\n' +
+        'export default { title: "Input", component: Input, parameters: { docs: {} } };\n' +
+        "export const Default = {};",
+      ),
+    },
+    {
+      name: "select-layout-param-not-argTypes",
+      apply: (): FixtureFiles => pdFixture(
+        "Select",
+        PD_SELECT_SRC,
+        'import { Select } from "@acme/ui";\n' +
+        'export default { title: "Select", component: Select, parameters: { layout: "centered" } };\n' +
+        "export const Default = {};",
+      ),
+    },
+    {
+      name: "modal-decorator-not-argTypes",
+      apply: (): FixtureFiles => pdFixture(
+        "Modal",
+        PD_MODAL_SRC,
+        'import { Modal } from "@acme/ui";\n' +
+        'export default { title: "Modal", component: Modal, decorators: [(S: () => null) => null] };\n' +
+        "export const Default = {};",
+      ),
+    },
+    {
+      name: "checkbox-tags-not-argTypes",
+      apply: (): FixtureFiles => pdFixture(
+        "Checkbox",
+        PD_CHECKBOX_SRC,
+        'import { Checkbox } from "@acme/ui";\n' +
+        'export default { title: "Checkbox", component: Checkbox, tags: ["autodocs"] };\n' +
+        "export const Default = {};",
+      ),
+    },
+    {
+      name: "button-union-props-no-doc",
+      apply: (): FixtureFiles => pdFixture(
+        "Button",
+        'interface ButtonProps { size?: "xs" | "sm" | "md" | "lg" | "xl"; weight?: "light" | "regular" | "bold" }\n' +
+        "export function Button(props: ButtonProps) { return <button />; }",
+        pdBareStory("Button"),
+      ),
+    },
+    {
+      name: "card-required-props-no-doc",
+      apply: (): FixtureFiles => pdFixture(
+        "Card",
+        "interface CardProps { title: string; description: string; imageUrl: string }\n" +
+        "export function Card(props: CardProps) { return <div />; }",
+        pdBareStory("Card"),
+      ),
+    },
+    {
+      name: "badge-inline-type-no-doc",
+      apply: (): FixtureFiles => pdFixture(
+        "Badge",
+        "export function Badge(props: { count: number; max?: number; showZero?: boolean }) { return <span />; }",
+        pdBareStory("Badge"),
+      ),
+    },
+    {
+      name: "input-type-alias-no-doc",
+      apply: (): FixtureFiles => pdFixture(
+        "Input",
+        'type InputProps = { value: string; placeholder?: string; type?: "text" | "password" | "email" }\n' +
+        "export function Input(props: InputProps) { return <input />; }",
+        pdBareStory("Input"),
+      ),
+    },
+    {
+      name: "select-arrow-fn-no-doc",
+      apply: (): FixtureFiles => pdFixture(
+        "Select",
+        "interface SelectProps { options: string[]; multiple?: boolean }\n" +
+        "export const Select = (props: SelectProps) => <select />;",
+        pdBareStory("Select"),
+      ),
+    },
+    {
+      name: "tooltip-multi-export-no-doc",
+      apply: (): FixtureFiles => pdFixture(
+        "Tooltip",
+        PD_TOOLTIP_SRC,
+        'import { Tooltip } from "@acme/ui";\n' +
+        'export default { title: "Tooltip", component: Tooltip };\n' +
+        "export const Dark = {};\nexport const Light = {};\nexport const Wide = {};",
+      ),
+    },
+    {
+      name: "avatar-many-exports-no-doc",
+      apply: (): FixtureFiles => pdFixture(
+        "Avatar",
+        PD_AVATAR_SRC,
+        'import { Avatar } from "@acme/ui";\n' +
+        'export default { title: "Avatar", component: Avatar };\n' +
+        "export const Xs = {};\nexport const Sm = {};\nexport const Md = {};\nexport const Lg = {};",
+      ),
+    },
+  ],
+  falseFriends: [
+    // FP class 1: component with props whose story has argTypes — must NOT flag.
+    pdFixture("Button", PD_BUTTON_SRC, pdArgTypesStory("Button", "variant")),
+    // FP class 2: component with props whose named export has non-empty args — must NOT flag.
+    pdFixture("Card", PD_CARD_SRC, pdArgsStory("Card", "elevated: true")),
+    // FP class 3: prop-LESS component with a bare story — must NOT flag.
+    {
+      "package.json": PD_PKG,
+      "src/App.tsx": pdApp("Divider"),
+      "src/Divider.tsx": "export function Divider() { return <hr />; }",
+      "src/Divider.stories.tsx": pdBareStory("Divider"),
+    },
+    // FP class 4: component with UNKNOWN props (no source file = not parsed) — must NOT flag.
+    {
+      "package.json": PD_PKG,
+      "src/App.tsx": pdApp("External"),
+      "src/External.stories.tsx": pdBareStory("External"),
+    },
+    // FP class 5: component with props but NO story — must NOT flag.
+    {
+      "package.json": PD_PKG,
+      "src/App.tsx": pdApp("Button"),
+      "src/Button.tsx": PD_BUTTON_SRC,
+    },
+    // FP class 6: dsSelfMode (DS auditing itself) — must NOT flag.
+    {
+      "package.json": JSON.stringify({ name: "@acme/ui", version: "1.0.0" }),
+      "src/Button.tsx": PD_BUTTON_SRC,
+      "src/Button.stories.tsx": pdBareStory("Button"),
+    },
+    // FP class 7: storyIndex null (no story files) — must NOT flag.
+    {
+      "package.json": PD_PKG,
+      "src/App.tsx": pdApp("Button"),
+      "src/Button.tsx": PD_BUTTON_SRC,
+    },
+    // Extra: story with BOTH argTypes AND args — must NOT flag.
+    pdFixture(
+      "Select",
+      PD_SELECT_SRC,
+      'import { Select } from "@acme/ui";\n' +
+      'export default { title: "Select", component: Select, argTypes: { size: { control: "radio" } } };\n' +
+      "export const Default = { args: { value: 'a' } };",
+    ),
+    // Extra: multi-arg story — must NOT flag.
+    pdFixture(
+      "Input",
+      PD_INPUT_SRC,
+      'import { Input } from "@acme/ui";\n' +
+      'export default { title: "Input", component: Input };\n' +
+      "export const Filled = { args: { value: 'hello', placeholder: 'type here', disabled: false } };",
+    ),
+    // Extra: two components both with documented stories — must NOT flag.
+    {
+      "package.json": PD_PKG,
+      "src/App.tsx": 'import { Button, Badge } from "@acme/ui";\nexport const App = () => <><Button /><Badge /></>;',
+      "src/Button.tsx": PD_BUTTON_SRC,
+      "src/Badge.tsx": PD_BADGE_SRC,
+      "src/Button.stories.tsx": pdArgTypesStory("Button", "variant"),
+      "src/Badge.stories.tsx": pdArgsStory("Badge", "label: 'new'"),
+    },
+  ],
+  metamorphic: [],
+};
+
+const PROPS_DOC_APP_TSX = [
+  'import { Button, Card } from "@acme/ui";',
+  "export function App() {",
+  "  return <div><Button>click</Button><Card /></div>;",
+  "}",
+].join("\n");
+
+const usageExamplesAdapter: OracleAdapter = {
+  ruleId: "stories/usage-examples",
+  oracleKind: "construction",
+  cleanFixture: () => ({
+    "package.json": PKG_CONSUMER,
+    "src/App.tsx": PROPS_DOC_APP_TSX,
+    "src/Button.stories.tsx": [
+      'import { Button } from "@acme/ui";',
+      'export default { title: "Button", component: Button };',
+      "export const Primary = {};",
+      "export const Secondary = {};",
+    ].join("\n"),
+    "src/Card.stories.tsx": [
+      'import { Card } from "@acme/ui";',
+      'export default { title: "Card", component: Card };',
+      "export const Default = {};",
+      "export const Elevated = {};",
+    ].join("\n"),
+  }),
+  mutations: [
+    {
+      name: "button-story-single-bare-export",
+      apply: (f): FixtureFiles => ({
+        ...f,
+        "src/Button.stories.tsx": [
+          'import { Button } from "@acme/ui";',
+          'export default { title: "Button", component: Button };',
+          "export const Primary = {};",
+        ].join("\n"),
+      }),
+    },
+  ],
+  metamorphic: [],
+};
+
+const standardizedVariantPropsAdapter: OracleAdapter = {
+  ruleId: "components/standardized-variant-props",
+  oracleKind: "construction",
+  cleanFixture: () => ({
+    "package.json": PKG_SIMPLE,
+    "src/Button.tsx": [
+      'interface ButtonProps { variant?: "primary" | "secondary" | "danger"; disabled?: boolean }',
+      "export function Button(props: ButtonProps) { return <button />; }",
+    ].join("\n"),
+  }),
+  mutations: [
+    {
+      name: "boolean-variant-explosion",
+      apply: (f): FixtureFiles => ({
+        ...f,
+        "src/Button.tsx": [
+          "interface ButtonProps { primary?: boolean; secondary?: boolean; danger?: boolean }",
+          "export function Button(props: ButtonProps) { return <button />; }",
+        ].join("\n"),
+      }),
+    },
+  ],
+  metamorphic: [],
+};
+
 export const componentAdapters: OracleAdapter[] = [
   svgViewboxAdapter,
   iconDecorativeAriaAdapter,
@@ -304,4 +1462,10 @@ export const componentAdapters: OracleAdapter[] = [
   namingPascalCaseAdapter,
   namingHookPrefixAdapter,
   storiesCoverageAdapter,
+  propsDocumentedAdapter,
+  usageExamplesAdapter,
+  contractsStrictnessAdapter,
+  noArbitraryTailwindAdapter,
+  noStyleEscapeHatchAdapter,
+  standardizedVariantPropsAdapter,
 ];

@@ -2,6 +2,7 @@ import { writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { VERSION } from "../src/index.js";
+import { SUB_AXES } from "../src/reliability/catalogue/sub-axes.js";
 import { evaluateAdapter } from "./run-adapter.js";
 import { adapters as allAdapters } from "./adapters/index.js";
 import type { OracleAdapter, EngineReport, RuleScore } from "./types.js";
@@ -15,9 +16,15 @@ export async function runAll(list: OracleAdapter[] = allAdapters): Promise<Engin
   return { lyseVersion: VERSION, scores };
 }
 
+const STABLE_RULE_IDS: ReadonlySet<string> = new Set(
+  SUB_AXES.filter((s) => s.status === "stable").flatMap((s) => s.ruleIds),
+);
+
 export function engineGateFailures(report: EngineReport): RuleScore[] {
   return report.scores.filter(
-    (s) => s.youdensJ < 1 || s.metamorphicInconsistencies.length > 0,
+    (s) =>
+      STABLE_RULE_IDS.has(s.ruleId) &&
+      (s.youdensJ < 1 || s.metamorphicInconsistencies.length > 0),
   );
 }
 

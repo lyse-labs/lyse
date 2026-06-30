@@ -1,5 +1,7 @@
 import { join, resolve } from "node:path";
-import { describe, it, expect, afterEach } from "vitest";
+import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { describe, it, expect, afterEach, beforeAll } from "vitest";
 import { rule } from "../../src/rules/tokens-no-hardcoded-color.js";
 import { getTsMorphProject } from "../../src/parsers/ts-morph-project.js";
 import type { Finding, ClassifyContext, TokenMap } from "../../src/types.js";
@@ -119,5 +121,61 @@ describe("tokens/no-hardcoded-color classifyConfidence — token-definition file
     };
     const result = rule.classifyConfidence!(finding, ctx);
     expect(result).toBe("high");
+  });
+});
+
+describe("tokens/no-hardcoded-color classifyConfidence — AST role demotion", () => {
+  let tmpDir: string;
+
+  beforeAll(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), "conf-role-"));
+  });
+
+  afterEach(() => {
+    getTsMorphProject(tmpDir).clear();
+  });
+
+  it("demotes canvas fillStyle color to low", () => {
+    const src = "function draw(c: CanvasRenderingContext2D){ c.fillStyle = '#ffffff'; }";
+    writeFileSync(join(tmpDir, "canvas.ts"), src);
+    const idx = src.indexOf("#");
+    const col = idx - src.lastIndexOf("\n", idx - 1);
+    const ctx = makeCtx(new Map([["#ffffff", ["color.white"]]]), { repoRoot: tmpDir });
+    const finding: Finding = {
+      ruleId: "tokens/no-hardcoded-color",
+      axis: "tokens",
+      severity: "warning",
+      location: { file: "canvas.ts", line: 1, column: col },
+      message: "Hardcoded color value: #ffffff",
+    };
+    expect(rule.classifyConfidence!(finding, ctx)).toBe("low");
+  });
+
+  it("keeps styled color as high (drift — not demoted)", () => {
+    const src = "const Box = styled.div({ color: '#2563eb' });";
+    writeFileSync(join(tmpDir, "styled.tsx"), src);
+    const idx = src.indexOf("#");
+    const col = idx - src.lastIndexOf("\n", idx - 1);
+    const ctx = makeCtx(new Map([["#2563eb", ["color.action"]]]), { repoRoot: tmpDir });
+    const finding: Finding = {
+      ruleId: "tokens/no-hardcoded-color",
+      axis: "tokens",
+      severity: "warning",
+      location: { file: "styled.tsx", line: 1, column: col },
+      message: "Hardcoded color value: #2563eb",
+    };
+    expect(rule.classifyConfidence!(finding, ctx)).toBe("high");
+  });
+
+  it("keeps unknown role as high (recall guardrail — parse failure never demotes)", () => {
+    const ctx = makeCtx(new Map([["#3b82f6", ["color.primary"]]]), { repoRoot: tmpDir });
+    const finding: Finding = {
+      ruleId: "tokens/no-hardcoded-color",
+      axis: "tokens",
+      severity: "warning",
+      location: { file: "nonexistent.tsx", line: 1, column: 1 },
+      message: "Hardcoded color value: #3b82f6",
+    };
+    expect(rule.classifyConfidence!(finding, ctx)).toBe("high");
   });
 });

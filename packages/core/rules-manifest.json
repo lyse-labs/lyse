@@ -315,6 +315,26 @@
       ]
     },
     {
+      "id": "components/standardized-variant-props",
+      "axis": "components",
+      "defaultSeverity": "warning",
+      "shortDescription": "Variants encoded as separate boolean props",
+      "fullDescription": "Flags an exported PascalCase component that declares two or more mutually-exclusive visual-variant flags (primary, secondary, danger, ghost, outline, …) as separate `boolean` props — the 'boolean explosion' antipattern. Such props permit nonsensical combinations (`<Button primary danger>`) and give an AI agent no enumerable vocabulary; the standard is a single `variant` string-literal union. Only names in a curated style-modifier vocabulary, typed `boolean`, count — generic state booleans (`disabled`, `loading`, `fullWidth`, …) are never matched. Orthogonal to `components/contracts-strictness`, which checks the type of an existing `variant` prop.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/components-standardized-variant-props.md",
+      "rationale": "Why it matters\n\nA component with `primary`, `secondary`, and `danger` boolean props lets a caller set several at once and offers an AI agent no closed set of valid values. One `variant` union (`\"primary\" | \"secondary\" | \"danger\"`) is mutually exclusive by construction and self-documenting.\n\nA single style boolean (e.g. just `primary`) is a common, acceptable shorthand, so the rule fires only at two or more.\n\nExperimental and unmeasured: real-world precision is pending a harvest measurement; the rule does not contribute to the Health Score.",
+      "examples": [
+        {
+          "good": "interface ButtonProps { variant?: \"primary\" | \"secondary\" | \"danger\"; disabled?: boolean }",
+          "bad": "interface ButtonProps { primary?: boolean; secondary?: boolean; danger?: boolean }"
+        }
+      ],
+      "allowlist": [
+        "generic state booleans (disabled, loading, active, selected, fullWidth, rounded, …) — not in the style-modifier vocabulary",
+        "a single style-modifier boolean (below the >=2 threshold)",
+        "style-modifier names that are not typed `boolean`"
+      ]
+    },
+    {
       "id": "components/doc-comments",
       "axis": "components",
       "defaultSeverity": "info",
@@ -543,6 +563,31 @@
       ]
     },
     {
+      "id": "a11y/contrast-tokens",
+      "axis": "a11y",
+      "defaultSeverity": "warning",
+      "shortDescription": "Static WCAG-AA contrast check on co-applied foreground/background color pairs",
+      "fullDescription": "For each CSS rule, CSS-in-JS block, or inline `style` object that declares BOTH a foreground (`color`) AND a solid background (`background-color` or a solid `background` shorthand), checks WCAG 2.x contrast on literal color values. Emits a warning when the contrast ratio falls below 4.5:1 (normal text) or 3.0:1 (large text: `font-size` ≥ 24px, or ≥ 18.66px with `font-weight` ≥ 700). Skips when: only one of color/background is present; either side is `transparent`, `currentColor`, or `inherit`; the background is a gradient, `url()`, or multi-layer; either value uses `var()` (the DTCG forward map is not available in RuleContext — token-reference pairs are not yet checked); or `contrastRatio` returns null (alpha channel present). Experimental / off-score — not yet calibrated on real repos.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/a11y-contrast-tokens.md",
+      "rationale": "Why it matters\n\nInsufficient text contrast is one of the most common WCAG 2.1 SC 1.4.3 failures (AA level). Design system tokens are the right place to enforce it: a DS that ships a co-applied color pair below threshold silently propagates that failure to every product built on it.\n\nThis rule operates statically — it inspects literal color pairs declared together in the same CSS rule, CSS-in-JS block, or inline style object. `var()` references are skipped: the DTCG forward map (token path → resolved value) is not available in RuleContext, so token-reference pairs are not yet checked.\n\nSkips are aggressive: any ambiguity (var(), alpha, gradient, multi-layer background) → no verdict. The rule never guesses.",
+      "examples": [
+        {
+          "good": ".btn { color: var(--color-fg); background: var(--color-bg-action); } /* 7.5:1 */",
+          "bad": ".btn { color: #999999; background: #ffffff; } /* 2.85:1 — fails AA */"
+        },
+        {
+          "good": ".heading { color: #111111; background: #ffffff; font-size: 24px; } /* 18.9:1 */",
+          "bad": ".caption { color: #aaaaaa; background: #ffffff; } /* 2.32:1 — fails AA */"
+        }
+      ],
+      "allowlist": [
+        "rules where only one of color/background is declared (can't check without both)",
+        "var() references that can't be resolved via the project's DTCG token map",
+        "backgrounds with alpha, gradients, url(), or multi-layer values",
+        "color: transparent / currentColor / inherit (not concrete colors)"
+      ]
+    },
+    {
       "id": "stories/coverage",
       "axis": "stories",
       "defaultSeverity": "warning",
@@ -558,6 +603,44 @@
       ],
       "allowlist": [
         "components not in `componentInventory` (i.e., never imported)"
+      ]
+    },
+    {
+      "id": "stories/props-documented",
+      "axis": "stories",
+      "defaultSeverity": "warning",
+      "shortDescription": "Stories that document no component props",
+      "fullDescription": "A DS component that HAS a Storybook story, HAS known props (from the component inventory), but whose story documents none of those props — neither an `argTypes` block in the default-export meta nor any named story carrying `args` — is flagged. Such a story renders the component but teaches a consumer (human or AI agent) nothing about its API. Prop-less components (e.g. `<Divider>`) and components whose props could not be parsed are excluded. Only components with a story AND known non-empty props are judged; absence of a story is owned by `stories/coverage`.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/stories-props-documented.md",
+      "rationale": "Why it matters\n\nThe story is the canonical example surface for a DS component. A story that exercises no props documents nothing an integrator can act on. `argTypes` (explicit controls/docs) OR concrete `args` on a named story both satisfy the rule — autodocs users who set args are not penalized.\n\nThe rule only fires when the component is known to have props. Prop-less components (e.g. layout primitives like `<Divider>`) and components whose props were not parsed are skipped — flagging them would be a false positive since there is nothing to document.\n\nExperimental and unmeasured: real-world precision is pending a harvest measurement; the rule does not contribute to the Health Score.",
+      "examples": [
+        {
+          "good": "export default { component: Button, argTypes: { variant: {...} } }",
+          "bad": "export default { component: Button }; export const Primary = {};"
+        }
+      ],
+      "allowlist": [
+        "components not in `componentInventory`",
+        "inventory components with no story (owned by `stories/coverage`)"
+      ]
+    },
+    {
+      "id": "stories/usage-examples",
+      "axis": "stories",
+      "defaultSeverity": "warning",
+      "shortDescription": "Stories that show no usage examples",
+      "fullDescription": "A DS component that HAS a Storybook story but whose story shows essentially nothing — fewer than two named story exports AND no export carrying concrete `args` — is flagged. A single undifferentiated render is not a usage example. Only components present in the inventory AND with a story are judged; absence of a story is owned by `stories/coverage`.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/stories-usage-examples.md",
+      "rationale": "Why it matters\n\nA consumer (human or AI agent) learns how to use a component from its story examples. A story with a single bare render demonstrates no configuration or variant. Two or more named exports, OR at least one export with concrete `args`, counts as showing usage.\n\nExperimental and unmeasured: real-world precision is pending a harvest measurement; the rule does not contribute to the Health Score.",
+      "examples": [
+        {
+          "good": "export const Primary = {...}; export const Disabled = {...};",
+          "bad": "export const Primary = {};"
+        }
+      ],
+      "allowlist": [
+        "components not in `componentInventory`",
+        "inventory components with no story (owned by `stories/coverage`)"
       ]
     },
     {
@@ -601,6 +684,27 @@
         "shadcn/ui `components.json` (the CLI config file) — detected via `$schema` or `aliases` and skipped",
         "files larger than 2 MB — skipped to avoid pathological cases",
         "files matching `ctx.excludePaths` config"
+      ]
+    },
+    {
+      "id": "ai-surface/component-manifest-completeness",
+      "axis": "ai-surface",
+      "defaultSeverity": "info",
+      "shortDescription": "Component manifest entry completeness (props / variants / examples)",
+      "fullDescription": "For each component entry in a lyse-style component manifest (`components.json` / `lyse.components.json`), checks that the entry documents `props` (non-empty array), `examples` (non-empty array), and — when `variants` is present — that it is not an empty array. Silent when no manifest exists (the `ai-surface/component-manifest-json` rule owns the absence signal). Array-form manifests only (object-form manifests are structure-only in lyse convention).",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-surface-component-manifest-completeness.md",
+      "rationale": "Why it matters\n\nA component manifest that lists only `name` and `sourceFile` tells MCP servers WHERE a component lives but not WHAT it does. Agents still have to read the source file to discover props, variants, and usage examples — negating the 5× cost reduction the manifest is meant to deliver.\n\nThis rule closes the gap: a complete entry lets an MCP tool answer \"how do I use Button?\" with a 50-token lookup instead of a 500-token file read.\n\nSeverity is intentionally informational — the manifest works for discovery without completeness data; completeness is a quality improvement, not a correctness issue.",
+      "examples": [
+        {
+          "good": "{\"components\":[{\"name\":\"Button\",\"sourceFile\":\"src/button.tsx\",\"props\":[{\"name\":\"variant\",\"type\":\"string\"}],\"variants\":[\"primary\",\"secondary\"],\"examples\":[\"<Button variant=\\\"primary\\\">Save</Button>\"]}]}",
+          "bad": "{\"components\":[{\"name\":\"Button\",\"sourceFile\":\"src/button.tsx\"}]}"
+        }
+      ],
+      "allowlist": [
+        "shadcn/ui `components.json` (CLI config) — detected via `$schema` or `aliases` and skipped",
+        "manifests with no `components` array (or empty array) — skipped silently",
+        "object-form manifests (keyed by component name) — not checked for completeness (structure-only convention)",
+        "entries without a `name` field — skipped (manifest-json owns the validation)"
       ]
     },
     {
@@ -1460,6 +1564,72 @@
         }
       ],
       "allowlist": []
+    },
+    {
+      "id": "components/no-arbitrary-tailwind",
+      "axis": "components",
+      "defaultSeverity": "warning",
+      "shortDescription": "Disallow non-color arbitrary Tailwind values",
+      "fullDescription": "Arbitrary Tailwind utilities (e.g. `p-[12px]`, `text-[14px]`, `w-[37px]`) bypass the configured design scale. These literal bracket values embed hardcoded spacing, sizing, or typography outside any token contract — making token-based refactors miss them silently. Color bracket values (e.g. `bg-[#fff]`) are handled by `tokens/no-hardcoded-color`.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/components-no-arbitrary-tailwind.md",
+      "rationale": "Why it matters\n\nArbitrary Tailwind values short-circuit the design system contract the same way inline styles do. A spacing change (4→5px base) or a typography scale update won't catch `text-[14px]` — the drift is invisible to token-based tooling.\n\nThe color variant (`bg-[#fff]`) is already handled by `tokens/no-hardcoded-color`. This rule covers the non-color remainder: spacing, sizing, typography, layout, and any other literal scale bypass.",
+      "examples": [
+        {
+          "good": "<div className=\"p-4 text-sm\">",
+          "bad": "<div className=\"p-[12px] text-[14px]\">"
+        },
+        {
+          "good": "<div className=\"w-full\">",
+          "bad": "<div className=\"w-[37px]\">"
+        },
+        {
+          "good": "<div className=\"gap-4\">",
+          "bad": "<div className=\"gap-[10px]\">"
+        }
+      ],
+      "allowlist": []
+    },
+    {
+      "id": "components/no-style-escape-hatch",
+      "axis": "components",
+      "defaultSeverity": "warning",
+      "shortDescription": "Disallow inline `style` prop on DS components",
+      "fullDescription": "An inline `style` prop on a design-system component bypasses the component's own prop API (variant/size/color props, CSS-variable theming). It makes one-off overrides invisible to token tooling, breaks dark-mode propagation, and forks the component's visual contract silently.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/components-no-style-escape-hatch.md",
+      "rationale": "Why it matters\n\nDS components expose a deliberate prop API precisely so that consumers never need to reach for `style`. An inline `style` prop is the runtime equivalent of !important: it bypasses variant tokens, breaks dark-mode cascade, and survives token renames silently.\n\nThe rule is value-agnostic: `style={{ color: \"red\" }}` and `style={{ margin: 0 }}` are equally flagged. The fix is always to use the component's intended API (`variant`, `size`, `color`, `sx`, etc.) or a global token instead.",
+      "examples": [
+        {
+          "good": "<Button variant=\"primary\" size=\"md\">Save</Button>",
+          "bad": "<Button style={{ color: \"#2563eb\" }}>Save</Button>"
+        },
+        {
+          "good": "<Badge color=\"success\" />",
+          "bad": "<Badge style={{ background: \"green\" }} />"
+        }
+      ],
+      "allowlist": []
+    },
+    {
+      "id": "a11y/interactive-role-name",
+      "axis": "a11y",
+      "defaultSeverity": "warning",
+      "shortDescription": "Accessible name on interactive controls",
+      "fullDescription": "Wraps `jsx-a11y/control-has-associated-label`: every interactive control (`<button>`, `<input>`, `<select>`, `<textarea>`, `<a>`) must have an accessible name — via visible text, `aria-label`, `aria-labelledby`, or a `<label>`. This is the one accessible-name rule that `a11y/essentials` does not cover.",
+      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/a11y-interactive-role-name.md",
+      "rationale": "Why it matters\n\nIcon-only buttons (a close button wrapping only an SVG, a toolbar action with no label) are the most frequent accessible-name omission in AI-generated UI. They block screen-reader users who cannot determine what the control does, violating WCAG 2.1 SC 4.1.2 (Name, Role, Value).\n\n`a11y/essentials` already covers image `alt`, form `<label>`, ARIA role validity, and anchor content. This rule covers the remaining interactive-control gap via the upstream `eslint-plugin-jsx-a11y` `control-has-associated-label` rule.",
+      "examples": [
+        {
+          "good": "<button aria-label=\"Close dialog\"><svg aria-hidden=\"true\" /></button>",
+          "bad": "<button><svg /></button>"
+        },
+        {
+          "good": "<button>Save</button>",
+          "bad": "<button><span class=\"icon-save\" /></button>"
+        }
+      ],
+      "allowlist": [
+        "Decorative controls that are intentionally hidden from assistive technology via aria-hidden=\"true\" on the control itself"
+      ]
     }
   ]
 }

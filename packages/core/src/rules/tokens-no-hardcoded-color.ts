@@ -1,12 +1,13 @@
 import { isAbsolute, join } from "node:path";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, ClassifyContext, Confidence, CodemodContext, CodemodResult, FixGroup } from "../types.js";
-import { isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile, isInCommentOrUrl } from "./_skip-context.js";
+import { isInsideCodeDisplay, isCssCustomPropertyDeclaration, isLowSignalValueFile, isSchemaOrDataFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile, isInCommentOrUrl, isVendoredOrResetFile, isSvgIconContext, isDataPaletteContext, isGeneratedCssSource } from "./_skip-context.js";
 import { isPathExcluded } from "./_exclude.js";
 import { fixHardcodedColor } from "../codemods/tokens-color.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
 import { createLyseRule } from "./_rule-module.js";
 import { getTsMorphProject } from "../parsers/ts-morph-project.js";
 import { makeFixGroup } from "./_fix-group.js";
+import { classifyColorRole } from "./_color-ast-role.js";
 
 // Allow one level of nested parens so hsl(var(--token)) is captured whole.
 // Pattern: (?:[^)(]|\([^)]*\))* matches any mix of non-paren chars and
@@ -27,6 +28,49 @@ const ALLOWLIST = new Set(["currentColor", "transparent", "inherit", "initial", 
  */
 const COLOR_VAR_REF =
   /^(?:hsl[a]?|rgb[a]?|oklch)\(\s*var\(--[a-zA-Z0-9_-]+\)(?:\s*,\s*[^)]+)?\s*\)$/;
+
+/**
+ * Returns true when the color function's first argument is a non-literal
+ * (an identifier, member-access expression, function call, or the `from`
+ * keyword used in CSS relative-color syntax like `oklch(from var(--x) l c h)`).
+ *
+ * A literal argument starts with a digit, '+', '-', or '.' (numeric), or '#'
+ * (inline hex, unusual but possible). Any other leading character means the
+ * argument is a JS/TS expression or CSS keyword — the color value comes from
+ * a token/variable reference, so the rule MUST NOT flag it.
+ *
+ * Examples that return true (must skip):
+ *   rgba(theme.colors.blue[6], 0.2)  → first arg starts with 't' → identifier
+ *   rgba(lightParsed.value, 0.07)    → first arg starts with 'l' → identifier
+ *   oklch(from var(--primary) l c h) → first arg starts with 'f' ('from')
+ *
+ * Examples that return false (must flag):
+ *   rgba(255, 255, 255, 0.5)         → first arg '255' → digit → literal
+ *   hsl(217, 83%, 53%)               → first arg '217' → digit → literal
+ *   oklch(0.65 0.2 240)              → first arg '0.65' → digit → literal
+ *
+ * This check is purely syntactic — it never uses file paths, identifier names,
+ * or repo-specific knowledge. It generalises across all codebases.
+ */
+function colorFnHasNonLiteralArg(match: string): boolean {
+  // Hex literals are handled by the COLOR_FUNC regex separately — they have no
+  // parens, so this function is never called for them. Guard anyway.
+  if (match.startsWith("#")) return false;
+
+  const parenOpen = match.indexOf("(");
+  if (parenOpen === -1) return false;
+
+  // Extract content between the outer parens (no inner-paren awareness needed
+  // because we only inspect the first character of the first argument).
+  const inner = match.slice(parenOpen + 1, match.lastIndexOf(")")).trimStart();
+  if (inner.length === 0) return false;
+
+  const firstChar = inner[0]!;
+  // Literals start with a digit, sign, decimal point, or '#' (embedded hex).
+  // Anything else is a letter/underscore → identifier, keyword ('from'),
+  // or function reference — i.e. a non-literal reference expression.
+  return /[a-zA-Z_]/.test(firstChar);
+}
 
 function shouldSkip(value: string): boolean {
   return ALLOWLIST.has(value.trim());
@@ -71,6 +115,52 @@ function isInsideVarCall(source: string, hitStart: number): boolean {
       }
       depth--;
     }
+  }
+  return false;
+}
+
+/**
+ * Returns true if the hex hit at `hitStart` in `source` is inside a CSS
+ * attribute selector `[attr="value"]` — i.e. between an unmatched `[` and its
+ * matching `]` before the next `{`.
+ *
+ * Examples that return true (NOT a declared color — suppress):
+ *   [stroke='#ccc'] { ... }
+ *   [data-color="#fff"] { color: inherit; }
+ *   svg [fill='#abc123'] path { opacity: 1; }
+ *
+ * Examples that return false (real declarations — do not suppress):
+ *   .icon { stroke: #ccc; }
+ *   .x { color: #ccc; }
+ *
+ * Strategy: walk backwards from `hitStart`. If we first hit `[` (unmatched)
+ * before hitting `{`, `;`, or end-of-content, and the `]` closing that `[`
+ * appears after `hitStart` (and before any `{`), the hex is selector-internal.
+ */
+function isInsideCssAttributeSelector(source: string, hitStart: number): boolean {
+  let depth = 0;
+  for (let i = hitStart - 1; i >= 0; i--) {
+    const c = source[i];
+    if (c === "]") {
+      depth++;
+      continue;
+    }
+    if (c === "[") {
+      if (depth > 0) {
+        depth--;
+        continue;
+      }
+      // Unmatched `[` found — now verify its `]` comes after hitStart
+      // and before any `{` (confirming this is a selector, not CSS value).
+      for (let j = hitStart; j < source.length; j++) {
+        const d = source[j];
+        if (d === "]") return true;  // closing bracket after our hit → selector
+        if (d === "{") return false; // rule body opened → not in selector
+      }
+      return false;
+    }
+    // Rule body boundary or statement end — we're inside a CSS rule, not a selector.
+    if (c === "{" || c === "}" || c === ";") return false;
   }
   return false;
 }
@@ -144,15 +234,40 @@ export function countCompliantColorUses(source: string, fileExt: string): number
   return count;
 }
 
-export function detectInText(source: string, _path?: string): { match: string; index: number }[] {
+/**
+ * Returns true if the hex match at `hitIndex` in `source` is actually an HTML
+ * numeric character entity (`&#NNN;` or `&#xNN;`). These look like `#NNN` to
+ * the COLOR_FUNC hex regex but are NOT CSS color values — they are HTML escape
+ * sequences (e.g. `&#039;` = apostrophe, `&#8203;` = zero-width space).
+ *
+ * The check is purely syntactic: the character immediately before the `#` must
+ * be `&`. This is the canonical signal — general across all codebases, with no
+ * path or content-name heuristics.
+ *
+ * Recall guard: a standalone `#039` or `#039000` in styling (where the char
+ * before `#` is a space, `:`, `'`, etc.) is NOT preceded by `&`, so it still
+ * flags normally.
+ */
+function isHtmlNumericEntity(source: string, hitIndex: number): boolean {
+  return hitIndex > 0 && source[hitIndex - 1] === "&";
+}
+
+export function detectInText(source: string, _path?: string, isCssSource = false): { match: string; index: number }[] {
   const hits: { match: string; index: number }[] = [];
   COLOR_FUNC.lastIndex = 0;
   let m: RegExpExecArray | null;
   while ((m = COLOR_FUNC.exec(source)) !== null) {
     if (shouldSkip(m[0])) continue;
+    // Skip HTML numeric character entities (&#NNN; / &#xNN;) — the hex-like
+    // portion is not a color value; it is an HTML escape sequence.
+    if (isHtmlNumericEntity(source, m.index)) continue;
     // Skip any color function whose entire argument is a CSS variable reference
     // (canonical shadcn / radix-ui theming pattern — NOT hardcoded drift).
     if (COLOR_VAR_REF.test(m[0])) continue;
+    // Skip color functions whose first argument is a non-literal expression
+    // (identifier, member-access, `from var(...)` relative-color syntax, etc.).
+    // The color value comes from a token/variable — not hardcoded drift.
+    if (colorFnHasNonLiteralArg(m[0])) continue;
     // Skip values inside <code>...</code> or <pre>...</pre> on the same line
     // (display-only CSS examples — e.g. shadcn theme customizer).
     // NOTE: multi-line code blocks are not detected here; V1 needs AST context.
@@ -163,6 +278,21 @@ export function detectInText(source: string, _path?: string): { match: string; i
     // Skip color literals in comments (// /* *) and URL fragments (#anchor).
     if (isInCommentOrUrl(source, m.index)) continue;
     if (isCssCustomPropertyDeclaration(source, m.index)) continue;
+    // Skip hex literals that appear inside a CSS attribute selector `[attr="#hex"]`.
+    // The hex is matching an attribute VALUE — it is a selector predicate, not a
+    // declared color. Only meaningful in CSS/SCSS sources (in TS/JS, `[` opens an
+    // array, not a selector).
+    if (isCssSource && isInsideCssAttributeSelector(source, m.index)) continue;
+    // Skip color literals that are elements of a JS/TS multi-color collection
+    // (array or object with ≥3 color literals) — palette/data definitions,
+    // not DS drift. This suppresses syntax-highlight themes, color-preset
+    // arrays, chart color series, etc. without hardcoding library names.
+    // IMPORTANT: must NOT fire on CSS/SCSS sources — a gradient function or a
+    // CSS rule block with multiple color stops is STYLING = drift, not a palette
+    // data structure. Applying the palette guard to CSS caused a recall regression
+    // (7 real-drift findings suppressed: Progress.module.css gradient, SCSS button
+    // rule blocks with multiple stops, etc.).
+    if (!isCssSource && isDataPaletteContext(source, m.index)) continue;
     hits.push({ match: m[0], index: m.index });
   }
   TW_ARBITRARY.lastIndex = 0;
@@ -170,6 +300,7 @@ export function detectInText(source: string, _path?: string): { match: string; i
     if (isInsideCodeDisplay(source, m.index)) continue;
     if (isInCommentOrUrl(source, m.index)) continue;
     if (isCssCustomPropertyDeclaration(source, m.index)) continue;
+    if (!isCssSource && isDataPaletteContext(source, m.index)) continue;
     hits.push({ match: m[0], index: m.index });
   }
   return hits;
@@ -218,9 +349,11 @@ const evaluate = async (
 
   for (const f of files.ts) {
     if (isPathExcluded(f.path, ctx.excludePaths)) continue;
+    if (isVendoredOrResetFile(f.path)) continue;
     if (isLowSignalValueFile(f.path)) continue;
     if (isSchemaOrDataFile(f.path)) continue;
     if (isColorTokenDefFile(f.path)) continue;
+    if (isSvgIconContext(f.path)) continue;
     const fileExt = f.path.match(/\.[^.]+$/)?.[0] ?? ".ts";
     const hits = detectInText(f.source, f.path);
     const compliantCount = countCompliantColorUses(f.source, fileExt);
@@ -246,11 +379,14 @@ const evaluate = async (
 
   for (const c of files.css) {
     if (isPathExcluded(c.path, ctx.excludePaths)) continue;
+    if (isVendoredOrResetFile(c.path)) continue;
+    if (isGeneratedCssSource(c.source)) continue;
     if (isLowSignalValueFile(c.path)) continue;
     if (isSchemaOrDataFile(c.path)) continue;
     if (isColorTokenDefFile(c.path)) continue;
+    if (isSvgIconContext(c.path)) continue;
     const fileExt = c.path.match(/\.[^.]+$/)?.[0] ?? ".css";
-    const hits = detectInText(c.source, c.path);
+    const hits = detectInText(c.source, c.path, true);
     const compliantCount = countCompliantColorUses(c.source, fileExt);
     opportunities += hits.length + compliantCount;
     for (const h of hits) {
@@ -272,9 +408,11 @@ const evaluate = async (
 
   for (const b of files.cssInJs) {
     if (isPathExcluded(b.path, ctx.excludePaths)) continue;
+    if (isVendoredOrResetFile(b.path)) continue;
     if (isLowSignalValueFile(b.path)) continue;
     if (isSchemaOrDataFile(b.path)) continue;
     if (isColorTokenDefFile(b.path)) continue;
+    if (isSvgIconContext(b.path)) continue;
     const fileExt = b.path.match(/\.[^.]+$/)?.[0] ?? ".tsx";
     const hits = detectInText(b.content, b.path);
     const compliantCount = countCompliantColorUses(b.content, fileExt);
@@ -384,6 +522,21 @@ const classifyConfidence: NonNullable<Rule["classifyConfidence"]> = (
   finding: Finding,
   ctx: ClassifyContext,
 ): Confidence => {
+  // AST role: functional roles are not drift — grade them low.
+  // Only demote for the 3 genuine functional roles; unknown/styling/parse-failure
+  // keep existing logic (recall guardrail — never hide real drift).
+  if (ctx.repoRoot) {
+    const role = classifyColorRole({
+      repoRoot: ctx.repoRoot,
+      file: finding.location.file,
+      line: finding.location.line,
+      column: finding.location.column ?? 1,
+    });
+    if (role === "canvas" || role === "default-prop" || role === "svg-art") {
+      return "low";
+    }
+  }
+
   // Extract color value from message — format: "Hardcoded color value: <value>"
   const colorMatch = finding.message.match(/:\s*(.+)$/);
   const raw = colorMatch?.[1]?.trim() ?? "";

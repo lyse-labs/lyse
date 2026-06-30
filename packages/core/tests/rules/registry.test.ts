@@ -36,6 +36,7 @@ const EXPECTED_IDS = [
   "stories/coverage",
   "ai-surface/agents-md-quality",
   "ai-surface/component-manifest-json",
+  "ai-surface/component-manifest-completeness",
   "ai-surface/ds-index-exported",
   "ai-surface/mcp-config-present",
   "ai-surface/llms-txt-structure",
@@ -58,6 +59,8 @@ const EXPECTED_IDS = [
   "ai-governance/ai-token-misuse",
   "ai-governance/interaction-pattern-docs",
   "ai-governance/draft-attribution",
+  "components/no-arbitrary-tailwind",
+  "a11y/interactive-role-name",
 ];
 
 describe("rules/registry", () => {

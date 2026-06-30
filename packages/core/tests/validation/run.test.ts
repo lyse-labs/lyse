@@ -32,25 +32,27 @@ describe("runAll", () => {
 
 describe("engineGateFailures", () => {
   it("returns [] when all scores have J=1 and no metamorphic inconsistencies", () => {
+    // Use real STABLE rule IDs so the gate actually exercises the stable-rule path
+    // (not the unknown-rule path, which would return [] trivially).
     const report = makeReport([
-      makeScore({ ruleId: "a/rule", youdensJ: 1, metamorphicInconsistencies: [] }),
-      makeScore({ ruleId: "b/rule", youdensJ: 1, metamorphicInconsistencies: [] }),
+      makeScore({ ruleId: "tokens/no-hardcoded-spacing", youdensJ: 1, metamorphicInconsistencies: [] }),
+      makeScore({ ruleId: "tokens/no-hardcoded-z-index", youdensJ: 1, metamorphicInconsistencies: [] }),
     ]);
     expect(engineGateFailures(report)).toEqual([]);
   });
 
   it("returns the offending score when youdensJ < 1", () => {
-    const bad = makeScore({ ruleId: "bad/rule", youdensJ: 0.5 });
-    const good = makeScore({ ruleId: "good/rule", youdensJ: 1 });
+    const bad = makeScore({ ruleId: "tokens/no-hardcoded-spacing", youdensJ: 0.5 });
+    const good = makeScore({ ruleId: "tokens/no-hardcoded-color", youdensJ: 1 });
     const report = makeReport([bad, good]);
     const failures = engineGateFailures(report);
     expect(failures).toHaveLength(1);
-    expect(failures[0]!.ruleId).toBe("bad/rule");
+    expect(failures[0]!.ruleId).toBe("tokens/no-hardcoded-spacing");
   });
 
   it("flags a score with non-empty metamorphicInconsistencies even when J=1", () => {
     const inconsistent = makeScore({
-      ruleId: "meta/rule",
+      ruleId: "tokens/no-hardcoded-spacing",
       youdensJ: 1,
       metamorphicInconsistencies: [
         { pair: "pair-1", expectViolation: true, aFlagged: true, bFlagged: false },
@@ -59,15 +61,15 @@ describe("engineGateFailures", () => {
     const report = makeReport([inconsistent]);
     const failures = engineGateFailures(report);
     expect(failures).toHaveLength(1);
-    expect(failures[0]!.ruleId).toBe("meta/rule");
+    expect(failures[0]!.ruleId).toBe("tokens/no-hardcoded-spacing");
   });
 
   it("flags both J<1 and metamorphic issues in the same report", () => {
     const report = makeReport([
-      makeScore({ ruleId: "a/bad-j", youdensJ: 0.8 }),
-      makeScore({ ruleId: "b/good", youdensJ: 1, metamorphicInconsistencies: [] }),
+      makeScore({ ruleId: "tokens/no-hardcoded-spacing", youdensJ: 0.8 }),
+      makeScore({ ruleId: "tokens/no-hardcoded-color", youdensJ: 1, metamorphicInconsistencies: [] }),
       makeScore({
-        ruleId: "c/bad-meta",
+        ruleId: "tokens/no-hardcoded-z-index",
         youdensJ: 1,
         metamorphicInconsistencies: [
           { pair: "p", expectViolation: false, aFlagged: false, bFlagged: true },
@@ -76,6 +78,6 @@ describe("engineGateFailures", () => {
     ]);
     const failures = engineGateFailures(report);
     expect(failures).toHaveLength(2);
-    expect(failures.map((f) => f.ruleId)).toEqual(["a/bad-j", "c/bad-meta"]);
+    expect(failures.map((f) => f.ruleId)).toEqual(["tokens/no-hardcoded-spacing", "tokens/no-hardcoded-z-index"]);
   });
 });
