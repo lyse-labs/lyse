@@ -290,7 +290,9 @@ function componentHasProps(componentName: string, src: string): boolean | null {
           if (refName.type === "Identifier") propsTypeRef = (refName as t.Identifier).name;
         }
       } else if (first.type === "ObjectPattern") {
-        const ann = (first as t.ObjectPattern).typeAnnotation?.typeAnnotation;
+        const typeAnn = (first as t.ObjectPattern).typeAnnotation;
+        const ann =
+          typeAnn?.type === "TSTypeAnnotation" ? typeAnn.typeAnnotation : undefined;
         if (ann?.type === "TSTypeLiteral") {
           if ((ann as t.TSTypeLiteral).members.length > 0) hasInlineProps = true;
         } else if (ann?.type === "TSTypeReference") {
