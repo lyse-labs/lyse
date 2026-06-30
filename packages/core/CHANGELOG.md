@@ -1,5 +1,75 @@
 # @lyse-labs/lyse
 
+## 0.2.0-alpha.5
+
+### Minor Changes
+
+- be429ea: `lyse add git-hook`: install a pre-commit hook that surfaces design-system drift in _staged_ files (`lyse audit --staged`) before each commit. Advisory by design — it never blocks the commit (bypass with `git commit --no-verify`) and never clobbers a pre-existing hook without `--force`. Plus: the `lyse add ci-gate` workflow now includes an advisory step that reports the new drift a PR introduces on its changed files (`--scope changed`), complementing the score-regression gate.
+- 709f426: `lyse audit --scope changed|staged` (+ `--staged` shortcut, `--base <ref>`): limit the audit and its findings to git-changed files — `changed` (files changed vs `--base`, default `origin/main`) or `staged` (files in the index). This is the building block for finding-level PR review (flag only the drift a change introduces, not the whole backlog) and for pre-commit hooks. Whole-tree audit remains the default. A clear error (exit 64) is raised when the base ref can't be resolved or there's no git repo.
+- 09fcf7d: `lyse audit --scope uncommitted`: audit only the files changed in the working tree but not yet committed (tracked modifications vs HEAD + untracked files). This completes the `--scope` family (`changed` = committed-vs-base, `staged` = index, `uncommitted` = working tree) and is the right scope for verifying a coding agent's edits — which live in the working tree, uncommitted — so the `lyse handoff` skill now suggests `lyse audit --scope uncommitted` for a fast check of just the agent's fixes.
+- deeb218: One door for fixing: `lyse handoff`. Lyse no longer edits your code itself — the deterministic-codemod command `lyse fix` is retired and now prints a notice and redirects to `lyse handoff`, which hands the findings (grouped by drift class, with the resolved token mapping + full token map) to the coding agent you already use. The post-audit menu and the interactive REPL now offer "Hand off to your agent" instead of "Auto-fix". `lyse fix`'s two non-fix extras moved to the setup wizard: `lyse init --scaffold` (generate missing AI-readiness files) and `lyse init --migrate-tokens` (convert legacy `{ value, type }` token JSON to DTCG). The codemod engine (`rule.applyCodemod`) stays — it still powers MCP `suggest_fix` and the handoff payload. **Breaking:** `lyse fix --dry-run/--confidence/--rule/--force-on-dirty/--verify-with-tests` are gone; use `lyse handoff` (your agent reviews and edits the working tree, never commits).
+- b2f35cb: Add `lyse handoff`: audit a project, then hand the findings to your installed coding agent (Claude Code, Cursor, Codex) to fix — Lyse never edits code itself. Findings are grouped by **drift-class** with the resolved design token (e.g. `#3b82f6 → color.brand.primary`, applied consistently across all sites), and the project's TokenMap is serialized into the handoff. Findings now carry an optional structured `fixGroup`. Non-interactive contexts skip the prompt; the agent spawn is opt-in via the menu.
+- 51e2382: `lyse install`: one-command onboarding. Installs the Lyse skill into every detected coding agent (Claude Code, Cursor, Codex, OpenCode) and the advisory pre-commit hook, so a single `npx @lyse-labs/lyse install` wires Lyse into a repo. Reuses the existing agent-detection, skill-install, and git-hook primitives; resilient outside a git repo (skill still installs, hook reported as skipped).
+- b7a2048: Two new experimental rules (B1 socle sub-project).
+
+  `ai-surface/component-manifest-completeness` — deterministic structural check (Tier B) that each entry in a lyse-style component manifest documents `props` (non-empty), `examples` (non-empty), and — when `variants` is present — that it is not an empty array. Silent when no manifest exists; `ai-surface/component-manifest-json` owns the absence signal. `contributesToScore: false` — no Health Score change.
+
+  `components/no-arbitrary-tailwind` — flags non-color arbitrary Tailwind utilities (`p-[12px]`, `text-[14px]`, `w-[37px]`, `gap-[10px]`, `leading-[19px]`, …) where a literal bracket value bypasses the design scale. Color brackets (`bg-[#fff]`, `text-[#111]`) remain owned by `tokens/no-hardcoded-color`. `contributesToScore: false` — no Health Score change. Real-world precision is pending a harvest measurement; the rule ships unmeasured.
+
+- b7a2048: New experimental socle rule (B2a sub-project).
+
+  `components/no-style-escape-hatch` — flags an inline `style={...}` prop on a design-system component (a JSX tag imported from the configured `componentsModule`, or present in the component inventory) as a value-agnostic bypass of the component's prop API. Raw HTML, non-DS components, DS components without a `style` prop, and DS-self audits (`dsSelfMode`) are not flagged. It owns only the `style`-prop presence — `className` arbitrary values stay with `components/no-arbitrary-tailwind`, hardcoded values stay with their token rules. `contributesToScore: false` — no Health Score change; ships unmeasured (real-world precision pending a harvest measurement). Adds a reusable `isDsComponent` resolver (substrate for the upcoming `prefer-existing-component`).
+
+- b7a2048: New experimental socle rule (B3 sub-project) — `components/standardized-variant-props`.
+
+  Flags a component that encodes mutually-exclusive visual variants as two or more separate `boolean` props (the "boolean explosion" antipattern: `<Button primary danger>`) instead of a single `variant` string-literal union. Only a curated style-modifier vocabulary (`primary`, `secondary`, `danger`, `ghost`, `outline`, …) typed `boolean` counts — generic state booleans (`disabled`, `loading`, …) are never matched — and the rule fires only at two or more. Orthogonal to `components/contracts-strictness`. `experimental` / `contributesToScore: false` — no Health Score change; ships unmeasured (real-world precision pending a harvest measurement).
+
+- b7a2048: New experimental socle rule (C1 sub-project) — the first static contrast check.
+
+  `a11y/contrast-tokens` flags a CSS rule / CSS-in-JS object / inline `style` that declares BOTH a foreground (`color`) AND a solid background where the resolved **literal** colors fall below WCAG AA contrast (4.5:1 normal text, 3:1 large text). It resolves only literal colors and skips anything it can't resolve to two opaque concrete values — `var()` token references (no forward token map is available in the rule context), alpha, `transparent`/`currentColor`/`inherit`, gradients/images, and single-property rules — so it never guesses a verdict. Orthogonal to `tokens/no-hardcoded-color` (the value) and `a11y/runtime-axe` (render-only). `contributesToScore: false` — no Health Score change; ships unmeasured (real-world precision pending a harvest measurement). Adds a pure WCAG contrast util (`src/a11y/contrast.ts`).
+
+- b7a2048: New experimental socle rule (C2 sub-project) — `a11y/interactive-role-name`.
+
+  Flags interactive controls that lack an accessible name (an icon-only `<button>` with no text/`aria-label`, a custom control without a label) by wrapping `eslint-plugin-jsx-a11y`'s `jsx-a11y/control-has-associated-label` — the one accessible-name rule `a11y/essentials` omits — through the same in-process ESLint harness. Zero overlap with essentials (which covers images, links, form-input labels, and ARIA validity). `experimental` / `contributesToScore: false` — no Health Score change; ships unmeasured (real-world precision pending a harvest measurement).
+
+- b7a2048: Two new experimental socle rules (C3 sub-project) — `stories/props-documented` and `stories/usage-examples`.
+
+  Both judge the content of a Storybook story a DS component already has (absence of a story stays `stories/coverage`'s job). `stories/props-documented` flags a story that documents no props — neither an `argTypes` block nor any named story carrying `args`. `stories/usage-examples` flags a story showing no usage examples — fewer than two named exports and no arg'd export. Both `experimental` / `contributesToScore: false` — no Health Score change; ship unmeasured (real-world precision pending a harvest measurement). The story loader now records `hasArgTypes` per story entry.
+
+- 599f804: Retired 7 experimental, off-score ai-governance rules (sub-project D).
+
+  Removed `ai-governance/explainability-affordance`, `human-control-affordances`, `ai-marker-anti-patterns`, `disclaimer-present`, `value-gate-doc-present`, `ai-tokens-reserved`, and `ai-token-requires-marker` — all experimental, unmeasured, and never part of the Health Score, so scores are unaffected (`scoring-v1.1` unchanged). The ai-governance axis now reflects its 11 deterministic, validated rules (registry 73 → 66). A `.lyse.yaml` referencing a retired id is tolerated with a warning instead of a hard error. The `ai-token-requires-marker` codemod, the value-gate `lyse init` scaffold, and the 5 corresponding LLM precision-filter rubric dimensions were removed with the rules.
+
+### Patch Changes
+
+- c656a4c: Remove dead code identified by the 2026-06-27 audit (no behavior change).
+- 9272ef4: Audit judgment fixes:
+  - `lyse audit` no longer prompts for an email. Email is captured only by the
+    `lyse init` wizard; audit still silently retries delivery of an email you
+    already opted into during init if an earlier send failed offline.
+  - The LLM precision filter now drops any source file whose content matches a
+    high-confidence secret scan (PEM private-key blocks; AWS/OpenAI/GitHub/Slack
+    token shapes; quoted long `api_key`/`secret`/`token`/`password` assignments)
+    before sending it to the LLM — making the PRIVACY notice's secret-exclusion
+    promise true.
+  - Fixed the precision/recall labelling in the `bench kappa-report` diagnostic
+    (false positives and false negatives were swapped).
+  - Documented the `lyse handoff` trust boundary (it launches your coding agent
+    with permission prompts bypassed — run only on repositories you trust).
+
+- 84caccd: Audit structure sweep: unify the repo_bucket fingerprint, dedup helpers, and tighten correctness.
+  - **Feedback telemetry repo_bucket** now uses the canonical identity fingerprint (sha256 with credential-stripping normalization) instead of a separate HMAC variant. Git credentials (`user:token@`) embedded in a remote URL can no longer leak into the anonymous fingerprint. The bucket value for the feedback path changes (old HMAC → canonical sha256); it remains anonymous and opt-in.
+  - **Clipboard accuracy:** the agent handoff "copy prompt to clipboard" action now reports success only when the copy actually succeeds; on failure it points you to the saved `.lyse/handoff/` payload instead of falsely claiming "copied".
+
+- b7a2048: `tokens/no-hardcoded-color` reliability is now honestly uncalibrated (null) in the catalogue. The previous synthetic precision of 0.44 from an underpowered corpus was misleading — real-world precision is ~65% across 8 OSS repos (1256 findings), rising to ~88.9% on medium-confidence findings; recall is ~100%. The rule stays experimental and does not contribute to the Health Score. The rule doc gains a Reliability section explaining the lexical ceiling (~85–88%) and why 90%-scored is not honestly reachable with the current detection strategy.
+- 4f2c238: Finish the dead-code + doc-accuracy sweep. Remove five more unreferenced exports (`defaultResponseCache`, `defaultBudget`, `listRegisteredRuleMetas`, `prependLineDiff`, `wizardStep`) and the now-orphaned `log` import in `ui/wizard.ts`; drop the unused `picocolors` runtime dependency (the spinner colours via the shared `ui/tokens` ansis palette). Fix the `lyse fix` / `lyse audit` CLI reference to match the real flags — `--rule` (singular, not `--rules`), the documented `--force-on-dirty` / `--verify-with-tests` / `--scaffold` / `--migrate-tokens` / `--no-dry-run` fix flags, the `--verbose` / `--static-only` / `--dim` / `--cost-cap-usd` / `--no-cache` / `--interactive` audit flags — and remove the invented `audit --rules` / `--exclude` and `fix --max-files` flags that never existed. Add `lyse install`, `lyse handoff`, and `lyse add` to the commands table. Correct the remaining stale `12 built-in rules` counts (→ 65) and `0.1.0` version examples (→ 0.2.0-alpha.4) the earlier pass missed, and fix the doubled `schemas/v1/lyse-event.json` link in the packaged `PRIVACY.md` (the copy step now rewrites it for the tarball). No behavior change; full suite green.
+- 2602fde: Fix `lyse init` hanging after stack detection: the framework-detection spinner
+  kept redrawing over the interactive "Proceed?" prompt, burying it forever on a
+  TTY (#205). `runInit` now runs without the competing CLI spinner. Also stamp the
+  real Lyse version in the generated `.lyse.yaml` header instead of a hardcoded
+  `0.1.0` (#204).
+- b7a2048: Reliability numbers are now derived in-repo from adversarial fixtures with a real sample count (N); the per-rule SLO table shows N. `tokens/no-hardcoded-color`, `tokens/no-hardcoded-shadow`, and `components/contracts-strictness` gained honest in-repo measurements; all remain experimental and do not contribute to the Health Score. SARIF output now emits the conservative Wilson lower bound on precision (not the flattering point estimate) and omits precision entirely for sub-axes with N = 0.
+
 ## 0.2.0-alpha.4
 
 ### Patch Changes
