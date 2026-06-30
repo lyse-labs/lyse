@@ -9,6 +9,7 @@ import { createLyseRule } from "./_rule-module.js";
 
 function documentsProps(entry: StoryEntry): boolean {
   if (entry.hasArgTypes === true) return true;
+  if (entry.hasArgs === true) return true;
   return (entry.stories ?? []).some(
     (s) => s.args !== undefined && Object.keys(s.args).length > 0,
   );

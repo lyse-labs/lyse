@@ -220,6 +220,13 @@ export interface StoryEntry {
    * the meta has no `argTypes`); absent only when the file failed to parse.
    */
   hasArgTypes?: boolean;
+  /**
+   * True when the story's default-export meta declares an `args` object (the
+   * CSF3 autodocs prop-documentation signal — meta-level args document the
+   * component's props for every story). Presence only. Set by `loadStories`;
+   * absent only when the file failed to parse.
+   */
+  hasArgs?: boolean;
 }
 
 export interface StoryIndex {

@@ -6,6 +6,7 @@ import _traverse from "@babel/traverse";
 import type { TraverseOptions } from "@babel/traverse";
 import type * as t from "@babel/types";
 import { measureKindOf } from "./rule-measure-kind.js";
+import { storyFileDocumentsProps } from "../../loaders/stories.js";
 import type { FindingRow } from "./finding-row.js";
 
 export type Label = { verdict: "tp" | "fp"; source: "auto"; reason: string };
@@ -183,64 +184,10 @@ function agentsMdAbsent(repoDir: string): boolean {
 
 const PROPS_DOC_COMPONENT_RE = /DS component <([^>]+)>/;
 
-/**
- * Parse a story source file and return whether it documents any props:
- * true if argTypes present OR any named story has non-empty args.
- * Returns null on parse failure.
- */
-function storyDocumentsProps(src: string): boolean | null {
-  let ast: t.File;
-  try {
-    ast = parse(src, {
-      sourceType: "module",
-      plugins: ["typescript", "jsx"],
-      errorRecovery: true,
-    });
-  } catch {
-    return null;
-  }
-
-  let hasArgTypes = false;
-  let hasArgs = false;
-
-  try {
-    traverse(ast, {
-      ExportDefaultDeclaration(path) {
-        const decl = path.node.declaration;
-        if (decl.type !== "ObjectExpression") return;
-        for (const prop of (decl as t.ObjectExpression).properties) {
-          if (prop.type !== "ObjectProperty") continue;
-          const key = (prop as t.ObjectProperty).key;
-          if (key.type === "Identifier" && (key as t.Identifier).name === "argTypes") {
-            hasArgTypes = true;
-          }
-        }
-      },
-      ExportNamedDeclaration(path) {
-        const decl = path.node.declaration;
-        if (!decl || decl.type !== "VariableDeclaration") return;
-        for (const declarator of (decl as t.VariableDeclaration).declarations) {
-          const init = declarator.init;
-          if (!init || init.type !== "ObjectExpression") continue;
-          for (const prop of (init as t.ObjectExpression).properties) {
-            if (prop.type !== "ObjectProperty") continue;
-            const key = (prop as t.ObjectProperty).key;
-            if (key.type === "Identifier" && (key as t.Identifier).name === "args") {
-              const val = (prop as t.ObjectProperty).value;
-              if (val.type === "ObjectExpression" && (val as t.ObjectExpression).properties.length > 0) {
-                hasArgs = true;
-              }
-            }
-          }
-        }
-      },
-    });
-  } catch {
-    // partial parse is fine
-  }
-
-  return hasArgTypes || hasArgs;
-}
+// Story prop-documentation is re-derived via the loader's parser
+// (storyFileDocumentsProps) so the verifier and the rule cannot diverge — both
+// recognize meta-level argTypes/args, the `export default meta` indirection, and
+// per-story args.
 
 /**
  * Parse a component source file and return whether the named component has any
@@ -360,7 +307,7 @@ function propsDocumentedVerifier(row: FindingRow, repoDir: string): Label {
   const storyFiles: string[] = [];
   for (const pattern of storyGlobs) {
     try {
-      const found = fg.sync(pattern, { cwd: repoDir, absolute: true, ignore: ["**/node_modules/**"] });
+      const found = fg.sync(pattern, { cwd: repoDir, absolute: true, caseSensitiveMatch: false, ignore: ["**/node_modules/**"] });
       storyFiles.push(...found);
     } catch {
       // ignore
@@ -379,7 +326,7 @@ function propsDocumentedVerifier(row: FindingRow, repoDir: string): Label {
     return { verdict: "fp", source: "auto", reason: "needs-verifier" };
   }
 
-  const storyDocs = storyDocumentsProps(storySrc);
+  const storyDocs = storyFileDocumentsProps(storySrc);
   if (storyDocs === null) {
     return { verdict: "fp", source: "auto", reason: "needs-verifier" };
   }
@@ -397,6 +344,7 @@ function propsDocumentedVerifier(row: FindingRow, repoDir: string): Label {
       const found = fg.sync(pattern, {
         cwd: repoDir,
         absolute: true,
+        caseSensitiveMatch: false,
         ignore: ["**/node_modules/**", "**/*.stories.*", "**/*.story.*", "**/*.test.*", "**/*.spec.*"],
       });
       compFiles.push(...found);
