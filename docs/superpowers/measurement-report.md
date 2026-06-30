@@ -4,14 +4,15 @@
 > All detection-rule entries show `not-measured`.
 # Measurement report
 
-## walled (2)
+## walled (3)
 
 | ruleId | kind | n | nTotal | precLB | recallSyn | labelSource |
 |--------|------|---|--------|--------|-----------|-------------|
+| stories/props-documented | structural | 1 | — | 0.000 | 1.000 | auto |
 | versioning/changelog-present | structural | 2 | — | 0.342 | 1.000 | auto |
 | versioning/semver-versioning | structural | 1 | — | 0.207 | 1.000 | auto |
 
-## not-measured (71)
+## not-measured (63)
 
 | ruleId | kind | n | nTotal | precLB | recallSyn | labelSource |
 |--------|------|---|--------|--------|-----------|-------------|
@@ -27,22 +28,15 @@
 | a11y/semantic-html | detection | 0 | 164 | — | — | none |
 | ai-governance/ai-content-live-region | detection | 0 | — | — | 1.000 | none |
 | ai-governance/ai-loading-error-states | detection | 0 | — | — | 1.000 | none |
-| ai-governance/ai-marker-anti-patterns | detection | 0 | 5 | — | 1.000 | none |
 | ai-governance/ai-marker-component-present | detection | 0 | — | — | 1.000 | none |
 | ai-governance/ai-token-misuse | detection | 0 | — | — | 1.000 | none |
-| ai-governance/ai-token-requires-marker | detection | 0 | — | — | — | none |
-| ai-governance/ai-tokens-reserved | detection | 0 | — | — | — | none |
 | ai-governance/bot-identity-labeling | detection | 0 | — | — | 1.000 | none |
 | ai-governance/confidence-indicator-present | detection | 0 | — | — | 1.000 | none |
-| ai-governance/disclaimer-present | detection | 0 | — | — | 1.000 | none |
 | ai-governance/draft-attribution | detection | 0 | — | — | — | none |
-| ai-governance/explainability-affordance | detection | 0 | — | — | — | none |
 | ai-governance/feedback-control-present | detection | 0 | — | — | 1.000 | none |
-| ai-governance/human-control-affordances | detection | 0 | — | — | — | none |
 | ai-governance/interaction-pattern-docs | detection | 0 | — | — | 1.000 | none |
 | ai-governance/product-analytics | detection | 0 | — | — | 1.000 | none |
 | ai-governance/source-attribution-present | detection | 0 | — | — | 1.000 | none |
-| ai-governance/value-gate-doc-present | detection | 0 | — | — | 1.000 | none |
 | ai-surface/agent-instruction-files | structural | 0 | — | — | 1.000 | none |
 | ai-surface/agents-md-quality | structural | 0 | — | — | 1.000 | none |
 | ai-surface/component-manifest-completeness | structural | 0 | — | — | — | none |
@@ -63,7 +57,6 @@
 | naming/component-pascalcase | structural | 0 | — | — | 1.000 | none |
 | naming/hook-prefix | structural | 0 | — | — | 1.000 | none |
 | stories/coverage | structural | 0 | — | — | 1.000 | none |
-| stories/props-documented | structural | 0 | — | — | 1.000 | none |
 | stories/usage-examples | structural | 0 | — | — | 1.000 | none |
 | tokens/container-query | detection | 0 | — | — | 1.000 | none |
 | tokens/css-custom-property-export | structural | 0 | — | — | 1.000 | none |

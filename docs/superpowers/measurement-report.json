@@ -126,17 +126,6 @@
     "verdict": "not-measured"
   },
   {
-    "ruleId": "ai-governance/ai-marker-anti-patterns",
-    "kind": "detection",
-    "nSamples": 0,
-    "nTotal": 5,
-    "precisionMeasured": null,
-    "precisionWilsonLowerBound": null,
-    "recallSynthetic": 1,
-    "labelSource": "none",
-    "verdict": "not-measured"
-  },
-  {
     "ruleId": "ai-governance/ai-marker-component-present",
     "kind": "detection",
     "nSamples": 0,
@@ -153,26 +142,6 @@
     "precisionMeasured": null,
     "precisionWilsonLowerBound": null,
     "recallSynthetic": 1,
-    "labelSource": "none",
-    "verdict": "not-measured"
-  },
-  {
-    "ruleId": "ai-governance/ai-token-requires-marker",
-    "kind": "detection",
-    "nSamples": 0,
-    "precisionMeasured": null,
-    "precisionWilsonLowerBound": null,
-    "recallSynthetic": null,
-    "labelSource": "none",
-    "verdict": "not-measured"
-  },
-  {
-    "ruleId": "ai-governance/ai-tokens-reserved",
-    "kind": "detection",
-    "nSamples": 0,
-    "precisionMeasured": null,
-    "precisionWilsonLowerBound": null,
-    "recallSynthetic": null,
     "labelSource": "none",
     "verdict": "not-measured"
   },
@@ -197,27 +166,7 @@
     "verdict": "not-measured"
   },
   {
-    "ruleId": "ai-governance/disclaimer-present",
-    "kind": "detection",
-    "nSamples": 0,
-    "precisionMeasured": null,
-    "precisionWilsonLowerBound": null,
-    "recallSynthetic": 1,
-    "labelSource": "none",
-    "verdict": "not-measured"
-  },
-  {
     "ruleId": "ai-governance/draft-attribution",
-    "kind": "detection",
-    "nSamples": 0,
-    "precisionMeasured": null,
-    "precisionWilsonLowerBound": null,
-    "recallSynthetic": null,
-    "labelSource": "none",
-    "verdict": "not-measured"
-  },
-  {
-    "ruleId": "ai-governance/explainability-affordance",
     "kind": "detection",
     "nSamples": 0,
     "precisionMeasured": null,
@@ -233,16 +182,6 @@
     "precisionMeasured": null,
     "precisionWilsonLowerBound": null,
     "recallSynthetic": 1,
-    "labelSource": "none",
-    "verdict": "not-measured"
-  },
-  {
-    "ruleId": "ai-governance/human-control-affordances",
-    "kind": "detection",
-    "nSamples": 0,
-    "precisionMeasured": null,
-    "precisionWilsonLowerBound": null,
-    "recallSynthetic": null,
     "labelSource": "none",
     "verdict": "not-measured"
   },
@@ -268,16 +207,6 @@
   },
   {
     "ruleId": "ai-governance/source-attribution-present",
-    "kind": "detection",
-    "nSamples": 0,
-    "precisionMeasured": null,
-    "precisionWilsonLowerBound": null,
-    "recallSynthetic": 1,
-    "labelSource": "none",
-    "verdict": "not-measured"
-  },
-  {
-    "ruleId": "ai-governance/value-gate-doc-present",
     "kind": "detection",
     "nSamples": 0,
     "precisionMeasured": null,
@@ -493,12 +422,12 @@
   {
     "ruleId": "stories/props-documented",
     "kind": "structural",
-    "nSamples": 0,
-    "precisionMeasured": null,
-    "precisionWilsonLowerBound": null,
+    "nSamples": 1,
+    "precisionMeasured": 0,
+    "precisionWilsonLowerBound": 0,
     "recallSynthetic": 1,
-    "labelSource": "none",
-    "verdict": "not-measured"
+    "labelSource": "auto",
+    "verdict": "walled"
   },
   {
     "ruleId": "stories/usage-examples",

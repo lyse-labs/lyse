@@ -68,7 +68,17 @@ function extractArgs(obj: t.ObjectExpression): Record<string, string | number | 
  * are skipped — the function call's args are too varied to safely extract.
  * Cross-file variable references in `component:` are not resolved (v0.2).
  */
-function parseStoryFile(source: string): { componentName?: string; stories: StoryExport[]; hasArgTypes: boolean } | undefined {
+// Unwrap `… satisfies Meta<…>` / `… as Meta` to reach the underlying object.
+function asObjectExpression(node: t.Node | null | undefined): t.ObjectExpression | undefined {
+  if (!node) return undefined;
+  let n: t.Node = node;
+  while (n.type === "TSAsExpression" || n.type === "TSSatisfiesExpression") {
+    n = (n as t.TSAsExpression | t.TSSatisfiesExpression).expression;
+  }
+  return n.type === "ObjectExpression" ? (n as t.ObjectExpression) : undefined;
+}
+
+function parseStoryFile(source: string): { componentName?: string; stories: StoryExport[]; hasArgTypes: boolean; hasArgs: boolean } | undefined {
   let ast: t.File;
   try {
     ast = parse(source, {
@@ -82,30 +92,51 @@ function parseStoryFile(source: string): { componentName?: string; stories: Stor
 
   let componentName: string | undefined;
   let hasArgTypes = false;
+  let hasArgs = false;
   const stories: StoryExport[] = [];
 
+  // Scan a default-export meta object for component / argTypes / args.
+  const scanMeta = (obj: t.ObjectExpression): void => {
+    for (const prop of obj.properties) {
+      if (prop.type !== "ObjectProperty") continue;
+      const objProp = prop as t.ObjectProperty;
+      if (objProp.computed) continue;
+      if (objProp.key.type !== "Identifier") continue;
+      const keyName = (objProp.key as t.Identifier).name;
+      if (keyName === "component" && objProp.value.type === "Identifier") {
+        componentName = (objProp.value as t.Identifier).name;
+      }
+      if (keyName === "argTypes") hasArgTypes = true;
+      if (keyName === "args" && objProp.value.type === "ObjectExpression") {
+        if ((objProp.value as t.ObjectExpression).properties.length > 0) hasArgs = true;
+      }
+    }
+  };
+
   try {
+    // Top-level `const <id> = { … }` objects, so `export default meta` (the
+    // common `const meta = {…} satisfies Meta; export default meta` form) can be
+    // resolved to its object.
+    const topLevelObjects = new Map<string, t.ObjectExpression>();
+    let defaultMeta: t.ObjectExpression | undefined;
+    let defaultMetaIdent: string | undefined;
+
     traverse(ast, {
-      // Extract default export: `export default { component: Button, title: "..." }`
+      VariableDeclarator(path) {
+        if (path.node.id.type !== "Identifier") return;
+        const obj = asObjectExpression(path.node.init);
+        if (obj) topLevelObjects.set((path.node.id as t.Identifier).name, obj);
+      },
+
+      // Extract default export: `export default { component: Button, … }` or
+      // `export default meta` (identifier referencing a top-level const object).
       ExportDefaultDeclaration(path) {
         const decl = path.node.declaration;
-        if (decl.type !== "ObjectExpression") return;
-        const obj = decl as t.ObjectExpression;
-        for (const prop of obj.properties) {
-          if (prop.type !== "ObjectProperty") continue;
-          const objProp = prop as t.ObjectProperty;
-          if (objProp.computed) continue;
-          if (objProp.key.type !== "Identifier") continue;
-          const keyName = (objProp.key as t.Identifier).name;
-          if (keyName === "component") {
-            // Only capture direct identifier references, not expressions
-            if (objProp.value.type === "Identifier") {
-              componentName = (objProp.value as t.Identifier).name;
-            }
-          }
-          if (keyName === "argTypes") {
-            hasArgTypes = true;
-          }
+        const inline = asObjectExpression(decl as t.Node);
+        if (inline) {
+          defaultMeta = inline;
+        } else if (decl.type === "Identifier") {
+          defaultMetaIdent = (decl as t.Identifier).name;
         }
       },
 
@@ -152,6 +183,9 @@ function parseStoryFile(source: string): { componentName?: string; stories: Stor
         }
       },
     });
+
+    const meta = defaultMeta ?? (defaultMetaIdent !== undefined ? topLevelObjects.get(defaultMetaIdent) : undefined);
+    if (meta) scanMeta(meta);
   } catch {
     // Partial extraction is fine — return what we got
   }
@@ -160,7 +194,24 @@ function parseStoryFile(source: string): { componentName?: string; stories: Stor
     ...(componentName !== undefined && { componentName }),
     stories,
     hasArgTypes,
+    hasArgs,
   };
+}
+
+/**
+ * Whether a story source documents any component props: meta-level `argTypes`
+ * or `args` (CSF3 autodocs, incl. the `const meta = {…}; export default meta`
+ * form), or any named story carrying non-empty `args`. Returns null on parse
+ * failure. Single source of truth shared by the rule and the measurement
+ * verifier so they cannot diverge.
+ */
+export function storyFileDocumentsProps(src: string): boolean | null {
+  const parsed = parseStoryFile(src);
+  if (!parsed) return null;
+  if (parsed.hasArgTypes || parsed.hasArgs) return true;
+  return parsed.stories.some(
+    (s) => s.args !== undefined && Object.keys(s.args).length > 0,
+  );
 }
 
 export async function loadStories(root: string): Promise<StoryIndex | null> {
@@ -196,6 +247,7 @@ export async function loadStories(root: string): Promise<StoryIndex | null> {
               storyEntry.stories = parsed.stories;
             }
             storyEntry.hasArgTypes = parsed.hasArgTypes;
+            storyEntry.hasArgs = parsed.hasArgs;
           }
         }
 
@@ -232,6 +284,7 @@ export async function loadStories(root: string): Promise<StoryIndex | null> {
         storyEntry.stories = parsed.stories;
       }
       storyEntry.hasArgTypes = parsed.hasArgTypes;
+      storyEntry.hasArgs = parsed.hasArgs;
     }
 
     byTitle.set(leaf, storyEntry);

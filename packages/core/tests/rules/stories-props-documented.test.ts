@@ -25,6 +25,12 @@ describe("rule stories/props-documented", () => {
     expect(res.findings).toHaveLength(0);
   });
 
+  it("does NOT flag a story that documents props via meta-level args (CSF3 autodocs)", async () => {
+    const ctx = ctxWith(new Map([["Button", { id: "b", importPath: "x", hasArgTypes: false, hasArgs: true, stories: [{ name: "Default" }] }]]));
+    const res = await rule.evaluate(ctx, EMPTY);
+    expect(res.findings).toHaveLength(0);
+  });
+
   it("does NOT flag a story whose named export carries args", async () => {
     const ctx = ctxWith(new Map([["Button", { id: "b", importPath: "src/Button.stories.tsx", hasArgTypes: false, stories: [{ name: "Primary", args: { variant: "primary" } }] }]]));
     const res = await rule.evaluate(ctx, EMPTY);

@@ -66,6 +66,40 @@ export const Primary = { args: { variant: "primary" } };
     expect(entry!.componentName).toBe("Button");
   });
 
+  it("recognizes meta-level `args` on an inline default export (CSF3 autodocs)", async () => {
+    const root = makeTempDir();
+    writeSrcFile(root, "Foo.stories.tsx", `
+import { Foo } from "@acme/ui";
+export default { component: Foo, title: "Components/Foo", args: { size: "md" } };
+export const Default = {};
+`);
+    const idx = await loadStories(root);
+    const entry = idx!.byTitle.get("Foo");
+    expect(entry).toBeDefined();
+    expect(entry!.hasArgs).toBe(true);
+  });
+
+  it("follows the `const meta = {…}; export default meta` indirection", async () => {
+    const root = makeTempDir();
+    writeSrcFile(root, "AnimatedCounter.stories.tsx", `
+import type { Meta } from "@storybook/react";
+import { AnimatedCounter } from "./animated-counter";
+const meta = {
+  title: "Components/AnimatedCounter",
+  component: AnimatedCounter,
+  tags: ["autodocs"],
+  args: { size: "md", count: 0 },
+} satisfies Meta<typeof AnimatedCounter>;
+export default meta;
+export const Default = {};
+`);
+    const idx = await loadStories(root);
+    const entry = idx!.byTitle.get("AnimatedCounter");
+    expect(entry).toBeDefined();
+    expect(entry!.componentName).toBe("AnimatedCounter");
+    expect(entry!.hasArgs).toBe(true);
+  });
+
   it("extracts named story exports with args", async () => {
     const root = makeTempDir();
     writeSrcFile(root, "Button.stories.tsx", `

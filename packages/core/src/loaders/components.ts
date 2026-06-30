@@ -12,6 +12,49 @@ const traverse = (
   (_traverse as unknown as TraverseFn)
 );
 
+const COMPONENT_EXT = /\.(tsx|jsx|ts|js)$/;
+// Files that have a component-ish name but are not components.
+const NON_COMPONENT_SUFFIX = /\.(test|spec|stories|story|cy|d)$/;
+
+function pascalCase(segment: string): string {
+  return segment
+    .split(/[-_]/)
+    .filter((p) => p.length > 0)
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+    .join("");
+}
+
+/**
+ * Resolve the canonical PascalCase component name for a source file, following
+ * common design-system file conventions, or null when the path is not a
+ * component-file shape.
+ *
+ * `strong` is true when the signal is a PascalCase filename (`Button.tsx`,
+ * `Button/Button.tsx`) — a trustworthy component marker. It is false for names
+ * derived from a directory (`button/index.tsx`, `button/button.tsx`), which are
+ * ambiguous (a `utils/index.ts` would map to `Utils`) and should be corroborated
+ * by another signal (e.g. a matching Storybook title) before use.
+ */
+export function componentNameFromPath(
+  relPath: string,
+): { name: string; strong: boolean } | null {
+  if (!COMPONENT_EXT.test(relPath)) return null;
+  const segments = relPath.split("/");
+  const fileName = segments[segments.length - 1]!;
+  const stem = fileName.replace(COMPONENT_EXT, "");
+  if (NON_COMPONENT_SUFFIX.test(stem)) return null;
+
+  if (/^[A-Z]/.test(stem)) return { name: stem, strong: true };
+
+  const dir = segments.length >= 2 ? segments[segments.length - 2]! : "";
+  if (dir === "") return null;
+
+  if (stem === "index" || stem.toLowerCase() === dir.toLowerCase()) {
+    return { name: pascalCase(dir), strong: false };
+  }
+  return null;
+}
+
 /**
  * Extract the string value from a TSLiteralType node (string literals only).
  * Returns undefined for non-string literals.
