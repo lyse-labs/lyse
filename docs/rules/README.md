@@ -56,17 +56,10 @@ Rule output appears in:
 | `versioning/semver-versioning` | AI surface | warning | No | [→](./versioning-semver-versioning.md) |
 | `versioning/migration-guide-present` | AI surface | warning | No | [→](./versioning-migration-guide-present.md) |
 | `versioning/deprecation-markers` | AI surface | warning | No | [→](./versioning-deprecation-markers.md) |
-| `ai-governance/ai-tokens-reserved` | AI governance | info | No | [→](./ai-governance-ai-tokens-reserved.md) |
 | `ai-governance/ai-marker-component-present` | AI governance | warning | No | [→](./ai-governance-ai-marker-component-present.md) |
-| `ai-governance/ai-token-requires-marker` | AI governance | error | No | [→](./ai-governance-ai-token-requires-marker.md) |
-| `ai-governance/ai-marker-anti-patterns` | AI governance | warning | No | [→](./ai-governance-ai-marker-anti-patterns.md) |
 | `ai-governance/ai-loading-error-states` | AI governance | warning | No | [→](./ai-governance-ai-loading-error-states.md) |
 | `ai-governance/ai-content-live-region` | AI governance | warning | No | [→](./ai-governance-ai-content-live-region.md) |
-| `ai-governance/disclaimer-present` | AI governance | warning | No | [→](./ai-governance-disclaimer-present.md) |
 | `ai-governance/feedback-control-present` | AI governance | warning | No | [→](./ai-governance-feedback-control-present.md) |
-| `ai-governance/explainability-affordance` | AI governance | warning | No | [→](./ai-governance-explainability-affordance.md) |
-| `ai-governance/human-control-affordances` | AI governance | warning | No | [→](./ai-governance-human-control-affordances.md) |
-| `ai-governance/value-gate-doc-present` | AI governance | warning | No | [→](./ai-governance-value-gate-doc-present.md) |
 | `ai-governance/confidence-indicator-present` | AI governance | warning | No | [→](./ai-governance-confidence-indicator-present.md) |
 | `ai-governance/source-attribution-present` | AI governance | warning | No | [→](./ai-governance-source-attribution-present.md) |
 | `ai-governance/bot-identity-labeling` | AI governance | warning | No | [→](./ai-governance-bot-identity-labeling.md) |
