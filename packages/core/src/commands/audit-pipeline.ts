@@ -28,7 +28,11 @@ import { extractSfcStyleCss } from "../parsers/sfc-styles.js";
 import { extractSfcScript } from "../parsers/sfc-script.js";
 import { loadTokens } from "../loaders/tokens.js";
 import { loadStories } from "../loaders/stories.js";
-import { buildComponentInventory, extractComponentProps } from "../loaders/components.js";
+import {
+  buildComponentInventory,
+  extractComponentProps,
+  componentNameFromPath,
+} from "../loaders/components.js";
 import { ruleObjects } from "../rules/registry.js";
 import { loadGeneratedPack } from "../rules/pack-loader.js";
 import { runRules } from "../rule-runner.js";
@@ -362,12 +366,25 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   flags?.progress?.update("Loading tokens + components + stories…");
   const tokens = await loadTokens(absoluteRoot);
   const storyIndex = await loadStories(absoluteRoot);
-  const componentSources = new Map<string, string>();
+  // Resolve component source files by name, following DS file conventions. A
+  // PascalCase filename (`Button.tsx`) is a strong signal and is trusted; a
+  // dir-derived name (`button/index.tsx`, `button/button.tsx`) is ambiguous and
+  // is only admitted when a Storybook title corroborates it — so utility folders
+  // never pollute the inventory. A strong source wins over a weak one on a name
+  // collision.
+  const resolvedSources = new Map<string, { src: string; strong: boolean }>();
   for (const [rel, src] of fileContents) {
-    const base = rel.split("/").pop() ?? rel;
-    const name = base.replace(/\.(tsx?|jsx?)$/, "");
-    if (/^[A-Z]/.test(name)) componentSources.set(name, src);
+    const resolved = componentNameFromPath(rel);
+    if (resolved === null) continue;
+    if (!resolved.strong && !storyIndex?.byTitle.has(resolved.name)) continue;
+    const existing = resolvedSources.get(resolved.name);
+    if (existing === undefined || (resolved.strong && !existing.strong)) {
+      resolvedSources.set(resolved.name, { src, strong: resolved.strong });
+    }
   }
+  const componentSources = new Map<string, string>(
+    [...resolvedSources].map(([name, v]) => [name, v.src]),
+  );
   // In dsSelfMode the DS audits its own components: they import each other via
   // relative paths so import-counting yields nothing. Build inventory directly
   // from the in-tree PascalCase source files instead (props are still extracted

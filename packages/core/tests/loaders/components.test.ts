@@ -1,6 +1,65 @@
 import { describe, it, expect } from "vitest";
-import { buildComponentInventory, extractComponentProps } from "../../src/loaders/components.js";
+import {
+  buildComponentInventory,
+  extractComponentProps,
+  componentNameFromPath,
+} from "../../src/loaders/components.js";
 import type { ParsedTsFile } from "../../src/types.js";
+
+describe("componentNameFromPath", () => {
+  it("treats a PascalCase filename as a strong component signal", () => {
+    expect(componentNameFromPath("Button.tsx")).toEqual({ name: "Button", strong: true });
+    expect(componentNameFromPath("src/components/Button/Button.tsx")).toEqual({
+      name: "Button",
+      strong: true,
+    });
+  });
+
+  it("derives the name from the directory for index files (weak signal)", () => {
+    expect(componentNameFromPath("src/components/button/index.tsx")).toEqual({
+      name: "Button",
+      strong: false,
+    });
+  });
+
+  it("derives the name from a dir-matching lowercase file (weak signal)", () => {
+    expect(componentNameFromPath("src/components/button/button.tsx")).toEqual({
+      name: "Button",
+      strong: false,
+    });
+  });
+
+  it("PascalCases a kebab-case directory", () => {
+    expect(componentNameFromPath("src/date-picker/date-picker.tsx")).toEqual({
+      name: "DatePicker",
+      strong: false,
+    });
+    expect(componentNameFromPath("src/date-picker/index.tsx")).toEqual({
+      name: "DatePicker",
+      strong: false,
+    });
+  });
+
+  it("rejects non-component file shapes", () => {
+    expect(componentNameFromPath("src/components/button/utils.tsx")).toBeNull();
+    expect(componentNameFromPath("src/components/button/types.ts")).toBeNull();
+  });
+
+  it("rejects test, spec, story and cypress files", () => {
+    expect(componentNameFromPath("src/components/button/Button.test.tsx")).toBeNull();
+    expect(componentNameFromPath("src/components/Dialog.cy.tsx")).toBeNull();
+    expect(componentNameFromPath("src/components/button/button.stories.tsx")).toBeNull();
+    expect(componentNameFromPath("src/components/Button.spec.tsx")).toBeNull();
+  });
+
+  it("returns null for a top-level index with no directory to name it", () => {
+    expect(componentNameFromPath("index.tsx")).toBeNull();
+  });
+
+  it("returns null for non-source extensions", () => {
+    expect(componentNameFromPath("src/components/button/button.css")).toBeNull();
+  });
+});
 
 const file = (path: string, imports: { module: string; named: string[] }[]): ParsedTsFile => ({
   path, source: "", ast: null,
