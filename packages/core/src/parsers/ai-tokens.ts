@@ -1,9 +1,8 @@
 // Pure (repoRoot: string) => string[] helper that surfaces reserved AI-marker
-// design tokens declared in a repository. Consumed both by the
-// `ai-governance/ai-tokens-reserved` inventory rule and by Track 3.3
-// (`ai-governance/ai-token-requires-marker`), so the contract is intentionally
-// minimal: glob + read, no logging, no Rule context, no network. Same input →
-// same output, deterministic ordering.
+// design tokens declared in a repository. Consumed by `ai-governance/ai-token-misuse`,
+// `ai-governance/ai-marker-component-present`, and governance-signals, so the
+// contract is intentionally minimal: glob + read, no logging, no Rule context,
+// no network. Same input → same output, deterministic ordering.
 import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import fg from "fast-glob";

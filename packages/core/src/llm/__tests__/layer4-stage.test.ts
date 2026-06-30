@@ -271,19 +271,19 @@ describe("runLayer4Stage — real rubric default", () => {
   it("uses the real governance dimensions when none are passed and surfaces a validated finding", async () => {
     const repoRoot = makeRepoRoot({
       "src/Chat.tsx":
-        "export function Chat() { return <div>I feel happy to help you today friend</div>; }",
+        "export function Chat() { return <div>AI request failed. Something went wrong.</div>; }",
     });
     const responseJson = JSON.stringify({
       findings: [
         {
-          ruleId: "ai-governance/ai-marker-anti-patterns",
+          ruleId: "ai-governance/ai-loading-error-states",
           axis: "ai-governance",
           severity: "warning",
           file: "src/Chat.tsx",
           line: 1,
           column: 1,
-          snippet: "I feel happy to help you today friend",
-          message: "Anthropomorphic copy: first-person emotion",
+          snippet: "AI request failed. Something went wrong.",
+          message: "AI error state with no retry or recovery affordance",
         },
       ],
     });
@@ -295,7 +295,7 @@ describe("runLayer4Stage — real rubric default", () => {
     );
 
     expect(result.augmentedFindings).toHaveLength(1);
-    expect(result.augmentedFindings[0]!.ruleId).toBe("ai-governance/ai-marker-anti-patterns");
+    expect(result.augmentedFindings[0]!.ruleId).toBe("ai-governance/ai-loading-error-states");
     expect(result.meta.droppedHallucinations).toBe(0);
   });
 
@@ -320,13 +320,8 @@ describe("runLayer4Stage — real rubric default", () => {
       { connector: spyConnector },
     );
 
-    for (const key of [
-      "human-control-enforced",
-      "voice-anti-anthropomorphism",
-      "explanation-quality",
-      "risk-classification",
-      "value-gate-judgment",
-    ]) {
+    // After sub-project D only the recovery dimension survives.
+    for (const key of ["recovery-flow-behavioral"]) {
       expect(captured).toContain(key);
     }
   });

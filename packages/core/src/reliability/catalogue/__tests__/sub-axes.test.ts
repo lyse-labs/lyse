@@ -38,34 +38,13 @@ describe("SUB_AXES catalogue", () => {
 });
 
 describe("LLM-driven governance sub-axes (Track 4.3)", () => {
-  const LLM_DRIVEN_IDS = [
-    "ai-governance.human-control-affordances",
-    "ai-governance.ai-marker-anti-patterns",
-    "ai-governance.explainability-affordance",
-    "ai-governance.disclaimer-present",
-    "ai-governance.value-gate-doc-present",
-  ];
-
-  it("exactly 5 sub-axes are llmDriven", () => {
-    expect(SUB_AXES.filter((s) => s.llmDriven)).toHaveLength(5);
+  it("no sub-axis is llmDriven (the 5 grader dimensions were retired in sub-project D)", () => {
+    expect(SUB_AXES.filter((s) => s.llmDriven)).toHaveLength(0);
   });
 
-  it("the llmDriven sub-axes are precisely the 5 grader dimensions", () => {
-    const drivenIds = SUB_AXES.filter((s) => s.llmDriven).map((s) => s.id).sort();
-    expect(drivenIds).toEqual([...LLM_DRIVEN_IDS].sort());
-  });
-
-  it("every llmDriven sub-axis is on the ai-governance axis", () => {
+  it("every sub-axis is static (llmDriven false)", () => {
     for (const s of SUB_AXES) {
-      if (s.llmDriven) expect(s.axis).toBe("ai-governance");
-    }
-  });
-
-  it("all other sub-axes remain static (llmDriven false)", () => {
-    for (const s of SUB_AXES) {
-      if (!LLM_DRIVEN_IDS.includes(s.id)) {
-        expect(s.llmDriven, `${s.id} should stay static`).toBe(false);
-      }
+      expect(s.llmDriven, `${s.id} should stay static`).toBe(false);
     }
   });
 });

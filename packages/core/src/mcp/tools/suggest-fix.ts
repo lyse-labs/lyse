@@ -14,7 +14,7 @@ export const suggestFixTool: Tool = {
     "For a given finding (rule_id + path + line), return a unified-diff patch that fixes it. " +
     "**Only call when the corresponding `audit_file` finding has `suggestion_available: true`** — " +
     "otherwise the patch will be `null` with a rationale. Auto-fixable rules: " +
-    "tokens/no-hardcoded-color, tokens/no-hardcoded-spacing, components/no-native-shadows, ai-governance/ai-token-requires-marker.",
+    "tokens/no-hardcoded-color, tokens/no-hardcoded-spacing, components/no-native-shadows.",
   inputSchema: {
     type: "object",
     properties: {

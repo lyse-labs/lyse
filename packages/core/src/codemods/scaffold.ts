@@ -70,18 +70,6 @@ configuration live in \`package.json\` and \`tsconfig.json\`.
 `;
 }
 
-function valueGateDoc(_repoRoot: string): string {
-  return `# AI Value Gate
-
-Before shipping an AI-powered feature, complete this go/no-go checklist:
-
-- [ ] Is AI needed for this feature, or would a deterministic solution be better?
-- [ ] Is AI the right tool for the user's actual job?
-- [ ] What is the fallback when the AI is unavailable, slow, or wrong?
-- [ ] How will we measure whether the AI feature is actually helping users?
-`;
-}
-
 const TARGETS: readonly ScaffoldTarget[] = [
   {
     id: "ai-surface/llms-txt-structure",
@@ -94,19 +82,6 @@ const TARGETS: readonly ScaffoldTarget[] = [
     existsPaths: ["AGENTS.md", ".github/AGENTS.md", "docs/AGENTS.md"],
     createPath: "AGENTS.md",
     content: agentsMd,
-  },
-  {
-    id: "ai-governance/value-gate-doc-present",
-    existsPaths: [
-      "AI_GOVERNANCE.md",
-      "docs/ai-value-gate.md",
-      "docs/ai-governance.md",
-      "docs/ai-readiness.md",
-      "docs/ai-checklist.md",
-      ".lyse/ai-value-gate.md",
-    ],
-    createPath: "AI_GOVERNANCE.md",
-    content: valueGateDoc,
   },
 ];
 

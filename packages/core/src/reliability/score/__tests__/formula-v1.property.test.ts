@@ -11,7 +11,7 @@ const SUB_AXES = [
   "tokens.color",
   "tokens.spacing",
   "a11y.essentials",
-  "ai-governance.disclaimer-present",
+  "ai-governance.ai-content-live-region",
   "ai-governance.feedback-control-present",
   "components.no-native-shadows",
 ];

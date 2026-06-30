@@ -49,7 +49,7 @@ describe("validateProposedFindings", () => {
 
     const proposed: ProposedFinding[] = [
       {
-        ruleId: "ai-governance/disclaimer-present",
+        ruleId: "ai-governance/ai-loading-error-states",
         axis: "ai-governance",
         severity: "warning",
         file: "src/Card.tsx",
@@ -60,7 +60,7 @@ describe("validateProposedFindings", () => {
         confidence: 0.83,
       },
       {
-        ruleId: "ai-governance/disclaimer-present",
+        ruleId: "ai-governance/ai-loading-error-states",
         axis: "ai-governance",
         severity: "warning",
         file: "src/Card.tsx",
@@ -89,7 +89,7 @@ describe("validateProposedFindings", () => {
     writeFileSync(join(srcDir, "X.tsx"), "export const X = 1; // long enough snippet");
 
     const proposed: ProposedFinding[] = [{
-      ruleId: "ai-governance/disclaimer-present",
+      ruleId: "ai-governance/ai-loading-error-states",
       axis: "ai-governance",
       severity: "warning",
       file: "src/X.tsx",

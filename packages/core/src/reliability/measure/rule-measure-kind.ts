@@ -92,13 +92,6 @@ export const RULE_MEASURE_KIND: Record<string, MeasureKind> = {
   "ai-governance/interaction-pattern-docs": "detection",
   "ai-governance/draft-attribution": "detection",
   "ai-governance/product-analytics": "detection",
-  "ai-governance/ai-tokens-reserved": "detection",
-  "ai-governance/ai-token-requires-marker": "detection",
-  "ai-governance/ai-marker-anti-patterns": "detection",
-  "ai-governance/disclaimer-present": "detection",
-  "ai-governance/explainability-affordance": "detection",
-  "ai-governance/human-control-affordances": "detection",
-  "ai-governance/value-gate-doc-present": "detection",
   // ai-governance — detection (flag misuse pattern in source)
   "ai-governance/ai-token-misuse": "detection",
 };

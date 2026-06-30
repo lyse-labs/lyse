@@ -45,10 +45,10 @@ interface BucketLike {
 // What unlocks the next rung, keyed by current level. Derived from the gate
 // order in computeGovernanceMaturityLevel.
 const NEXT_RUNG_REQUIREMENT: Record<number, string> = {
-  0: "reserved AI-marker tokens (ai-governance/ai-tokens-reserved)",
+  0: "reserved AI-marker design tokens",
   1: "a dedicated AI-marker component (ai-governance/ai-marker-component-present)",
   2: "an AI interaction affordance — loading/error states, feedback control, or a live region (ai-governance/ai-loading-error-states · feedback-control-present · ai-content-live-region)",
-  3: "AI governance affordances — disclaimer + human-control + explainability, with no anti-patterns (ai-governance/disclaimer-present · human-control-affordances · explainability-affordance)",
+  3: "AI governance affordances (a disclaimer, human-control, or explainability surface)",
 };
 
 function buildMaturityGap(level: number): MaturityGap {

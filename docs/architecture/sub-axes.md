@@ -4,7 +4,7 @@
 
 > Generated: deterministic (set SOURCE_DATE_EPOCH=$(date +%s) for a stamped value)
 
-**73 sub-axes total** — stable: 52 · experimental: 21 · disabled: 0
+**66 sub-axes total** — stable: 52 · experimental: 14 · disabled: 0
 
 Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
@@ -69,19 +69,12 @@ Only sub-axes with `status: stable` contribute to the Health Score by default. P
 | `ai-surface.shadcn-registry-valid` | `ai-surface` | shadcn registry validity | **stable** | 0.901 | 0.904 | ✅ |
 | `ai-governance.ai-content-live-region` | `ai-governance` | AI content live region | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-governance.ai-loading-error-states` | `ai-governance` | AI loading state & error state | **stable** | 0.901 | 0.901 | ✅ |
-| `ai-governance.ai-marker-anti-patterns` | `ai-governance` | AI-marker anti-patterns | **experimental** | — | 0.901 | — |
 | `ai-governance.ai-marker-component-present` | `ai-governance` | AI-marker component present | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-governance.ai-token-misuse` | `ai-governance` | AI token misused on non-AI element | **stable** | 0.901 | 0.912 | ✅ |
-| `ai-governance.ai-token-requires-marker` | `ai-governance` | AI token requires co-located marker | **experimental** | — | 0.100 | — |
-| `ai-governance.ai-tokens-reserved` | `ai-governance` | Reserved AI-marker tokens inventory | **experimental** | — | 0.409 | — |
 | `ai-governance.bot-identity-labeling` | `ai-governance` | AI non-human identity labeling | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-governance.confidence-indicator-present` | `ai-governance` | AI confidence indicator present | **stable** | 0.901 | 0.901 | ✅ |
-| `ai-governance.disclaimer-present` | `ai-governance` | AI disclaimer present | **experimental** | — | 0.901 | — |
 | `ai-governance.draft-attribution` | `ai-governance` | AI draft-attribution convention | **stable** | 0.901 | 0.901 | ✅ |
-| `ai-governance.explainability-affordance` | `ai-governance` | Explainability affordance | **experimental** | — | 0.901 | — |
 | `ai-governance.feedback-control-present` | `ai-governance` | AI feedback control present | **stable** | 0.901 | 0.901 | ✅ |
-| `ai-governance.human-control-affordances` | `ai-governance` | Human-control affordances | **experimental** | — | 0.901 | — |
 | `ai-governance.interaction-pattern-docs` | `ai-governance` | AI interaction-pattern docs present | **stable** | 0.901 | 0.901 | ✅ |
 | `ai-governance.product-analytics` | `ai-governance` | AI product-analytics instrumentation | **stable** | 0.916 | 0.901 | ✅ |
 | `ai-governance.source-attribution-present` | `ai-governance` | AI source attribution present | **stable** | 0.901 | 0.901 | ✅ |
-| `ai-governance.value-gate-doc-present` | `ai-governance` | AI value-gate governance doc | **experimental** | — | 0.641 | — |

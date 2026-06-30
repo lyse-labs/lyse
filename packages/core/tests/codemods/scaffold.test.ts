@@ -20,12 +20,11 @@ beforeEach(() => {
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 describe("computeMissingScaffolds", () => {
-  it("proposes llms.txt, AGENTS.md and a value-gate doc when none exist", () => {
+  it("proposes llms.txt and AGENTS.md when none exist", () => {
     const s = computeMissingScaffolds(dir);
     const paths = s.map((x) => x.path).sort();
     expect(paths).toContain("llms.txt");
     expect(paths).toContain("AGENTS.md");
-    expect(paths.some((p) => /AI_GOVERNANCE\.md|ai-value-gate\.md/.test(p))).toBe(true);
   });
 
   it("omits a target that already exists (idempotent)", () => {
@@ -45,7 +44,6 @@ describe("computeMissingScaffolds", () => {
   it("returns nothing when all targets already exist", () => {
     writeFileSync(join(dir, "llms.txt"), "# x\n");
     writeFileSync(join(dir, "AGENTS.md"), "# x\n");
-    writeFileSync(join(dir, "AI_GOVERNANCE.md"), "# x\n");
     expect(computeMissingScaffolds(dir)).toHaveLength(0);
   });
 });
