@@ -3,6 +3,8 @@ import {
   findUnknownRuleIds,
   disabledRuleIds,
   applySeverityOverrides,
+  findRetiredRuleIds,
+  RETIRED_RULE_IDS,
 } from "../../src/config/rules-config.js";
 import type { Finding, LyseConfig } from "../../src/types.js";
 
@@ -35,6 +37,38 @@ describe("findUnknownRuleIds", () => {
       rules: { "zzz/typo": "off", "aaa/nope": "off", "stories/coverage": "off" },
     };
     expect(findUnknownRuleIds(config, known)).toEqual(["aaa/nope", "zzz/typo"]);
+  });
+});
+
+describe("retired rule id tolerance", () => {
+  const knownIds = new Set(["tokens/no-hardcoded-color", "components/contracts-strictness"]);
+
+  it("does NOT report a retired id as unknown", () => {
+    const cfg: LyseConfig = { rules: { "ai-governance/disclaimer-present": "off" } };
+    expect(findUnknownRuleIds(cfg, knownIds)).toEqual([]);
+  });
+
+  it("findRetiredRuleIds returns retired ids present in config, sorted", () => {
+    const cfg: LyseConfig = {
+      rules: {
+        "ai-governance/value-gate-doc-present": "off",
+        "ai-governance/disclaimer-present": "off",
+      },
+    };
+    expect(findRetiredRuleIds(cfg)).toEqual([
+      "ai-governance/disclaimer-present",
+      "ai-governance/value-gate-doc-present",
+    ]);
+  });
+
+  it("a genuinely unknown (non-retired) id is still reported", () => {
+    const cfg: LyseConfig = { rules: { "tokens/not-a-real-rule": "off" } };
+    expect(findUnknownRuleIds(cfg, knownIds)).toEqual(["tokens/not-a-real-rule"]);
+  });
+
+  it("RETIRED_RULE_IDS holds exactly the 7 retired ids", () => {
+    expect(RETIRED_RULE_IDS.size).toBe(7);
+    expect(RETIRED_RULE_IDS.has("ai-governance/ai-tokens-reserved")).toBe(true);
   });
 });
 

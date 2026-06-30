@@ -10,7 +10,12 @@ import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { loadConfig, resolveConfigPath } from "../config/schema.js";
-import { findUnknownRuleIds, disabledRuleIds, applySeverityOverrides } from "../config/rules-config.js";
+import {
+  findUnknownRuleIds,
+  findRetiredRuleIds,
+  disabledRuleIds,
+  applySeverityOverrides,
+} from "../config/rules-config.js";
 import { parseFileOverrides, type FileOverrides } from "../suppression/frontmatter.js";
 import { hashDeps } from "../util/hash-deps.js";
 import { detectFromPackageJson } from "../detection/from-package-json.js";
@@ -486,6 +491,11 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     throw new Error(
       `Unknown rule id(s) in .lyse.yaml \`rules:\`: ${unknownRuleIds.join(", ")}. ` +
         `Run \`lyse rules\` to list valid rule ids.`,
+    );
+  }
+  for (const retired of findRetiredRuleIds(config)) {
+    process.stderr.write(
+      `[lyse] Warning: rule "${retired}" was retired and is ignored. Remove it from your .lyse.yaml \`rules:\` block.\n`,
     );
   }
   const disabled = disabledRuleIds(config);
