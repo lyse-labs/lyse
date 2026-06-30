@@ -1,4 +1,4 @@
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding } from "../types.js";
+import type { RuleContext, ParsedFiles, RuleEvalResult, Finding } from "../types.js";
 import { isPathExcluded } from "./_exclude.js";
 import {
   isVendoredOrResetFile,
