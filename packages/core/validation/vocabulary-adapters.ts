@@ -307,20 +307,6 @@ const aiContentLiveRegionAdapter: OracleAdapter = {
   ],
 };
 
-const VALUE_GATE_DOC_CONTENT = `# AI Value Gate
-
-- [ ] Is AI needed for this feature?
-- [ ] Is AI the right tool?
-- [ ] What is the deterministic fallback?
-`;
-
-const valueGateDocAdapter: OracleAdapter = makeVocabularyAdapter({
-  ruleId: "ai-governance/value-gate-doc-present",
-  aiSurface: `export const AILabel = () => null;`,
-  affordanceSnippet: VALUE_GATE_DOC_CONTENT,
-  affordanceFile: "AI_GOVERNANCE.md",
-});
-
 const INTERACTION_PATTERN_DOC_CONTENT = `# AI Assistant Patterns
 
 ## Suggestions
@@ -365,123 +351,6 @@ const aiTokenMisuseAdapter: OracleAdapter = {
   metamorphic: [],
 };
 
-const DISCLAIMER_COMPLIANT = `
-export function AISummary() {
-  return (
-    <div>
-      <AILabel />
-      <p>Some content here.</p>
-      <p>AI-generated content may be inaccurate. Always check important information.</p>
-    </div>
-  );
-}
-`.trim();
-
-const DISCLAIMER_BARE_AILABEL = `
-export function AISummary() {
-  return (
-    <div>
-      <AILabel />
-      <p>Some content here.</p>
-    </div>
-  );
-}
-`.trim();
-
-const DISCLAIMER_BARE_AIBADGE = `
-export function AISummary() {
-  return (
-    <div>
-      <AIBadge />
-      <p>Some content here.</p>
-    </div>
-  );
-}
-`.trim();
-
-const disclaimerPresentAdapter: OracleAdapter = {
-  ruleId: "ai-governance/disclaimer-present",
-  oracleKind: "construction",
-  cleanFixture: () => ({
-    "package.json": PKG,
-    "src/AISummary.tsx": DISCLAIMER_COMPLIANT,
-  }),
-  mutations: [
-    {
-      name: "ai-marker-tag-no-disclaimer-should-flag",
-      apply: () => ({
-        "package.json": PKG,
-        "src/AISummary.tsx": DISCLAIMER_BARE_AILABEL,
-      }),
-    },
-  ],
-  metamorphic: [
-    {
-      name: "ailabel-and-aibadge-both-flag-without-disclaimer",
-      a: { "package.json": PKG, "src/AISummary.tsx": DISCLAIMER_BARE_AILABEL },
-      b: { "package.json": PKG, "src/AISummary.tsx": DISCLAIMER_BARE_AIBADGE },
-      expectViolation: true,
-    },
-  ],
-};
-
-const ANTI_PATTERN_CLEAN_WITH_AILABEL_TAG = `
-export const AILabel = () => null;
-export function SparkleAI() {
-  return (
-    <span>
-      <AILabel />
-      ✨
-    </span>
-  );
-}
-`.trim();
-
-const ANTI_PATTERN_CLEAN_WITH_AIBADGE_TAG = `
-export const AIBadge = () => null;
-export function SparkleAI() {
-  return (
-    <span>
-      <AIBadge />
-      ✨
-    </span>
-  );
-}
-`.trim();
-
-const ANTI_PATTERN_FLAGGED = `
-export const AILabel = () => null;
-export function SparkleOnly() {
-  return <span>✨ generatedText</span>;
-}
-`.trim();
-
-const aiMarkerAntiPatternsAdapter: OracleAdapter = {
-  ruleId: "ai-governance/ai-marker-anti-patterns",
-  oracleKind: "metamorphic",
-  cleanFixture: () => ({
-    "package.json": PKG,
-    "src/SparkleAI.tsx": ANTI_PATTERN_CLEAN_WITH_AILABEL_TAG,
-  }),
-  mutations: [
-    {
-      name: "remove-ai-marker-tag-sparkle-should-flag",
-      apply: () => ({
-        "package.json": PKG,
-        "src/SparkleAI.tsx": ANTI_PATTERN_FLAGGED,
-      }),
-    },
-  ],
-  metamorphic: [
-    {
-      name: "ailabel-tag-vs-aibadge-tag-both-clean",
-      a: { "package.json": PKG, "src/SparkleAI.tsx": ANTI_PATTERN_CLEAN_WITH_AILABEL_TAG },
-      b: { "package.json": PKG, "src/SparkleAI.tsx": ANTI_PATTERN_CLEAN_WITH_AIBADGE_TAG },
-      expectViolation: false,
-    },
-  ],
-};
-
 export const vocabularyAdapters: OracleAdapter[] = [
   aiMarkerComponentPresentAdapter,
   botIdentityAdapter,
@@ -491,14 +360,6 @@ export const vocabularyAdapters: OracleAdapter[] = [
   productAnalyticsAdapter,
   aiLoadingErrorStatesAdapter,
   aiContentLiveRegionAdapter,
-  valueGateDocAdapter,
   interactionPatternDocsAdapter,
   aiTokenMisuseAdapter,
-  disclaimerPresentAdapter,
-  aiMarkerAntiPatternsAdapter,
-  // DROPPED: ai-governance/ai-token-requires-marker
-  // Cross-file AST tracer is recall-failing (per coverage.ts note). The fixture
-  // injection surface requires reserved tokens in one file AND component files
-  // referencing them via var() — too complex to produce a deterministic J=1.000.
-  // Stays in ADDRESSABLE_PENDING until the tracer is improved.
 ];

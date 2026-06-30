@@ -32,11 +32,11 @@ describe("scoring-v1", () => {
 
 describe("scoring-v1 ai-governance grace ramp (#89 / ADR-0018)", () => {
   const govFindings: Finding[] = [
-    { ruleId: "ai-governance/disclaimer-present", subAxisId: "ai-governance.disclaimer-present", severity: "warning", confidence: "high", message: "", file: "AIBadge.tsx", line: 1, column: null },
+    { ruleId: "ai-governance/ai-content-live-region", subAxisId: "ai-governance.ai-content-live-region", severity: "warning", confidence: "high", message: "", file: "AIBadge.tsx", line: 1, column: null },
     { ruleId: "ai-governance/feedback-control-present", subAxisId: "ai-governance.feedback-control-present", severity: "warning", confidence: "high", message: "", file: "AIBadge.tsx", line: 1, column: null },
   ];
-  const stable = new Set(["ai-governance.disclaimer-present", "ai-governance.feedback-control-present"]);
-  const conf = { "ai-governance.disclaimer-present": 1.0, "ai-governance.feedback-control-present": 1.0 };
+  const stable = new Set(["ai-governance.ai-content-live-region", "ai-governance.feedback-control-present"]);
+  const conf = { "ai-governance.ai-content-live-region": 1.0, "ai-governance.feedback-control-present": 1.0 };
 
   it("grace 1 (default/inert) penalizes ai-governance findings fully", () => {
     const full = computeScoreV1({ findings: govFindings, stableSubAxes: stable, confidenceByAxis: conf });
@@ -66,8 +66,8 @@ describe("scoring-v1 ai-governance grace ramp (#89 / ADR-0018)", () => {
 
 describe("scoring-v1 conformal gate (Phase D, D-gov-2a)", () => {
   const gov = (msg: string, conf?: number): Finding => ({
-    ruleId: "ai-governance/disclaimer-present",
-    subAxisId: "ai-governance.disclaimer-present",
+    ruleId: "ai-governance/ai-content-live-region",
+    subAxisId: "ai-governance.ai-content-live-region",
     severity: "warning",
     confidence: "high",
     message: msg,
@@ -77,8 +77,8 @@ describe("scoring-v1 conformal gate (Phase D, D-gov-2a)", () => {
     ...(conf !== undefined ? { llmJudgement: { verdict: "violation" as const, confidence: conf } } : {}),
   } as Finding);
 
-  const conformal = new Map([["ai-governance.disclaimer-present", 0.7]]);
-  const confidenceByAxis = { "ai-governance.disclaimer-present": 1.0 };
+  const conformal = new Map([["ai-governance.ai-content-live-region", 0.7]]);
+  const confidenceByAxis = { "ai-governance.ai-content-live-region": 1.0 };
 
   it("counts a conformal finding only when confidence ≥ threshold", () => {
     const r = computeScoreV1({
@@ -135,14 +135,14 @@ describe("scoring-v1 mutation hardening (#104)", () => {
 
   it("conformal gate counts a finding whose confidence EQUALS the threshold (kills > vs >=)", () => {
     const f: Finding = {
-      ruleId: "ai-governance/disclaimer-present", subAxisId: "ai-governance.disclaimer-present",
+      ruleId: "ai-governance/ai-content-live-region", subAxisId: "ai-governance.ai-content-live-region",
       severity: "warning", confidence: "high", message: "", file: "a", line: 1, column: null,
       llmJudgement: { verdict: "violation", confidence: 0.7 },
     };
     const r = computeScoreV1({
       findings: [f], stableSubAxes: new Set(),
-      conformalSubAxes: new Map([["ai-governance.disclaimer-present", 0.7]]),
-      confidenceByAxis: { "ai-governance.disclaimer-present": 1.0 },
+      conformalSubAxes: new Map([["ai-governance.ai-content-live-region", 0.7]]),
+      confidenceByAxis: { "ai-governance.ai-content-live-region": 1.0 },
     });
     expect(r.findingsCountedInScore).toBe(1); // conf === theta must count
   });

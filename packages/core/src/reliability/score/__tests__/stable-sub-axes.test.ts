@@ -66,16 +66,16 @@ describe("stableRuleIds", () => {
   it("collects the rule ids of stable contributing sub-axes", () => {
     const axes = [
       makeSubAxis({ id: "a.stable", status: "stable", contributesToScore: true, ruleIds: ["tokens/no-hardcoded-color"] }),
-      makeSubAxis({ id: "a.exp", status: "experimental", contributesToScore: false, ruleIds: ["ai-governance/ai-tokens-reserved"] }),
+      makeSubAxis({ id: "a.exp", status: "experimental", contributesToScore: false, ruleIds: ["components/no-arbitrary-tailwind"] }),
     ];
     const ids = stableRuleIds(axes, { filterRan: false });
     expect(ids.has("tokens/no-hardcoded-color")).toBe(true);
-    expect(ids.has("ai-governance/ai-tokens-reserved")).toBe(false);
+    expect(ids.has("components/no-arbitrary-tailwind")).toBe(false);
   });
 
   it("on the real catalogue, includes a known-stable rule and excludes a known-experimental one", () => {
     const ids = stableRuleIds(SUB_AXES, { filterRan: false });
     expect(ids.has("versioning/deprecation-markers")).toBe(true); // promoted this session
-    expect(ids.has("ai-governance/ai-tokens-reserved")).toBe(false); // recall-failing, experimental
+    expect(ids.has("components/no-arbitrary-tailwind")).toBe(false); // experimental, off-score
   });
 });

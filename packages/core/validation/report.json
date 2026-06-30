@@ -54,19 +54,6 @@
       "mutationsRun": 1
     },
     {
-      "ruleId": "ai-governance/ai-marker-anti-patterns",
-      "oracleKind": "metamorphic",
-      "matrix": {
-        "tp": 1,
-        "fp": 0,
-        "tn": 1,
-        "fn": 0
-      },
-      "youdensJ": 1,
-      "metamorphicInconsistencies": [],
-      "mutationsRun": 1
-    },
-    {
       "ruleId": "ai-governance/ai-marker-component-present",
       "oracleKind": "construction",
       "matrix": {
@@ -107,19 +94,6 @@
     },
     {
       "ruleId": "ai-governance/confidence-indicator-present",
-      "oracleKind": "construction",
-      "matrix": {
-        "tp": 1,
-        "fp": 0,
-        "tn": 1,
-        "fn": 0
-      },
-      "youdensJ": 1,
-      "metamorphicInconsistencies": [],
-      "mutationsRun": 1
-    },
-    {
-      "ruleId": "ai-governance/disclaimer-present",
       "oracleKind": "construction",
       "matrix": {
         "tp": 1,
@@ -173,19 +147,6 @@
     {
       "ruleId": "ai-governance/source-attribution-present",
       "oracleKind": "construction",
-      "matrix": {
-        "tp": 1,
-        "fp": 0,
-        "tn": 1,
-        "fn": 0
-      },
-      "youdensJ": 1,
-      "metamorphicInconsistencies": [],
-      "mutationsRun": 1
-    },
-    {
-      "ruleId": "ai-governance/value-gate-doc-present",
-      "oracleKind": "metamorphic",
       "matrix": {
         "tp": 1,
         "fp": 0,

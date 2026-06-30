@@ -41,15 +41,8 @@ export type BuiltInRuleId =
   | "versioning/migration-guide-present"
   | "ai-governance/ai-content-live-region"
   | "ai-governance/ai-loading-error-states"
-  | "ai-governance/ai-marker-anti-patterns"
   | "ai-governance/ai-marker-component-present"
-  | "ai-governance/ai-token-requires-marker"
-  | "ai-governance/ai-tokens-reserved"
-  | "ai-governance/disclaimer-present"
-  | "ai-governance/explainability-affordance"
-  | "ai-governance/feedback-control-present"
-  | "ai-governance/human-control-affordances"
-  | "ai-governance/value-gate-doc-present";
+  | "ai-governance/feedback-control-present";
 
 export type RuleId = BuiltInRuleId | string;
 

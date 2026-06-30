@@ -1,9 +1,24 @@
 import type { Finding, LyseConfig, Severity } from "../types.js";
 
+// Rule ids retired in the ai-governance prune (sub-project D). A `.lyse.yaml`
+// that still references one is tolerated: it is NOT a hard error (unlike a
+// genuine typo), it is warned-and-ignored. Kept as a const so the audit
+// pipeline can surface a precise retirement warning.
+export const RETIRED_RULE_IDS: ReadonlySet<string> = new Set([
+  "ai-governance/explainability-affordance",
+  "ai-governance/human-control-affordances",
+  "ai-governance/ai-marker-anti-patterns",
+  "ai-governance/disclaimer-present",
+  "ai-governance/value-gate-doc-present",
+  "ai-governance/ai-tokens-reserved",
+  "ai-governance/ai-token-requires-marker",
+]);
+
 /**
  * Rule ids referenced in `config.rules` that are not in the known registry.
  * Returned sorted for deterministic error messages. Catching these at audit
  * start turns a typo'd / renamed rule id from a silent no-op into a hard error.
+ * Retired ids are excluded — they degrade gracefully via {@link findRetiredRuleIds}.
  */
 export function findUnknownRuleIds(
   config: LyseConfig,
@@ -12,7 +27,19 @@ export function findUnknownRuleIds(
   const rules = config.rules;
   if (!rules) return [];
   return Object.keys(rules)
-    .filter((id) => !knownRuleIds.has(id))
+    .filter((id) => !knownRuleIds.has(id) && !RETIRED_RULE_IDS.has(id))
+    .sort();
+}
+
+/**
+ * Retired rule ids referenced in `config.rules`. The audit pipeline warns on
+ * these (rather than erroring) so a stale `.lyse.yaml` keeps working.
+ */
+export function findRetiredRuleIds(config: LyseConfig): string[] {
+  const rules = config.rules;
+  if (!rules) return [];
+  return Object.keys(rules)
+    .filter((id) => RETIRED_RULE_IDS.has(id))
     .sort();
 }
 

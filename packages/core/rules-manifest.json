@@ -1071,34 +1071,6 @@
       ]
     },
     {
-      "id": "ai-governance/ai-tokens-reserved",
-      "axis": "ai-governance",
-      "defaultSeverity": "info",
-      "shortDescription": "Inventory reserved AI-marker design tokens",
-      "fullDescription": "Scans token sources (`tokens.json`, `tokens/**/*.json`, `*.tokens.json`, `**/*.css` `--*` custom properties, and `**/*.scss` `$variable` declarations / `theme.$ai-*` usages) for token names that match reserved AI-marker vocabularies: Carbon (`dragon-fruit`, `*-ai-*` color tokens authored in Sass as `theme.$ai-*` and compiled to `--cds-ai-*`), AWS Cloudscape (`*-gen-ai`), Shopify Polaris (`--p-color-*-magic*`, `magic-*`), Workday Canvas (`*-ai-*` segment), and the generic leading/trailing `ai` segment. Scanning the raw SCSS `$variable` source (not just the post-transform CSS) closes the #139 gap where SCSS-authored AI tokens were invisible to a source scan. Matching is segment-anchored (split by `-`, `_`, `.`, `/`) so `rain`, `paint`, `mainColor`, `captain`, `detail` do not trigger. Emits one info finding listing up to 20 matched names when reserved tokens are present; emits nothing when none are. Severity is informational — a DS with no AI surface is not penalized here; the gating rule lives in Track 3.3 (`ai-governance/ai-token-requires-marker`).",
-      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-ai-tokens-reserved.md",
-      "rationale": "Why it matters\n\nAI-marker tokens are how a design system tells consumers — humans and agents — that a UI region was produced by AI. Carbon's `dragon-fruit` AI gradient, Polaris's `magic` namespace, and Workday Canvas's `*-ai-*` color tokens are the three established vocabularies; a fourth generic `ai` segment covers the long tail.\n\nTrack 3 of the Lyse roadmap (Face B — AI-Governance) treats these tokens as the foundation for the composite gating rule `ai-governance/ai-token-requires-marker` (Track 3.3), which enforces that AI-produced surfaces actually wear the AI marker. This rule is the inventory step: detect which reserved tokens the repo declares so 3.3 has a deterministic set to check against. It carries no penalty — a DS with zero AI tokens (no AI surface) emits no finding and is not down-scored. The teeth live in 3.3.\n\nThe shared parser `detectReservedAiTokens(repoRoot)` is exported from `packages/core/src/parsers/ai-tokens.ts` so 3.3 reuses the exact same detection set.",
-      "examples": [
-        {
-          "good": "/* tokens.json */ { \"color\": { \"primary\": \"#0070f3\" } }",
-          "bad": "/* tokens.json */ { \"color\": { \"ai\": { \"primary\": \"#0070f3\" } } }"
-        },
-        {
-          "good": ":root { --color-primary: #0070f3; }",
-          "bad": ":root { --p-color-bg-magic: #f4f0fd; }"
-        },
-        {
-          "good": "/* tokens.json */ { \"gradient\": { \"sunrise\": \"...\" } }",
-          "bad": "/* tokens.json */ { \"gradient\": { \"dragon-fruit\": \"...\" } }"
-        }
-      ],
-      "allowlist": [
-        "repos containing `lyse-disable ai-governance/ai-tokens-reserved` in an adjacent README or `.lyse.yaml` — rule is N/A",
-        "token files larger than 2 MB — skipped to avoid pathological cases",
-        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
-      ]
-    },
-    {
       "id": "ai-governance/ai-marker-component-present",
       "axis": "ai-governance",
       "defaultSeverity": "warning",
@@ -1125,64 +1097,6 @@
         "repos with no reserved AI tokens AND no marker component — no AI surface detected, rule emits nothing",
         "files larger than 1 MB — skipped to avoid pathological cases",
         "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
-      ]
-    },
-    {
-      "id": "ai-governance/explainability-affordance",
-      "axis": "ai-governance",
-      "defaultSeverity": "warning",
-      "shortDescription": "Detect an explainability affordance paired with AI-marker components",
-      "fullDescription": "When an AI-marker component is detected in the design system (per the shared `isAiMarkerName` predicate exported by `ai-governance/ai-marker-component-present`), this rule checks whether a companion explainability affordance exists. Detection is name-based: any exported identifier or component file whose name contains `Explain`, `Explainability`, `WhyThis`, `Citation`, `Sources`, `Confidence`, or `Provenance` (case-insensitive) qualifies. A marker component that opens a popover or tooltip carrying explanation content (`aria-describedby` / `role=\"dialog\"` / `role=\"tooltip\"`) also satisfies the rule. Emits `info` when an affordance is found; emits `warning` when an AI-marker exists but no affordance is detected. Emits nothing when no AI-marker is present (no AI surface). Guidelines: HAX G11 (Explain AI decisions) / PAIR Explainability. The behavioral slice — verifying that an indicator appears wherever AI output is rendered — is deferred to Track 4.",
-      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-explainability-affordance.md",
-      "rationale": "Why it matters\n\nUsers interacting with AI-generated content have a right to understand why a particular output was produced. HAX G11 (Google PAIR / IBM Human-AI Experience guidelines) requires that AI-powered interfaces expose an explanation pathway — a popover, citation list, confidence meter, or similar affordance — so users can evaluate trustworthiness and take informed action.\n\nWithout this affordance, consumers of the design system have no standard component to reach for when building explainable AI interfaces, leading to ad-hoc implementations with inconsistent UX and missing accessibility attributes.\n\nThis rule checks only the static \"affordance present\" slice (Track 3.5): does the DS export a component whose name signals explainability intent, or does an AI-marker component carry the appropriate ARIA binding to open an explanation panel? The behavioral slice — ensuring such an indicator appears wherever AI output is rendered in a consuming application — requires semantic location detection and is out of scope here; it will be addressed in Track 4.\n\nA DS with no AI-marker component at all has no AI surface and is not penalised.",
-      "examples": [
-        {
-          "good": "// src/index.ts\nexport { AILabel } from './ai-label';\nexport { ExplainPopover } from './explain-popover';",
-          "bad": "// src/index.ts\nexport { AILabel } from './ai-label';\n// no Explain/Citation/Confidence component exported"
-        },
-        {
-          "good": "// AILabel.tsx — marker bound to explanation panel\n<button aria-describedby=\"explain-panel\">AI</button>\n<div id=\"explain-panel\" role=\"dialog\">Why: …</div>",
-          "bad": "// AILabel.tsx — marker with no explanation binding\n<span className=\"ai-badge\">AI</span>"
-        },
-        {
-          "good": "// src/index.ts\nexport { ConfidenceDisplay } from './confidence-display';\nexport { CitationList } from './citation-list';",
-          "bad": "// AI tokens and AIBadge exported, but no explainability affordance component present"
-        }
-      ],
-      "allowlist": [
-        "repos containing `lyse-disable ai-governance/explainability-affordance` in an adjacent README or `.lyse.yaml` — rule is N/A",
-        "repos with no AI-marker component — no AI surface detected, rule emits nothing",
-        "files larger than 1 MB — skipped to avoid pathological cases",
-        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
-      ]
-    },
-    {
-      "id": "ai-governance/ai-token-requires-marker",
-      "axis": "ai-governance",
-      "defaultSeverity": "error",
-      "shortDescription": "AI token usage requires a co-located AI-marker (Carbon mandatory composite)",
-      "fullDescription": "For each component file (`**/*.{tsx,jsx,vue}`): if the file references a reserved AI design token (`var(--ai-*)`, `--p-color-*-magic*`, `color.ai.*`, `dragon-fruit`, etc.) it MUST also render an AI-marker — a JSX element whose name is in the shared `AI_MARKER_NAMES` vocabulary (imported from `ai-governance/ai-marker-component-present`), a `magic-*`-prefixed tag, or an explicit `data-ai` attribute. Token usage without a co-located marker is an `error`. Confidence is HIGH only when token detection is via unambiguous `var(--…)` or bare `--token` references; dot-path heuristic hits are LOW-confidence and suppressed by default. The rule is a no-op when no reserved tokens are declared anywhere in the repo (fast-exit via `detectReservedAiTokens`).",
-      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-ai-token-requires-marker.md",
-      "rationale": "Why it matters\n\nIBM Carbon's AI design system mandates the composite: every AI-generated surface must both (a) consume an AI-marker token for visual styling and (b) render a labelling component (AILabel, AIBadge, etc.) so the provenance is legible to users. Without this pairing, the marker token is applied silently — the UI looks \"AI-styled\" without any transparency cue, which violates IBM's own guidance and emerging regulatory expectations around AI disclosure.\n\nLyse enforces this as an `error` (not `warning`) because the composite is binary: either both halves are present (correct) or one is missing (incorrect — always a bug or oversight, not a style preference). The fast-exit on `detectReservedAiTokens` means the rule is a zero-cost no-op for DS repos with no AI surface.\n\nThe marker vocabulary (`AI_MARKER_NAMES`) is shared with sibling rule `ai-governance/ai-marker-component-present` to keep a single source of truth for what counts as a valid AI marker.",
-      "examples": [
-        {
-          "good": "// AICard.tsx — uses var(--ai-gradient) AND renders <AILabel>\nconst AICard = () => (\n  <div style={{ background: 'var(--ai-gradient)' }}>\n    <AILabel>AI-generated</AILabel>\n    {content}\n  </div>\n);",
-          "bad": "// AICard.tsx — uses var(--ai-gradient) but no AI-marker rendered\nconst AICard = () => (\n  <div style={{ background: 'var(--ai-gradient)' }}>\n    {content}\n  </div>\n);"
-        },
-        {
-          "good": "// AnswerCard.tsx — data-ai attribute used as explicit annotation\n<div data-ai style={{ background: 'var(--p-color-bg-magic)' }}>\n  {aiAnswer}\n</div>",
-          "bad": "// AnswerCard.tsx — magic token applied, no marker whatsoever\n<div style={{ background: 'var(--p-color-bg-magic)' }}>\n  {aiAnswer}\n</div>"
-        },
-        {
-          "good": "// Component.tsx — no AI tokens, no AI-marker needed\nconst Card = () => <div style={{ color: 'var(--color-primary)' }}>{content}</div>;",
-          "bad": "// AIAssistant.vue — uses --ai-surface token, missing data-ai or AIBadge\n<template><div :style=\"{ background: 'var(--ai-surface)' }\">{{ answer }}</div></template>"
-        }
-      ],
-      "allowlist": [
-        "component files larger than 1 MB — skipped",
-        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`",
-        "repos with no reserved AI tokens anywhere — rule is a no-op (zero findings, zero opportunities)",
-        "findings where token reference is ambiguous (dot-path heuristic only) — emitted as LOW confidence and suppressed by default"
       ]
     },
     {
@@ -1216,65 +1130,6 @@
       ]
     },
     {
-      "id": "ai-governance/human-control-affordances",
-      "axis": "ai-governance",
-      "defaultSeverity": "warning",
-      "shortDescription": "Detect human-control affordances over AI output",
-      "fullDescription": "Scans component files (`**/*.{tsx,jsx,vue}`) for two groups of human-control affordances. Group 1 — per-output controls, detected via language-agnostic signals first: exported component names matching the correction/dismissal vocabulary (Regenerate, Retry, Stop, Edit, Undo, Confirm, Dismiss, Accept, Reject, Report, Revert to AI, Use suggestion), JSX handler props (`onRegenerate`, `onRetry`, `onStop`, `onUndo`, `onAccept`, `onReject`, `onDismiss`, `onReport`), and `data-action=\"regenerate|retry|stop|undo|accept|reject|dismiss|report\"` attributes — these stay English even in localized products. Button labels are matched against the locale-keyed `controlLabels` vocabulary (en/fr/de/ja/es built-in, extensible via the `i18n` block in `.lyse.yaml`), so `Régénérer`, `Neu generieren`, or `再生成` earn the same credit as `Regenerate`. Group 2 — global AI toggle: exported names or toggle labels indicating a settings surface that lets users disable AI (AISettings, AiPreferences, DisableAI, or a label 'Disable AI' / 'AI features'). Cross-condition: when an AI-marker component is present (per the shared `isAiMarkerName` predicate) but no per-output control is found, emits `warning`; when controls are detected, emits `info` listing them and noting global toggle presence. Emits nothing when the DS has no AI surface. Guidelines: HAX G8 (efficient correction) / G9 (efficient dismissal).",
-      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-human-control-affordances.md",
-      "rationale": "Why it matters\n\nHAX G8 (efficient correction) and G9 (efficient dismissal) are foundational human-AI interaction guidelines: users must be able to correct, stop, retry, or dismiss AI-generated output without friction. Without corresponding affordances in the design system, consuming teams implement ad-hoc controls that are inconsistent, inaccessible, and miss the correction loop entirely.\n\nThis rule performs static detection: does the DS export components covering the standard correction/dismissal vocabulary? It does not verify usage site coverage (deferred to Track 4).\n\nA DS with no AI-marker component emits nothing and is not penalised.",
-      "examples": [
-        {
-          "good": "// src/index.ts\nexport { AIBadge } from './ai-badge';\nexport { RegenerateButton } from './regenerate-button';\nexport { AISettings } from './ai-settings';",
-          "bad": "// src/index.ts\nexport { AIBadge } from './ai-badge';\n// no correction or dismissal controls exported"
-        },
-        {
-          "good": "// AIControls.tsx\nexport function RegenerateButton() { return <button>Regenerate</button>; }\nexport function DismissResult() { return <button>Dismiss</button>; }",
-          "bad": "// No per-output control components; users have no standardised way to correct AI output"
-        },
-        {
-          "good": "// AISettings.tsx\nexport function AISettings() {\n  return <Toggle label=\"Disable AI\" />;\n}",
-          "bad": "// AI surface present but no global disable/settings toggle shipped"
-        }
-      ],
-      "allowlist": [
-        "repos containing `lyse-disable ai-governance/human-control-affordances` in an adjacent README or `.lyse.yaml` — rule is N/A",
-        "repos with no AI-marker component at all — no AI surface detected, rule emits nothing",
-        "files larger than 1 MB — skipped to avoid pathological cases",
-        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
-      ]
-    },
-    {
-      "id": "ai-governance/ai-marker-anti-patterns",
-      "axis": "ai-governance",
-      "defaultSeverity": "warning",
-      "shortDescription": "Lint AI-marker anti-patterns in component source files",
-      "fullDescription": "Scans component files (`**/*.{tsx,jsx,vue}`) for two forbidden AI-marking anti-patterns. Anti-pattern A: a sparkle signal (`✨` literal, `Sparkle`/`Sparkles`/`SparkleIcon` import, or `icon=\"sparkle*\"` prop) used as the sole AI marker with no accompanying text label or AI-marker component — SAP Fiori XAI forbids icon-only marking because it fails accessibility and is ambiguous. Anti-pattern B: a standalone, case-sensitive AI noun from any active locale (`AI`, `IA`, `KI`, `人工知能`, …) used as the primary action label of a `<button>`, `<Button>`, or `<a>` element — GitLab Pajamas forbids this because the noun describes the technology, not the user action. Both detectors are pure source heuristics with no runtime or behavioral analysis. Emits `warning` for each occurrence. A sparkle accompanied by a text AI-marker (including localized disclaimers such as `Généré par IA`) or AI-marker component (`AILabel`, `BadgeIA`, `AIBadge`, magic-* etc.) is not flagged. AI nouns appearing only in body or descriptor text (headings, paragraphs) are not flagged.",
-      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-ai-marker-anti-patterns.md",
-      "rationale": "Why it matters\n\nIcon-only AI marking (a lone sparkle ✨) silently fails users who rely on assistive technology: a screen reader announces an image description or nothing at all — not \"AI-generated.\" SAP Fiori XAI made this explicit: sparkle MUST be paired with a text label or dedicated AI-marker component. Lyse enforces the same constraint statically.\n\nLabelling a CTA button \"AI\" is a UX anti-pattern: \"AI\" is a noun describing technology, not an action verb. GitLab Pajamas explicitly forbids it, recommending \"Summarize,\" \"Explain,\" or \"Generate\" instead — words that tell the user what will happen, not what engine does it. Lyse catches this in source before it ships.\n\nBoth findings are warnings (not errors) because the fix is mechanical and low-risk.",
-      "examples": [
-        {
-          "good": "<span><AILabel>AI</AILabel> <Sparkles aria-hidden/></span>",
-          "bad": "<span>✨ {generatedText}</span>"
-        },
-        {
-          "good": "<button>Summarize</button>",
-          "bad": "<button>AI</button>"
-        },
-        {
-          "good": "<button>Draft reply</button>",
-          "bad": "<button>Ask AI</button>"
-        }
-      ],
-      "allowlist": [
-        "repos containing `lyse-disable ai-governance/ai-marker-anti-patterns` in an adjacent README or `.lyse.yaml` — rule is N/A for the entire repo",
-        "files larger than 1 MB — skipped to avoid pathological cases",
-        "files under `node_modules/`, `dist/`, `build/`",
-        "sparkle accompanied by a text AI-marker (`AILabel`, `AIBadge`, magic-*, GenAI*, etc.) — not flagged",
-        "`AI` in non-CTA elements (headings, paragraphs, spans) — not flagged"
-      ]
-    },
-    {
       "id": "ai-governance/ai-content-live-region",
       "axis": "ai-governance",
       "defaultSeverity": "warning",
@@ -1295,35 +1150,6 @@
       "allowlist": [
         "repos containing `lyse-disable ai-governance/ai-content-live-region` in an adjacent README or `.lyse.yaml` — rule is N/A",
         "repos with no AI-output or streaming component — no AI surface detected, rule emits nothing",
-        "files larger than 1 MB — skipped to avoid pathological cases",
-        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
-      ]
-    },
-    {
-      "id": "ai-governance/disclaimer-present",
-      "axis": "ai-governance",
-      "defaultSeverity": "warning",
-      "shortDescription": "Detect AI disclaimer near AI-generated output",
-      "fullDescription": "Scans component files (`**/*.{tsx,jsx,vue}`) for a co-located AI disclaimer. Language-agnostic signals are primary: a `role=\"note\"` element or a `data-ai-disclaimer` / `data-disclaimer` attribute inside an AI-marker file, or a `*Disclaimer*` / `*AIDisclaimer*` component tag. Disclaimer copy is matched against the locale-keyed `disclaimerPhrases` vocabulary (en/fr/de/ja/es built-in, extensible via the `i18n` block in `.lyse.yaml`) — e.g. `Generated by AI`, `Généré par l'IA`, `KI-generiert`, `AIによって生成`, `Generado por IA` (case-insensitive substring). Highest-confidence signal: the GitLab Pajamas canonical disclaimer wording matched verbatim. Cross-condition: if an AI-marker component (per AI_MARKER_NAMES) is present but no disclaimer is found, emits `warning`; if a disclaimer is detected, emits `info` (noting the GitLab canonical match when applicable). Emits nothing when no AI surface is present.",
-      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-disclaimer-present.md",
-      "rationale": "Why it matters\n\nAI systems make errors. Capability-framing guidelines (HAX G1/G2) require that AI-generated surfaces carry a visible disclaimer so users understand the system's limits and know to verify critical information.\n\nGitLab Pajamas formalises this with a canonical disclaimer string: \"AI-generated content may be inaccurate. Always check important information.\" When the exact Pajamas wording is used, Lyse flags it as highest-confidence.\n\nThis rule enforces the pairing: an AI-marker component is the visual signal that content is AI-generated; a disclaimer is the capability-framing signal that the content may err. Having the marker without the disclaimer leaves users without the context they need to make safe decisions.\n\nThe rule emits `warning` (action required) when a marker is present but no disclaimer is found, and `info` (inventory) when a disclaimer is detected — flagging whether it matches the GitLab canonical wording.",
-      "examples": [
-        {
-          "good": "// AISummary.tsx — marker + disclaimer present\n<AILabel />\n<p>{summary}</p>\n<p className=\"disclaimer\">Generated by AI. May be inaccurate.</p>",
-          "bad": "// AISummary.tsx — marker present, no disclaimer\n<AILabel />\n<p>{summary}</p>"
-        },
-        {
-          "good": "// GitLab canonical wording — highest-confidence pass\n<AIDisclaimer message=\"AI-generated content may be inaccurate. Always check important information.\" />",
-          "bad": "// AI marker but disclaimer is buried in a tooltip the user may never see\n<AIBadge /><Tooltip>AI content</Tooltip>"
-        },
-        {
-          "good": "// Vue SFC — disclaimer component rendered alongside output\n<template><AIOutput :text /><AiDisclaimer /></template>",
-          "bad": "// Vue SFC — AI token reserved in class, no disclaimer rendered\n<template><div class=\"ai-output\">{{ text }}</div></template>"
-        }
-      ],
-      "allowlist": [
-        "repos containing `lyse-disable ai-governance/disclaimer-present` in an adjacent README or `.lyse.yaml` — rule is N/A",
-        "repos with no AI-marker component AND no disclaimer text — no AI surface detected, rule emits nothing",
         "files larger than 1 MB — skipped to avoid pathological cases",
         "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
       ]
@@ -1354,27 +1180,6 @@
         "repos containing `lyse-disable ai-governance/feedback-control-present` in an adjacent README or `.lyse.yaml` — rule is N/A",
         "repos with no AI-marker component — no AI surface detected, rule emits nothing",
         "files larger than 1 MB — skipped to avoid pathological cases",
-        "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
-      ]
-    },
-    {
-      "id": "ai-governance/value-gate-doc-present",
-      "axis": "ai-governance",
-      "defaultSeverity": "warning",
-      "shortDescription": "AI value-gate governance doc must be present when an AI surface exists",
-      "fullDescription": "When a design system ships an AI surface — detected by an AI-marker component (via the `AI_MARKER_NAMES` vocabulary from Track 3.2) or reserved AI-marker design tokens (Track 3.1, `detectReservedAiTokens`) — this rule checks that a governance value-gate doc exists and contains structured go/no-go decision language. Candidate locations scanned: `AI_GOVERNANCE.md` at repo root, `docs/ai-value-gate.md`, `docs/ai-governance.md`, `docs/ai-readiness.md`, `docs/ai-checklist.md`, `.lyse/ai-value-gate.md`, and `AI_GOVERNANCE.md` anywhere in the repo tree. A doc is considered valid if it carries a language-agnostic structural signal — a markdown checklist (`- [ ]` / `- [x]`) or the YAML front-matter key `lyse-doc: value-gate` — or gate phrasing from the locale-keyed `gatePhrases` vocabulary (en/fr/de/ja/es built-in, extensible via the `i18n` block in `.lyse.yaml`): e.g. \"is AI needed\", \"value gate\", \"go/no-go\", \"is AI the right tool\", \"L'IA est-elle nécessaire\", \"Ist KI notwendig\", \"AIは必要か\". Emits `warning` when AI surface exists but no doc found, or doc found but lacks gate language. Emits `info` when a valid value-gate doc is present. Emits nothing when the DS has no AI surface.",
-      "helpUri": "https://github.com/lyse-labs/lyse/blob/main/docs/rules/ai-governance-value-gate-doc-present.md",
-      "rationale": "Why it matters\n\nBefore shipping AI-powered UI, design systems need a structured answer to \"is AI actually needed here?\" — a go/no-go gate. ServiceNow's internal \"10-Q\" process documents exactly this: a fixed checklist of questions (is AI the right tool? can a deterministic rule solve this? what is the fallback?) that must be answered before any AI feature lands.\n\nWithout this gate doc, individual teams ship AI features ad-hoc, often when a rule-based solution would have been faster, cheaper, and more auditable. The governance debt accumulates: inconsistent AI use, unclear fallback paths, and no audit trail.\n\nThis rule does NOT enforce the answers — only that the DS ships the document, ensuring the gate process is defined and discoverable. Teams that use Lyse for AI governance get a measurable signal: \"this DS has defined its AI decision process.\"\n\nThe cross-condition logic — checking for an AI surface first via `scanForMarkerComponents` and `detectReservedAiTokens` — ensures DSs without any AI surface are not penalised. The rule is additive: it rewards good governance without creating false positives for projects that have not yet adopted AI features.",
-      "examples": [
-        {
-          "good": "# AI Value Gate\n\n## Is AI needed?\n- [ ] Can a deterministic rule solve this instead?\n- [ ] Does ML outperform a rule on this specific input distribution?\n- [ ] What is the fallback if the model is unavailable?\n\nGo/no-go: answer all three before shipping.",
-          "bad": "# AI Guidelines\n\nUse `AILabel` on all AI-generated content surfaces.\nFollow the design tokens from the `ai` namespace."
-        }
-      ],
-      "allowlist": [
-        "repos containing `lyse-disable ai-governance/value-gate-doc-present` in README, README.md, README.mdx, readme.md, .lyse.yaml, or .lyse.yml — rule is N/A",
-        "DSs with no AI surface (no AI-marker component and no reserved AI tokens) — rule emits nothing",
-        "doc files larger than 500 KB — skipped to avoid pathological cases",
         "files under `node_modules/`, `dist/`, `build/`, `.git/`, `.next/`, `out/`, `coverage/`"
       ]
     },

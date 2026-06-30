@@ -49,17 +49,10 @@ import { rule as rNoHardcodedMotion } from "./tokens-no-hardcoded-motion.js";
 import { rule as rNoHardcodedShadow } from "./tokens-no-hardcoded-shadow.js";
 import { rule as rNoHardcodedGradient } from "./tokens-no-hardcoded-gradient.js";
 import { rule as rNoHardcodedTypography } from "./tokens-no-hardcoded-typography.js";
-import { rule as rAiTokensReserved } from "./ai-governance-ai-tokens-reserved.js";
 import { rule as rAiMarkerComponentPresent } from "./ai-governance-ai-marker-component-present.js";
-import { rule as rExplainabilityAffordance } from "./ai-governance-explainability-affordance.js";
-import { rule as rAiTokenRequiresMarker } from "./ai-governance-ai-token-requires-marker.js";
 import { rule as rAiLoadingErrorStates } from "./ai-governance-ai-loading-error-states.js";
-import { rule as rHumanControlAffordances } from "./ai-governance-human-control-affordances.js";
-import { rule as rAiMarkerAntiPatterns } from "./ai-governance-ai-marker-anti-patterns.js";
 import { rule as rAiContentLiveRegion } from "./ai-governance-ai-content-live-region.js";
-import { rule as rDisclaimerPresent } from "./ai-governance-disclaimer-present.js";
 import { rule as rFeedbackControlPresent } from "./ai-governance-feedback-control-present.js";
-import { rule as rValueGateDocPresent } from "./ai-governance-value-gate-doc-present.js";
 import { rule as rConfidenceIndicatorPresent } from "./ai-governance-confidence-indicator-present.js";
 import { rule as rSourceAttributionPresent } from "./ai-governance-source-attribution-present.js";
 import { rule as rBotIdentityLabeling } from "./ai-governance-bot-identity-labeling.js";
@@ -125,17 +118,10 @@ export const ruleObjects: Rule[] = [
   rNoHardcodedShadow,
   rNoHardcodedGradient,
   rNoHardcodedTypography,
-  rAiTokensReserved,
   rAiMarkerComponentPresent,
-  rExplainabilityAffordance,
-  rAiTokenRequiresMarker,
   rAiLoadingErrorStates,
-  rHumanControlAffordances,
-  rAiMarkerAntiPatterns,
   rAiContentLiveRegion,
-  rDisclaimerPresent,
   rFeedbackControlPresent,
-  rValueGateDocPresent,
   rConfidenceIndicatorPresent,
   rSourceAttributionPresent,
   rBotIdentityLabeling,

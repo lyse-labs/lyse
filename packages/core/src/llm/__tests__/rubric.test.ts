@@ -6,8 +6,8 @@ import { ruleMap } from "../../rules/registry.js";
 describe("getRubricDimensions", () => {
   const dims = getRubricDimensions();
 
-  it("defines exactly 7 governance dimensions", () => {
-    expect(dims).toHaveLength(7);
+  it("defines exactly 1 governance dimension (the rest retired in sub-project D)", () => {
+    expect(dims).toHaveLength(1);
   });
 
   it("each dimension has a unique key", () => {
@@ -25,15 +25,9 @@ describe("getRubricDimensions", () => {
     }
   });
 
-  it("maps the 7 dimensions onto the expected registered rule ids", () => {
+  it("maps the surviving dimension onto its registered rule id", () => {
     const byKey = new Map<string, RubricDimension>(dims.map((d) => [d.key, d]));
-    expect(byKey.get("human-control-enforced")?.ruleId).toBe("ai-governance/human-control-affordances");
-    expect(byKey.get("voice-anti-anthropomorphism")?.ruleId).toBe("ai-governance/ai-marker-anti-patterns");
-    expect(byKey.get("explanation-quality")?.ruleId).toBe("ai-governance/explainability-affordance");
-    expect(byKey.get("risk-classification")?.ruleId).toBe("ai-governance/disclaimer-present");
-    expect(byKey.get("value-gate-judgment")?.ruleId).toBe("ai-governance/value-gate-doc-present");
     expect(byKey.get("recovery-flow-behavioral")?.ruleId).toBe("ai-governance/ai-loading-error-states");
-    expect(byKey.get("explainability-coverage-behavioral")?.ruleId).toBe("ai-governance/explainability-affordance");
   });
 
   it("recovery-flow-behavioral dimension is behavioral (not a presence re-check)", () => {
@@ -51,14 +45,6 @@ describe("getRubricDimensions", () => {
     expect(dim?.prompt).toMatch(/exact code snippet/i);
     expect(dim?.prompt).toMatch(/file path/i);
     expect(dim?.prompt).toMatch(/\{ "findings": \[\] \}/);
-  });
-
-  it("explainability-coverage-behavioral dimension has correct shape", () => {
-    const byKey = new Map<string, RubricDimension>(dims.map((d) => [d.key, d]));
-    const dim = byKey.get("explainability-coverage-behavioral");
-    expect(dim).toBeDefined();
-    expect(dim?.ruleId).toBe("ai-governance/explainability-affordance");
-    expect(dim?.guidelines.length).toBeGreaterThanOrEqual(1);
   });
 
   it("each dimension carries the full rubric shape", () => {
@@ -87,17 +73,9 @@ describe("getRubricDimensions", () => {
 });
 
 describe("GUIDELINE_TRACEABILITY_MAP", () => {
-  const EXPECTED_KEYS = [
-    "human-control-enforced",
-    "voice-anti-anthropomorphism",
-    "explanation-quality",
-    "risk-classification",
-    "value-gate-judgment",
-    "recovery-flow-behavioral",
-    "explainability-coverage-behavioral",
-  ] as const;
+  const EXPECTED_KEYS = ["recovery-flow-behavioral"] as const;
 
-  it("covers all 7 dimensions", () => {
+  it("covers all surviving dimensions", () => {
     expect(Object.keys(GUIDELINE_TRACEABILITY_MAP).sort()).toEqual([...EXPECTED_KEYS].sort());
   });
 

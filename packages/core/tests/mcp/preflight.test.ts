@@ -15,15 +15,15 @@ describe("classifyPreflight", () => {
 
   it("routes stable-rule findings to blocking and the rest to advisory", () => {
     const stable = new Set(["tokens/no-hardcoded-color"]);
-    const r = classifyPreflight([v("tokens/no-hardcoded-color"), v("ai-governance/ai-tokens-reserved")], stable);
+    const r = classifyPreflight([v("tokens/no-hardcoded-color"), v("components/no-arbitrary-tailwind")], stable);
     expect(r.verdict).toBe("blocked");
     expect(r.blocking.map((b) => b.rule_id)).toEqual(["tokens/no-hardcoded-color"]);
-    expect(r.advisory.map((b) => b.rule_id)).toEqual(["ai-governance/ai-tokens-reserved"]);
+    expect(r.advisory.map((b) => b.rule_id)).toEqual(["components/no-arbitrary-tailwind"]);
   });
 
   it("passes when only experimental (advisory) findings exist", () => {
     const stable = new Set(["tokens/no-hardcoded-color"]);
-    const r = classifyPreflight([v("ai-governance/ai-tokens-reserved")], stable);
+    const r = classifyPreflight([v("components/no-arbitrary-tailwind")], stable);
     expect(r.verdict).toBe("pass");
     expect(r.blocking).toHaveLength(0);
     expect(r.advisory).toHaveLength(1);

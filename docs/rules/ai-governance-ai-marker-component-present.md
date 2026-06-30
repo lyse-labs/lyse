@@ -2,7 +2,7 @@
 
 > **Axis:** AI governance · **Severity:** warning (info when found) · **Auto-fixable:** no · **Version:** v1
 
-Detect whether the design system ships a dedicated AI-marker component — a label, badge, avatar, or indicator that visually marks AI-generated output. Part of Track 3 — Face B (AI-Governance). This rule is the component-presence foundation that the composite gating rule `ai-governance/ai-token-requires-marker` (Track 3.3) depends on.
+Detect whether the design system ships a dedicated AI-marker component — a label, badge, avatar, or indicator that visually marks AI-generated output. Part of Track 3 — Face B (AI-Governance).
 
 ## Why
 
@@ -121,7 +121,5 @@ rules:
 
 ## See also
 
-- [`ai-governance/ai-tokens-reserved`](./ai-governance-ai-tokens-reserved.md) — Track 3.1 inventory rule; detects reserved AI-marker tokens that trigger the cross-condition warning here.
-- `ai-governance/ai-token-requires-marker` — Track 3.3 composite gating rule that pairs token usage with the marker component detected by this rule (doc lands with that rule).
 - [Health Score](../guide/health-score.md) — how rules combine into the final score.
 - AI-marker component vocabularies by DS vendor (plain text — external sites may block link checkers): Carbon Design System `AILabel`; Shopify Polaris `magic-*` components; Workday Canvas AI-flagged components; SAP Horizon AI indicator patterns; Microsoft Fluent AI badge components.

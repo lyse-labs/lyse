@@ -46,13 +46,7 @@ export const VALID_GUIDELINE_IDS: ReadonlySet<string> = new Set([
 
 // Dimension key → canonical guideline ids (HAX G1–G18 / Google PAIR chapters).
 export const GUIDELINE_TRACEABILITY_MAP: Readonly<Record<string, readonly string[]>> = {
-  "human-control-enforced": ["HAX G8", "HAX G9", "PAIR Human Control"],
-  "voice-anti-anthropomorphism": ["HAX G4", "PAIR Explainability"],
-  "explanation-quality": ["HAX G11", "PAIR Explainability"],
-  "risk-classification": ["HAX G1", "HAX G2", "PAIR Safety"],
-  "value-gate-judgment": ["HAX G18", "PAIR Augmentation"],
   "recovery-flow-behavioral": ["HAX G7", "PAIR Error Recovery"],
-  "explainability-coverage-behavioral": ["HAX G11", "PAIR Explainability"],
 };
 
 const EVIDENCE_CONTRACT = [
@@ -97,151 +91,6 @@ function buildDimensionPrompt(parts: {
 
 const DIMENSIONS: RubricDimension[] = [
   {
-    key: "human-control-enforced",
-    axis: "ai-governance",
-    ruleId: "ai-governance/human-control-affordances",
-    title: "Human control actually enforced",
-    question:
-      "Is a human-control affordance (cancel, undo, edit, approve, stop, override) not merely present in the UI but actually wired to the AI action it governs?",
-    scale:
-      "0 = no control; 1 = control rendered but not wired to any AI call/state; 2 = control wired but bypassable or no confirmed effect; 3 = control wired to the AI action with a confirmed effect (handler cancels/undoes/gates the AI output).",
-    evidence:
-      "The control element AND the handler/binding (onClick, onCancel, abort signal, mutation gate) that connects it to the AI request, generation, or commit. Cite both the affordance and the wiring; a button with no handler scores low.",
-    prompt: buildDimensionPrompt({
-      ruleId: "ai-governance/human-control-affordances",
-      title: "Human control actually enforced",
-      question:
-        "Is a human-control affordance (cancel, undo, edit, approve, stop, override) not merely present in the UI but actually wired to the AI action it governs?",
-      scale:
-        "0 = no control; 1 = control rendered but not wired; 2 = control wired but bypassable; 3 = control wired with confirmed effect.",
-      evidence:
-        "Cite the affordance element and the handler/binding that connects it to the AI request or output.",
-      instructions: [
-        "A control with no event handler, or whose handler does not touch the AI request/state, is NOT enforced — flag it.",
-        "Look for abort/cancel signals, approval gates before commit, and undo paths that revert AI-written state.",
-        "Do not flag controls that are demonstrably wired; cite the wiring line as proof.",
-      ],
-      guidelineIds: GUIDELINE_TRACEABILITY_MAP["human-control-enforced"]!,
-    }),
-    guidelines: [...GUIDELINE_TRACEABILITY_MAP["human-control-enforced"]!],
-  },
-  {
-    key: "voice-anti-anthropomorphism",
-    axis: "ai-governance",
-    ruleId: "ai-governance/ai-marker-anti-patterns",
-    title: "Voice, tone & anti-anthropomorphism",
-    question:
-      "Does AI-facing copy avoid anthropomorphic framing (first-person feelings, human identity, false agency) and keep a clear machine voice?",
-    scale:
-      "0 = strong anthropomorphism (AI presented as a person with feelings/will); 1 = frequent anthropomorphic phrasing; 2 = occasional slips; 3 = consistently machine-honest voice (tool framing, no fake emotion or sentience).",
-    evidence:
-      "The exact copy string or label: e.g. 'I feel', 'I think you should', 'as your friend', human names presented as the AI's identity, or emotive first-person claims.",
-    prompt: buildDimensionPrompt({
-      ruleId: "ai-governance/ai-marker-anti-patterns",
-      title: "Voice, tone & anti-anthropomorphism",
-      question:
-        "Does AI-facing copy avoid anthropomorphic framing and keep a clear machine voice?",
-      scale:
-        "0 = strong anthropomorphism; 1 = frequent; 2 = occasional; 3 = consistently machine-honest.",
-      evidence:
-        "Cite the exact copy string or label that anthropomorphizes the AI.",
-      instructions: [
-        "Flag first-person emotion/will ('I feel', 'I want', 'I'm happy to'), claimed sentience, or human identity framing.",
-        "Do not flag neutral functional copy ('Generating…', 'AI suggestion') — that is correct machine voice.",
-        "Cite the literal string from the source as the snippet.",
-      ],
-      guidelineIds: GUIDELINE_TRACEABILITY_MAP["voice-anti-anthropomorphism"]!,
-    }),
-    guidelines: [...GUIDELINE_TRACEABILITY_MAP["voice-anti-anthropomorphism"]!],
-  },
-  {
-    key: "explanation-quality",
-    axis: "ai-governance",
-    ruleId: "ai-governance/explainability-affordance",
-    title: "Explanation quality",
-    question:
-      "Beyond the mere existence of an explainability affordance, does the explanation convey real, specific, actionable reasoning (inputs, confidence, why-this) rather than a generic placeholder?",
-    scale:
-      "0 = no explanation; 1 = affordance exists but content is empty/generic ('AI generated this'); 2 = some specifics but shallow; 3 = concrete, sourced, actionable explanation (cites inputs, factors, or confidence).",
-    evidence:
-      "The explanation text/template or the data bound into it. A tooltip/section that renders a constant generic string scores low; cite that string.",
-    prompt: buildDimensionPrompt({
-      ruleId: "ai-governance/explainability-affordance",
-      title: "Explanation quality",
-      question:
-        "Does the explanation convey real, specific, actionable reasoning rather than a generic placeholder?",
-      scale:
-        "0 = none; 1 = generic placeholder; 2 = shallow specifics; 3 = concrete and sourced.",
-      evidence:
-        "Cite the explanation text/template or the data bound into the affordance.",
-      instructions: [
-        "An affordance that renders a hardcoded generic line ('This was generated by AI') is low quality — flag it.",
-        "Reward explanations that surface inputs, factors, sources, or confidence; cite the binding that supplies them.",
-        "Judge content quality, not the mere presence of the affordance.",
-      ],
-      guidelineIds: GUIDELINE_TRACEABILITY_MAP["explanation-quality"]!,
-    }),
-    guidelines: [...GUIDELINE_TRACEABILITY_MAP["explanation-quality"]!],
-  },
-  {
-    key: "risk-classification",
-    axis: "ai-governance",
-    ruleId: "ai-governance/disclaimer-present",
-    title: "Risk classification of the AI feature",
-    question:
-      "Is the AI feature's risk severity correctly classified and matched with proportionate safeguards (disclaimers, confirmations, guardrails) for what it can affect?",
-    scale:
-      "0 = high-impact AI action with no disclaimer/guardrail; 1 = under-protected for its impact; 2 = some safeguards but not proportionate; 3 = safeguards proportionate to assessed severity.",
-    evidence:
-      "The AI action's effect surface (writes data, sends messages, makes decisions, handles sensitive content) AND the disclaimer/guardrail (or its absence) near it. Cite the high-impact call and the missing/weak safeguard.",
-    prompt: buildDimensionPrompt({
-      ruleId: "ai-governance/disclaimer-present",
-      title: "Risk classification of the AI feature",
-      question:
-        "Is the AI feature's risk severity correctly classified and matched with proportionate safeguards?",
-      scale:
-        "0 = high-impact, no safeguard; 1 = under-protected; 2 = partial; 3 = proportionate.",
-      evidence:
-        "Cite the AI action's effect surface and the disclaimer/guardrail (or its absence).",
-      instructions: [
-        "Assess what the AI feature can affect (data writes, outbound messages, financial/health/legal content) and whether safeguards match.",
-        "Flag high-impact actions lacking a proportionate disclaimer or confirmation.",
-        "Severity of the finding should track the assessed impact: error for high-impact unguarded actions.",
-      ],
-      guidelineIds: GUIDELINE_TRACEABILITY_MAP["risk-classification"]!,
-    }),
-    guidelines: [...GUIDELINE_TRACEABILITY_MAP["risk-classification"]!],
-  },
-  {
-    key: "value-gate-judgment",
-    axis: "ai-governance",
-    ruleId: "ai-governance/value-gate-doc-present",
-    title: "Is AI even needed (value gate)",
-    question:
-      "Does the AI feature pass a value gate — is there a documented justification that AI adds real value here over a deterministic/simpler solution?",
-    scale:
-      "0 = AI used where a deterministic solution clearly suffices, no justification; 1 = weak/absent justification; 2 = justification present but thin; 3 = clear documented value-gate rationale tied to this feature.",
-    evidence:
-      "The AI feature invocation AND the value-gate doc/comment justifying it (or its absence). Cite the AI call and the justification text, or the call plus the gap where justification should be.",
-    prompt: buildDimensionPrompt({
-      ruleId: "ai-governance/value-gate-doc-present",
-      title: "Is AI even needed (value gate)",
-      question:
-        "Is there a documented justification that AI adds real value over a deterministic solution?",
-      scale:
-        "0 = unjustified AI over a deterministic alternative; 1 = weak; 2 = thin; 3 = clear documented rationale.",
-      evidence:
-        "Cite the AI feature invocation and the value-gate justification (or the gap).",
-      instructions: [
-        "Flag AI used for tasks a deterministic rule/regex/lookup would solve, with no documented rationale.",
-        "Reward features with an explicit value-gate doc/comment tying AI to a need the deterministic path cannot meet.",
-        "Cite the AI invocation as the snippet when justification is absent.",
-      ],
-      guidelineIds: GUIDELINE_TRACEABILITY_MAP["value-gate-judgment"]!,
-    }),
-    guidelines: [...GUIDELINE_TRACEABILITY_MAP["value-gate-judgment"]!],
-  },
-  {
     key: "recovery-flow-behavioral",
     axis: "ai-governance",
     ruleId: "ai-governance/ai-loading-error-states",
@@ -272,38 +121,6 @@ const DIMENSIONS: RubricDimension[] = [
       guidelineIds: GUIDELINE_TRACEABILITY_MAP["recovery-flow-behavioral"]!,
     }),
     guidelines: [...GUIDELINE_TRACEABILITY_MAP["recovery-flow-behavioral"]!],
-  },
-  {
-    key: "explainability-coverage-behavioral",
-    axis: "ai-governance",
-    ruleId: "ai-governance/explainability-affordance",
-    title: "Explainability coverage & layering (behavioral, HAX G11 / PAIR Explainability)",
-    question:
-      "Is an explainability indicator reachable at every site where AI output is rendered (coverage), and does it support a layered What → Why → How structure?",
-    scale:
-      "0 = AI output rendered with no reachable explainability indicator; 1 = indicator exists somewhere but not at one or more render sites (coverage gap); 2 = indicator present at all render sites but explanation is flat (no What/Why/How layering); 3 = indicator reachable at every AI output site and supports What → Why → How.",
-    evidence:
-      "The AI output render site AND the explainability indicator (or its absence) co-located or reachable from it. For layering, cite the structure of the explanation content (What label, Why rationale, How action/source).",
-    prompt: buildDimensionPrompt({
-      ruleId: "ai-governance/explainability-affordance",
-      title: "Explainability coverage & layering (behavioral, HAX G11 / PAIR Explainability)",
-      question:
-        "Is an explainability indicator reachable at every site where AI output is rendered (coverage), and does it support a layered What → Why → How structure?",
-      scale:
-        "0 = AI output with no indicator; 1 = indicator exists but coverage gap at a render site; 2 = full coverage but flat explanation; 3 = full coverage with What/Why/How layering.",
-      evidence:
-        "Cite the AI output render site and the explainability indicator (or its absence) at that site. For layering, cite the explanation structure.",
-      instructions: [
-        "Identify every component or render site that surfaces AI-generated output (look for AI-marker components, AI badge labels, generated content props).",
-        "For each such site, check whether an explainability indicator (Explain, WhyThis, Citation, Confidence, Provenance or similar) is reachable — co-located, linked via aria-describedby, or composed into the same render tree.",
-        "Flag any render site that presents AI output without a reachable explainability indicator — this is a coverage gap that static presence checks miss.",
-        "For sites that do have an indicator, assess layering: does the explanation tell the user What was generated, Why (rationale, inputs, confidence), and How to act or verify (source, link, correction path)?",
-        "A flat generic label ('AI generated this') with no Why or How scores low — flag it.",
-        "Do not flag render sites where the AI-marker component itself carries the explanation via aria-describedby or role='dialog' with layered content.",
-      ],
-      guidelineIds: GUIDELINE_TRACEABILITY_MAP["explainability-coverage-behavioral"]!,
-    }),
-    guidelines: [...GUIDELINE_TRACEABILITY_MAP["explainability-coverage-behavioral"]!],
   },
 ];
 
