@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`tokens/no-hardcoded-color` reliability: honest uncalibrated state.** The synthetic construction-oracle numbers (precision: 0.44 from an underpowered corpus) are replaced with null — uncalibrated. Real-world precision is ~65% across 8 OSS repos (1256 findings), rising to ~88.9% on medium-confidence findings; recall is ~100%. The rule stays `experimental` / `contributesToScore: false`. Promotion to 90% is not honestly reachable with lexical detection alone (ceiling ~85–88%); the `confidence` field measures fix-confidence, not drift-confidence. Rule doc updated with an honest Reliability section.
 
+### Changed
+
+- **No prompt before the first score.** `lyse audit` used to ask two consent questions (telemetry, then the LLM precision filter) before running anything on a first-run TTY. The telemetry prompt now appears after the report is rendered (max two lifetime prompts unchanged; per ADR 0012 the run that asks still never emits — guaranteed by construction, since an undecided run resolves to off before the audit). The LLM prompt is gone from the default audit path: opt in via `--llm` (single run) or `LYSE_LLM=1` (persisted); previously persisted decisions and all env overrides keep working, and CI/non-TTY behavior is byte-identical.
+
 ### Fixed
 
 - `@lyse-overrides` frontmatter no longer silently disables the whole block (#226). The parser was all-or-nothing brittle: CRLF line endings, a blank comment continuation line (` *`) between entries, an entry on the same line as the tag, or a second `@lyse-overrides` block each caused every entry to be ignored — which read as "only the first rule is applied". All four shapes now parse, and multiple blocks merge (`off` unions; on a severity conflict the later block wins; `off` beats a severity override for the same rule).

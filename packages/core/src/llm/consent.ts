@@ -137,3 +137,28 @@ export async function resolveLlmConsent(
   if (flags?.llm === true) return true;
   return (await ensureLlmConsentDecision(deps)).accepted;
 }
+
+/**
+ * Non-interactive variant for the default audit path: flags and env and
+ * persisted record only — NEVER prompts. The LLM filter is a power feature;
+ * a first-run user should meet the Health Score before any consent
+ * question, and this one only when they reach for `--llm` / `LYSE_LLM=1`.
+ */
+export function resolveLlmConsentNonInteractive(
+  flags: { llm?: boolean } | undefined,
+  deps: LlmConsentDeps = {},
+): boolean {
+  if (flags?.llm === false) return false;
+  if (flags?.llm === true) return true;
+  if (process.env["LYSE_LLM"] === "0") return false;
+
+  const existing = readLlmConsent(deps);
+  if (!existing && process.env["LYSE_LLM"] === "1") {
+    writeLlmConsent(
+      { accepted: true, attempt: 1, decided_at: new Date().toISOString(), version: "1.0.0" },
+      deps,
+    );
+    return true;
+  }
+  return existing?.accepted ?? false;
+}

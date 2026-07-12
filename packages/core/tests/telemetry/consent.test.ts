@@ -9,6 +9,7 @@ import {
   consentFilePath,
   promptForConsent,
   ensureConsentDecision,
+  resolveConsentNonInteractive,
   getCachedConsent,
   resetConsentCache,
   type ConsentRecord,
@@ -265,6 +266,51 @@ describe("ensureConsentDecision", () => {
       expect(readConsent(deps)?.attempt).toBe(1);
     } finally {
       Object.defineProperty(process.stdout, "isTTY", { value: origIsTTY, configurable: true });
+    }
+  });
+});
+
+describe("resolveConsentNonInteractive (pre-audit, never prompts)", () => {
+  beforeEach(() => {
+    resetConsentCache();
+  });
+
+  it("undecided + TTY: returns accepted=false, writes nothing, never prompts", () => {
+    const origIsTTY = process.stdout.isTTY;
+    Object.defineProperty(process.stdout, "isTTY", { value: true, configurable: true });
+    try {
+      prompts.override({ accepted: true });
+      const out = resolveConsentNonInteractive(deps);
+      expect(out).toEqual({ accepted: false, justAsked: false });
+      expect(readConsent(deps)).toBeNull();
+    } finally {
+      prompts.override({});
+      Object.defineProperty(process.stdout, "isTTY", { value: origIsTTY, configurable: true });
+    }
+  });
+
+  it("returns the persisted decision (accepted=true)", () => {
+    writeConsent({ accepted: true, attempt: 1, decided_at: "2026-01-01T00:00:00Z", version: "1.0.0" }, deps);
+    resetConsentCache();
+    expect(resolveConsentNonInteractive(deps)).toEqual({ accepted: true, justAsked: false });
+    expect(getCachedConsent(deps)).toBe(true);
+  });
+
+  it("returns the persisted decision (declined attempt=1) without consuming an attempt", () => {
+    writeConsent({ accepted: false, attempt: 1, decided_at: "2026-01-01T00:00:00Z", version: "1.0.0" }, deps);
+    resetConsentCache();
+    expect(resolveConsentNonInteractive(deps)).toEqual({ accepted: false, justAsked: false });
+    expect(readConsent(deps)?.attempt).toBe(1);
+  });
+
+  it("migrates LYSE_TELEMETRY=1 into a consent file exactly like ensureConsentDecision", () => {
+    process.env["LYSE_TELEMETRY"] = "1";
+    try {
+      const out = resolveConsentNonInteractive(deps);
+      expect(out).toEqual({ accepted: true, justAsked: false });
+      expect(readConsent(deps)?.accepted).toBe(true);
+    } finally {
+      delete process.env["LYSE_TELEMETRY"];
     }
   });
 });
