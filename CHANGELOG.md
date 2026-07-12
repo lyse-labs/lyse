@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- New positioning line in the README and npm description: "Design systems drift. Lyse measures it." Docs only — no behavior change.
 - **The default terminal view shows every scored axis.** `ai-surface` and `ai-governance` moved the Health Score while being invisible in the default report (4 of 6 axes rendered). The view now derives from the scorer's axis list — display-only, no score change. The "Next steps" tokens tip now points at `lyse handoff` instead of the deprecated `lyse agents-md`, and a weak `ai-surface` axis suggests `lyse init --scaffold`.
 - **No prompt before the first score.** `lyse audit` used to ask two consent questions (telemetry, then the LLM precision filter) before running anything on a first-run TTY. The telemetry prompt is now the last interactive act of the run — after the report, the action menu, and every telemetry emit site — so per ADR 0012 the run that asks never emits, by construction (max two lifetime prompts unchanged). The LLM prompt is removed entirely, along with its now-dead interactive consent path (`resolveLlmConsent` / `ensureLlmConsentDecision` / `promptForLlmConsent`): opt in via `--llm` (single run) or `LYSE_LLM=1` (persisted); previously persisted decisions and all env overrides keep working, and CI/non-TTY behavior is byte-identical.
 
