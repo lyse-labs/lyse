@@ -15,13 +15,14 @@ function runCli(args: string[], opts: { env?: NodeJS.ProcessEnv } = {}): ReturnT
     encoding: "utf8",
     timeout: 10_000,
     // Pipe stdin so the process never receives a TTY → isInteractive() is
-    // false → the REPL must skip prompting and fall through to help.
+    // false → the bare command must skip the audit delegation and fall
+    // through to help.
     stdio: ["pipe", "pipe", "pipe"],
     env,
   });
 }
 
-describe("cli root command (menu wiring)", () => {
+describe("cli root command (bare-command wiring)", () => {
   if (!existsSync(cli)) {
     it.skip("CLI not built — skip", () => {});
     return;
@@ -52,31 +53,12 @@ describe("cli root command (menu wiring)", () => {
 
   it("`lyse` with no args in non-TTY mode shows help instead of hanging on a prompt", () => {
     // Test environment has no TTY → isInteractive() returns false → root.run()
-    // must fall through to showUsage(), NOT prompt. The 10s timeout catches a
-    // regression where the menu would block waiting for stdin.
+    // must fall through to showUsage(), NOT delegate to the audit command.
+    // The 10s timeout catches a regression where something would block
+    // waiting for stdin.
     const r = runCli([]);
     expect(r.status).toBe(0);
     expect(r.stdout).toContain("USAGE");
     expect(r.stdout).toContain("Audit your design system");
-  });
-
-  it("`lyse --no-menu` bypasses the menu and prints help (even if a TTY were attached)", () => {
-    const r = runCli(["--no-menu"]);
-    expect(r.status).toBe(0);
-    expect(r.stdout).toContain("USAGE");
-    expect(r.stdout).toContain("Audit your design system");
-    expect(r.stderr).not.toMatch(/[Uu]nknown/);
-  });
-
-  it("`LYSE_NO_MENU=1 lyse` bypasses the menu and prints help", () => {
-    const r = runCli([], { env: { LYSE_NO_MENU: "1" } });
-    expect(r.status).toBe(0);
-    expect(r.stdout).toContain("USAGE");
-  });
-
-  it("`lyse --no-menu` does NOT error with 'Unknown option'", () => {
-    // Regression: --no-menu must be registered on the root command's args.
-    const r = runCli(["--no-menu"]);
-    expect(r.stderr).not.toMatch(/[Uu]nknown/);
   });
 });
