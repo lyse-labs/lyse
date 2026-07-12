@@ -42,7 +42,7 @@ The optional **render layer** (`lyse audit --render`) runs additional checks aga
 
 ## Privacy
 
-`lyse audit` is **static-only by default**: nothing leaves your machine. The optional LLM precision filter is **opt-in** (`--llm`, `LYSE_LLM=1`, a one-time prompt, or explicit `llm.provider` config) and BYOK — having the `claude` CLI installed does not enable it silently. Telemetry is opt-in only (one-time prompt, default declines). See [PRIVACY.md](./PRIVACY.md).
+`lyse audit` is **static-only by default**: nothing leaves your machine. The optional LLM precision filter is **opt-in** (`--llm`, `LYSE_LLM=1`, or explicit `llm.provider` config) and BYOK — having the `claude` CLI installed does not enable it silently, and the default audit never prompts for it. Telemetry is opt-in only (a one-time prompt shown after your first report, default declines). See [PRIVACY.md](./PRIVACY.md).
 
 ## More
 

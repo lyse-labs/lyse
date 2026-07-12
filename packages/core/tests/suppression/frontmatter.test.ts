@@ -111,6 +111,25 @@ describe("parseFileOverrides", () => {
     expect(o.off.has("tokens/no-hardcoded-typography")).toBe(true);
   });
 
+  it("tolerates a decorative separator line between entries", () => {
+    const o = parseFileOverrides(
+      block(" *   tokens/no-hardcoded-color: off\n * ----------\n *   stories/coverage: off\n"),
+    );
+    expect(o.off.has("tokens/no-hardcoded-color")).toBe(true);
+    expect(o.off.has("stories/coverage")).toBe(true);
+  });
+
+  it("a tag quoted in code or prose never activates overrides", () => {
+    const inString =
+      'const help = "add @lyse-overrides tokens/no-hardcoded-color: off to a JSDoc block";\n' +
+      "tokens/no-hardcoded-color: off\n";
+    expect(parseFileOverrides(inString).off.size).toBe(0);
+
+    const inProse =
+      "/**\n * To disable a rule, use @lyse-overrides in a comment.\n *   tokens/no-hardcoded-color: off\n */\n";
+    expect(parseFileOverrides(inProse).off.size).toBe(0);
+  });
+
   it("does not read past the end of the comment block", () => {
     const src =
       "/**\n * @lyse-overrides\n *   tokens/no-hardcoded-color: off\n */\n" +

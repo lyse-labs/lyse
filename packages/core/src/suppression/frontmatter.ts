@@ -4,10 +4,16 @@ const REAL_SEVERITIES = new Set<Severity>(["error", "warning", "info"]);
 const TAG = "@lyse-overrides";
 // `tokens/no-hardcoded-color: error` inside a JSDoc comment line.
 const ENTRY_RE = /^[ \t]*\*?[ \t]*([\w-]+(?:\/[\w-]+)+)[ \t]*:[ \t]*(error|warning|info|off)[ \t]*$/;
-// A comment continuation line carrying nothing (` *`) — tolerated between
-// entries. A star is required: a fully blank line may sit outside the
-// comment block, and skipping it could leak the scan into code.
-const BLANK_CONTINUATION_RE = /^[ \t]*\*[ \t]*$/;
+// A comment continuation line carrying no entry — bare (` *`) or a
+// decorative separator (` * ----`) — tolerated between entries. A star is
+// required: a fully blank line may sit outside the comment block, and
+// skipping it could leak the scan into code. Prose (any word character)
+// still ends the block.
+const BLANK_CONTINUATION_RE = /^[ \t]*\*[ \t]*[-=_~#*·—]*[ \t]*$/;
+// The text before the tag on its line must be comment punctuation only —
+// a tag mentioned in code or prose (a string literal, a doc sentence)
+// must never activate overrides.
+const COMMENT_PREFIX_RE = /^[ \t/*]*$/;
 
 export interface FileOverrides {
   /** Rule ids suppressed for this file (severity `off`). */
@@ -39,7 +45,9 @@ const EMPTY: FileOverrides = { off: new Set(), severity: new Map() };
  *   a severity override for the same rule at the pipeline).
  *
  * A block's entries stop at the end of the comment (`*\/`) or at the first
- * line that is neither an entry nor a blank continuation.
+ * line that is neither an entry nor a blank/decorative continuation (` *`,
+ * ` * ----`). A tag only opens a block when everything before it on the
+ * line is comment punctuation — a tag quoted in code or prose is inert.
  */
 export function parseFileOverrides(source: string): FileOverrides {
   if (!source.includes(TAG)) return EMPTY;
@@ -64,6 +72,7 @@ export function parseFileOverrides(source: string): FileOverrides {
   for (let i = 0; i < lines.length; i++) {
     const tagAt = lines[i]!.indexOf(TAG);
     if (tagAt === -1) continue;
+    if (!COMMENT_PREFIX_RE.test(lines[i]!.slice(0, tagAt))) continue;
 
     const sameLine = beforeCloser(lines[i]!.slice(tagAt + TAG.length));
     readEntry(sameLine.text);
