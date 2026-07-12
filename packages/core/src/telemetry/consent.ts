@@ -140,13 +140,16 @@ export function getCachedConsent(deps: ConsentDeps = {}): boolean {
   return _cachedConsent;
 }
 
-/**
- * Resolve the consent decision WITHOUT ever prompting: env override and
- * persisted record only. The audit path calls this before running so the
- * first score renders prompt-free; the interactive prompt (if still
- * undecided) runs after the report via {@link ensureConsentDecision}.
- */
-export function resolveConsentNonInteractive(deps: ConsentDeps = {}): ConsentDecision {
+interface ResolvedConsent {
+  accepted: boolean;
+  /** True when no further prompting may change the answer (accepted, second decline, or env opt-in). */
+  final: boolean;
+  existing: ConsentRecord | null;
+}
+
+// Single source of truth for the env-override + persisted-record resolution
+// (and its cache priming) shared by both public entry points below.
+function resolveFromEnvAndDisk(deps: ConsentDeps): ResolvedConsent {
   const existing = readConsent(deps);
 
   if (!existing && process.env["LYSE_TELEMETRY"] === "1") {
@@ -158,44 +161,39 @@ export function resolveConsentNonInteractive(deps: ConsentDeps = {}): ConsentDec
     }, deps);
     _cachedConsent = true;
     _cacheInitialised = true;
-    return { accepted: true, justAsked: false };
+    return { accepted: true, final: true, existing: null };
   }
 
   _cachedConsent = existing?.accepted ?? false;
   _cacheInitialised = true;
-  return { accepted: _cachedConsent, justAsked: false };
+  return {
+    accepted: _cachedConsent,
+    final: existing !== null && (existing.accepted || existing.attempt === 2),
+    existing,
+  };
+}
+
+/**
+ * Resolve the consent decision WITHOUT ever prompting: env override and
+ * persisted record only. The audit path calls this before running so the
+ * first score renders prompt-free; the interactive prompt (if still
+ * undecided) runs at the end of the run via {@link ensureConsentDecision}.
+ */
+export function resolveConsentNonInteractive(deps: ConsentDeps = {}): ConsentDecision {
+  return { accepted: resolveFromEnvAndDisk(deps).accepted, justAsked: false };
 }
 
 export async function ensureConsentDecision(deps: ConsentDeps = {}): Promise<ConsentDecision> {
-  const existing = readConsent(deps);
-
-  if (!existing && process.env["LYSE_TELEMETRY"] === "1") {
-    writeConsent({
-      accepted: true,
-      attempt: 1,
-      decided_at: new Date().toISOString(),
-      version: "1.0.0",
-    }, deps);
-    _cachedConsent = true;
-    _cacheInitialised = true;
-    return { accepted: true, justAsked: false };
-  }
-
-  if (existing && (existing.accepted || existing.attempt === 2)) {
-    _cachedConsent = existing.accepted;
-    _cacheInitialised = true;
-    return { accepted: existing.accepted, justAsked: false };
-  }
+  const resolved = resolveFromEnvAndDisk(deps);
+  if (resolved.final) return { accepted: resolved.accepted, justAsked: false };
 
   if (!process.stdout.isTTY) {
-    _cachedConsent = false;
-    _cacheInitialised = true;
     return { accepted: false, justAsked: false };
   }
 
   const outcome = await promptForConsent();
   const accepted = outcome === "yes";
-  const nextAttempt: 1 | 2 = existing ? 2 : 1;
+  const nextAttempt: 1 | 2 = resolved.existing ? 2 : 1;
 
   writeConsent({
     accepted,

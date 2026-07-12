@@ -529,14 +529,6 @@ const auditCommand = defineCommand({
     // earlier send failed (offline).
     await syncPendingEmail();
 
-    // First-run telemetry consent — asked AFTER the report so the score is
-    // the first thing a new user sees. Max two lifetime prompts (persisted);
-    // ADR 0012 holds: this run resolved consent as undecided-off above, so
-    // nothing is emitted on the run that asks.
-    if (promptsAllowed) {
-      await ensureConsentDecision();
-    }
-
     if (promptsAllowed && !wantsFeedback) {
       // Standard action menu path (no --interactive, or no findings).
       const fsDetect = await detectFromFilesystem(repoRoot);
@@ -570,6 +562,14 @@ const auditCommand = defineCommand({
     await appendCommandInvokedEvent(repoRoot, "audit", didFail ? "error" : "success", Date.now() - startTime, {
       suppress: consent.justAsked,
     });
+
+    // First-run telemetry consent — the LAST interactive act of the run, after
+    // the report, the action menu, and every telemetry emit. ADR 0012 (the run
+    // that asks never emits) then holds by construction: accepting here flips
+    // the consent cache only after all emit sites have already run gated off.
+    if (promptsAllowed) {
+      await ensureConsentDecision();
+    }
 
     if (didFail) {
       process.exit(1);

@@ -52,7 +52,7 @@ export interface AuditFlags {
   llm?: boolean;
   /**
    * Resolved LLM consent for this run (set by the CLI audit entry via
-   * resolveLlmConsent). Gates the connector auto-detect path: source is never
+   * resolveLlmConsentNonInteractive). Gates the connector auto-detect path: source is never
    * sent to an auto-detected `claude` CLI unless this is true (#115).
    */
   llmConsented?: boolean;
