@@ -50,6 +50,42 @@ describe("buildHandoffPayload — drift-class grouping", () => {
   });
 });
 
+describe("buildHandoffPayload — migration-scale sampling instruction", () => {
+  function makeGroupFindings(fileCount: number): Finding[] {
+    return Array.from({ length: fileCount }, (_, i) => ({
+      ruleId: "tokens/no-hardcoded-color",
+      axis: "tokens",
+      severity: "warning",
+      location: { file: `src/File${i}.tsx`, line: 1, column: 1 },
+      message: "Hardcoded color value: #3b82f6",
+      fixGroup: { key: "tokens/no-hardcoded-color::#3b82f6", from: "#3b82f6", to: "color.brand.primary" },
+    }));
+  }
+
+  it("appends the sampling block for a group at/above the default threshold (45 files)", () => {
+    const out = buildHandoffPayload(makeGroupFindings(45), { projectName: "acme", topN: 5, maxFilesPerRule: 3 });
+    expect(out).toContain("Migration-scale (45 files)");
+    expect(out).toContain("representative sample");
+    expect(out).toContain("sign off");
+    expect(out).toContain("lyse audit --scope uncommitted");
+  });
+
+  it("omits the block for a group below the default threshold (3 files)", () => {
+    const out = buildHandoffPayload(makeGroupFindings(3), { projectName: "acme", topN: 5, maxFilesPerRule: 3 });
+    expect(out).not.toContain("Migration-scale");
+    expect(out).not.toContain("representative sample");
+  });
+
+  it("honors a custom migrationScaleFileCount threshold", () => {
+    const findings = makeGroupFindings(6);
+    const below = buildHandoffPayload(findings, { projectName: "acme", topN: 5, maxFilesPerRule: 3, migrationScaleFileCount: 10 });
+    expect(below).not.toContain("Migration-scale");
+
+    const above = buildHandoffPayload(findings, { projectName: "acme", topN: 5, maxFilesPerRule: 3, migrationScaleFileCount: 5 });
+    expect(above).toContain("Migration-scale (6 files)");
+  });
+});
+
 describe("serializeTokenMap", () => {
   it("turns Maps into plain objects and tolerates null", () => {
     expect(serializeTokenMap(null)).toEqual({});

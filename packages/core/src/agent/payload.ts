@@ -1,5 +1,6 @@
 import type { Finding, TokenMap } from "../types.js";
 import { getRegisteredRuleMeta } from "../rules/_rule-module.js";
+import { groupFindings, MIGRATION_SCALE_FILE_COUNT_DEFAULT } from "../report/fix-groups.js";
 
 const SEVERITY_ORDER = { error: 0, warning: 1, info: 2 } as const;
 
@@ -7,6 +8,8 @@ export interface PayloadOptions {
   projectName: string;
   topN: number;
   maxFilesPerRule: number;
+  /** `.lyse.yaml` `advisory.migrationScaleFileCount` override; falls back to `MIGRATION_SCALE_FILE_COUNT_DEFAULT`. */
+  migrationScaleFileCount?: number;
 }
 
 export function buildHandoffPayload(findings: Finding[], opts: PayloadOptions): string {
@@ -24,11 +27,17 @@ export function buildHandoffPayload(findings: Finding[], opts: PayloadOptions): 
     return b[1].length - a[1].length;
   });
 
+  // `groupFindings` keys groups identically (`fixGroup.key ?? ruleId`), so the
+  // migration-scale flag it derives applies 1:1 to the prompt groups above —
+  // reuse it instead of recomputing file counts here.
+  const scaleThreshold = opts.migrationScaleFileCount ?? MIGRATION_SCALE_FILE_COUNT_DEFAULT;
+  const scaleByKey = new Map(groupFindings(findings, scaleThreshold).map((g) => [g.key, g]));
+
   const lines: string[] = [
     `Fix the top ${Math.min(opts.topN, groups.length)} design-system issues Lyse found in ${opts.projectName} on this pass — leave the rest for a follow-up.`,
     "",
   ];
-  groups.slice(0, opts.topN).forEach(([, group], i) => {
+  groups.slice(0, opts.topN).forEach(([key, group], i) => {
     const first = group[0]!;
     const ruleId = first.ruleId;
     const fg = first.fixGroup;
@@ -41,6 +50,12 @@ export function buildHandoffPayload(findings: Finding[], opts: PayloadOptions): 
     if (fg && !fg.to) lines.push(`   no single token matched ${fg.from} — pick one from tokens.json and apply it to every site`);
     else if (first.suggestion) lines.push(`   fix: ${first.suggestion}`);
     if (help) lines.push(`   recipe: ${help}  (or run \`lyse explain ${ruleId}\`)`);
+    const scale = scaleByKey.get(key);
+    if (scale?.migrationScale) {
+      lines.push(
+        `   Migration-scale (${scale.fileCount} files): fix a representative sample (~5 files), re-run \`lyse audit --scope uncommitted\`, confirm the recipe holds, then STOP and ask the maintainer to sign off before sweeping the rest.`,
+      );
+    }
     group.slice(0, opts.maxFilesPerRule).forEach((f) => lines.push(`   - ${f.location.file}:${f.location.line}`));
     const extra = group.length - opts.maxFilesPerRule;
     if (extra > 0) lines.push(`   - +${extra} more file${extra === 1 ? "" : "s"}`);
