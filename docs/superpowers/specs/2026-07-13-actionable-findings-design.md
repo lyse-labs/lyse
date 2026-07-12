@@ -17,8 +17,10 @@ cannot honestly reconstruct them:
   `"<ruleId>::<from>"`), else `ruleId`. One group = one coherent fix.
 - For each of the largest groups, recompute
   `scoreFromFindings(findings \ group, opportunitiesByAxis, sameOpts)`
-  and record `gain = projectedScore − finalScore` (0-floored; skip
-  groups with gain 0 unless nothing has positive gain).
+  and record `gain = projectedScore − finalScore` (0-floored). As
+  implemented, groups with gain 0 are simply excluded from `top`; when
+  no group has positive gain, `top` is empty and `meta.projection` is
+  omitted entirely (no zero-gain fallback entry).
 - Attach to the result:
   `meta.projection = { top: [{ key, ruleId, from?, to?, count, files, gain }... max 3], totalGainTop3 }`
   (keys sorted deterministic; ties broken by count desc then key asc).
