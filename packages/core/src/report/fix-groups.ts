@@ -1,4 +1,4 @@
-import type { AxisName, Finding, ProjectionEntry, ProjectionMeta } from "../types.js";
+import type { AxisName, Finding, ProjectionEntry, ProjectionMeta, Severity } from "../types.js";
 import { scoreFromFindings, type ScoreOptions } from "../scorer.js";
 
 export type { ProjectionEntry, ProjectionMeta } from "../types.js";
@@ -26,10 +26,15 @@ export interface FindingGroup {
   migrationScale: boolean;
 }
 
+/** Ranks severities for sorting: error < warning < info. */
+const SEVERITY_RANK: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
+
 /**
  * Groups findings by their fix — `fixGroup.key` when present, else `ruleId`.
- * Sort is deterministic: group size (findings.length) descending, then key
- * ascending as the tiebreaker.
+ * Sort is deterministic: group size (findings.length) descending, then
+ * severity ascending (error < warning < info — a group's severity is its
+ * `findings[0].severity`, uniform per group by construction), then key
+ * ascending as the final tiebreaker.
  */
 export function groupFindings(findings: Finding[], migrationScaleFileCount: number): FindingGroup[] {
   const byKey = new Map<string, FindingGroup>();
@@ -59,7 +64,12 @@ export function groupFindings(findings: Finding[], migrationScaleFileCount: numb
     group.migrationScale = files.size >= migrationScaleFileCount;
   }
 
-  groups.sort((a, b) => b.findings.length - a.findings.length || a.key.localeCompare(b.key));
+  groups.sort(
+    (a, b) =>
+      b.findings.length - a.findings.length ||
+      SEVERITY_RANK[a.findings[0]!.severity] - SEVERITY_RANK[b.findings[0]!.severity] ||
+      a.key.localeCompare(b.key),
+  );
   return groups;
 }
 

@@ -16,6 +16,8 @@ export interface TerminalOpts {
   findingsLimit?: number | null;
   /** Suppress contextual nags (static-only LLM banner, "run lyse init" hint) — set when rendering from inside `lyse init`. */
   suppressNags?: boolean;
+  /** Configured `advisory.migrationScaleFileCount` threshold (falls back to `MIGRATION_SCALE_FILE_COUNT_DEFAULT` when absent). */
+  migrationScaleFileCount?: number;
 }
 
 const ui = (opts: TerminalOpts): UiOpts => ({ color: opts.color, unicode: opts.unicode });

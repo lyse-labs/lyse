@@ -341,6 +341,21 @@ describe("renderTerminal (plain-text mode for snapshot stability)", () => {
     expect(migrationLines[0]).toContain("migration-scale (3 files) — sample before you sweep");
   });
 
+  it("uses opts.migrationScaleFileCount for groups not named in projection.top (custom threshold threaded from config)", async () => {
+    const threeFiles = Array.from({ length: 3 }, (_, i) => ({
+      ruleId: "tokens/custom-threshold" as const, axis: "tokens" as const, severity: "warning" as const,
+      location: { file: `src/T${i}.tsx`, line: i + 1, column: 1 }, message: "drift",
+    }));
+    const result = { ...sample, findings: threeFiles };
+    // No meta.projection — the group's migrationScale is computed by groupFindings
+    // itself, using opts.migrationScaleFileCount instead of the hardcoded default.
+    const flagged = await renderTerminal(result, { ...baseOpts, migrationScaleFileCount: 3 });
+    expect(flagged).toContain("migration-scale (3 files) — sample before you sweep");
+
+    const notFlagged = await renderTerminal(result, baseOpts);
+    expect(notFlagged).not.toContain("migration-scale");
+  });
+
   it("'N more groups' wording (not 'N more findings') when default mode overflows 5 groups", async () => {
     const longFindings = Array.from({ length: 8 }, (_, i) => ({
       ruleId: `tokens/rule-${String(i).padStart(2, "0")}` as const, axis: "tokens" as const, severity: "warning" as const,

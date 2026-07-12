@@ -119,4 +119,32 @@ describe("groupFindings", () => {
   it("returns an empty array for no findings", () => {
     expect(groupFindings([], MIGRATION_SCALE_FILE_COUNT_DEFAULT)).toEqual([]);
   });
+
+  it("ranks an error group above an alphabetically-earlier warning group on equal counts (severity tiebreak before key)", () => {
+    const findings: Finding[] = [
+      finding({
+        ruleId: "a/warn-rule", axis: "tokens", severity: "warning",
+        location: { file: "src/A1.tsx", line: 1, column: 1 },
+      }),
+      finding({
+        ruleId: "a/warn-rule", axis: "tokens", severity: "warning",
+        location: { file: "src/A2.tsx", line: 1, column: 1 },
+      }),
+      finding({
+        ruleId: "z/error-rule", axis: "tokens", severity: "error",
+        location: { file: "src/Z1.tsx", line: 1, column: 1 },
+      }),
+      finding({
+        ruleId: "z/error-rule", axis: "tokens", severity: "error",
+        location: { file: "src/Z2.tsx", line: 1, column: 1 },
+      }),
+    ];
+
+    const groups = groupFindings(findings, MIGRATION_SCALE_FILE_COUNT_DEFAULT);
+
+    // Both groups have count 2; key-only ordering would put "a/warn-rule" first.
+    // Severity-aware ordering (error < warning < info) must put the error
+    // group first despite its alphabetically-later key.
+    expect(groups.map((g) => g.key)).toEqual(["z/error-rule", "a/warn-rule"]);
+  });
 });

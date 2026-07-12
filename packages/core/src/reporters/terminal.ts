@@ -45,12 +45,15 @@ function findingLines(f: Finding, index: number, opts: TerminalOpts): string[] {
  * Ranks fix groups for the default-mode grouped view (design §2): groups
  * named in `projection.top` come first, in that order (a reader who saw the
  * card's "fix the top N" line finds the same groups at the top of the list);
- * the rest keep `groupFindings`'s own count-desc/key-asc order. Also adopts
- * the pipeline's `migrationScale` flag for named groups — it was computed
- * against the configured threshold, which the terminal has no access to.
+ * the rest keep `groupFindings`'s own count-desc/severity-asc/key-asc order,
+ * computed against `opts.migrationScaleFileCount` (falling back to the
+ * default) so a custom `advisory.migrationScaleFileCount` also governs
+ * groups not named in the projection. Named groups still adopt the
+ * pipeline's `migrationScale` flag directly — the pipeline flag is
+ * authoritative since it was computed alongside the rest of `projection.top`.
  */
-function rankedGroups(findings: Finding[], projection: ProjectionMeta | undefined): FindingGroup[] {
-  const groups = groupFindings(findings, MIGRATION_SCALE_FILE_COUNT_DEFAULT);
+function rankedGroups(findings: Finding[], projection: ProjectionMeta | undefined, opts: TerminalOpts): FindingGroup[] {
+  const groups = groupFindings(findings, opts.migrationScaleFileCount ?? MIGRATION_SCALE_FILE_COUNT_DEFAULT);
   if (!projection || projection.top.length === 0) return groups;
   const projectedByKey = new Map(projection.top.map((e) => [e.key, e]));
   const withOverrides = groups.map((g) => {
@@ -129,7 +132,7 @@ function flatTopFindings(findings: Finding[], opts: TerminalOpts): string[] {
 
 /** Default mode — fix-grouped view (design §2): up to 5 group blocks, ranked per `rankedGroups`. */
 function groupedTopFindings(findings: Finding[], opts: TerminalOpts, projection: ProjectionMeta | undefined): string[] {
-  const groups = rankedGroups(findings, projection);
+  const groups = rankedGroups(findings, projection, opts);
   const shown = groups.slice(0, 5);
   const lines: string[] = ["", bold("  Top findings", opts), ""];
   shown.forEach((g, i) => lines.push(...groupLines(g, i + 1, opts)));

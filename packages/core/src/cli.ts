@@ -68,6 +68,7 @@ function computeTerminalOpts(
   cwd: string,
   hasTokenRegistry: boolean,
   findingsLimit: number | null | undefined,
+  migrationScaleFileCount?: number,
 ): TerminalOpts {
   const mode: "default" | "quiet" | "verbose" = args.verbose ? "verbose" : args.quiet ? "quiet" : "default";
   const noColorEnv = typeof process.env["NO_COLOR"] === "string" && process.env["NO_COLOR"] !== "";
@@ -77,6 +78,7 @@ function computeTerminalOpts(
   return {
     mode, color, unicode, width, outDir: args.output, fileCount, durationMs, cwd, hasTokenRegistry,
     ...(findingsLimit !== undefined ? { findingsLimit } : {}),
+    ...(migrationScaleFileCount !== undefined ? { migrationScaleFileCount } : {}),
   };
 }
 
@@ -362,9 +364,9 @@ const auditCommand = defineCommand({
     const isMachineFormatForSpinner =
       formatForSpinner === "json" || formatForSpinner === "sarif" || formatForSpinner === "html" || formatForSpinner === "tsv";
 
-    let result: AuditResult, fileCount: number, hasTokenRegistry: boolean;
+    let result: AuditResult, fileCount: number, hasTokenRegistry: boolean, config: LyseConfig;
     try {
-      ({ result, fileCount, hasTokenRegistry } = await withSpinner<AuditOutcome>(
+      ({ result, fileCount, hasTokenRegistry, config } = await withSpinner<AuditOutcome>(
         {
           isTTY: isTTYForSpinner,
           quiet: isQuiet,
@@ -481,7 +483,10 @@ const auditCommand = defineCommand({
         if (format === "eslint") {
           return renderEslintStyleAudit(result, textFindingsLimit) + "\n";
         }
-        const opts = computeTerminalOpts(args, isTTY, fileCount, Date.now() - startTime, repoRoot, hasTokenRegistry, textFindingsLimit);
+        const opts = computeTerminalOpts(
+          args, isTTY, fileCount, Date.now() - startTime, repoRoot, hasTokenRegistry, textFindingsLimit,
+          config.advisory?.migrationScaleFileCount,
+        );
         if (format === "table") {
           return renderTable(result, opts) + "\n";
         }

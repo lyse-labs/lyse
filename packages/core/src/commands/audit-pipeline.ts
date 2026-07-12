@@ -598,8 +598,8 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
         runResult.findingsByAxis[ax]++;
       }
     }
-    // Re-sort by severity (error < warn < info)
-    const severityOrder: Record<string, number> = { error: 0, warn: 1, info: 2 };
+    // Re-sort by severity (error < warning < info)
+    const severityOrder: Record<string, number> = { error: 0, warning: 1, info: 2 };
     runResult.findings.sort(
       (a, b) => (severityOrder[a.severity] ?? 9) - (severityOrder[b.severity] ?? 9),
     );
