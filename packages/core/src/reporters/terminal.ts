@@ -11,9 +11,7 @@ import { brandHeader } from "../ui/banner.js";
 
 export type { TerminalOpts } from "./terminal-format.js";
 
-const AXES_ORDER = ["tokens", "a11y", "components", "stories"] as const;
-
-const AXIS_NAME_WIDTH = 12;
+const AXIS_NAME_WIDTH = 14;
 const AXIS_SCORE_WIDTH = 5;
 const RULE_ID_WIDTH = 34;
 const FINDING_NUM_WIDTH = 2;
@@ -98,9 +96,10 @@ function nextSteps(result: AuditResult, opts: TerminalOpts): string[] {
   const components = axisBy.get("components");
   const stories = axisBy.get("stories");
   const a11y = axisBy.get("a11y");
+  const aiSurface = axisBy.get("ai-surface");
 
   if (tokens !== undefined && tokens.score !== "N/A" && tokens.score < 70) {
-    tips.push(`Run \`lyse agents-md > AGENTS.md\` and commit it  ${dim("·", opts)}  give your AI agents your token namespaces`);
+    tips.push(`Run \`lyse handoff\`  ${dim("·", opts)}  hand these findings to your coding agent to fix`);
   }
   if (components !== undefined && components.score !== "N/A" && components.score < 70) {
     tips.push(`Audit native <button>/<input>/<a> usage in your highest-traffic files`);
@@ -111,6 +110,9 @@ function nextSteps(result: AuditResult, opts: TerminalOpts): string[] {
   if (stories !== undefined && stories.score !== "N/A" && stories.score < 70) {
     const jsonPath = opts.outDir ? `${opts.outDir}/lyse.json` : "lyse.json (use --output <dir>)";
     tips.push(`Add stories for orphan DS components listed in ${jsonPath}`);
+  }
+  if (aiSurface !== undefined && aiSurface.score !== "N/A" && aiSurface.score < 70) {
+    tips.push(`Run \`lyse init --scaffold\`  ${dim("·", opts)}  generate the AI-readiness files your DS is missing`);
   }
   if (tips.length === 0) return [];
   const arrow = teal("->", opts);
@@ -215,9 +217,11 @@ export async function renderTerminal(result: AuditResult, opts: TerminalOpts): P
   }
 
   lines.push("", "");
-  for (const axisName of AXES_ORDER) {
-    const a = result.axes.find((ax) => ax.axis === axisName);
-    if (a !== undefined) lines.push(axisLine(a, opts));
+  // Every scored axis renders — the view must match the score's composition
+  // (the scorer emits axes in canonical order; ai-surface / ai-governance
+  // were previously invisible here while still moving the Health Score).
+  for (const a of result.axes) {
+    lines.push(axisLine(a, opts));
   }
   if (opts.mode !== "quiet") {
     lines.push(...topFindings(result.findings, opts));
