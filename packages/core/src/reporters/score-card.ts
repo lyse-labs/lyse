@@ -76,7 +76,14 @@ export function renderScoreCard(
 
   const gaugeCells = Math.min(40, inner - 2 * EDGE);
   const barCells = Math.min(20, inner - EDGE - 24);
-  const projRow = projectionRow(result, opts);
+  // Same fits()-style guard as the score row, but budgeted against wrap()'s
+  // actual left inset (EDGE-1) rather than the doubly-conservative EDGE+EDGE
+  // margin `fits()` reserves for the score row — the projection line has no
+  // trailing content (no delta suffix) competing for the right margin, so it
+  // only needs to not overflow the border, not leave room for anything else.
+  const rawProjRow = projectionRow(result, opts);
+  const projRowFits = (s: string) => inner - (EDGE - 1) - visibleWidth(s) >= 0;
+  const projRow = rawProjRow !== undefined && projRowFits(rawProjRow) ? rawProjRow : undefined;
 
   return [
     `${b.tl}${b.h.repeat(inner)}${b.tr}`,
