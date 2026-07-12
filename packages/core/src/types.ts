@@ -331,6 +331,40 @@ export interface Layer4Meta {
   filteredCount?: number;
 }
 
+/**
+ * One ranked, actionable fix-group entry in `meta.projection.top` — how much
+ * Health Score is on the table if this group is fixed. Produced by
+ * `report/fix-groups.ts` (`computeProjection`); consumed by the terminal
+ * reporter and the handoff payload.
+ */
+export interface ProjectionEntry {
+  /** `fixGroup.key` when present, else `ruleId` — same key as `FindingGroup.key`. */
+  key: string;
+  ruleId: string;
+  from?: string;
+  to?: string;
+  /** Findings in this group. */
+  count: number;
+  /** Distinct files touched by this group. */
+  files: number;
+  /** Health Score points gained if this group's findings were fixed (0-floored). */
+  gain: number;
+  /** True when `files` meets or exceeds the migration-scale threshold. */
+  migrationScale: boolean;
+}
+
+/**
+ * Deterministic score-projection summary attached to `meta.projection`.
+ * Presentation-only math on top of the existing scorer — never changes the
+ * Health Score itself.
+ */
+export interface ProjectionMeta {
+  /** Up to `cap` (default 3) highest-gain fix groups, sorted gain desc, count desc, key asc. */
+  top: ProjectionEntry[];
+  /** Score gain from fixing every group in `top` at once (not the sum of individual gains). */
+  totalGainTop3: number;
+}
+
 export interface CoverageMeta {
   /** Count of source files actually walked by the scanner (NOT a generic find of the repo). */
   scannedFiles: number;
@@ -387,6 +421,8 @@ export interface AuditResult {
     coverage?: CoverageMeta;
     /** Render-layer metadata; present only when `lyse audit --render` ran. */
     render?: import("./render/types.js").RenderMeta;
+    /** Deterministic score projection for the largest fix groups (Sprint 1 actionable findings). */
+    projection?: ProjectionMeta;
   };
 }
 
