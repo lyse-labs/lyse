@@ -149,14 +149,14 @@ describe("renderTerminal (plain-text mode for snapshot stability)", () => {
     expect(out).not.toContain("more findings");
   });
 
-  it("default mode truncates to 5 findings + shows N more", async () => {
+  it("default mode truncates to 5 groups + shows N more groups (distinct rules, no fixGroup -> one group per rule)", async () => {
     const longFindings = Array.from({ length: 12 }, (_, i) => ({
-      ruleId: "tokens/no-hardcoded-color" as const, axis: "tokens" as const, severity: "warning" as const,
+      ruleId: `tokens/rule-${String(i).padStart(2, "0")}` as const, axis: "tokens" as const, severity: "warning" as const,
       location: { file: `src/F${i}.tsx`, line: i + 1, column: 1 }, message: `Hardcoded #${i}`,
     }));
     const result = { ...sample, findings: longFindings };
     const out = await renderTerminal(result, baseOpts);
-    expect(out).toContain("7 more findings");
+    expect(out).toContain("7 more groups");
   });
 
   it("strips ANSI when color=false", async () => {
@@ -272,6 +272,84 @@ describe("renderTerminal (plain-text mode for snapshot stability)", () => {
         // ignore cleanup errors
       }
     }
+  });
+
+  it("default mode groups same-fixGroup findings into one block with ×N and the one-fix-clears line", async () => {
+    const grouped = Array.from({ length: 12 }, (_, i) => ({
+      ruleId: "tokens/no-hardcoded-color" as const, axis: "tokens" as const, severity: "warning" as const,
+      location: { file: `src/F${i}.tsx`, line: i + 1, column: 1 }, message: "Hardcoded color value",
+      fixGroup: { key: "tokens/no-hardcoded-color::#2563eb", from: "#2563eb", to: "color.brand.primary" },
+    }));
+    const result = { ...sample, findings: grouped };
+    const out = await renderTerminal(result, baseOpts);
+    expect(out).toContain("×12");
+    expect(out).toContain("one fix clears all 12 findings.");
+    expect(out).toContain("and 11 more sites");
+    expect(out).toContain("replace with color.brand.primary");
+    // one block, not 12 — no leftover per-finding rows beyond the representative one
+    expect(out).not.toContain("F1.tsx");
+  });
+
+  it("verbose mode stays flat even when findings share a fixGroup", async () => {
+    const grouped = Array.from({ length: 3 }, (_, i) => ({
+      ruleId: "tokens/no-hardcoded-color" as const, axis: "tokens" as const, severity: "warning" as const,
+      location: { file: `src/F${i}.tsx`, line: i + 1, column: 1 }, message: "Hardcoded color value",
+      fixGroup: { key: "tokens/no-hardcoded-color::#2563eb", from: "#2563eb", to: "color.brand.primary" },
+    }));
+    const result = { ...sample, findings: grouped };
+    const out = await renderTerminal(result, { ...baseOpts, mode: "verbose" });
+    for (let i = 0; i < 3; i++) expect(out).toContain(`F${i}.tsx`);
+    expect(out).not.toContain("×3");
+    expect(out).not.toContain("one fix clears all");
+  });
+
+  it("explicit --limit stays flat even when findings share a fixGroup", async () => {
+    const grouped = Array.from({ length: 3 }, (_, i) => ({
+      ruleId: "tokens/no-hardcoded-color" as const, axis: "tokens" as const, severity: "warning" as const,
+      location: { file: `src/F${i}.tsx`, line: i + 1, column: 1 }, message: "Hardcoded color value",
+      fixGroup: { key: "tokens/no-hardcoded-color::#2563eb", from: "#2563eb", to: "color.brand.primary" },
+    }));
+    const result = { ...sample, findings: grouped };
+    const out = await renderTerminal(result, { ...baseOpts, findingsLimit: 2 });
+    for (let i = 0; i < 2; i++) expect(out).toContain(`F${i}.tsx`);
+    expect(out).not.toContain("×3");
+    expect(out).not.toContain("one fix clears all");
+  });
+
+  it("migration-scale suffix appears only for a group flagged migrationScale via the projection", async () => {
+    const flagged = Array.from({ length: 3 }, (_, i) => ({
+      ruleId: "tokens/rule-flagged" as const, axis: "tokens" as const, severity: "warning" as const,
+      location: { file: `src/Flag${i}.tsx`, line: i + 1, column: 1 }, message: "drift",
+    }));
+    const notFlagged = [{
+      ruleId: "a11y/essentials" as const, axis: "a11y" as const, severity: "warning" as const,
+      location: { file: "src/Other.tsx", line: 1, column: 1 }, message: "drift",
+    }];
+    const result: AuditResult = {
+      ...sample,
+      findings: [...flagged, ...notFlagged],
+      meta: {
+        projection: {
+          top: [{ key: "tokens/rule-flagged", ruleId: "tokens/rule-flagged", count: 3, files: 3, gain: 5, migrationScale: true }],
+          totalGainTop3: 5,
+        },
+      },
+    } as AuditResult;
+    const out = await renderTerminal(result, baseOpts);
+    const migrationLines = out.split("\n").filter((l) => l.includes("migration-scale"));
+    expect(migrationLines).toHaveLength(1);
+    expect(migrationLines[0]).toContain("migration-scale (3 files) — sample before you sweep");
+  });
+
+  it("'N more groups' wording (not 'N more findings') when default mode overflows 5 groups", async () => {
+    const longFindings = Array.from({ length: 8 }, (_, i) => ({
+      ruleId: `tokens/rule-${String(i).padStart(2, "0")}` as const, axis: "tokens" as const, severity: "warning" as const,
+      location: { file: `src/F${i}.tsx`, line: i + 1, column: 1 }, message: `Hardcoded #${i}`,
+    }));
+    const result = { ...sample, findings: longFindings };
+    const out = await renderTerminal(result, baseOpts);
+    expect(out).toContain("3 more groups");
+    expect(out).not.toContain("more findings");
   });
 
   it("prints a 'Scanned: N files in Xs.' footer line when meta.coverage is present", async () => {

@@ -1,13 +1,14 @@
-import type { AuditResult, Finding } from "../types.js";
+import type { AuditResult, Finding, ProjectionMeta } from "../types.js";
 import { formatCoverageFooter } from "./coverage-footer.js";
 import { readRecent, computeDelta, type AuditEvent } from "../history/ndjson-store.js";
 import {
-  teal, severityColor, dim, bold, link,
+  teal, severityColor, dim, bold, link, warnColor,
   visiblePad, truncateStart,
   type TerminalOpts,
 } from "./terminal-format.js";
 import { brandHeader } from "../ui/banner.js";
 import { renderScoreCard } from "./score-card.js";
+import { groupFindings, MIGRATION_SCALE_FILE_COUNT_DEFAULT, type FindingGroup } from "../report/fix-groups.js";
 
 export type { TerminalOpts } from "./terminal-format.js";
 
@@ -40,8 +41,69 @@ function findingLines(f: Finding, index: number, opts: TerminalOpts): string[] {
   ];
 }
 
-function topFindings(findings: Finding[], opts: TerminalOpts): string[] {
-  if (findings.length === 0) return [];
+/**
+ * Ranks fix groups for the default-mode grouped view (design §2): groups
+ * named in `projection.top` come first, in that order (a reader who saw the
+ * card's "fix the top N" line finds the same groups at the top of the list);
+ * the rest keep `groupFindings`'s own count-desc/key-asc order. Also adopts
+ * the pipeline's `migrationScale` flag for named groups — it was computed
+ * against the configured threshold, which the terminal has no access to.
+ */
+function rankedGroups(findings: Finding[], projection: ProjectionMeta | undefined): FindingGroup[] {
+  const groups = groupFindings(findings, MIGRATION_SCALE_FILE_COUNT_DEFAULT);
+  if (!projection || projection.top.length === 0) return groups;
+  const projectedByKey = new Map(projection.top.map((e) => [e.key, e]));
+  const withOverrides = groups.map((g) => {
+    const entry = projectedByKey.get(g.key);
+    return entry && entry.migrationScale !== g.migrationScale ? { ...g, migrationScale: entry.migrationScale } : g;
+  });
+  const orderByKey = new Map(projection.top.map((e, i) => [e.key, i]));
+  return [...withOverrides].sort((a, b) => {
+    const ai = orderByKey.get(a.key);
+    const bi = orderByKey.get(b.key);
+    if (ai !== undefined && bi !== undefined) return ai - bi;
+    if (ai !== undefined) return -1;
+    if (bi !== undefined) return 1;
+    return 0; // stable sort — preserves groupFindings' own count-desc/key-asc order
+  });
+}
+
+function groupLines(group: FindingGroup, index: number, opts: TerminalOpts): string[] {
+  const rep = group.findings[0]!;
+  const count = group.findings.length;
+  const num = visiblePad(dim(String(index), opts), FINDING_NUM_WIDTH, "left");
+  const ruleColored = severityColor(rep.severity, opts)(group.ruleId);
+  const ruleLinked = link(ruleColored, `https://github.com/lyse-labs/lyse/blob/main/docs/rules/${group.ruleId}`, opts);
+  const countTag = count > 1 ? ` ${dim(`×${count}`, opts)}` : "";
+  const rulePadded = visiblePad(`${ruleLinked}${countTag}`, RULE_ID_WIDTH);
+
+  const locMaxWidth = Math.max(20, opts.width - 42);
+  const locText = `${rep.location.file}:${rep.location.line}`;
+  const locTruncated = truncateStart(locText, locMaxWidth);
+  const locLinked = link(locTruncated, `file://${rep.location.file}:${rep.location.line}`, opts);
+  const sitesSuffix = count > 1 ? `  ${dim(`and ${count - 1} more sites`, opts)}` : "";
+
+  const arrow = teal("->", opts);
+  const detail = rep.suggestion ? `${rep.message}  ${arrow}  ${rep.suggestion}` : rep.message;
+
+  const lines = [
+    `  ${num}  ${rulePadded}  ${dim(locLinked, opts)}${sitesSuffix}`,
+    `      ${dim(detail, opts)}`,
+  ];
+  if (group.to) {
+    const toArrow = opts.unicode ? "→" : "->";
+    lines.push(`      ${teal(toArrow, opts)} ${dim(`replace with ${group.to}  ·  one fix clears all ${count} findings.`, opts)}`);
+  }
+  if (group.migrationScale) {
+    const warnGlyph = opts.unicode ? "⚠" : "!";
+    lines.push(`      ${warnColor(`${warnGlyph} migration-scale (${group.fileCount} files) — sample before you sweep`, opts)}`);
+  }
+  lines.push("");
+  return lines;
+}
+
+/** `--verbose` / explicit `--limit` — today's flat per-finding list, byte-identical. */
+function flatTopFindings(findings: Finding[], opts: TerminalOpts): string[] {
   const explicit = opts.findingsLimit;
   const limit =
     explicit === null
@@ -63,6 +125,33 @@ function topFindings(findings: Finding[], opts: TerminalOpts): string[] {
     lines.push("");
   }
   return lines;
+}
+
+/** Default mode — fix-grouped view (design §2): up to 5 group blocks, ranked per `rankedGroups`. */
+function groupedTopFindings(findings: Finding[], opts: TerminalOpts, projection: ProjectionMeta | undefined): string[] {
+  const groups = rankedGroups(findings, projection);
+  const shown = groups.slice(0, 5);
+  const lines: string[] = ["", bold("  Top findings", opts), ""];
+  shown.forEach((g, i) => lines.push(...groupLines(g, i + 1, opts)));
+  const remaining = groups.length - shown.length;
+  if (remaining > 0) {
+    const moreMsg = opts.outDir
+      ? `${remaining} more groups  ·  full list in ${opts.outDir}/lyse.json`
+      : `${remaining} more groups  ·  use --output <dir> for the full JSON report`;
+    lines.push(`     ${dim(moreMsg, opts)}`);
+    lines.push("");
+  }
+  return lines;
+}
+
+function topFindings(findings: Finding[], opts: TerminalOpts, projection: ProjectionMeta | undefined): string[] {
+  if (findings.length === 0) return [];
+  // Verbose and an explicit --limit are deep-dive / machine-ish reads — keep
+  // the flat per-finding list. Default mode gets the new grouped-by-fix view.
+  if (opts.findingsLimit !== undefined || opts.mode === "verbose") {
+    return flatTopFindings(findings, opts);
+  }
+  return groupedTopFindings(findings, opts, projection);
 }
 
 function nextSteps(result: AuditResult, opts: TerminalOpts): string[] {
@@ -193,7 +282,7 @@ export async function renderTerminal(result: AuditResult, opts: TerminalOpts): P
   }
 
   if (opts.mode !== "quiet") {
-    lines.push(...topFindings(result.findings, opts));
+    lines.push(...topFindings(result.findings, opts, result.meta?.projection));
     lines.push(...nextSteps(result, opts));
   }
   if (result.meta?.coverage) {
