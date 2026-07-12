@@ -290,6 +290,19 @@ describe("renderTerminal (plain-text mode for snapshot stability)", () => {
     expect(out).not.toContain("F1.tsx");
   });
 
+  it("singleton fixGroup (count 1) omits the 'one fix clears all N findings' tail", async () => {
+    const singleton = [{
+      ruleId: "tokens/no-hardcoded-color" as const, axis: "tokens" as const, severity: "warning" as const,
+      location: { file: "src/F0.tsx", line: 1, column: 1 }, message: "Hardcoded color value",
+      fixGroup: { key: "tokens/no-hardcoded-color::#2563eb", from: "#2563eb", to: "color.brand.primary" },
+    }];
+    const result = { ...sample, findings: singleton };
+    const out = await renderTerminal(result, baseOpts);
+    expect(out).toContain("replace with color.brand.primary");
+    expect(out).not.toContain("one fix clears all");
+    expect(out).not.toContain("×1");
+  });
+
   it("verbose mode stays flat even when findings share a fixGroup", async () => {
     const grouped = Array.from({ length: 3 }, (_, i) => ({
       ruleId: "tokens/no-hardcoded-color" as const, axis: "tokens" as const, severity: "warning" as const,

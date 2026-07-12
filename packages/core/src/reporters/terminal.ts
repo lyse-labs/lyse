@@ -15,6 +15,11 @@ export type { TerminalOpts } from "./terminal-format.js";
 const RULE_ID_WIDTH = 34;
 const FINDING_NUM_WIDTH = 2;
 
+/** Rule doc files are dash-named (e.g. `tokens/no-hardcoded-color` -> `docs/rules/tokens-no-hardcoded-color.md`). */
+function ruleDocsUrl(ruleId: string): string {
+  return `https://github.com/lyse-labs/lyse/blob/main/docs/rules/${ruleId.replace(/\//g, "-")}.md`;
+}
+
 function header(result: AuditResult, opts: TerminalOpts): string {
   const ui = { color: opts.color, unicode: opts.unicode };
   const subtitle = opts.fileCount > 0 ? `${opts.fileCount} files · ${(opts.durationMs / 1000).toFixed(1)}s` : "";
@@ -24,7 +29,7 @@ function header(result: AuditResult, opts: TerminalOpts): string {
 function findingLines(f: Finding, index: number, opts: TerminalOpts): string[] {
   const num = visiblePad(dim(String(index), opts), FINDING_NUM_WIDTH, "left");
   const ruleColored = severityColor(f.severity, opts)(f.ruleId);
-  const ruleLinked = link(ruleColored, `https://github.com/lyse-labs/lyse/blob/main/docs/rules/${f.ruleId}`, opts);
+  const ruleLinked = link(ruleColored, ruleDocsUrl(f.ruleId), opts);
   const rulePadded = visiblePad(ruleLinked, RULE_ID_WIDTH);
   // Width-aware truncation of file:line. Available width = total width - the prefix columns.
   // Prefix = 2 spaces + num (2) + 2 spaces + rule (34) + 2 spaces = ~42 chars.
@@ -76,7 +81,7 @@ function groupLines(group: FindingGroup, index: number, opts: TerminalOpts): str
   const count = group.findings.length;
   const num = visiblePad(dim(String(index), opts), FINDING_NUM_WIDTH, "left");
   const ruleColored = severityColor(rep.severity, opts)(group.ruleId);
-  const ruleLinked = link(ruleColored, `https://github.com/lyse-labs/lyse/blob/main/docs/rules/${group.ruleId}`, opts);
+  const ruleLinked = link(ruleColored, ruleDocsUrl(group.ruleId), opts);
   const countTag = count > 1 ? ` ${dim(`×${count}`, opts)}` : "";
   const rulePadded = visiblePad(`${ruleLinked}${countTag}`, RULE_ID_WIDTH);
 
@@ -95,7 +100,8 @@ function groupLines(group: FindingGroup, index: number, opts: TerminalOpts): str
   ];
   if (group.to) {
     const toArrow = opts.unicode ? "→" : "->";
-    lines.push(`      ${teal(toArrow, opts)} ${dim(`replace with ${group.to}  ·  one fix clears all ${count} findings.`, opts)}`);
+    const toText = count > 1 ? `replace with ${group.to}  ·  one fix clears all ${count} findings.` : `replace with ${group.to}`;
+    lines.push(`      ${teal(toArrow, opts)} ${dim(toText, opts)}`);
   }
   if (group.migrationScale) {
     const warnGlyph = opts.unicode ? "⚠" : "!";
