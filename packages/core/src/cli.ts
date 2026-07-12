@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import { defineCommand, renderUsage, runCommand, runMain } from "citty";
-import prompts from "prompts";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { access } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -42,7 +41,6 @@ import { appendAuditEvent, appendCommandInvokedEvent } from "./history/ndjson-st
 import { ensureGitignoreEntry } from "./util/gitignore.js";
 import { withSpinner } from "./util/with-spinner.js";
 import { showActionMenu } from "./menu/action-menu.js";
-import { runRepl, withExitGuard, type ReplActionId, type ReplContext } from "./menu/repl.js";
 import { buildClassifyContext, populateConfidence } from "./codemods/safety.js";
 import { isInteractive, confirm } from "./menu/prompts.js";
 import { detectFromFilesystem } from "./detection/from-filesystem.js";
@@ -1075,60 +1073,6 @@ const benchPackCommand = defineCommand({
   },
 });
 
-// ---------------------------------------------------------------------------
-// Root-level REPL dispatch — when `lyse` is invoked without a subcommand on a
-// TTY, an interactive menu lets the user pick an action (audit, handoff, mcp-setup,
-// explain, bench-pack, telemetry) and loops back to itself after each run. On
-// non-TTY (CI, pipe) or when `--no-menu` / `LYSE_NO_MENU=1` is set, the menu is
-// skipped and the standard help text is printed instead.
-// ---------------------------------------------------------------------------
-
-async function dispatchReplAction(action: ReplActionId, ctx: ReplContext): Promise<void> {
-  switch (action) {
-    case "audit":
-      await withExitGuard(() => runCommand(auditCommand, { rawArgs: [ctx.cwd] }));
-      return;
-    case "handoff":
-      await withExitGuard(() => runCommand(handoffCommand, { rawArgs: [ctx.cwd] }));
-      return;
-    case "mcp-setup":
-      await withExitGuard(() => runCommand(mcpCommand, { rawArgs: ["setup", ctx.cwd] }));
-      return;
-    case "explain": {
-      const r = await prompts({
-        type: "text",
-        name: "v",
-        message: "Rule ID (e.g. tokens/no-hardcoded-color, blank to cancel):",
-      });
-      const ruleId = typeof r.v === "string" ? r.v.trim() : "";
-      if (!ruleId) return;
-      await withExitGuard(() => runCommand(explainCommand, { rawArgs: [ruleId] }));
-      return;
-    }
-    case "bench-pack":
-      await withExitGuard(() => runCommand(benchPackCommand, { rawArgs: [ctx.cwd] }));
-      return;
-    case "telemetry": {
-      const r = await prompts({
-        type: "select",
-        name: "v",
-        message: "Telemetry:",
-        choices: [
-          { title: "Status — show current consent", value: "status" },
-          { title: "On — opt in to anonymous telemetry", value: "on" },
-          { title: "Off — opt out", value: "off" },
-          { title: "Back", value: "back" },
-        ],
-      });
-      if (!r.v || r.v === "back") return;
-      await withExitGuard(() => runCommand(telemetryCommand, { rawArgs: [r.v as string] }));
-      return;
-    }
-    case "exit":
-      return;
-  }
-}
-
 const main = defineCommand({
   meta: { name: "lyse", version: VERSION, description: "Audit your design system" },
   args: {
@@ -1136,7 +1080,6 @@ const main = defineCommand({
     "no-prompt": { type: "boolean", description: "Refuse prompts; error on missing input" },
     "no-color": { type: "boolean", description: "Disable ANSI color output" },
     quiet: { type: "boolean", description: "Suppress informational output" },
-    "no-menu": { type: "boolean", description: "Skip the interactive menu (print help instead)" },
   },
   subCommands: { init: initCommand, audit: auditCommand, fix: fixCommand, add: addCommand, install: installCommand, share: shareCommand, badge: badgeCommand, agents: agentsCommand, "agents-md": agentsMdCommand, handoff: handoffCommand, "bench-pack": benchPackCommand, version: versionCommand, explain: explainCommand, mcp: mcpCommand, feedback: feedbackCommand, telemetry: telemetryCommand },
   async run({ args, cmd, rawArgs }) {
@@ -1144,26 +1087,33 @@ const main = defineCommand({
 
     // citty calls parent.run() AFTER the matched subcommand finishes — so
     // detect when a subcommand was invoked (first non-flag in rawArgs) and
-    // bow out cleanly. Otherwise our help / REPL would print AFTER the
-    // subcommand's stdout (breaking audit's JSON / SARIF / mcp-serve output).
+    // bow out cleanly. Otherwise our help / bare-audit delegation would print
+    // AFTER the subcommand's stdout (breaking audit's JSON / SARIF / mcp-serve
+    // output).
     const subCommands = cmd.subCommands as Record<string, unknown> | undefined;
     if (subCommands) {
       const firstPositional = rawArgs.find((a) => !a.startsWith("-"));
       if (firstPositional && firstPositional in subCommands) return;
     }
 
-    const noMenu = args["no-menu"] === true || process.env.LYSE_NO_MENU === "1";
-    if (noMenu || !isInteractive()) {
+    if (!isInteractive()) {
       // Use renderUsage + process.stdout.write rather than citty's showUsage
       // because the latter routes through consola, which silently drops output
       // when CI=true is set in the env (regression-proofs CI/test environments).
       process.stdout.write((await renderUsage(cmd)) + "\n");
       return;
     }
-    await runRepl(
-      { cwd: process.cwd(), quiet: args.quiet === true, version: VERSION },
-      dispatchReplAction,
-    );
+
+    // Bare `lyse` on a TTY runs the audit of the current directory, exactly
+    // as `lyse audit` (react-doctor trajectory: the first command IS the
+    // product). The standalone REPL menu is retired — the post-audit action
+    // menu (shown by auditCommand itself) owns interactive follow-ups.
+    const forwarded: string[] = [];
+    if (args.yes === true) forwarded.push("--yes");
+    if (args["no-prompt"] === true) forwarded.push("--no-prompt");
+    if (args.quiet === true) forwarded.push("--quiet");
+    if (args["no-color"] === true) forwarded.push("--no-color");
+    await runCommand(auditCommand, { rawArgs: forwarded });
   },
 });
 
