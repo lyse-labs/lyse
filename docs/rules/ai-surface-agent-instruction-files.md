@@ -121,6 +121,6 @@ excludePaths:
 ## See also
 
 - [Cursor rules documentation](https://cursor.com/docs/context/rules)
-- [Claude skills documentation](https://docs.claude.com/en/docs/agents-and-tools/skills)
+- [Claude skills documentation](https://code.claude.com/docs/en/skills)
 - [`ai-surface/agents-md-quality`](./ai-surface-agents-md-quality.md) — sibling rule covering `AGENTS.md` quality.
 - [Health Score](../guide/health-score.md) — how rules combine into the final score.
