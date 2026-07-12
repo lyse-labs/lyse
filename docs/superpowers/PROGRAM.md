@@ -10,7 +10,7 @@ through it. Supersedes nothing; sequences everything.
 
 ---
 
-## 1. Thesis (the YC-grade version)
+## 1. Thesis
 
 **One-liner:** Lyse is the health score for design systems. AI agents
 write most UI code now, and they break design systems by default —
@@ -64,7 +64,11 @@ audience's job (leaderboard + score card + verified badges):
   wild.
 - **T+12 weeks:** 2k stars, 1.5k weekly downloads, 25+ repos running the
   GitHub Action, 3–5 design-system teams in structured design-partner
-  conversations, YC application submitted with live traction numbers.
+  conversations.
+
+(The ambition bar throughout is "best-in-category, react-doctor-caliber
+execution" — the numbers are funnel checkpoints, not fundraising
+artifacts.)
 
 These are checkpoints, not vanity: each maps to a funnel stage (discover
 → run once → install in CI → depend on it → pay for fleet view).
@@ -189,17 +193,13 @@ plans on a cold repo for ≥6 agent clients.
 Acceptance: launch-day kit complete and rehearsed; leaderboard live with
 70 entries; badge → share page → npx funnel measured end-to-end.
 
-### Sprint 5 — Enterprise wedge + YC pack
+### Sprint 5 — Enterprise wedge
 
 1. **Fleet view spec** (brainstormed properly): multi-repo drift over
    time on the Worker — the artifact a design-system lead shows their VP.
    Spec + design partner interviews before code.
 2. Verified-badge adoption push with the first external teams.
-3. **YC application pack**: one-liner, traction table (live numbers from
-   Sprint 4), demo video, "why now" narrative, founder story, competitive
-   table (react-doctor validates the category; we own the design-system
-   axis they structurally can't cover without rebuilding their engine).
-4. Pricing skeleton on COMMERCIAL.md's existing dual-license frame.
+3. Pricing skeleton on COMMERCIAL.md's existing dual-license frame.
 
 ### Sprint 6 — The editor frontier (start of the next arc)
 
