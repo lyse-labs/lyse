@@ -93,6 +93,37 @@ describe("renderTerminal (plain-text mode for snapshot stability)", () => {
     expect(out).not.toContain("Health Score ·");
   });
 
+  it("renders every scored axis — ai-surface and ai-governance included (display parity with the score)", async () => {
+    const six: AuditResult = {
+      ...sample,
+      axes: [
+        ...sample.axes,
+        { axis: "ai-surface", score: 55, findings: 3, opportunities: 8 },
+        { axis: "ai-governance", score: "N/A", findings: 0, opportunities: 0 },
+      ],
+    };
+    const out = await renderTerminal(six, baseOpts);
+    expect(out).toContain("ai-surface");
+    expect(out).toContain("ai-governance");
+    const axisSection = out.split("Top findings")[0]!;
+    expect(axisSection).toContain("55");
+  });
+
+  it("suggests `lyse init --scaffold` when ai-surface scores below 70", async () => {
+    const six: AuditResult = {
+      ...sample,
+      axes: [...sample.axes, { axis: "ai-surface", score: 40, findings: 6, opportunities: 10 }],
+    };
+    const out = await renderTerminal(six, baseOpts);
+    expect(out).toContain("lyse init --scaffold");
+  });
+
+  it("tokens tip points at `lyse handoff`, not a deprecated command", async () => {
+    const out = await renderTerminal(sample, baseOpts);
+    expect(out).toContain("lyse handoff");
+    expect(out).not.toContain("agents-md");
+  });
+
   it("quiet mode omits findings list and Next steps", async () => {
     const out = await renderTerminal(sample, { ...baseOpts, mode: "quiet" });
     expect(out).not.toContain("Top findings");

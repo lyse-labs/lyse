@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The default terminal view shows every scored axis.** `ai-surface` and `ai-governance` moved the Health Score while being invisible in the default report (4 of 6 axes rendered). The view now derives from the scorer's axis list — display-only, no score change. The "Next steps" tokens tip now points at `lyse handoff` instead of the deprecated `lyse agents-md`, and a weak `ai-surface` axis suggests `lyse init --scaffold`.
 - **No prompt before the first score.** `lyse audit` used to ask two consent questions (telemetry, then the LLM precision filter) before running anything on a first-run TTY. The telemetry prompt now appears after the report is rendered (max two lifetime prompts unchanged; per ADR 0012 the run that asks still never emits — guaranteed by construction, since an undecided run resolves to off before the audit). The LLM prompt is gone from the default audit path: opt in via `--llm` (single run) or `LYSE_LLM=1` (persisted); previously persisted decisions and all env overrides keep working, and CI/non-TTY behavior is byte-identical.
 
 ### Fixed

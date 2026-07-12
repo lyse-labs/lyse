@@ -10,10 +10,10 @@ exports[`renderTerminal (plain-text mode for snapshot stability) > matches snaps
   No token registry detected — run \`lyse init\` for a calibrated score.
 
 
-  x tokens           31  ######--------------
-  ! a11y             62  ############--------
-  x components       38  ########------------
-  ! stories          47  #########-----------
+  x tokens             31  ######--------------
+  ! a11y               62  ############--------
+  x components         38  ########------------
+  ! stories            47  #########-----------
 
   Top findings
 
@@ -29,7 +29,7 @@ exports[`renderTerminal (plain-text mode for snapshot stability) > matches snaps
 
   Next steps
 
-   ->  Run \`lyse agents-md > AGENTS.md\` and commit it  ·  give your AI agents your token namespaces
+   ->  Run \`lyse handoff\`  ·  hand these findings to your coding agent to fix
    ->  Audit native <button>/<input>/<a> usage in your highest-traffic files
    ->  Run \`eslint --fix\` with eslint-plugin-jsx-a11y to auto-fix trivial a11y warnings
    ->  Add stories for orphan DS components listed in report/lyse.json
