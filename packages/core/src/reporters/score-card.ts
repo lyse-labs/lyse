@@ -1,7 +1,7 @@
 import type { AuditResult, AxisScore } from "../types.js";
 import { statusGlyph } from "../ui/tokens.js";
 import {
-  bar, bold, dim, statusDot, thresholdColor, visiblePad, visibleWidth,
+  bar, bold, dim, passColor, statusDot, thresholdColor, visiblePad, visibleWidth,
   type TerminalOpts,
 } from "./terminal-format.js";
 
@@ -18,6 +18,25 @@ function axisRow(a: AxisScore, opts: TerminalOpts, barCells: number): string {
   const name = visiblePad(a.axis, 14);
   const scoreText = visiblePad(a.score === "N/A" ? "—" : String(a.score), 4, "left");
   return `${gly} ${name} ${scoreText}  ${bar(a.score, opts, barCells)}`;
+}
+
+/**
+ * "↗ fix the top N drift groups → +M pts" — one line under the gauge when the
+ * pipeline attached a positive-gain projection (Sprint 1 actionable findings,
+ * design §1). Omitted entirely when `meta.projection` is absent or
+ * `totalGainTop3` is 0 — presentation-only, never implies a score change.
+ */
+function projectionRow(result: AuditResult, opts: TerminalOpts): string | undefined {
+  const projection = result.meta?.projection;
+  if (!projection || projection.totalGainTop3 <= 0) return undefined;
+  const leadGlyph = opts.unicode ? "↗" : "^";
+  const midArrow = opts.unicode ? "→" : "->";
+  const n = projection.top.length;
+  const gain = projection.totalGainTop3;
+  return (
+    `${passColor(leadGlyph, opts)} ${dim(`fix the top ${n} drift groups`, opts)}` +
+    ` ${passColor(midArrow, opts)} ${passColor(`+${gain} pts`, opts)}`
+  );
 }
 
 export function renderScoreCard(
@@ -57,12 +76,14 @@ export function renderScoreCard(
 
   const gaugeCells = Math.min(40, inner - 2 * EDGE);
   const barCells = Math.min(20, inner - EDGE - 24);
+  const projRow = projectionRow(result, opts);
 
   return [
     `${b.tl}${b.h.repeat(inner)}${b.tr}`,
     blank,
     wrap(scoreRow),
     wrap(bar(score, opts, gaugeCells)),
+    ...(projRow !== undefined ? [wrap(projRow)] : []),
     blank,
     // Every scored axis renders, N/A included — ai-surface/ai-governance were
     // invisible pre-card while still moving the score; do not "clean up" N/A rows.

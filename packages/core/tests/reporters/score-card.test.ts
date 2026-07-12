@@ -76,3 +76,75 @@ describe("renderScoreCard", () => {
     expect(text).not.toMatch(/\x1b/);
   });
 });
+
+describe("renderScoreCard — projection line", () => {
+  const withProjection = {
+    ...result,
+    meta: {
+      projection: {
+        top: [
+          { key: "tokens/no-hardcoded-color", ruleId: "tokens/no-hardcoded-color", count: 12, files: 8, gain: 8, migrationScale: false },
+        ],
+        totalGainTop3: 12,
+      },
+    },
+  } as unknown as AuditResult;
+
+  it("renders the projection line when totalGainTop3 > 0", () => {
+    const text = renderScoreCard(withProjection, { ...opts }).join("\n");
+    expect(text).toContain("^ fix the top 1 drift groups -> +12 pts");
+  });
+
+  it("uses the unicode glyph and arrow when unicode is on", () => {
+    const text = renderScoreCard(withProjection, { ...opts, unicode: true }).join("\n");
+    expect(text).toContain("↗ fix the top 1 drift groups → +12 pts");
+  });
+
+  it("omits the projection line when meta.projection is absent", () => {
+    const text = renderScoreCard(result, { ...opts }).join("\n");
+    expect(text).not.toContain("fix the top");
+  });
+
+  it("omits the projection line when totalGainTop3 is 0", () => {
+    const zeroGain = {
+      ...result,
+      meta: {
+        projection: {
+          top: [{ key: "tokens/no-hardcoded-color", ruleId: "tokens/no-hardcoded-color", count: 12, files: 8, gain: 8, migrationScale: false }],
+          totalGainTop3: 0,
+        },
+      },
+    } as unknown as AuditResult;
+    const text = renderScoreCard(zeroGain, { ...opts }).join("\n");
+    expect(text).not.toContain("fix the top");
+  });
+
+  it("stays inside the box (uniform width) with the projection line present", () => {
+    const lines = renderScoreCard(withProjection, { ...opts });
+    const w = lines[0]!.length;
+    for (const l of lines) expect(l.length).toBe(w);
+  });
+
+  it("fits the worst-case 3-digit gain at the narrowest box width (44) without overflow", () => {
+    const worstCase = {
+      ...result,
+      meta: {
+        projection: {
+          top: [
+            { key: "a", ruleId: "a", count: 1, files: 1, gain: 1, migrationScale: false },
+            { key: "b", ruleId: "b", count: 1, files: 1, gain: 1, migrationScale: false },
+            { key: "c", ruleId: "c", count: 1, files: 1, gain: 1, migrationScale: false },
+          ],
+          totalGainTop3: 100,
+        },
+      },
+    } as unknown as AuditResult;
+    const lines = renderScoreCard(worstCase, { ...opts, width: 44 });
+    const w = lines[0]!.length;
+    expect(w).toBeLessThanOrEqual(64);
+    for (const l of lines) expect(l.length).toBe(w);
+    const projLine = lines.find((l) => l.includes("fix the top"));
+    expect(projLine).toBeDefined();
+    expect(projLine).toContain("^ fix the top 3 drift groups -> +100 pts");
+  });
+});

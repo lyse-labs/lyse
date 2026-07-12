@@ -21,14 +21,14 @@ exports[`renderTerminal (plain-text mode for snapshot stability) > matches snaps
 
   Top findings
 
-   1  tokens/no-hardcoded-color           src/Header.tsx:42
-      Hardcoded color value: #2563eb  ->  consider replacing with token color.action.primary
+   1  a11y/essentials                     src/Logo.tsx:9
+      [jsx-a11y/alt-text] img elements must have an alt prop
 
    2  components/no-native-shadows        src/Send.tsx:118
       Native <button> used where <Button> from @acme/ui is available
 
-   3  a11y/essentials                     src/Logo.tsx:9
-      [jsx-a11y/alt-text] img elements must have an alt prop
+   3  tokens/no-hardcoded-color           src/Header.tsx:42
+      Hardcoded color value: #2563eb  ->  consider replacing with token color.action.primary
 
 
   Next steps

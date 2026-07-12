@@ -43,6 +43,14 @@ export function dim(s: string, opts: TerminalOpts): string {
   return color.muted(s, ui(opts));
 }
 
+export function passColor(s: string, opts: TerminalOpts): string {
+  return color.pass(s, ui(opts));
+}
+
+export function warnColor(s: string, opts: TerminalOpts): string {
+  return color.warn(s, ui(opts));
+}
+
 export function bold(s: string, opts: TerminalOpts): string {
   return color.bold(s, ui(opts));
 }
