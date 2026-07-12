@@ -34,10 +34,13 @@ export function renderScoreCard(
   const score = result.finalScore;
   const grade = result.grade && result.grade.grade !== "N/A" ? `${result.grade.grade}  ` : "";
   const head = score === "N/A" ? bold("N/A", opts) : bold(thresholdColor(score, opts)(`${grade}${score}/100`), opts);
-  // Content budget mirrors the delta-fitting check below: EDGE on both sides.
-  // A long grade name plus "(auto-fail)" plus the subtitle can outgrow OUTER_MIN
-  // (44), so the annotation and subtitle are dropped — in that priority order —
-  // rather than letting the row overflow the border.
+  // Geometry is asymmetric, not a mirrored EDGE-on-both-sides margin: wrap()'s
+  // left inset is EDGE-1 (2 columns), while fits() budgets EDGE+EDGE (3+3) of
+  // the inner width, so the right-hand margin is >=4 columns in the worst case
+  // (content sized right up to the fits() limit) and wider whenever content is
+  // shorter. A long grade name plus "(auto-fail)" plus the subtitle can outgrow
+  // OUTER_MIN (44), so the annotation and subtitle are dropped — in that
+  // priority order — rather than letting the row overflow the border.
   const fits = (s: string) => inner - EDGE - visibleWidth(s) - EDGE >= 0;
   let scoreRow = `${statusDot(score, opts)}  ${head}`;
   if (result.grade?.autoFailed) {
@@ -61,6 +64,8 @@ export function renderScoreCard(
     wrap(scoreRow),
     wrap(bar(score, opts, gaugeCells)),
     blank,
+    // Every scored axis renders, N/A included — ai-surface/ai-governance were
+    // invisible pre-card while still moving the score; do not "clean up" N/A rows.
     ...result.axes.map((a) => wrap(axisRow(a, opts, barCells))),
     blank,
     `${b.bl}${b.h.repeat(inner)}${b.br}`,
