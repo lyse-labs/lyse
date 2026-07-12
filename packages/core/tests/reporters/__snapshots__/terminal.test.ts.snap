@@ -5,15 +5,19 @@ exports[`renderTerminal (plain-text mode for snapshot stability) > matches snaps
   lyse  247 files · 1.4s   0.1.0-alpha.1
 
 
-  o  43/100   design system health
++--------------------------------------------------------------+
+|                                                              |
+|  o  43/100   design system health                            |
+|  #################-----------------------                    |
+|                                                              |
+|  x tokens           31  ######--------------                 |
+|  ! a11y             62  ############--------                 |
+|  x components       38  ########------------                 |
+|  ! stories          47  #########-----------                 |
+|                                                              |
++--------------------------------------------------------------+
 
   No token registry detected — run \`lyse init\` for a calibrated score.
-
-
-  x tokens             31  ######--------------
-  ! a11y               62  ############--------
-  x components         38  ########------------
-  ! stories            47  #########-----------
 
   Top findings
 

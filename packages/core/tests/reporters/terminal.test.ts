@@ -75,6 +75,13 @@ describe("renderTerminal (plain-text mode for snapshot stability)", () => {
     expect(out).toMatchSnapshot();
   });
 
+  it("renders the score card box in the default view", async () => {
+    const out = await renderTerminal(sample, baseOpts);
+    expect(out).toContain("+");        // ascii border (unicode:false)
+    expect(out).toContain("43/100");
+    expect(out.indexOf("+")).toBeLessThan(out.indexOf("tokens"));
+  });
+
   it("renders the clean report: score line, axes, top findings, no jargon", async () => {
     const out = await renderTerminal(sample, baseOpts);
     // score line: "● <grade> <score>/100   design system health"
@@ -332,8 +339,10 @@ describe("renderTerminal (colored mode alignment)", () => {
 
   it("aligns axis lines to the same visible width across all 4 axes", async () => {
     const out = await renderTerminal(sample, colorOpts);
+    // Axis rows live inside the score card box, so the visible line leads with
+    // the unicode border char ("│") ahead of the indent, not a bare 2-space gutter.
     const axisLines = out.split("\n").filter((line) =>
-      /^ {2}\S+ (tokens|a11y|components|stories)\b/.test(stripAnsi(line))
+      /^│ {2}\S+ (tokens|a11y|components|stories)\b/.test(stripAnsi(line))
     );
     expect(axisLines).toHaveLength(4);
     const visibleWidths = axisLines.map((l) => stripAnsi(l).trimEnd().length);
