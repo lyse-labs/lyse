@@ -52,12 +52,19 @@ export function bar(score: number | "N/A", opts: TerminalOpts, cells = 20): stri
 }
 
 /**
- * Pads `text` to `targetWidth` visible columns. Uses string-width to count
- * visible characters, so it works correctly on ANSI-colored or OSC 8 strings.
- * For widths smaller than the visible text, returns the text unchanged.
+ * Visible-column width of `text`. Uses string-width to count visible
+ * characters, so it works correctly on ANSI-colored or OSC 8 strings.
+ */
+export function visibleWidth(text: string): number {
+  return stringWidth(text);
+}
+
+/**
+ * Pads `text` to `targetWidth` visible columns. For widths smaller than the
+ * visible text, returns the text unchanged.
  */
 export function visiblePad(text: string, targetWidth: number, side: "left" | "right" = "right"): string {
-  const visible = stringWidth(text);
+  const visible = visibleWidth(text);
   if (visible >= targetWidth) return text;
   const pad = " ".repeat(targetWidth - visible);
   return side === "right" ? text + pad : pad + text;
