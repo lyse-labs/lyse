@@ -6,6 +6,9 @@ import type { Finding, TokenMap } from "../../src/types.js";
 import type { AgentId } from "../../src/agent/registry.js";
 import type { HandoffDeps } from "../../src/agent/handoff.js";
 import { runHandoff, spawnAgentLauncher } from "../../src/agent/handoff.js";
+// Side-effect import: registers rule meta (incl. `helpUri`) into the module-level
+// META_REGISTRY that `getRegisteredRuleMeta` reads from.
+import "../../src/rules/registry.js";
 
 const baseFindings: Finding[] = [
   {
@@ -94,6 +97,44 @@ describe("runHandoff — artifacts written", () => {
     const tokensPath = join(root, ".lyse", "handoff", "tokens.json");
     const tokens = JSON.parse(readFileSync(tokensPath, "utf8")) as Record<string, unknown>;
     expect(tokens).toEqual({});
+  });
+});
+
+describe("runHandoff — findings.json recipe links", () => {
+  it("carries helpUri for a registered rule and omits the key for an unregistered ruleId", async () => {
+    const root = makeTempRoot();
+    const deps = makeDeps({ prompt: vi.fn().mockResolvedValue(null) });
+
+    const findings: Finding[] = [
+      {
+        ruleId: "tokens/no-hardcoded-color",
+        axis: "tokens",
+        severity: "warning",
+        location: { file: "src/Button.tsx", line: 14, column: 1 },
+        message: "Hardcoded color #3B82F6",
+      },
+      {
+        ruleId: "fake/not-a-registered-rule",
+        axis: "tokens",
+        severity: "info",
+        location: { file: "src/Other.tsx", line: 1, column: 1 },
+        message: "Unregistered rule finding",
+      },
+    ];
+
+    await runHandoff({ findings, tokens: null, root, projectName: "acme" }, deps);
+
+    const findingsPath = join(root, ".lyse", "handoff", "findings.json");
+    const written = JSON.parse(readFileSync(findingsPath, "utf8")) as (Finding & { helpUri?: string })[];
+
+    const registered = written.find((f) => f.ruleId === "tokens/no-hardcoded-color");
+    expect(registered?.helpUri).toBe(
+      "https://github.com/lyse-labs/lyse/blob/main/docs/rules/tokens-no-hardcoded-color.md",
+    );
+
+    const unregistered = written.find((f) => f.ruleId === "fake/not-a-registered-rule");
+    expect(unregistered).toBeDefined();
+    expect(Object.prototype.hasOwnProperty.call(unregistered, "helpUri")).toBe(false);
   });
 });
 

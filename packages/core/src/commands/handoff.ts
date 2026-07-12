@@ -38,14 +38,22 @@ export async function runHandoffCommand(root: string, deps?: HandoffDeps): Promi
     }
     throw err;
   }
-  const { result, tokens } = auditResult;
+  const { result, tokens, config } = auditResult;
   const projectName = basename(root) || "project";
 
   const prompt = deps?.prompt ?? defaultPrompt;
   const launch = deps?.launch ?? spawnAgentLauncher;
 
   const handoffResult: HandoffResult = await runHandoff(
-    { findings: result.findings, tokens, root, projectName },
+    {
+      findings: result.findings,
+      tokens,
+      root,
+      projectName,
+      ...(config.advisory?.migrationScaleFileCount !== undefined
+        ? { migrationScaleFileCount: config.advisory.migrationScaleFileCount }
+        : {}),
+    },
     { prompt, launch },
   );
 

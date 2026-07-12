@@ -8,6 +8,7 @@ import { launchArgs, copyToClipboard } from "./launch.js";
 import { isCommandAvailable, detectAgents } from "./registry.js";
 import { buildHandoffPayload, serializeTokenMap } from "./payload.js";
 import { installLyseSkill } from "./skill.js";
+import { getRegisteredRuleMeta } from "../rules/_rule-module.js";
 
 export interface HandoffDeps {
   prompt: (choices: { value: string; label: string }[]) => Promise<string | null>;
@@ -22,6 +23,8 @@ export interface HandoffInput {
   root: string;
   projectName: string;
   topN?: number;
+  /** `.lyse.yaml` `advisory.migrationScaleFileCount` override; falls back to the payload default. */
+  migrationScaleFileCount?: number;
 }
 
 export type HandoffAction = "launched" | "copied" | "copy-failed" | "skipped" | "none";
@@ -35,9 +38,26 @@ const HANDOFF_DIR_NAME = join(".lyse", "handoff");
 const DEFAULT_TOP_N = 10;
 const DEFAULT_MAX_FILES_PER_RULE = 5;
 
+/**
+ * Enriches each finding with its rule's `helpUri` (recipe link) when the
+ * rule is registered — looked up once per unique `ruleId`. Uses
+ * `exactOptionalPropertyTypes`-safe conditional spread so unregistered
+ * rules omit the key entirely rather than serializing `helpUri: undefined`.
+ */
+function enrichWithHelpUri(findings: Finding[]): (Finding & { helpUri?: string })[] {
+  const helpUriByRule = new Map<string, string | undefined>();
+  return findings.map((f) => {
+    if (!helpUriByRule.has(f.ruleId)) {
+      helpUriByRule.set(f.ruleId, getRegisteredRuleMeta(f.ruleId)?.helpUri);
+    }
+    const helpUri = helpUriByRule.get(f.ruleId);
+    return { ...f, ...(helpUri ? { helpUri } : {}) };
+  });
+}
+
 function writeArtifacts(handoffDir: string, findings: Finding[], tokens: TokenMap | null): void {
   mkdirSync(handoffDir, { recursive: true });
-  writeFileSync(join(handoffDir, "findings.json"), JSON.stringify(findings, null, 2) + "\n");
+  writeFileSync(join(handoffDir, "findings.json"), JSON.stringify(enrichWithHelpUri(findings), null, 2) + "\n");
   writeFileSync(join(handoffDir, "tokens.json"), JSON.stringify(serializeTokenMap(tokens), null, 2) + "\n");
 }
 
@@ -65,6 +85,9 @@ export async function runHandoff(input: HandoffInput, deps: HandoffDeps): Promis
     projectName,
     topN,
     maxFilesPerRule: DEFAULT_MAX_FILES_PER_RULE,
+    ...(input.migrationScaleFileCount !== undefined
+      ? { migrationScaleFileCount: input.migrationScaleFileCount }
+      : {}),
   });
 
   const availableAgents = await detectAgents(root);
