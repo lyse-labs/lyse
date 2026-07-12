@@ -100,7 +100,7 @@ These are checkpoints, not vanity: each maps to a funnel stage (discover
 
 ## 4. The program
 
-### Sprint 1 — Instant wow (the v0.3 core UX) — *in progress, resuming now*
+### Sprint 1 — Instant wow (the v0.3 core UX) — ✅ **DELIVERED 2026-07-12** (PR #227 merged to main, rebase, all checks green)
 
 Deliverables:
 1. ~~Score card as the default audit view~~ (done, byte-verified) —
