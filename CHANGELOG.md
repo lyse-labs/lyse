@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `@lyse-overrides` frontmatter no longer silently disables the whole block (#226). The parser was all-or-nothing brittle: CRLF line endings, a blank comment continuation line (` *`) between entries, an entry on the same line as the tag, or a second `@lyse-overrides` block each caused every entry to be ignored — which read as "only the first rule is applied". All four shapes now parse, and multiple blocks merge (`off` unions; on a severity conflict the later block wins; `off` beats a severity override for the same rule).
 - `lyse init` no longer hangs after stack detection (#205): the framework-detection spinner ran a redraw loop on top of the interactive "Proceed?" prompt, burying it indefinitely on a TTY. `runInit` now runs without the competing CLI spinner.
 - The generated `.lyse.yaml` header now stamps the real Lyse version instead of a hardcoded `0.1.0` (#204).
 
