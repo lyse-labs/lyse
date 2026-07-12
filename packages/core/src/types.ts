@@ -495,6 +495,15 @@ export interface LyseConfig {
     cacheMaxAgeDays?: number;
     staticOnly?: boolean;
   };
+  /**
+   * Advisory-only tuning — does not affect the Health Score. `migrationScaleFileCount`
+   * is the distinct-file threshold above which a fix group's projection entry is
+   * flagged `migrationScale` (large blast radius — sample before you sweep).
+   * Default 40 (`MIGRATION_SCALE_FILE_COUNT_DEFAULT` in `report/fix-groups.ts`).
+   */
+  advisory?: {
+    migrationScaleFileCount?: number;
+  };
 }
 
 export interface ClassifyContext {

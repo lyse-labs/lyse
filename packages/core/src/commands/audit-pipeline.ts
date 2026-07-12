@@ -37,6 +37,7 @@ import { ruleObjects } from "../rules/registry.js";
 import { loadGeneratedPack } from "../rules/pack-loader.js";
 import { runRules } from "../rule-runner.js";
 import { scoreFromFindings } from "../scorer.js";
+import { groupFindings, computeProjection, MIGRATION_SCALE_FILE_COUNT_DEFAULT } from "../report/fix-groups.js";
 import { posixRelative, toPosix } from "../util/paths.js";
 import { scanForMarkerComponents } from "../rules/ai-governance-ai-marker-component-present.js";
 import { aiGovernanceGraceFactor, DEFAULT_AI_GOVERNANCE_GRACE_WINDOW } from "../reliability/score/grace.js";
@@ -625,6 +626,25 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   });
   const grade = computeGrade(scoring.finalScore, scoring.autoFail);
 
+  // Deterministic score projection (Sprint 1 actionable findings, spec §1/§3):
+  // top fix groups by size and their Health Score gain if fixed. Must run on
+  // the SAME runResult.findings array instance used for scoring above — both
+  // groupFindings and computeProjection key removal by Finding object
+  // identity, so a re-fetched or serialized array would silently yield zero
+  // gain for every candidate. This must stay BEFORE applySeverityOverrides,
+  // which maps findings to new (display-only) objects.
+  const groups = groupFindings(
+    runResult.findings,
+    config.advisory?.migrationScaleFileCount ?? MIGRATION_SCALE_FILE_COUNT_DEFAULT,
+  );
+  const projection = computeProjection(
+    groups,
+    runResult.findings,
+    runResult.opportunitiesByAxis,
+    { aiGovernanceGrace },
+    scoring.finalScore,
+  );
+
   // Apply severity display overrides AFTER scoring so user config changes what
   // reporters show but never the Health Score (determinism contract: severity
   // does not change the score). Global `rules.<id>.severity` first, then the
@@ -652,6 +672,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     meta: {
       ...(layer4Meta ? { layer4: layer4Meta } : {}),
       ...(renderMeta !== undefined ? { render: renderMeta } : {}),
+      ...(projection ? { projection } : {}),
       coverage: {
         scannedFiles: files.length,
         durationMs: Date.now() - t0,
