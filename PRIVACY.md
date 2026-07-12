@@ -17,7 +17,7 @@ A few entry points may call out to an LLM provider you configure (Anthropic, Ope
 
 - `lyse audit`'s LLM precision filter (drops false positives on hardcoded color/spacing). It is **off until you opt in** via one of:
   - `lyse audit --llm` (single run), or
-  - `LYSE_LLM=1` (or accepting the one-time interactive prompt, persisted to `~/.lyse/llm-consent.json`), or
+  - `LYSE_LLM=1` (persisted to `~/.lyse/llm-consent.json`; a previously accepted interactive prompt stays honored), or
   - an explicit `llm.provider` / `llm.connector` in `.lyse.yaml`.
 
   Having the `claude` CLI installed no longer silently enables it. `lyse audit --no-llm` and `LYSE_LLM=0` force it off, and in non-interactive contexts (CI, pipes) it stays off.
@@ -52,7 +52,7 @@ We collect data **only** when you explicitly opt in via the first-run consent pr
 
 ### First-run consent prompt
 
-On your first `lyse audit`, Lyse displays a one-time prompt describing exactly what data would be sent. Pressing `y` enables anonymous telemetry; pressing Enter, `n`, or interrupting the prompt declines. **The audit runs to completion in both cases — there is no functional difference between accepting and declining.** Your answer is saved to `~/.lyse/consent.json` and Lyse never prompts you again, except: if you decline on the first prompt, Lyse will ask one more time on your next audit (max two prompts in your lifetime). You can change your answer at any time (see §7).
+On your first `lyse audit`, after your report is rendered, Lyse displays a one-time prompt describing exactly what data would be sent. Pressing `y` enables anonymous telemetry; pressing Enter, `n`, or interrupting the prompt declines. **The audit runs to completion in both cases — there is no functional difference between accepting and declining.** Your answer is saved to `~/.lyse/consent.json` and Lyse never prompts you again, except: if you decline on the first prompt, Lyse will ask one more time on your next audit (max two prompts in your lifetime). You can change your answer at any time (see §7).
 
 In non-interactive environments (CI, scripts, piped output), no prompt is shown and telemetry remains OFF unless explicitly enabled.
 

@@ -52,9 +52,10 @@ import {
   logFindingDiscovered,
   generateId,
   ensureConsentDecision,
+  resolveConsentNonInteractive,
   type LogContext,
 } from "./telemetry/index.js";
-import { resolveLlmConsent } from "./llm/consent.js";
+import { resolveLlmConsentNonInteractive } from "./llm/consent.js";
 import { runTelemetryOn, runTelemetryOff, runTelemetryStatus } from "./commands/telemetry.js";
 import { runBenchPack } from "./commands/bench-pack.js";
 import { runHandoffCommand } from "./commands/handoff.js";
@@ -289,10 +290,13 @@ const auditCommand = defineCommand({
       process.exit(2);
     }
 
-    // Resolve telemetry consent (may prompt on first run). Per ADR 0012,
-    // never emit on the run that triggered the prompt.
-    const consent = await ensureConsentDecision();
-    const telemetryActive = consent.accepted && !consent.justAsked && args["no-telemetry"] !== true;
+    // Resolve telemetry consent WITHOUT prompting — the first score must
+    // render before any consent question (first-run DX). The interactive
+    // prompt runs after the report, below. Per ADR 0012 the run that asks
+    // never emits, which this ordering preserves by construction: an
+    // undecided run resolves to accepted=false here.
+    const consent = resolveConsentNonInteractive();
+    const telemetryActive = consent.accepted && args["no-telemetry"] !== true;
 
     // Build telemetry context early (only if opt-in and not just asked)
     let telemetryCtx: LogContext | null = null;
@@ -341,11 +345,12 @@ const auditCommand = defineCommand({
     };
 
     // #115: resolve LLM consent once, in the CLI layer (mirrors telemetry).
-    // --no-llm wins; --llm opts in for this run; otherwise env/persisted/prompt.
-    // The result gates the connector auto-detect path (resolver.ts).
+    // --no-llm wins; --llm opts in for this run; otherwise env/persisted only —
+    // the default audit path never prompts for the LLM filter (opt-in via
+    // --llm or LYSE_LLM=1). The result gates the connector auto-detect path.
     const llmFlag =
       args["no-llm"] === true ? false : args["llm"] === true ? true : undefined;
-    auditFlags.llmConsented = await resolveLlmConsent(
+    auditFlags.llmConsented = resolveLlmConsentNonInteractive(
       llmFlag === undefined ? undefined : { llm: llmFlag },
     );
 
@@ -523,6 +528,14 @@ const auditCommand = defineCommand({
     // delivery of an email the user already opted into during init but whose
     // earlier send failed (offline).
     await syncPendingEmail();
+
+    // First-run telemetry consent — asked AFTER the report so the score is
+    // the first thing a new user sees. Max two lifetime prompts (persisted);
+    // ADR 0012 holds: this run resolved consent as undecided-off above, so
+    // nothing is emitted on the run that asks.
+    if (promptsAllowed) {
+      await ensureConsentDecision();
+    }
 
     if (promptsAllowed && !wantsFeedback) {
       // Standard action menu path (no --interactive, or no findings).

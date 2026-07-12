@@ -8,6 +8,7 @@ import {
   llmConsentFilePath,
   ensureLlmConsentDecision,
   resolveLlmConsent,
+  resolveLlmConsentNonInteractive,
 } from "../../src/llm/consent.js";
 
 let home: string;
@@ -73,5 +74,39 @@ describe("resolveLlmConsent — flag precedence", () => {
   });
   it("no flag → defers to ensureLlmConsentDecision (non-TTY → false)", async () => {
     expect(await resolveLlmConsent(undefined, deps())).toBe(false);
+  });
+});
+
+describe("resolveLlmConsentNonInteractive — default audit path, never prompts", () => {
+  it("undecided + TTY: returns false, writes nothing, never prompts", () => {
+    const origIsTTY = process.stdout.isTTY;
+    Object.defineProperty(process.stdout, "isTTY", { value: true, configurable: true });
+    try {
+      expect(resolveLlmConsentNonInteractive(undefined, deps())).toBe(false);
+      expect(existsSync(llmConsentFilePath(deps()))).toBe(false);
+    } finally {
+      Object.defineProperty(process.stdout, "isTTY", { value: origIsTTY, configurable: true });
+    }
+  });
+  it("--llm / --no-llm flags win over env and record", () => {
+    process.env["LYSE_LLM"] = "1";
+    expect(resolveLlmConsentNonInteractive({ llm: false }, deps())).toBe(false);
+    delete process.env["LYSE_LLM"];
+    expect(resolveLlmConsentNonInteractive({ llm: true }, deps())).toBe(true);
+  });
+  it("LYSE_LLM=1 with no record → accepted + persisted", () => {
+    process.env["LYSE_LLM"] = "1";
+    expect(resolveLlmConsentNonInteractive(undefined, deps())).toBe(true);
+    expect(readLlmConsent(deps())?.accepted).toBe(true);
+  });
+  it("LYSE_LLM=0 → false even with a prior accepted record (no rewrite)", () => {
+    writeLlmConsent({ accepted: true, attempt: 1, decided_at: "t", version: "1.0.0" }, deps());
+    process.env["LYSE_LLM"] = "0";
+    expect(resolveLlmConsentNonInteractive(undefined, deps())).toBe(false);
+    expect(readLlmConsent(deps())?.accepted).toBe(true);
+  });
+  it("persisted decision applies", () => {
+    writeLlmConsent({ accepted: true, attempt: 1, decided_at: "t", version: "1.0.0" }, deps());
+    expect(resolveLlmConsentNonInteractive(undefined, deps())).toBe(true);
   });
 });

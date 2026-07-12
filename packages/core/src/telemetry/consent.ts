@@ -140,6 +140,32 @@ export function getCachedConsent(deps: ConsentDeps = {}): boolean {
   return _cachedConsent;
 }
 
+/**
+ * Resolve the consent decision WITHOUT ever prompting: env override and
+ * persisted record only. The audit path calls this before running so the
+ * first score renders prompt-free; the interactive prompt (if still
+ * undecided) runs after the report via {@link ensureConsentDecision}.
+ */
+export function resolveConsentNonInteractive(deps: ConsentDeps = {}): ConsentDecision {
+  const existing = readConsent(deps);
+
+  if (!existing && process.env["LYSE_TELEMETRY"] === "1") {
+    writeConsent({
+      accepted: true,
+      attempt: 1,
+      decided_at: new Date().toISOString(),
+      version: "1.0.0",
+    }, deps);
+    _cachedConsent = true;
+    _cacheInitialised = true;
+    return { accepted: true, justAsked: false };
+  }
+
+  _cachedConsent = existing?.accepted ?? false;
+  _cacheInitialised = true;
+  return { accepted: _cachedConsent, justAsked: false };
+}
+
 export async function ensureConsentDecision(deps: ConsentDeps = {}): Promise<ConsentDecision> {
   const existing = readConsent(deps);
 
