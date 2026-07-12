@@ -1096,7 +1096,14 @@ const main = defineCommand({
       if (firstPositional && firstPositional in subCommands) return;
     }
 
-    if (!isInteractive()) {
+    // Decide on the raw terminal signal, not isInteractive(): that helper
+    // conflates "user wants no questions" (LYSE_YES/LYSE_NO_PROMPT/CI) with
+    // "no terminal", and applyGlobalFlags() above has already set those env
+    // vars from --yes/--no-prompt. Gating on isInteractive() here would make
+    // `lyse --yes` on a real TTY fall through to usage instead of auditing —
+    // the flags mean "don't ask questions", not "there is no terminal". Only
+    // a genuinely missing TTY should print usage.
+    if (process.stdout.isTTY !== true) {
       // Use renderUsage + process.stdout.write rather than citty's showUsage
       // because the latter routes through consola, which silently drops output
       // when CI=true is set in the env (regression-proofs CI/test environments).

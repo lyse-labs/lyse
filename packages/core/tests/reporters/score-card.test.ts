@@ -17,7 +17,7 @@ const result = {
   findings: [],
 } as unknown as AuditResult;
 
-const opts = { mode: "default", color: false, unicode: false, width: 80, fileCount: 0, durationMs: 0, cwd: "/tmp" } as const;
+const opts = { mode: "default", color: false, unicode: false, width: 80, outDir: undefined, fileCount: 0, durationMs: 0, cwd: "/tmp" } as const;
 
 describe("renderScoreCard", () => {
   it("renders a closed ascii box of uniform width", () => {
@@ -70,5 +70,9 @@ describe("renderScoreCard", () => {
   it("clamps to narrow terminals without overflow", () => {
     const lines = renderScoreCard(result, { ...opts, width: 50 });
     for (const l of lines) expect(l.length).toBeLessThanOrEqual(50);
+  });
+  it("emits no ANSI escapes when color is off", () => {
+    const text = renderScoreCard(result, { ...opts }).join("\n");
+    expect(text).not.toMatch(/\x1b/);
   });
 });
