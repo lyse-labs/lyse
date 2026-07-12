@@ -1,6 +1,8 @@
 # Lyse
 
-> Measure design system drift. Audit, explain, fix — locally, deterministically, in CI or live for AI agents.
+> Design systems drift. Lyse measures it.
+
+The local, deterministic health score for your design system — audit, explain, and hand the fixes to your coding agent, locally or in CI.
 
 [![ci](https://github.com/lyse-labs/lyse/actions/workflows/ci.yml/badge.svg)](https://github.com/lyse-labs/lyse/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/%40lyse-labs%2Flyse?logo=npm&label=npm)](https://www.npmjs.com/package/@lyse-labs/lyse)

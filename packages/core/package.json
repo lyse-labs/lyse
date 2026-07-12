@@ -4,7 +4,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "description": "Lyse — measure design system health. Audit, explain, fix. Free CLI + GitHub Action + MCP server.",
+  "description": "Design systems drift. Lyse measures it. The local, deterministic health score for your design system — CLI + GitHub Action + MCP server.",
   "license": "AGPL-3.0-only",
   "type": "module",
   "main": "./dist/index.js",

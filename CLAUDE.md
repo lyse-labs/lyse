@@ -99,6 +99,16 @@ should not as a routine.
 - Source code never leaves the user's machine via `lyse audit`.
 - See [`PRIVACY.md`](./PRIVACY.md) for the full privacy posture.
 
+## Development workflow (superpowers)
+
+The [superpowers](https://github.com/obra/superpowers) skills (MIT) are vendored
+under `.claude/skills/`. Follow that workflow for any non-trivial change:
+**brainstorming** (design + user approval) → spec in `docs/superpowers/specs/` →
+**writing-plans** (plan in `docs/superpowers/plans/`) →
+**subagent-driven-development** (fresh subagent per task + per-task review) →
+**requesting-code-review** before merge. TDD throughout; verification before
+any completion claim.
+
 ## Operating principles
 
 - **Local-first by default.** New features should run on the user's machine unless they fundamentally cannot.
