@@ -76,6 +76,13 @@
         "cacheMaxAgeDays": { "type": "number", "exclusiveMinimum": 0 },
         "staticOnly": { "type": "boolean" }
       }
+    },
+    "advisory": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "migrationScaleFileCount": { "type": "integer", "minimum": 2 }
+      }
     }
   }
 }

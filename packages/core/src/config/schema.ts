@@ -79,6 +79,14 @@ export const LyseConfigSchema = z.object({
       staticOnly: z.boolean().optional(),
     })
     .optional(),
+  // Advisory-only tuning — does not affect the Health Score. Overrides
+  // MIGRATION_SCALE_FILE_COUNT_DEFAULT (40) used to flag large fix groups
+  // in meta.projection (Sprint 1 actionable findings).
+  advisory: z
+    .object({
+      migrationScaleFileCount: z.number().int().min(2).optional(),
+    })
+    .optional(),
 });
 
 export type LyseConfigValidated = z.infer<typeof LyseConfigSchema>;
