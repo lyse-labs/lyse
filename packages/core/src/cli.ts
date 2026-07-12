@@ -843,7 +843,7 @@ export const initCommand = defineCommand({
   args: {
     path: { type: "positional", required: false, default: ".", description: "repository root" },
     "first-run": { type: "boolean", description: "mark as first run (used by npm create lyse)" },
-    scaffold: { type: "boolean", default: false, description: "generate missing AI-readiness files (llms.txt, AGENTS.md, value-gate doc)" },
+    scaffold: { type: "boolean", default: false, description: "generate missing AI-readiness files (llms.txt, AGENTS.md)" },
     "migrate-tokens": { type: "boolean", default: false, description: "migrate legacy ({ value, type }) token JSON to DTCG ({ $value, $type }); skips files that wouldn't be conformant" },
     ...GLOBAL_FLAGS,
   },

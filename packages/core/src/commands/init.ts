@@ -21,7 +21,7 @@ export interface InitOptions {
   yes?: boolean | undefined;
   /** Skip Node.js version check (used in tests running on Node < 22). */
   skipNodeCheck?: boolean | undefined;
-  /** Generate missing AI-readiness files (llms.txt, AGENTS.md, value-gate doc). */
+  /** Generate missing AI-readiness files (llms.txt, AGENTS.md). */
   scaffold?: boolean | undefined;
   /** Migrate legacy ({ value, type }) token JSON files to DTCG ({ $value, $type }). */
   migrateTokens?: boolean | undefined;
