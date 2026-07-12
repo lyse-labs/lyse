@@ -32,7 +32,7 @@ npx -y @lyse-labs/lyse@latest init
 ```bash
 lyse audit        # rerun the audit (text, JSON, or SARIF)
 lyse handoff      # audit, then hand the findings to your coding agent to fix (Claude Code / Cursor / Codex)
-lyse init --scaffold        # generate missing AI-readiness files (llms.txt, AGENTS.md, value-gate doc)
+lyse init --scaffold        # generate missing AI-readiness files (llms.txt, AGENTS.md)
 lyse init --migrate-tokens  # convert legacy {value,type} token JSON to DTCG ({$value,$type})
 lyse explain X    # rationale + examples for a rule
 lyse mcp setup    # wire MCP into Cursor / Claude Code / Codex
