@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Docs
+
+- Restructured README to showcase agent-era pain point and instant-audit Quickstart via bare `lyse` command (no config, no prompts); moved `lyse init` setup into new "Optional: calibrate" section.
+
 ### Internal
 
 - Added a measurement harness (`pnpm measure:rules`) that scores rule precision against a local clone of the lyse-bench tier-1 corpus: it runs the real audit pipeline, auto-labels structural (presence/structure) rules deterministically, and LLM-judges detection rules via the agent-CLI connector (no API key). First-pass report at `docs/superpowers/measurement-report.md`. Dev tooling only — no change to published behavior or the Health Score.
