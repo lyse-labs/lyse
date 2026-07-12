@@ -283,7 +283,7 @@ const evaluate = async (
         severity: "error",
         location: { file: relPath, line: 1, column: 1 },
         message: `Claude skill ${relPath}: ${err}`,
-        suggestion: "see https://docs.claude.com/en/docs/agents-and-tools/skills for the expected frontmatter shape",
+        suggestion: "see https://code.claude.com/docs/en/skills for the expected frontmatter shape",
       });
     }
     for (const warn of warnings) {
