@@ -4,6 +4,10 @@ const REAL_SEVERITIES = new Set<Severity>(["error", "warning", "info"]);
 const TAG = "@lyse-overrides";
 // `tokens/no-hardcoded-color: error` inside a JSDoc comment line.
 const ENTRY_RE = /^[ \t]*\*?[ \t]*([\w-]+(?:\/[\w-]+)+)[ \t]*:[ \t]*(error|warning|info|off)[ \t]*$/;
+// A comment continuation line carrying nothing (` *`) — tolerated between
+// entries. A star is required: a fully blank line may sit outside the
+// comment block, and skipping it could leak the scan into code.
+const BLANK_CONTINUATION_RE = /^[ \t]*\*[ \t]*$/;
 
 export interface FileOverrides {
   /** Rule ids suppressed for this file (severity `off`). */
@@ -15,7 +19,7 @@ export interface FileOverrides {
 const EMPTY: FileOverrides = { off: new Set(), severity: new Map() };
 
 /**
- * Parses a per-file `@lyse-overrides` JSDoc frontmatter block:
+ * Parses per-file `@lyse-overrides` JSDoc frontmatter:
  *
  * ```
  * /**
@@ -25,30 +29,57 @@ const EMPTY: FileOverrides = { off: new Set(), severity: new Map() };
  *  *\/
  * ```
  *
- * Entries are read line-by-line starting after the `@lyse-overrides` tag and
- * stop at the first line that is not a `<rule-id>: <level>` entry. `off` goes
- * to {@link FileOverrides.off}; a real severity goes to the display map.
+ * Accepted shapes (#226 — each of these previously parsed to ZERO entries,
+ * silently disabling the whole block):
+ * - CRLF line endings.
+ * - Blank comment continuation lines (` *`) between entries.
+ * - An entry on the same line as the tag (`@lyse-overrides tokens/x: off`).
+ * - Multiple `@lyse-overrides` blocks in one file (entries are merged:
+ *   `off` unions; on a severity conflict the later block wins; `off` beats
+ *   a severity override for the same rule at the pipeline).
+ *
+ * A block's entries stop at the end of the comment (`*\/`) or at the first
+ * line that is neither an entry nor a blank continuation.
  */
 export function parseFileOverrides(source: string): FileOverrides {
-  const tagIdx = source.indexOf(TAG);
-  if (tagIdx === -1) return EMPTY;
-
-  const lines = source.split("\n");
-  // Locate the line carrying the tag, then read subsequent entry lines.
-  let i = 0;
-  for (; i < lines.length; i++) {
-    if (lines[i]!.includes(TAG)) break;
-  }
+  if (!source.includes(TAG)) return EMPTY;
 
   const off = new Set<string>();
   const severity = new Map<string, Severity>();
-  for (let j = i + 1; j < lines.length; j++) {
-    const m = ENTRY_RE.exec(lines[j]!);
-    if (!m) break;
+  const readEntry = (line: string): boolean => {
+    const m = ENTRY_RE.exec(line);
+    if (!m) return false;
     const ruleId = m[1]!;
     const level = m[2]!;
     if (level === "off") off.add(ruleId);
     else if (REAL_SEVERITIES.has(level as Severity)) severity.set(ruleId, level as Severity);
+    return true;
+  };
+  const beforeCloser = (line: string): { text: string; closes: boolean } => {
+    const at = line.indexOf("*/");
+    return at === -1 ? { text: line, closes: false } : { text: line.slice(0, at), closes: true };
+  };
+
+  const lines = source.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const tagAt = lines[i]!.indexOf(TAG);
+    if (tagAt === -1) continue;
+
+    const sameLine = beforeCloser(lines[i]!.slice(tagAt + TAG.length));
+    readEntry(sameLine.text);
+    if (sameLine.closes) continue;
+
+    for (let j = i + 1; j < lines.length; j++) {
+      // A repeated tag line ends this block; the outer loop re-enters on it.
+      if (lines[j]!.includes(TAG)) break;
+      const { text, closes } = beforeCloser(lines[j]!);
+      if (closes) {
+        readEntry(text);
+        break;
+      }
+      if (BLANK_CONTINUATION_RE.test(text)) continue;
+      if (!readEntry(text)) break;
+    }
   }
 
   if (off.size === 0 && severity.size === 0) return EMPTY;
