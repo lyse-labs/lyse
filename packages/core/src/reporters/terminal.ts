@@ -1,18 +1,16 @@
-import type { AuditResult, Finding, AxisScore } from "../types.js";
+import type { AuditResult, Finding } from "../types.js";
 import { formatCoverageFooter } from "./coverage-footer.js";
 import { readRecent, computeDelta, type AuditEvent } from "../history/ndjson-store.js";
 import {
-  teal, thresholdColor, severityColor, dim, bold, bar, statusDot, link,
+  teal, severityColor, dim, bold, link,
   visiblePad, truncateStart,
   type TerminalOpts,
 } from "./terminal-format.js";
-import { statusGlyph } from "../ui/tokens.js";
 import { brandHeader } from "../ui/banner.js";
+import { renderScoreCard } from "./score-card.js";
 
 export type { TerminalOpts } from "./terminal-format.js";
 
-const AXIS_NAME_WIDTH = 14;
-const AXIS_SCORE_WIDTH = 5;
 const RULE_ID_WIDTH = 34;
 const FINDING_NUM_WIDTH = 2;
 
@@ -20,28 +18,6 @@ function header(result: AuditResult, opts: TerminalOpts): string {
   const ui = { color: opts.color, unicode: opts.unicode };
   const subtitle = opts.fileCount > 0 ? `${opts.fileCount} files · ${(opts.durationMs / 1000).toFixed(1)}s` : "";
   return brandHeader(result.toolVersion, subtitle, ui);
-}
-
-function scoreLine(result: AuditResult, opts: TerminalOpts, deltaSuffix?: string): string {
-  const score = result.finalScore;
-  const dot = statusDot(score, opts);
-  const sub = dim("design system health", opts);
-  if (score === "N/A") {
-    return `  ${dot}  ${bold("N/A", opts)}   ${sub}`;
-  }
-  const grade = result.grade && result.grade.grade !== "N/A" ? `${result.grade.grade}  ` : "";
-  const head = bold(thresholdColor(score, opts)(`${grade}${score}/100`), opts);
-  const autoFail = result.grade?.autoFailed ? `  ${dim("(auto-fail)", opts)}` : "";
-  const delta = deltaSuffix ? `  ${dim(deltaSuffix, opts)}` : "";
-  return `  ${dot}  ${head}${autoFail}${delta}   ${sub}`;
-}
-
-function axisLine(a: AxisScore, opts: TerminalOpts): string {
-  const gly = statusGlyph(a.score, { color: opts.color, unicode: opts.unicode });
-  const name = visiblePad(a.axis, AXIS_NAME_WIDTH);
-  const scoreText = visiblePad(a.score === "N/A" ? "—" : String(a.score), AXIS_SCORE_WIDTH, "left");
-  const barViz = bar(a.score, opts, 20);
-  return `  ${gly} ${name}  ${scoreText}  ${barViz}`;
 }
 
 function findingLines(f: Finding, index: number, opts: TerminalOpts): string[] {
@@ -170,9 +146,9 @@ export async function renderTerminal(result: AuditResult, opts: TerminalOpts): P
     // silently ignore history read errors
   }
 
-  lines.push(scoreLine(result, opts, deltaSuffix));
+  lines.push(...renderScoreCard(result, opts, deltaSuffix));
 
-  // Layer 4 banners — shown immediately after the score line. In v0.1.0
+  // Layer 4 banners — shown immediately after the card block. In v0.1.0
   // `llm/layer4-stage.ts` is a stub that only ever sets `staticOnly: true`,
   // so the cacheHit / usdSpent / error branches below cannot fire from
   // production input. They're gated behind `LYSE_LAYER4_ENABLED` so the
@@ -216,13 +192,6 @@ export async function renderTerminal(result: AuditResult, opts: TerminalOpts): P
     lines.push(`  ${dim("No token registry detected — run `lyse init` for a calibrated score.", opts)}`);
   }
 
-  lines.push("", "");
-  // Every scored axis renders — the view must match the score's composition
-  // (the scorer emits axes in canonical order; ai-surface / ai-governance
-  // were previously invisible here while still moving the Health Score).
-  for (const a of result.axes) {
-    lines.push(axisLine(a, opts));
-  }
   if (opts.mode !== "quiet") {
     lines.push(...topFindings(result.findings, opts));
     lines.push(...nextSteps(result, opts));
