@@ -11,13 +11,23 @@ The local, deterministic health score for your design system — audit, explain,
 
 ## Quickstart
 
+AI coding agents ship UI fast — and hardcode `#3b82f6` where `color.brand.primary` exists, reinvent `<Button>`, and skip stories. Lyse audits the drift they (and humans) introduce, scores it 0–100, and hands the fixes back to the same agent.
+
 ```bash
-npx @lyse-labs/lyse init
+npx -y @lyse-labs/lyse@latest
 ```
 
-That's it. `lyse init` detects your framework, writes `.lyse.yaml`, optionally wires the MCP server for your AI agent, and prints your first Health Score (0–100).
+That's it — no config, no prompts, your Health Score in seconds.
 
-## After init
+## Optional: calibrate
+
+`lyse init` detects your framework, writes `.lyse.yaml`, and optionally wires the MCP server for your AI agent.
+
+```bash
+npx -y @lyse-labs/lyse@latest init
+```
+
+## Commands
 
 ```bash
 lyse audit        # rerun the audit (text, JSON, or SARIF)
@@ -29,8 +39,6 @@ lyse mcp setup    # wire MCP into Cursor / Claude Code / Codex
 lyse add ci-gate  # install the score-regression CI gate (.github/workflows/lyse.yml)
 lyse share        # copy a Markdown summary to your clipboard
 ```
-
-Running `lyse` with no subcommand opens an interactive menu and loops back after each action.
 
 > **Trust boundary.** `lyse handoff` launches your coding agent with its permission prompts bypassed so it can apply fixes unattended. Only run it on repositories you trust.
 
