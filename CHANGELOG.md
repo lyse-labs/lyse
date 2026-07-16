@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Repaired a broken type-only import in two reliability tests (`auto-label.test.ts`, `judge.test.ts`): they imported `FindingRow` from a non-existent `scripts/harvest-findings.js` path; they now import the canonical type from `src/reliability/measure/finding-row.js`.
+
+### Internal
+
+- Root `devDependencies` now list `tsx`, so `pnpm clone:bench` and `pnpm measure:rules` work on a fresh clone; removed the unused root `@anthropic-ai/sdk` entry (the runtime dependency in `packages/core` is untouched).
+
 ### Docs
 
 - Restructured README to showcase agent-era pain point and instant-audit Quickstart via bare `lyse` command (no config, no prompts); moved `lyse init` setup into new "Optional: calibrate" section.
