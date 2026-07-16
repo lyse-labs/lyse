@@ -2,7 +2,7 @@
  * TDD guard: config / vendored FP class for tokens/no-hardcoded-color.
  *
  * Real snippets from the color-harvest labeled dataset
- * (docs/superpowers/color-harvest-labels.md), fpClass "config":
+ * (color-harvest-labels.md, archived in lyse-internal), fpClass "config":
  *
  *   ids 1-8:  .yarn/releases/yarn-4.17.0.cjs — Yarn PnP binary; .yarn/ path
  *   id 48:    src/base/normalize.scss:307 — browser normalize, #c0c0c0

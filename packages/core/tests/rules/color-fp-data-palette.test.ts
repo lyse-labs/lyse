@@ -2,7 +2,7 @@
  * TDD guard: data-palette FP class for tokens/no-hardcoded-color.
  *
  * Real snippets from the color-harvest labeled dataset
- * (docs/superpowers/color-harvest-labels.md), fpClass "data-palette":
+ * (color-harvest-labels.md, archived in lyse-internal), fpClass "data-palette":
  *
  *   id 13:  apps/mantine.dev/src/components/ColorsGenerator/ColorsInput/colors-preset.ts:2
  *           — reference color preset list for color generator UI

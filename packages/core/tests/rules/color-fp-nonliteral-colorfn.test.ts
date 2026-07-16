@@ -1,7 +1,7 @@
 /**
  * TDD guard: color functions with non-literal arguments must NOT be flagged.
  *
- * Real snippets from the color-harvest labeled dataset (docs/superpowers/color-harvest-labels.md):
+ * Real snippets from the color-harvest labeled dataset (color-harvest-labels.md, archived in lyse-internal):
  *   id 9:   rgba(theme.colors.blue[6], 0.2)   — mantine, fpClass "other"
  *   id 20:  rgba(theme.colors.blue[4], 0.2)   — mantine, fpClass "other"
  *   id 35:  rgba(lightParsed.value, 0.07)      — mantine, fpClass "other"

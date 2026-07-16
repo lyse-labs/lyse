@@ -13,7 +13,7 @@
  *      - detection   → judgeFindings (LLM) → aggregate precision
  *      - render-only → skip, verdict=not-measured
  *   4. Pull synthetic recall from validation/report.json
- *   5. buildReport → write docs/superpowers/measurement-report.{md,json}
+ *   5. buildReport → write .superpowers/measurement-report.{md,json}
  *   6. Write per-rule human review packets to .bench-corpus/packets/<rule>.md
  */
 
@@ -286,7 +286,7 @@ async function main(): Promise<void> {
 
   const md = partialNote + rawMd;
 
-  const outDir = join(REPO_ROOT, "docs/superpowers");
+  const outDir = join(REPO_ROOT, ".superpowers");
   if (!existsSync(outDir)) {
     await mkdir(outDir, { recursive: true });
   }
@@ -294,7 +294,7 @@ async function main(): Promise<void> {
   await writeFile(join(outDir, "measurement-report.md"), md, "utf8");
   await writeFile(join(outDir, "measurement-report.json"), JSON.stringify(json, null, 2) + "\n", "utf8");
 
-  console.log(`\nReport written to docs/superpowers/measurement-report.{md,json}`);
+  console.log(`\nReport written to .superpowers/measurement-report.{md,json}`);
   const promotable = json.filter((m) => m.verdict === "promotable").length;
   const pendingHuman = json.filter((m) => m.verdict === "pending-human").length;
   const walled = json.filter((m) => m.verdict === "walled").length;

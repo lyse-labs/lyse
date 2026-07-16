@@ -2,7 +2,7 @@
  * TDD guard: token-def / story-test / svg-icon FP classes for tokens/no-hardcoded-color.
  *
  * Real snippets from the color-harvest labeled dataset
- * (docs/superpowers/color-harvest-labels.md):
+ * (color-harvest-labels.md, archived in lyse-internal):
  *
  * token-def (29 findings):
  *   id 21:  apps/mantine.dev/theme.ts:44 — color values in theme.ts
