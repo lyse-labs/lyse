@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Internal
 
+- Removed 5 orphaned fixture directories whose consuming tests/rubrics were deleted in earlier commits (`validation-fixture`, `recovery-flow-no-recovery`, `recovery-flow-wired`, `explainability-coverage-negative`, `explainability-coverage-positive`), plus the unused `packages/core/validation/types.d.ts` and the bypassed `src/reliability/confidence/index.ts` barrel. Added a `knip.json` recording the known false positives (`axe-core` loaded via `createRequire`, the Windows `where` builtin, editor-only `prettier`, flat-config `@eslint/js`) so dead-code scans stay actionable. No published behavior change.
 - Root `devDependencies` now list `tsx`, so `pnpm clone:bench` and `pnpm measure:rules` work on a fresh clone; removed the unused root `@anthropic-ai/sdk` entry (the runtime dependency in `packages/core` is untouched).
 
 ### Docs

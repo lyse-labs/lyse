@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreBinaries": ["where"],
+  "ignoreDependencies": ["@eslint/js", "prettier"],
+  "workspaces": {
+    ".": {},
+    "packages/core": {
+      "ignoreDependencies": ["axe-core"]
+    }
+  }
+}
