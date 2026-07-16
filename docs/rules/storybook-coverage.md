@@ -1,6 +1,6 @@
 # `stories/coverage`
 
-> **Axis:** Stories · **Severity:** info · **Auto-fixable:** no · **Version:** v1
+> **Axis:** Stories · **Severity:** warning · **Auto-fixable:** no · **Version:** v1
 
 Flags components that don't have a corresponding Storybook story file.
 

@@ -1,5 +1,7 @@
 # ai-governance/ai-content-live-region
 
+> **Axis:** AI governance · **Severity:** warning · **Auto-fixable:** no
+
 ## Why it matters
 
 Screen-reader users rely on ARIA live regions to hear dynamically updated content.

@@ -1,6 +1,8 @@
 # Rules
 
-Lyse ships with 65 rules, all listed in the table below (2 are render-only experimental rules — see [Render-only and experimental rules](#render-only-and-experimental-rules)). Each rule has a stable ID, a version, a severity, an axis, and (optionally) a codemod for auto-fix.
+Lyse ships with 66 rules, all listed in the table below. Each rule has a stable ID, a version, a severity, an axis, and (optionally) a codemod for auto-fix.
+
+Rules marked with \* are **experimental** and do not contribute to the Health Score (two of them additionally require the opt-in render layer — see [Render-only and experimental rules](#render-only-and-experimental-rules)).
 
 Rule output appears in:
 - Terminal text (default reporter).
@@ -11,47 +13,55 @@ Rule output appears in:
 
 | Rule ID | Axis | Severity | Auto-fixable | Doc |
 |---|---|---|---|---|
-| `tokens/no-hardcoded-color` | Tokens | warning | Yes | [→](./tokens-no-hardcoded-color.md) |
+| `tokens/no-hardcoded-color` \* | Tokens | warning | Yes | [→](./tokens-no-hardcoded-color.md) |
 | `tokens/no-hardcoded-spacing` | Tokens | warning | Yes | [→](./tokens-no-hardcoded-spacing.md) |
 | `tokens/dtcg-conformance` | Tokens | warning | No | [→](./tokens-dtcg-conformance.md) |
-| `tokens/description-coverage` | Tokens | info | No | — |
+| `tokens/description-coverage` | Tokens | info | No | [→](./tokens-description-coverage.md) |
 | `tokens/responsive-breakpoints` | Tokens | warning | No | [→](./tokens-responsive-breakpoints.md) |
 | `tokens/css-custom-property-export` | Tokens | warning | No | [→](./tokens-css-custom-property-export.md) |
 | `tokens/no-hardcoded-media-query` | Tokens | warning | No | [→](./tokens-no-hardcoded-media-query.md) |
 | `tokens/container-query` | Tokens | warning | No | [→](./tokens-container-query.md) |
 | `tokens/no-hardcoded-z-index` | Tokens | warning | No | [→](./tokens-no-hardcoded-z-index.md) |
-| `tokens/no-hardcoded-shadow` | Tokens | warning | No | [→](./tokens-no-hardcoded-shadow.md) |
-| `tokens/no-hardcoded-gradient` | Tokens | warning | No | [→](./tokens-no-hardcoded-gradient.md) |
+| `tokens/no-hardcoded-shadow` \* | Tokens | warning | No | [→](./tokens-no-hardcoded-shadow.md) |
+| `tokens/no-hardcoded-gradient` \* | Tokens | warning | No | [→](./tokens-no-hardcoded-gradient.md) |
 | `tokens/no-hardcoded-typography` | Tokens | warning | No | [→](./tokens-no-hardcoded-typography.md) |
 | `tokens/no-hardcoded-opacity` | Tokens | warning | No | [→](./tokens-no-hardcoded-opacity.md) |
 | `tokens/no-hardcoded-border-radius` | Tokens | warning | No | [→](./tokens-no-hardcoded-border-radius.md) |
 | `tokens/no-hardcoded-border-width` | Tokens | warning | No | [→](./tokens-no-hardcoded-border-width.md) |
 | `tokens/no-hardcoded-motion` | Tokens | warning | No | [→](./tokens-no-hardcoded-motion.md) |
-| `a11y/essentials` | A11y | error | No | [→](./a11y-essentials.md) |
+| `a11y/essentials` | A11y | warning | No | [→](./a11y-essentials.md) |
 | `a11y/prefers-reduced-motion` | A11y | warning | No | [→](./a11y-prefers-reduced-motion.md) |
 | `a11y/focus-visible` | A11y | warning | No | [→](./a11y-focus-visible.md) |
 | `a11y/inclusive-language` | A11y | info | No | [→](./a11y-inclusive-language.md) |
 | `a11y/forced-colors` | A11y | warning | No | [→](./a11y-forced-colors.md) |
 | `a11y/html-lang` | A11y | warning | No | [→](./a11y-html-lang.md) |
 | `a11y/semantic-html` | A11y | warning | No | [→](./a11y-semantic-html.md) |
+| `a11y/contrast-tokens` \* | A11y | warning | No | [→](./a11y-contrast-tokens.md) |
+| `a11y/interactive-role-name` \* | A11y | warning | No | [→](./a11y-interactive-role-name.md) |
 | `components/no-native-shadows` | Components | warning | Yes | [→](./components-shadow-native.md) |
 | `components/no-icon-fonts` | Components | warning | No | [→](./components-no-icon-fonts.md) |
 | `components/svg-viewbox` | Components | warning | No | [→](./components-svg-viewbox.md) |
 | `components/icon-decorative-aria` | Components | warning | No | [→](./components-icon-decorative-aria.md) |
-| `components/contracts-strictness` | Components | warning | No | [→](./components-contracts-strictness.md) |
+| `components/contracts-strictness` \* | Components | warning | No | [→](./components-contracts-strictness.md) |
+| `components/standardized-variant-props` \* | Components | warning | No | [→](./components-standardized-variant-props.md) |
+| `components/no-arbitrary-tailwind` \* | Components | warning | No | [→](./components-no-arbitrary-tailwind.md) |
+| `components/no-style-escape-hatch` \* | Components | warning | No | [→](./components-no-style-escape-hatch.md) |
 | `components/doc-comments` | Components | info | No | [→](./components-doc-comments.md) |
 | `naming/component-pascalcase` | Components | warning | Yes | [→](./naming-component-pascalcase.md) |
 | `naming/hook-prefix` | Components | warning | Yes | [→](./naming-hook-prefix.md) |
-| `stories/coverage` | Stories | info | No | [→](./storybook-coverage.md) |
-| `ai-surface/agents-md-quality` | AI surface | warning | No | — |
-| `ai-surface/component-manifest-json` | AI surface | warning | No | — |
+| `stories/coverage` | Stories | warning | No | [→](./storybook-coverage.md) |
+| `stories/props-documented` \* | Stories | warning | No | [→](./stories-props-documented.md) |
+| `stories/usage-examples` \* | Stories | warning | No | [→](./stories-usage-examples.md) |
+| `ai-surface/agents-md-quality` | AI surface | warning | No | [→](./ai-surface-agents-md-quality.md) |
+| `ai-surface/component-manifest-json` | AI surface | info | No | [→](./ai-surface-component-manifest-json.md) |
+| `ai-surface/component-manifest-completeness` \* | AI surface | info | No | [→](./ai-surface-component-manifest-completeness.md) |
 | `ai-surface/ds-index-exported` | AI surface | warning | No | [→](./ai-surface-ds-index-exported.md) |
 | `ai-surface/mcp-config-present` | AI surface | warning | No | [→](./ai-surface-mcp-config-present.md) |
 | `ai-surface/llms-txt-structure` | AI surface | warning | No | [→](./ai-surface-llms-txt-structure.md) |
 | `ai-surface/shadcn-registry-valid` | AI surface | warning | No | [→](./ai-surface-shadcn-registry-valid.md) |
 | `ai-surface/agent-instruction-files` | AI surface | warning | No | [→](./ai-surface-agent-instruction-files.md) |
 | `tokens/deprecated-token-usage` | Tokens | warning | No | [→](./tokens-deprecated-token-usage.md) |
-| `tokens/theme-modes-present` | Tokens | warning | No | — |
+| `tokens/theme-modes-present` | Tokens | warning | No | [→](./tokens-theme-modes-present.md) |
 | `versioning/changelog-present` | AI surface | warning | No | [→](./versioning-changelog-present.md) |
 | `versioning/semver-versioning` | AI surface | warning | No | [→](./versioning-semver-versioning.md) |
 | `versioning/migration-guide-present` | AI surface | warning | No | [→](./versioning-migration-guide-present.md) |
@@ -70,12 +80,14 @@ Rule output appears in:
 
 ## Render-only and experimental rules
 
-Some rules require the opt-in render layer (`lyse audit --render`) and do not contribute to the Health Score:
+Every rule marked with \* in the table above is **experimental**: it reports findings but does not contribute to the Health Score until its real-world precision clears the promotion gate.
+
+Two experimental rules additionally require the opt-in render layer (`lyse audit --render`):
 
 | Rule ID | Requires | Status | Doc |
 |---|---|---|---|
 | `a11y/runtime-axe` | `--render` + pre-built Storybook | experimental | [→](./a11y-runtime-axe.md) |
-| `tokens/rendered-token-fidelity` | `--render` + pre-built Storybook | experimental | — |
+| `tokens/rendered-token-fidelity` | `--render` + pre-built Storybook | experimental | [→](./tokens-rendered-token-fidelity.md) |
 
 These rules are reported-only until calibration data is available from real design system corpora.
 
