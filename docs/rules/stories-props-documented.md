@@ -2,7 +2,7 @@
 
 **Axis:** stories  
 **Severity:** warning  
-**Status:** experimental — unmeasured, does not contribute to the Health Score
+**Status:** experimental — measured (n=46, precision 1.0, calibrated 2026-06-28), does not contribute to the Health Score
 
 ## What it flags
 
@@ -40,4 +40,4 @@ The story is the canonical documentation surface for a DS component. A story tha
 
 ## Honest status note
 
-This rule is **experimental and unmeasured**. Real-world precision against OSS design systems has not been harvested. It will not contribute to the Health Score until precision and recall clear the 0.90 Wilson lower-bound threshold. The finding severity is `warning` throughout the experimental period.
+This rule is **experimental**. A first measurement exists (n=46, precision 1.0, Wilson lower bound ≈0.901, calibrated 2026-06-28), but the rule does not contribute to the Health Score pending promotion. The finding severity is `warning` throughout the experimental period.

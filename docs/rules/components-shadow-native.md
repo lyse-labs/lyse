@@ -2,15 +2,15 @@
 
 > **Axis:** Components · **Severity:** warning · **Auto-fixable:** yes · **Version:** v1
 
-Flags native HTML elements used where a design system component would be more appropriate.
+Flags native HTML elements used in a file that already imports from your design system's component module.
 
 ## Why
 
 When `<Button>` exists in your component library but a developer writes `<button>`, the result is a button that lacks your DS's focus styles, loading state, sizing variants, and accessibility affordances. Over time these native elements accumulate, and the DS becomes a parallel universe to actual usage.
 
-This rule flags native elements that shadow a component you've already built.
+The rule only fires in files that **already import from the DS module** — that is the high-signal case: the team uses the DS in this file but bypassed it for this element. Files that don't touch the DS at all are skipped entirely.
 
-## How it knows which components exist
+## How it works
 
 The rule reads the `componentsModule` from `.lyse.yaml`:
 
@@ -19,24 +19,22 @@ designSystem:
   componentsModule: "@your-org/ui"
 ```
 
-Lyse resolves the module, enumerates its named exports, and maps each export to a default native equivalent:
+In every file that imports from that module, it flags these native elements using a fixed mapping:
 
-| Native | Component (heuristic) |
+| Native | Suggested component |
 |---|---|
 | `<button>` | `Button` |
-| `<a>` | `Link` |
 | `<input>` | `Input` |
 | `<select>` | `Select` |
 | `<textarea>` | `Textarea` |
-| `<table>` | `Table` |
-| `<img>` | `Image` |
+| `<a>` | `Link` |
 
-You can override the mapping in config (see Configuration below).
+The mapping is fixed in v1 — it does not inspect the module's actual exports, and it is not configurable.
 
 ## Bad
 
 ```tsx
-// Project has @your-org/ui exporting Button, Input, Link
+import { Button } from "@your-org/ui";
 
 function LoginForm() {
   return (
@@ -69,41 +67,28 @@ function LoginForm() {
 
 The codemod rewrites the native element to its component equivalent, including the import statement at the top of the file.
 
-The codemod **preserves all attributes** — `onClick`, `disabled`, `aria-*`, `data-*`, `className`, `style` — and just changes the tag name and the import.
-
 ## Allowlist
 
-For valid native usage (legacy code, third-party libraries, semantic HTML in MDX/blog posts):
+For valid native usage:
 
 ```tsx
 // lyse-disable-next-line components/no-native-shadows
 <button onClick={onLegacyHandler}>Old way</button>
 ```
 
-For an entire file:
+For an entire file, use the block-comment form (line comments are not recognized for file-level suppression):
 
 ```ts
-// lyse-disable components/no-native-shadows
+/* lyse-disable components/no-native-shadows */
 ```
 
 ## What does NOT trigger this rule
 
-- Native elements when the component is not exported from `componentsModule` (no shadowing).
-- Native elements inside Storybook story files (fixtures).
-- Native elements inside MDX / `.md` files (prose).
-- Native elements inside an explicit `unsafe-html` boundary (component opt-out).
-
-## Configuration
-
-```yaml
-# .lyse.yaml
-designSystem:
-  componentsModule: "@your-org/ui"
-  componentMap:
-    "button": "Button"        # override default mapping
-    "a": "Link"
-    "select": "Combobox"      # use Combobox instead of default Select
-```
+- Files that do not import from `componentsModule` (no shadowing signal).
+- Repos with no `componentsModule` configured — the rule is silent.
+- DS-self audits (`dsSelfMode`): a DS that implements `<Button>` necessarily writes `<button>` — that's its job.
+- Polymorphic usage: a nearby `as="button"` / `as="a"` prop (e.g. `<Box as="button">`) exempts the match.
+- Files matching `designSystem.excludePaths` in `.lyse.yaml`.
 
 ## See also
 

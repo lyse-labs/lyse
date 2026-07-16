@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Docs
 
+- Resynced the rule index (`docs/rules/README.md`) with the registry: count 65 → 66, added the 8 missing rules (`a11y/contrast-tokens`, `a11y/interactive-role-name`, `components/standardized-variant-props`, `components/no-arbitrary-tailwind`, `components/no-style-escape-hatch`, `stories/props-documented`, `stories/usage-examples`, `ai-surface/component-manifest-completeness`), marked all experimental/off-score rules with `*`, fixed 4 severity cells that had drifted from code (`a11y/essentials`, `stories/coverage`, `ai-surface/component-manifest-json` — and `ai-surface/ds-index-exported` in its own doc), and linked 5 doc pages that existed but showed as missing.
+- Created the missing `docs/rules/tokens-theme-modes-present.md` (the rule's `helpUri` 404'd) and rewrote `docs/rules/components-shadow-native.md` to match the actual v1 behavior (fixed native→DS mapping, no export enumeration, no `componentMap`; corrected the file-level suppression example to block-comment form).
+
 - Restructured README to showcase agent-era pain point and instant-audit Quickstart via bare `lyse` command (no config, no prompts); moved `lyse init` setup into new "Optional: calibrate" section.
 
 ### Internal

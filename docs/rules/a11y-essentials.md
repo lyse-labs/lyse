@@ -1,12 +1,12 @@
 # `a11y/essentials`
 
-> **Axis:** A11y · **Severity:** error · **Auto-fixable:** no · **Version:** v1
+> **Axis:** A11y · **Severity:** warning · **Auto-fixable:** no · **Version:** v1
 
 Enforces a curated subset of accessibility essentials, wrapping `eslint-plugin-jsx-a11y` rules treated as non-negotiable.
 
 ## Why
 
-Accessibility is the highest-stakes axis in a design system. Mistakes here exclude real users, expose the company to legal risk (EAA, ADA, EU AI Act), and undermine user trust. Lyse treats `a11y` violations as `error` (rather than `warning`) by default.
+Accessibility is the highest-stakes axis in a design system. Mistakes here exclude real users, expose the company to legal risk (EAA, ADA, EU AI Act), and undermine user trust.
 
 This rule does not invent new a11y heuristics. It reuses established `eslint-plugin-jsx-a11y` rules and selects a subset that maps to the [W3C WAI Easy Checks](https://www.w3.org/WAI/test-evaluate/preliminary/).
 
