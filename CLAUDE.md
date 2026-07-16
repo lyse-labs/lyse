@@ -103,11 +103,16 @@ should not as a routine.
 
 The [superpowers](https://github.com/obra/superpowers) skills (MIT) are vendored
 under `.claude/skills/`. Follow that workflow for any non-trivial change:
-**brainstorming** (design + user approval) → spec in `docs/superpowers/specs/` →
-**writing-plans** (plan in `docs/superpowers/plans/`) →
+**brainstorming** (design + user approval) → spec in `.superpowers/specs/` →
+**writing-plans** (plan in `.superpowers/plans/`) →
 **subagent-driven-development** (fresh subagent per task + per-task review) →
 **requesting-code-review** before merge. TDD throughout; verification before
 any completion claim.
+
+`.superpowers/` is gitignored — specs, plans, and measurement reports are
+internal working documents. Never commit them to this public repo; archive
+anything worth keeping to `lyse-labs/lyse-internal`
+(`internal/superpowers-archive/`).
 
 ## Operating principles
 

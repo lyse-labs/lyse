@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Internal
 
+- Moved the `docs/superpowers/` working documents (specs, plans, measurement reports — 41 files) out of the public tree; they are archived in the private `lyse-internal` repository and new ones are written to the gitignored `.superpowers/`. `pnpm measure:rules` now writes its report there too. Public docs under `docs/` are unaffected.
 - Removed 5 orphaned fixture directories whose consuming tests/rubrics were deleted in earlier commits (`validation-fixture`, `recovery-flow-no-recovery`, `recovery-flow-wired`, `explainability-coverage-negative`, `explainability-coverage-positive`), plus the unused `packages/core/validation/types.d.ts` and the bypassed `src/reliability/confidence/index.ts` barrel. Added a `knip.json` recording the known false positives (`axe-core` loaded via `createRequire`, the Windows `where` builtin, editor-only `prettier`, flat-config `@eslint/js`) so dead-code scans stay actionable. No published behavior change.
 - Root `devDependencies` now list `tsx`, so `pnpm clone:bench` and `pnpm measure:rules` work on a fresh clone; removed the unused root `@anthropic-ai/sdk` entry (the runtime dependency in `packages/core` is untouched).
 
@@ -25,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Internal
 
-- Added a measurement harness (`pnpm measure:rules`) that scores rule precision against a local clone of the lyse-bench tier-1 corpus: it runs the real audit pipeline, auto-labels structural (presence/structure) rules deterministically, and LLM-judges detection rules via the agent-CLI connector (no API key). First-pass report at `docs/superpowers/measurement-report.md`. Dev tooling only — no change to published behavior or the Health Score.
+- Added a measurement harness (`pnpm measure:rules`) that scores rule precision against a local clone of the lyse-bench tier-1 corpus: it runs the real audit pipeline, auto-labels structural (presence/structure) rules deterministically, and LLM-judges detection rules via the agent-CLI connector (no API key). First-pass report written to the gitignored `.superpowers/measurement-report.md`. Dev tooling only — no change to published behavior or the Health Score.
 
 ### Added
 
