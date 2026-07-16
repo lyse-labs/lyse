@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { judgeFindings, packetFor, buildJudgePrompt } from "../../../src/reliability/measure/judge.js";
 import type { ConnectorClient, ConnectorResult } from "../../../src/llm/connectors/types.js";
-import type { FindingRow } from "../../../../scripts/harvest-findings.js";
+import type { FindingRow } from "../../../src/reliability/measure/finding-row.js";
 
 function makeRow(overrides: Partial<FindingRow> = {}): FindingRow {
   return {

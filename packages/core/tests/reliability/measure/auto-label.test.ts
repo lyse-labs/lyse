@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { autoLabel } from "../../../src/reliability/measure/auto-label.js";
-import type { FindingRow } from "../../../../scripts/harvest-findings.js";
+import type { FindingRow } from "../../../src/reliability/measure/finding-row.js";
 
 function makeTmpRepo(): string {
   return mkdtempSync(join(tmpdir(), "lyse-auto-label-test-"));
