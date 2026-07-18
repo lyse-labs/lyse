@@ -5,6 +5,7 @@ import { fixHardcodedSpacing } from "../codemods/tokens-spacing.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
 import { createLyseRule } from "./_rule-module.js";
 import { makeFixGroup } from "./_fix-group.js";
+import { isScored, onScale, reverseLookup } from "../graph/query.js";
 
 const PX_REM_EM = /\b(\d+(\.\d+)?)(px|rem|em)\b/g;
 // Only `0` and `100` are unconditionally allowed. `1` (i.e. 1px) is only
@@ -64,25 +65,29 @@ function locationFromIndex(source: string, index: number): { line: number; colum
 }
 
 function isOnScale(ctx: RuleContext, value: number): boolean {
+  if (ctx.graph) return onScale(ctx.graph, "spacing", String(value));
   if (!ctx.tokens) return false;
   return ctx.tokens.spacing.has(String(value));
 }
 
+function spacingCandidates(ctx: RuleContext, numKey: string, raw: string): string[] {
+  if (ctx.graph) return reverseLookup(ctx.graph, "spacing", numKey);
+  if (!ctx.tokens) return [];
+  return ctx.tokens.spacing.get(raw) ?? ctx.tokens.spacing.get(numKey) ?? [];
+}
+
 function suggestSpacing(ctx: RuleContext, raw: string): string | undefined {
-  if (!ctx.tokens) return undefined;
   const m = raw.match(/^(\d+(\.\d+)?)(px|rem|em)$/);
   if (!m) return undefined;
-  const candidates = ctx.tokens.spacing.get(m[1]!);
-  if (!candidates || candidates.length === 0) return undefined;
+  const candidates = spacingCandidates(ctx, m[1]!, raw);
+  if (candidates.length === 0) return undefined;
   return candidates.length === 1 ? `consider token ${candidates[0]!}` : `candidate tokens: ${candidates.join(", ")}`;
 }
 
 function spacingFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {
-  if (!ctx.tokens) return undefined;
   const m = raw.match(/^(\d+(\.\d+)?)(px|rem|em)$/);
   if (!m) return undefined;
-  const numKey = m[1]!;
-  const candidates = ctx.tokens.spacing.get(raw) ?? ctx.tokens.spacing.get(numKey);
+  const candidates = spacingCandidates(ctx, m[1]!, raw);
   return makeFixGroup("tokens/no-hardcoded-spacing", raw, candidates);
 }
 
@@ -140,8 +145,8 @@ const evaluate = async (
 
   for (const f of files.ts) {
     if (isPathExcluded(f.path, ctx.excludePaths)) continue;
-    if (isLowSignalValueFile(f.path)) continue;
-    if (isSchemaOrDataFile(f.path)) continue;
+    if (ctx.graph && !isScored(ctx.graph, f.path)) continue;
+    if (!ctx.graph && (isLowSignalValueFile(f.path) || isSchemaOrDataFile(f.path))) continue;
     scan(f.path, f.source);
     // Also count Tailwind spacing utility classes as compliant opportunities
     const fileExt = f.path.match(/\.[^.]+$/)?.[0] ?? ".ts";
@@ -149,14 +154,14 @@ const evaluate = async (
   }
   for (const c of files.css) {
     if (isPathExcluded(c.path, ctx.excludePaths)) continue;
-    if (isLowSignalValueFile(c.path)) continue;
-    if (isSchemaOrDataFile(c.path)) continue;
+    if (ctx.graph && !isScored(ctx.graph, c.path)) continue;
+    if (!ctx.graph && (isLowSignalValueFile(c.path) || isSchemaOrDataFile(c.path))) continue;
     scan(c.path, c.source);
   }
   for (const b of files.cssInJs) {
     if (isPathExcluded(b.path, ctx.excludePaths)) continue;
-    if (isLowSignalValueFile(b.path)) continue;
-    if (isSchemaOrDataFile(b.path)) continue;
+    if (ctx.graph && !isScored(ctx.graph, b.path)) continue;
+    if (!ctx.graph && (isLowSignalValueFile(b.path) || isSchemaOrDataFile(b.path))) continue;
     scan(b.path, b.content, b.line);
   }
 
