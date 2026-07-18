@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { GOLDEN_CORPUS } from "./corpus.js";
-import { fetchGoldenRepo } from "./fetch.js";
+import { fetchGoldenRepo, goldenCacheDir } from "./fetch.js";
 
 const NET = process.env.LYSE_GOLDEN === "1";
 describe.runIf(NET)("fetchGoldenRepo (network)", () => {
@@ -13,4 +14,16 @@ describe.runIf(NET)("fetchGoldenRepo (network)", () => {
     const p2 = await fetchGoldenRepo(repo); // cache hit
     expect(p2).toBe(p1);
   }, 120_000);
+
+  it("a failed fetch returns null and leaves no poisoned cache dir", async () => {
+    const bad = {
+      ...GOLDEN_CORPUS[0]!,
+      sha: "0000000000000000000000000000000000000000",
+      url: "https://codeload.github.com/carbon-design-system/carbon/tar.gz/0000000000000000000000000000000000000000",
+    };
+    const p = await fetchGoldenRepo(bad);
+    expect(p).toBeNull();
+    const dest = join(goldenCacheDir(), `carbon-design-system__carbon-${bad.sha}`);
+    expect(existsSync(dest)).toBe(false); // not poisoned
+  }, 60_000);
 });
