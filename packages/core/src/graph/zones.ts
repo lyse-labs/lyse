@@ -15,6 +15,12 @@ export interface ZoneInputs {
 
 const STORY_RE = /\.stories\.[jt]sx?$/;
 
+// P2: real-repo conventions the JS/TS-only skip regexes miss.
+const STORY_STYLING_RE = /(?:^|[\\/])[^\\/]*(?:[.-]story|[.-]stories)\.(?:css|scss|sass|less)$/i;
+const FIGMA_RE = /(?:^|[\\/])code-connect[\\/]|\.figma\.[cm]?[jt]sx?$/i;
+const HYPHEN_TEST_RE = /(?:^|[\\/])[^\\/]*-test\.[cm]?[jt]sx?$|(?:^|[\\/])test\.(?:css|scss|sass|less)$/i;
+const PREVIEWER_RE = /(?:^|[\\/])previewer[\\/]/i;
+
 export function classifyZone(rel: string, source: string, opts: ZoneInputs): ZoneKind {
   if (STORY_RE.test(rel)) return "story";
   if (isVendoredOrResetFile(rel)) return "vendored";
@@ -23,6 +29,10 @@ export function classifyZone(rel: string, source: string, opts: ZoneInputs): Zon
   if (isLowSignalValueFile(rel)) return "test";
   if (isSchemaOrDataFile(rel)) return "config";
   if (isColorTokenDefFile(rel)) return "ds-source";
+  if (STORY_STYLING_RE.test(rel)) return "story";
+  if (PREVIEWER_RE.test(rel)) return "config";
+  if (FIGMA_RE.test(rel)) return "config";
+  if (HYPHEN_TEST_RE.test(rel)) return "test";
   return opts.dsSelfMode ? "ds-source" : "app";
 }
 
