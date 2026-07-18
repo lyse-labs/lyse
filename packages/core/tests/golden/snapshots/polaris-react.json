@@ -1,0 +1,119 @@
+{
+  "$schema": "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-result.json",
+  "axes": [
+    {
+      "absoluteCap": 100,
+      "axis": "tokens",
+      "findings": 135,
+      "opportunities": 2392,
+      "rateScore": 89,
+      "score": 89,
+      "sevPenalty": 270,
+      "weightedFindings": 270
+    },
+    {
+      "absoluteCap": 100,
+      "axis": "a11y",
+      "findings": 85,
+      "opportunities": 395,
+      "rateScore": 57,
+      "score": 57,
+      "sevPenalty": 170,
+      "weightedFindings": 170
+    },
+    {
+      "absoluteCap": 100,
+      "axis": "components",
+      "findings": 114,
+      "opportunities": 1494,
+      "rateScore": 92,
+      "score": 92,
+      "sevPenalty": 126,
+      "weightedFindings": 126
+    },
+    {
+      "absoluteCap": "N/A",
+      "axis": "stories",
+      "findings": 0,
+      "opportunities": 0,
+      "rateScore": "N/A",
+      "score": "N/A",
+      "sevPenalty": 0,
+      "weightedFindings": 0
+    },
+    {
+      "absoluteCap": 100,
+      "axis": "ai-surface",
+      "findings": 6,
+      "opportunities": 39,
+      "rateScore": 74,
+      "score": 74,
+      "sevPenalty": 10,
+      "weightedFindings": 10
+    },
+    {
+      "absoluteCap": 100,
+      "axis": "ai-governance",
+      "findings": 10,
+      "opportunities": 598,
+      "rateScore": 97,
+      "score": 100,
+      "sevPenalty": 20,
+      "weightedFindings": 20
+    }
+  ],
+  "finalScore": 82,
+  "findingsCount": 350,
+  "findingsDigest": "2c26f60221c809461dbafeef7702b9baab7ba9c425d415504948070ee36345c4",
+  "grade": {
+    "autoFailed": false,
+    "grade": "A",
+    "reasons": []
+  },
+  "meta": {
+    "coverage": {
+      "configPath": null,
+      "scannedFiles": 1170
+    },
+    "projection": {
+      "top": [
+        {
+          "count": 62,
+          "files": 16,
+          "gain": 7,
+          "key": "a11y/interactive-role-name",
+          "migrationScale": false,
+          "ruleId": "a11y/interactive-role-name"
+        },
+        {
+          "count": 102,
+          "files": 102,
+          "gain": 2,
+          "key": "components/doc-comments",
+          "migrationScale": true,
+          "ruleId": "components/doc-comments"
+        },
+        {
+          "count": 20,
+          "files": 14,
+          "gain": 2,
+          "key": "a11y/semantic-html",
+          "migrationScale": false,
+          "ruleId": "a11y/semantic-html"
+        }
+      ],
+      "totalGainTop3": 10
+    }
+  },
+  "repoRoot": "<REPO>/polaris-react",
+  "rulesVersion": "0.1.0",
+  "schemaVersion": 2,
+  "scoringVersion": "scoring-v1.1",
+  "stack": [
+    "react",
+    "storybook"
+  ],
+  "tier": "Autonomous",
+  "timestamp": "",
+  "toolVersion": ""
+}

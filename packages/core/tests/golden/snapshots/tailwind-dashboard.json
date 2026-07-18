@@ -1,0 +1,113 @@
+{
+  "$schema": "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-result.json",
+  "axes": [
+    {
+      "absoluteCap": 100,
+      "axis": "tokens",
+      "findings": 40,
+      "opportunities": 2018,
+      "rateScore": 96,
+      "score": 96,
+      "sevPenalty": 80,
+      "weightedFindings": 80
+    },
+    {
+      "absoluteCap": 100,
+      "axis": "a11y",
+      "findings": 33,
+      "opportunities": 137,
+      "rateScore": 52,
+      "score": 52,
+      "sevPenalty": 66,
+      "weightedFindings": 66
+    },
+    {
+      "absoluteCap": 100,
+      "axis": "components",
+      "findings": 96,
+      "opportunities": 176,
+      "rateScore": -9,
+      "score": 0,
+      "sevPenalty": 192,
+      "weightedFindings": 192
+    },
+    {
+      "absoluteCap": "N/A",
+      "axis": "stories",
+      "findings": 0,
+      "opportunities": 0,
+      "rateScore": "N/A",
+      "score": "N/A",
+      "sevPenalty": 0,
+      "weightedFindings": 0
+    },
+    {
+      "absoluteCap": 100,
+      "axis": "ai-surface",
+      "findings": 6,
+      "opportunities": 8,
+      "rateScore": -25,
+      "score": 0,
+      "sevPenalty": 10,
+      "weightedFindings": 10
+    },
+    {
+      "absoluteCap": 100,
+      "axis": "ai-governance",
+      "findings": 0,
+      "opportunities": 43,
+      "rateScore": 100,
+      "score": 100,
+      "sevPenalty": 0,
+      "weightedFindings": 0
+    }
+  ],
+  "finalScore": 39,
+  "findingsCount": 175,
+  "findingsDigest": "c03bac1e1757d7c3b8774a836ff16004b734f715fc967b90c00218b95f1a6924",
+  "grade": {
+    "autoFailed": true,
+    "grade": "Fail",
+    "reasons": [
+      "2 axes scored 0: ai-surface, components"
+    ]
+  },
+  "meta": {
+    "coverage": {
+      "configPath": null,
+      "scannedFiles": 49
+    },
+    "projection": {
+      "top": [
+        {
+          "count": 76,
+          "files": 19,
+          "gain": 26,
+          "key": "components/icon-decorative-aria",
+          "migrationScale": false,
+          "ruleId": "components/icon-decorative-aria"
+        },
+        {
+          "count": 19,
+          "files": 7,
+          "gain": 13,
+          "key": "components/no-arbitrary-tailwind",
+          "migrationScale": false,
+          "ruleId": "components/no-arbitrary-tailwind"
+        }
+      ],
+      "totalGainTop3": 30
+    }
+  },
+  "repoRoot": "<REPO>",
+  "rulesVersion": "0.1.0",
+  "schemaVersion": 2,
+  "scoringVersion": "scoring-v1.1",
+  "stack": [
+    "react",
+    "tailwind"
+  ],
+  "tier": "Managed",
+  "timestamp": "",
+  "toolVersion": ""
+}

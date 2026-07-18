@@ -1,0 +1,119 @@
+{
+  "$schema": "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-result.json",
+  "axes": [
+    {
+      "absoluteCap": 100,
+      "axis": "tokens",
+      "findings": 690,
+      "opportunities": 22982,
+      "rateScore": 94,
+      "score": 94,
+      "sevPenalty": 1380,
+      "weightedFindings": 1380
+    },
+    {
+      "absoluteCap": 100,
+      "axis": "a11y",
+      "findings": 265,
+      "opportunities": 1336,
+      "rateScore": 61,
+      "score": 61,
+      "sevPenalty": 524,
+      "weightedFindings": 524
+    },
+    {
+      "absoluteCap": 100,
+      "axis": "components",
+      "findings": 10263,
+      "opportunities": 13048,
+      "rateScore": -57,
+      "score": 0,
+      "sevPenalty": 20526,
+      "weightedFindings": 20526
+    },
+    {
+      "absoluteCap": "N/A",
+      "axis": "stories",
+      "findings": 0,
+      "opportunities": 0,
+      "rateScore": "N/A",
+      "score": "N/A",
+      "sevPenalty": 0,
+      "weightedFindings": 0
+    },
+    {
+      "absoluteCap": 100,
+      "axis": "ai-surface",
+      "findings": 6,
+      "opportunities": 12,
+      "rateScore": 17,
+      "score": 17,
+      "sevPenalty": 10,
+      "weightedFindings": 10
+    },
+    {
+      "absoluteCap": 100,
+      "axis": "ai-governance",
+      "findings": 0,
+      "opportunities": 3119,
+      "rateScore": 100,
+      "score": 100,
+      "sevPenalty": 0,
+      "weightedFindings": 0
+    }
+  ],
+  "finalScore": 54,
+  "findingsCount": 11224,
+  "findingsDigest": "5b9f324df88bdb4e830eda0c4aaa866563e78cf5676ee9f1bc6de826485433cd",
+  "grade": {
+    "autoFailed": false,
+    "grade": "C",
+    "reasons": []
+  },
+  "meta": {
+    "coverage": {
+      "configPath": null,
+      "scannedFiles": 3388
+    },
+    "projection": {
+      "top": [
+        {
+          "count": 10198,
+          "files": 1007,
+          "gain": 20,
+          "key": "components/no-arbitrary-tailwind",
+          "migrationScale": true,
+          "ruleId": "components/no-arbitrary-tailwind"
+        },
+        {
+          "count": 136,
+          "files": 91,
+          "gain": 4,
+          "key": "a11y/essentials",
+          "migrationScale": true,
+          "ruleId": "a11y/essentials"
+        },
+        {
+          "count": 121,
+          "files": 68,
+          "gain": 4,
+          "key": "a11y/interactive-role-name",
+          "migrationScale": true,
+          "ruleId": "a11y/interactive-role-name"
+        }
+      ],
+      "totalGainTop3": 28
+    }
+  },
+  "repoRoot": "<REPO>",
+  "rulesVersion": "0.1.0",
+  "schemaVersion": 2,
+  "scoringVersion": "scoring-v1.1",
+  "stack": [
+    "react",
+    "tailwind"
+  ],
+  "tier": "Defined",
+  "timestamp": "",
+  "toolVersion": ""
+}

@@ -48,6 +48,9 @@ packages/core/fixtures/**/.lyse/
 .stryker-tmp/
 packages/core/reports/
 
+# golden-corpus fetch cache (third-party sources, never committed)
+lyse-golden-corpus/
+
 # SDD scratch (subagent-driven working files)
 .superpowers/
 # Backup files

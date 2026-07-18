@@ -1,0 +1,119 @@
+{
+  "$schema": "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-result.json",
+  "axes": [
+    {
+      "absoluteCap": 100,
+      "axis": "tokens",
+      "findings": 136,
+      "opportunities": 265,
+      "rateScore": -3,
+      "score": 0,
+      "sevPenalty": 272,
+      "weightedFindings": 272
+    },
+    {
+      "absoluteCap": 100,
+      "axis": "a11y",
+      "findings": 21,
+      "opportunities": 975,
+      "rateScore": 96,
+      "score": 96,
+      "sevPenalty": 42,
+      "weightedFindings": 42
+    },
+    {
+      "absoluteCap": 100,
+      "axis": "components",
+      "findings": 54,
+      "opportunities": 309,
+      "rateScore": 81,
+      "score": 81,
+      "sevPenalty": 60,
+      "weightedFindings": 60
+    },
+    {
+      "absoluteCap": "N/A",
+      "axis": "stories",
+      "findings": 0,
+      "opportunities": 0,
+      "rateScore": "N/A",
+      "score": "N/A",
+      "sevPenalty": 0,
+      "weightedFindings": 0
+    },
+    {
+      "absoluteCap": 100,
+      "axis": "ai-surface",
+      "findings": 19,
+      "opportunities": 117,
+      "rateScore": 68,
+      "score": 68,
+      "sevPenalty": 37,
+      "weightedFindings": 37
+    },
+    {
+      "absoluteCap": 100,
+      "axis": "ai-governance",
+      "findings": 10,
+      "opportunities": 1165,
+      "rateScore": 98,
+      "score": 98,
+      "sevPenalty": 18,
+      "weightedFindings": 18
+    }
+  ],
+  "finalScore": 69,
+  "findingsCount": 240,
+  "findingsDigest": "a2d348ab8b93234e50b7ee14b73b630f82bfccb59a23e55ba58d5dce199f8e12",
+  "grade": {
+    "autoFailed": false,
+    "grade": "B",
+    "reasons": []
+  },
+  "meta": {
+    "coverage": {
+      "configPath": null,
+      "scannedFiles": 980
+    },
+    "projection": {
+      "top": [
+        {
+          "count": 107,
+          "files": 22,
+          "gain": 15,
+          "key": "tokens/no-hardcoded-spacing",
+          "migrationScale": false,
+          "ruleId": "tokens/no-hardcoded-spacing"
+        },
+        {
+          "count": 48,
+          "files": 30,
+          "gain": 3,
+          "key": "components/doc-comments",
+          "migrationScale": false,
+          "ruleId": "components/doc-comments"
+        },
+        {
+          "count": 11,
+          "files": 2,
+          "gain": 3,
+          "key": "versioning/deprecation-markers",
+          "migrationScale": false,
+          "ruleId": "versioning/deprecation-markers"
+        }
+      ],
+      "totalGainTop3": 22
+    }
+  },
+  "repoRoot": "<REPO>/packages/react",
+  "rulesVersion": "0.1.0",
+  "schemaVersion": 2,
+  "scoringVersion": "scoring-v1.1",
+  "stack": [
+    "react",
+    "storybook"
+  ],
+  "tier": "Quantitative",
+  "timestamp": "",
+  "toolVersion": ""
+}
