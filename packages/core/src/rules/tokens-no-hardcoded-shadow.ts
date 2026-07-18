@@ -4,7 +4,8 @@ import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap,
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 import { makeFixGroup } from "./_fix-group.js";
-import { isScored, onScale, reverseLookup } from "../graph/query.js";
+import { isScored } from "../graph/query.js";
+import type { DesignSystemGraph } from "../graph/types.js";
 
 const RULE_ID = "tokens/no-hardcoded-shadow";
 const MAX_FILE_BYTES = 1_000_000;
@@ -37,15 +38,31 @@ function extractShadows(text: string): ShadowHit[] {
 }
 
 function shadowOnScale(ctx: RuleContext, normed: string): boolean {
-  if (ctx.graph) return onScale(ctx.graph, "shadows", normed);
+  if (ctx.graph) return graphShadowScaleSet(ctx.graph).has(normed);
   if (!ctx.tokens) return false;
   return shadowScaleSet(ctx.tokens).has(normed);
 }
 
 function shadowCandidates(ctx: RuleContext, normed: string): string[] {
-  if (ctx.graph) return reverseLookup(ctx.graph, "shadows", normed);
+  if (ctx.graph) return graphShadowReverseLookup(ctx.graph, normed);
   if (!ctx.tokens) return [];
   return ctx.tokens.shadows.get(normed) ?? [];
+}
+
+// graph.tokens[].rawValue is copied verbatim from the loader maps (whitespace
+// preserved) — normalize it with the same norm() the rule uses for hit keys,
+// since the hit key is whitespace-stripped. See graph/extract/tokens.ts.
+function graphShadowScaleSet(graph: DesignSystemGraph): Set<string> {
+  const set = new Set<string>();
+  for (const t of graph.tokens) if (t.axis === "shadows") set.add(norm(t.rawValue));
+  return set;
+}
+
+function graphShadowReverseLookup(graph: DesignSystemGraph, normed: string): string[] {
+  return graph.tokens
+    .filter((t) => t.axis === "shadows" && norm(t.rawValue) === normed)
+    .map((t) => t.id)
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
 function shadowFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {

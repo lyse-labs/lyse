@@ -4,7 +4,8 @@ import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap,
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 import { makeFixGroup } from "./_fix-group.js";
-import { isScored, onScale as onScaleGraph, reverseLookup } from "../graph/query.js";
+import { isScored } from "../graph/query.js";
+import type { DesignSystemGraph } from "../graph/types.js";
 
 const RULE_ID = "tokens/no-hardcoded-motion";
 const MAX_FILE_BYTES = 1_000_000;
@@ -61,7 +62,7 @@ const norm = (s: string): string => s.replace(/\s+/g, "").toLowerCase();
 function motionFixGroup(ctx: RuleContext, hit: MotionHit): FixGroup | undefined {
   const prefix = hit.kind === "duration" ? "duration/" : "easing/";
   const key = prefix + norm(hit.raw);
-  if (ctx.graph) return makeFixGroup(RULE_ID, hit.raw, reverseLookup(ctx.graph, "motion", key));
+  if (ctx.graph) return makeFixGroup(RULE_ID, hit.raw, graphMotionReverseLookup(ctx.graph, key));
   if (!ctx.tokens) return undefined;
   const candidates = ctx.tokens.motion.get(key);
   return makeFixGroup(RULE_ID, hit.raw, candidates);
@@ -74,9 +75,26 @@ function motionOnScale(
 ): boolean {
   if (ctx.graph) {
     const key = (hit.kind === "duration" ? "duration/" : "easing/") + norm(hit.raw);
-    return onScaleGraph(ctx.graph, "motion", key);
+    return graphMotionScaleSet(ctx.graph).has(key);
   }
   return hit.kind === "duration" ? scales.durations.has(norm(hit.raw)) : scales.easings.has(norm(hit.raw));
+}
+
+// graph.tokens[].rawValue is copied verbatim from the loader maps (internal
+// whitespace preserved, e.g. `easing/cubic-bezier(0.4, 0, 0.2, 1)` from
+// `join(", ")`) — normalize it with the same norm() the rule uses for hit
+// keys, since the hit key is whitespace-stripped. See graph/extract/tokens.ts.
+function graphMotionScaleSet(graph: DesignSystemGraph): Set<string> {
+  const set = new Set<string>();
+  for (const t of graph.tokens) if (t.axis === "motion") set.add(norm(t.rawValue));
+  return set;
+}
+
+function graphMotionReverseLookup(graph: DesignSystemGraph, key: string): string[] {
+  return graph.tokens
+    .filter((t) => t.axis === "motion" && norm(t.rawValue) === key)
+    .map((t) => t.id)
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
 function motionScaleSets(tokens: TokenMap | null): { durations: Set<string>; easings: Set<string> } {

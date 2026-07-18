@@ -128,4 +128,17 @@ describe("graph-aware zone gating (P2 migration)", () => {
     const res = await rule.evaluate(ctxWith(graph), files);
     expect(res.findings).toHaveLength(0);
   });
+
+  it("treats a graph easing token whose rawValue has real extractor whitespace as on-scale (no finding)", async () => {
+    const files: ParsedFiles = {
+      ts: [],
+      css: [{ path: "a/Real.css", source: ".x { transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }" }],
+      cssInJs: [],
+    };
+    // graph/extract/tokens.ts / canonicalRawValue join cubic-bezier args with ", " —
+    // internal whitespace is preserved, unlike the rule's whitespace-stripped hit key.
+    const graph = graphWith({ "a/Real.css": "app" }, ["easing/cubic-bezier(0.4, 0, 0.2, 1)"]);
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
+  });
 });

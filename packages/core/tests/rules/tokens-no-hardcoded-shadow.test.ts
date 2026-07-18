@@ -101,4 +101,17 @@ describe("graph-aware zone gating (P2 migration)", () => {
     const res = await rule.evaluate(ctxWith(graph), files);
     expect(res.findings).toHaveLength(0);
   });
+
+  it("treats a graph token whose rawValue has real extractor whitespace as on-scale (no finding)", async () => {
+    const files: ParsedFiles = {
+      ts: [],
+      css: [{ path: "a/Real.css", source: ".c { box-shadow: 0 1px 3px rgba(0,0,0,0.1); }" }],
+      cssInJs: [],
+    };
+    // graph/extract/tokens.ts copies TokenMap.shadows keys verbatim (.trim()-only) —
+    // internal whitespace is preserved, unlike the rule's whitespace-stripped hit key.
+    const graph = graphWith({ "a/Real.css": "app" }, ["0 1px 3px rgba(0,0,0,0.1)"]);
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
+  });
 });
