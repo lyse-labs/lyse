@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { rule, _internal } from "../../src/rules/tokens-no-hardcoded-media-query.js";
 import type { RuleContext, ParsedFiles, TokenMap, ExtractedCssInJsBlock } from "../../src/types.js";
+import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
 
 function makeCtx(repoRoot: string, tokens: TokenMap | null = null): RuleContext {
   return { repoRoot, tokens, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [] };
@@ -107,5 +108,44 @@ describe("rule tokens/no-hardcoded-media-query", () => {
 
   it("exposes internals for testing", () => {
     expect(typeof _internal.isAllowlisted).toBe("function");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P2 — graph-aware zone gating (Task 8: media-query migration)
+// ---------------------------------------------------------------------------
+function graphWith(zones: Record<string, string>, breakpoints: string[] = []): DesignSystemGraph {
+  return {
+    schemaVersion: 1,
+    tokens: breakpoints.map((v, i) => ({ id: `breakpoints.${i}`, axis: "breakpoints" as const, rawValue: v, source: "dtcg" as const })),
+    components: [], stories: [], usage: [],
+    zones: { byFile: zones as Record<string, ZoneKind> },
+    extraction: { entries: [], conflicts: [] },
+  };
+}
+function ctxWith(graph: DesignSystemGraph): RuleContext {
+  return { repoRoot: "/r", tokens: null, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [], graph };
+}
+
+describe("graph-aware zone gating (P2 migration)", () => {
+  it("does NOT flag a hardcoded breakpoint in a story-zoned file", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/Story.css", source: "@media (min-width: 768px) { .g { color: red; } }" }], cssInJs: [] };
+    const graph = graphWith({ "a/Story.css": "story" });
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("flags a hardcoded breakpoint in an app-zoned file", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source: "@media (min-width: 768px) { .g { color: red; } }" }], cssInJs: [] };
+    const graph = graphWith({ "a/Real.css": "app" });
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(1);
+  });
+
+  it("treats a breakpoint present in the fused graph tokens as on-scale (no finding)", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source: "@media (min-width: 768px) { .g { color: red; } }" }], cssInJs: [] };
+    const graph = graphWith({ "a/Real.css": "app" }, ["768px"]);
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
   });
 });

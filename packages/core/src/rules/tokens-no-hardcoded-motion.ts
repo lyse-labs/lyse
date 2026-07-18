@@ -4,6 +4,7 @@ import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap,
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 import { makeFixGroup } from "./_fix-group.js";
+import { isScored, onScale as onScaleGraph, reverseLookup } from "../graph/query.js";
 
 const RULE_ID = "tokens/no-hardcoded-motion";
 const MAX_FILE_BYTES = 1_000_000;
@@ -58,11 +59,24 @@ function extractMotion(text: string): MotionHit[] {
 const norm = (s: string): string => s.replace(/\s+/g, "").toLowerCase();
 
 function motionFixGroup(ctx: RuleContext, hit: MotionHit): FixGroup | undefined {
-  if (!ctx.tokens) return undefined;
-  const normed = norm(hit.raw);
   const prefix = hit.kind === "duration" ? "duration/" : "easing/";
-  const candidates = ctx.tokens.motion.get(prefix + normed);
+  const key = prefix + norm(hit.raw);
+  if (ctx.graph) return makeFixGroup(RULE_ID, hit.raw, reverseLookup(ctx.graph, "motion", key));
+  if (!ctx.tokens) return undefined;
+  const candidates = ctx.tokens.motion.get(key);
   return makeFixGroup(RULE_ID, hit.raw, candidates);
+}
+
+function motionOnScale(
+  ctx: RuleContext,
+  hit: MotionHit,
+  scales: { durations: Set<string>; easings: Set<string> },
+): boolean {
+  if (ctx.graph) {
+    const key = (hit.kind === "duration" ? "duration/" : "easing/") + norm(hit.raw);
+    return onScaleGraph(ctx.graph, "motion", key);
+  }
+  return hit.kind === "duration" ? scales.durations.has(norm(hit.raw)) : scales.easings.has(norm(hit.raw));
 }
 
 function motionScaleSets(tokens: TokenMap | null): { durations: Set<string>; easings: Set<string> } {
@@ -112,9 +126,10 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
     ...files.cssInJs.map((b) => ({ path: b.path, source: b.content })),
   ];
   for (const { path, source } of sources) {
+    if (ctx.graph && !isScored(ctx.graph, path)) continue;
     for (const hit of extractMotion(source)) {
       opportunities++;
-      const onScale = hit.kind === "duration" ? durations.has(norm(hit.raw)) : easings.has(norm(hit.raw));
+      const onScale = motionOnScale(ctx, hit, { durations, easings });
       if (onScale) continue;
       const what = hit.kind === "duration" ? "duration" : "easing curve";
       const fixGroup = motionFixGroup(ctx, hit);

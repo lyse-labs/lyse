@@ -5,6 +5,7 @@ import { isInCommentOrUrl, isLowSignalValueFile, isSchemaOrDataFile } from "./_s
 import { isPathExcluded } from "./_exclude.js";
 import { createLyseRule } from "./_rule-module.js";
 import { makeFixGroup } from "./_fix-group.js";
+import { isScored, onScale, reverseLookup } from "../graph/query.js";
 
 const RULE_ID = "tokens/no-hardcoded-media-query";
 const MAX_FILE_BYTES = 1_000_000;
@@ -52,12 +53,14 @@ function locationFromIndex(source: string, index: number): { line: number; colum
 }
 
 function isOnScale(ctx: RuleContext, raw: string): boolean {
+  if (ctx.graph) return onScale(ctx.graph, "breakpoints", raw);
   const scale = ctx.tokens?.breakpoints;
   if (!scale || scale.size === 0) return false;
   return scale.has(raw);
 }
 
 function mediaQueryFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {
+  if (ctx.graph) return makeFixGroup(RULE_ID, raw, reverseLookup(ctx.graph, "breakpoints", raw));
   if (!ctx.tokens) return undefined;
   const candidates = ctx.tokens.breakpoints.get(raw);
   return makeFixGroup(RULE_ID, raw, candidates);
@@ -121,14 +124,14 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
   for (const f of files.css) {
     if (f.skipped) continue;
     if (isPathExcluded(f.path, ctx.excludePaths)) continue;
-    if (isLowSignalValueFile(f.path)) continue;
-    if (isSchemaOrDataFile(f.path)) continue;
+    if (ctx.graph && !isScored(ctx.graph, f.path)) continue;
+    if (!ctx.graph && (isLowSignalValueFile(f.path) || isSchemaOrDataFile(f.path))) continue;
     scan(f.path, f.source);
   }
   for (const b of files.cssInJs) {
     if (isPathExcluded(b.path, ctx.excludePaths)) continue;
-    if (isLowSignalValueFile(b.path)) continue;
-    if (isSchemaOrDataFile(b.path)) continue;
+    if (ctx.graph && !isScored(ctx.graph, b.path)) continue;
+    if (!ctx.graph && (isLowSignalValueFile(b.path) || isSchemaOrDataFile(b.path))) continue;
     scan(b.path, b.content, b.line);
   }
 

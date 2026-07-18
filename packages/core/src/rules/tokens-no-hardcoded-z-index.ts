@@ -1,9 +1,10 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding } from "../types.js";
+import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, FixGroup } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 import { makeFixGroup } from "./_fix-group.js";
+import { isScored, onScale, reverseLookup } from "../graph/query.js";
 
 const RULE_ID = "tokens/no-hardcoded-z-index";
 const MAX_FILE_BYTES = 1_000_000;
@@ -63,11 +64,22 @@ function isAllowlisted(repoRoot: string): boolean {
   return false;
 }
 
+function zIndexOnScale(ctx: RuleContext, strValue: string): boolean {
+  if (ctx.graph) return onScale(ctx.graph, "zIndex", strValue);
+  const scale = ctx.tokens?.zIndex ?? null;
+  return scale !== null && scale.has(strValue);
+}
+
+function zIndexFixGroup(ctx: RuleContext, strValue: string): FixGroup | undefined {
+  if (ctx.graph) return makeFixGroup(RULE_ID, strValue, reverseLookup(ctx.graph, "zIndex", strValue));
+  if (!ctx.tokens) return undefined;
+  return makeFixGroup(RULE_ID, strValue, ctx.tokens.zIndex.get(strValue));
+}
+
 const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalResult> => {
   const findings: Finding[] = [];
   if (ctx.repoRoot && isAllowlisted(ctx.repoRoot)) return { findings, opportunities: 0 };
 
-  const scale = ctx.tokens?.zIndex ?? null;
   let opportunities = 0;
 
   const sources: { path: string; source: string }[] = [
@@ -76,14 +88,13 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
   ];
 
   for (const { path, source } of sources) {
+    if (ctx.graph && !isScored(ctx.graph, path)) continue;
     for (const hit of extractZIndexValues(source)) {
       opportunities++;
       const strValue = String(hit.value);
       // On-scale values are compliant (counted as opportunity, not flagged).
-      if (scale !== null && scale.has(strValue)) continue;
-      const fixGroup = ctx.tokens
-        ? makeFixGroup(RULE_ID, strValue, ctx.tokens.zIndex.get(strValue))
-        : undefined;
+      if (zIndexOnScale(ctx, strValue)) continue;
+      const fixGroup = zIndexFixGroup(ctx, strValue);
       findings.push({
         ruleId: RULE_ID,
         axis: "tokens",

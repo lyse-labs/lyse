@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { rule, _internal } from "../../src/rules/tokens-no-hardcoded-motion.js";
 import type { RuleContext, ParsedFiles, TokenMap, ExtractedCssInJsBlock } from "../../src/types.js";
+import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
 
 function makeCtx(repoRoot: string, tokens: TokenMap | null = null): RuleContext {
   return { repoRoot, tokens, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [] };
@@ -76,5 +77,55 @@ describe("rule tokens/no-hardcoded-motion", () => {
       const kinds = hits.map((h) => h.kind).sort();
       expect(kinds).toEqual(["duration", "easing"]);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P2 — graph-aware zone gating (Task 8: motion migration)
+// ---------------------------------------------------------------------------
+function graphWith(zones: Record<string, string>, motion: string[] = []): DesignSystemGraph {
+  return {
+    schemaVersion: 1,
+    tokens: motion.map((v, i) => ({ id: `motion.${i}`, axis: "motion" as const, rawValue: v, source: "dtcg" as const })),
+    components: [], stories: [], usage: [],
+    zones: { byFile: zones as Record<string, ZoneKind> },
+    extraction: { entries: [], conflicts: [] },
+  };
+}
+function ctxWith(graph: DesignSystemGraph): RuleContext {
+  return { repoRoot: "/r", tokens: null, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [], graph };
+}
+
+describe("graph-aware zone gating (P2 migration)", () => {
+  it("does NOT flag a hardcoded motion duration in a story-zoned file", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/Story.css", source: ".x { transition-duration: 240ms; }" }], cssInJs: [] };
+    const graph = graphWith({ "a/Story.css": "story" });
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("flags a hardcoded motion duration in an app-zoned file", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source: ".x { transition-duration: 240ms; }" }], cssInJs: [] };
+    const graph = graphWith({ "a/Real.css": "app" });
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(1);
+  });
+
+  it("treats a duration present in the fused graph tokens as on-scale (no finding)", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source: ".x { transition-duration: 240ms; }" }], cssInJs: [] };
+    const graph = graphWith({ "a/Real.css": "app" }, ["duration/240ms"]);
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("treats an easing curve present in the fused graph tokens as on-scale (no finding)", async () => {
+    const files: ParsedFiles = {
+      ts: [],
+      css: [{ path: "a/Real.css", source: ".x { transition-timing-function: cubic-bezier(0.1, 0.2, 0.3, 0.4); }" }],
+      cssInJs: [],
+    };
+    const graph = graphWith({ "a/Real.css": "app" }, ["easing/cubic-bezier(0.1,0.2,0.3,0.4)"]);
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
   });
 });
