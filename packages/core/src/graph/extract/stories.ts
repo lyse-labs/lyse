@@ -28,7 +28,7 @@ export function extractStories(inputs: StoryExtractInputs): StoryExtraction {
       storyExportCount: entry.stories?.length ?? 0,
     });
   }
-  nodes.sort((a, b) => (a.title < b.title ? -1 : a.title > b.title ? 1 : a.id < b.id ? -1 : 1));
+  nodes.sort((a, b) => (a.title < b.title ? -1 : a.title > b.title ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
   const seededComponents: ComponentNode[] = [];
   const degraded = inputs.componentsModule === null && !inputs.dsSelfMode;

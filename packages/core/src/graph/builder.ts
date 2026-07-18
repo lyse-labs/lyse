@@ -57,7 +57,7 @@ export async function buildDesignSystemGraph(inputs: GraphInputs): Promise<Desig
   });
   for (const c of components) c.storyRefs = [...new Set(c.storyRefs)].sort();
 
-  components.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : a.module < b.module ? -1 : 1));
+  components.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : a.module < b.module ? -1 : a.module > b.module ? 1 : 0));
   tokenExtraction.nodes.sort((a, b) =>
     a.axis !== b.axis ? (a.axis < b.axis ? -1 : 1)
     : a.id !== b.id ? (a.id < b.id ? -1 : 1)
