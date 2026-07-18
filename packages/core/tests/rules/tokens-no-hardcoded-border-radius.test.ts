@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { rule } from "../../src/rules/tokens-no-hardcoded-border-radius.js";
 import type { RuleContext, ParsedFiles, TokenMap, ExtractedCssInJsBlock } from "../../src/types.js";
+import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
 
 function makeCtx(repoRoot: string, tokens: TokenMap | null = null): RuleContext {
   return { repoRoot, tokens, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [] };
@@ -51,5 +52,44 @@ describe("rule tokens/no-hardcoded-border-radius", () => {
     const r = await rule.evaluate(makeCtx(tmp), makeParsed({ css: [{ path: "a.css", source: "/* border-radius: 13px — legacy */\n.x{color:red}" }] }));
     expect(r.findings).toHaveLength(0);
     expect(r.opportunities).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P2 — graph-aware zone gating (Task 6: border-radius migration)
+// ---------------------------------------------------------------------------
+function graphWith(zones: Record<string, string>, radii: string[] = []): DesignSystemGraph {
+  return {
+    schemaVersion: 1,
+    tokens: radii.map((v, i) => ({ id: `radii.${i}`, axis: "radii" as const, rawValue: v, source: "dtcg" as const })),
+    components: [], stories: [], usage: [],
+    zones: { byFile: zones as Record<string, ZoneKind> },
+    extraction: { entries: [], conflicts: [] },
+  };
+}
+function ctxWith(graph: DesignSystemGraph): RuleContext {
+  return { repoRoot: "/r", tokens: null, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [], graph };
+}
+
+describe("graph-aware zone gating (P2 migration)", () => {
+  it("does NOT flag a hardcoded border-radius in a story-zoned file", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/Story.css", source: ".x{border-radius:6px}" }], cssInJs: [] };
+    const graph = graphWith({ "a/Story.css": "story" });
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("flags a hardcoded border-radius in an app-zoned file", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source: ".x{border-radius:6px}" }], cssInJs: [] };
+    const graph = graphWith({ "a/Real.css": "app" });
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(1);
+  });
+
+  it("treats a value present in the fused graph tokens as on-scale (no finding)", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source: ".x{border-radius:6px}" }], cssInJs: [] };
+    const graph = graphWith({ "a/Real.css": "app" }, ["6px"]);
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
   });
 });
