@@ -21,6 +21,10 @@ const FIGMA_RE = /(?:^|[\\/])code-connect[\\/]|\.figma\.[cm]?[jt]sx?$/i;
 const HYPHEN_TEST_RE = /(?:^|[\\/])[^\\/]*-test\.[cm]?[jt]sx?$|(?:^|[\\/])test\.(?:css|scss|sass|less)$/i;
 const PREVIEWER_RE = /(?:^|[\\/])previewer[\\/]/i;
 
+// P2: a component registry is DS source (the DS's own components), not consumer app.
+// Matches a `registry/` path segment and shadcn theme-variant `styles/<variant>/ui/` trees.
+const REGISTRY_DS_SOURCE_RE = /(?:^|[\\/])registry[\\/]|(?:^|[\\/])styles[\\/][^\\/]+[\\/]ui[\\/]/i;
+
 export function classifyZone(rel: string, source: string, opts: ZoneInputs): ZoneKind {
   if (STORY_RE.test(rel)) return "story";
   if (isVendoredOrResetFile(rel)) return "vendored";
@@ -33,6 +37,7 @@ export function classifyZone(rel: string, source: string, opts: ZoneInputs): Zon
   if (PREVIEWER_RE.test(rel)) return "config";
   if (FIGMA_RE.test(rel)) return "config";
   if (HYPHEN_TEST_RE.test(rel)) return "test";
+  if (REGISTRY_DS_SOURCE_RE.test(rel)) return "ds-source";
   return opts.dsSelfMode ? "ds-source" : "app";
 }
 

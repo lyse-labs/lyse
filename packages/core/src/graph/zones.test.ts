@@ -59,3 +59,17 @@ describe("classifyZone — real-repo conventions (P2)", () => {
     expect(classifyZone("src/components/DatePicker/DatePicker.tsx", "", opts)).toBe("app");
   });
 });
+
+describe("classifyZone — component registry ds-source (P2)", () => {
+  it("classifies registry component source as ds-source", () => {
+    expect(classifyZone("apps/v4/registry/new-york/ui/button.tsx", "", opts)).toBe("ds-source");
+    expect(classifyZone("packages/shadcn/src/registry/index.ts", "", opts)).toBe("ds-source");
+  });
+  it("classifies theme-variant ui trees as ds-source", () => {
+    expect(classifyZone("apps/v4/styles/base-luma/ui/button.tsx", "", opts)).toBe("ds-source");
+    expect(classifyZone("apps/v4/styles/radix-luma/ui/aspect-ratio.tsx", "", opts)).toBe("ds-source");
+  });
+  it("does NOT classify an app 'registry' data page as ds-source unless under a registry/ dir", () => {
+    expect(classifyZone("src/pages/registry-status.tsx", "", opts)).toBe("app");
+  });
+});
