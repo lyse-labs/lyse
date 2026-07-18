@@ -33,7 +33,7 @@ A bare `bot` token is deliberately **not** used (it would false-fire on "bottom"
 
 ## Scope
 
-Static "affordance present" slice (Track 16.8, manifest area L). Does not verify the label renders on every conversational surface.
+Static "affordance present" slice (manifest area L). Does not verify the label renders on every conversational surface.
 
 ## Disabling
 

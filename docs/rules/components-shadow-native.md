@@ -65,7 +65,7 @@ function LoginForm() {
 
 ## Auto-fix
 
-The codemod rewrites the native element to its component equivalent, including the import statement at the top of the file.
+Lyse emits a machine-applicable fix payload that rewrites the native element to its component equivalent, including the import statement at the top of the file. Lyse never writes source files itself — the payload is applied by your agent (via `lyse handoff`) or `git apply`.
 
 ## Allowlist
 

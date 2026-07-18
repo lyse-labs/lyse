@@ -21,7 +21,7 @@ Gated on AI-surface presence (an AI-marker component). Scans `**/*.{tsx,jsx,vue,
 
 ## Scope
 
-Presence of the attribution convention (Track 9.8). The anthropomorphism / tone lint originally grouped here moved to the semantic (Phase J) track — static string-matching FP rate is too high for tone.
+Presence of the attribution convention. The anthropomorphism / tone lint originally grouped here moved to the semantic LLM-judgement layer — static string-matching FP rate is too high for tone.
 
 ## Disabling
 

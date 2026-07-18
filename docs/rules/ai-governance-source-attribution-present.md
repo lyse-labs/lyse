@@ -32,7 +32,7 @@ The bare generic `source` / `reference` are deliberately excluded to avoid match
 
 ## Scope
 
-Static "affordance present" slice (Track 16.8, manifest area L). Does not verify citations appear at every AI-output render site, nor validate their correctness.
+Static "affordance present" slice (manifest area L). Does not verify citations appear at every AI-output render site, nor validate their correctness.
 
 ## Disabling
 

@@ -46,7 +46,7 @@ Names ending in `Icon` (case-insensitive) are excluded — icon primitives are n
 
 ## Scope
 
-Static "affordance present" slice (Track 3.8). Does not verify the control appears at every AI-output render site — that behavioral detection is Track 4.
+Static "affordance present" slice. Does not verify the control appears at every AI-output render site — that behavioral detection is a planned follow-up rule.
 
 ## Examples
 
@@ -111,7 +111,7 @@ rules:
 
 ## See also
 
-- `ai-governance/ai-marker-component-present` — Track 3.2; exports `AI_MARKER_NAMES` vocabulary reused by sibling rules.
-- `ai-governance/explainability-affordance` — Track 3.5; exports `scanForAiMarkers` reused as the AI-surface gate for this rule.
+- `ai-governance/ai-marker-component-present` — exports `AI_MARKER_NAMES` vocabulary reused by sibling rules.
+- `ai-governance/explainability-affordance` — exports `scanForAiMarkers` reused as the AI-surface gate for this rule.
 - Health Score — how rules combine into the final score.
 - Vendor feedback guidance (plain text): Microsoft Fluent 2 AI design guidelines (feedback affordance); Amazon Cloudscape AI components documentation; Red Hat PatternFly AI component guidance; IBM HAX G15 (Granular feedback); Google PAIR Feedback and Control guidebook.

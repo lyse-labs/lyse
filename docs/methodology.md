@@ -211,4 +211,4 @@ These are living inputs. Re-read them periodically — the rubrics evolve.
 
 | Date | Change |
 |------|--------|
-| 2026-06-10 | Initial doc — extracted from `internal/strategy/roadmap.md` §6 (Track 1) and validated against primary sources |
+| 2026-06-10 | Initial doc — compiled and validated against primary sources |

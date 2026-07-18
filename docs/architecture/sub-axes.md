@@ -6,7 +6,7 @@
 
 **66 sub-axes total** — stable: 52 · experimental: 14 · disabled: 0
 
-Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
+Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate (dual): N ≥ 40 independently-provenanced samples AND Wilson 95 % lower bound ≥ 0.90 on both recall (ships the `stable` claim) and precision (contributes to the Health Score). See [`docs/architecture/reliability.md`](./reliability.md) for methodology.
 
 > **Precision / Recall (LB) column note:** Lower bounds are Wilson 95 % estimates. Most rows were calibrated against the fixed-N synthetic recall suite; only `tokens/no-hardcoded-color`, `tokens/no-hardcoded-shadow`, and `components/contracts-strictness` have an in-repo adversarial N (see the [Per-rule SLO](./per-rule-slo.md) page for N values).
 

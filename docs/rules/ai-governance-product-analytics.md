@@ -123,6 +123,6 @@ Use this when:
 
 ## See also
 
-- Track 11.5 ai-governance/product-analytics (AI instrumentation moat-scoring track, `lyse-internal`)
-- Track 3.2 ai-governance/ai-marker-component-present (sibling rule — detects the AI-marker component this rule depends on)
+- `ai-governance/product-analytics` — AI instrumentation scoring (`lyse-internal`)
+- `ai-governance/ai-marker-component-present` — sibling rule that detects the AI-marker component this rule depends on
 - Microsoft Fluent 2 RAI design patterns (AI-surface instrumentation patterns)

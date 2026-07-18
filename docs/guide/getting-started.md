@@ -41,6 +41,7 @@ You'll see something like:
   ▸ Components:    74/100  (5 native shadows used)
   ▸ Stories:       65/100  (8 components missing stories)
   ▸ AI surface:    62/100  (AGENTS.md absent)
+  ▸ AI governance: N/A     (no AI surface detected)
 
   Run lyse explain <rule-id> for details.
 ```
@@ -56,6 +57,7 @@ The Health Score (0–100) is the equal-weight mean of every active axis:
 - **Components** — reusable components used vs native HTML re-implemented.
 - **Stories** — Storybook coverage.
 - **AI surface** — `AGENTS.md`, component manifest JSON, DS index export.
+- **AI governance** — whether AI surfaces are governed responsibly (content marking, loading/error states, feedback, source attribution). Only activates once a design system ships an AI surface — silent otherwise.
 
 Inactive axes (no opportunities found in your repo) are omitted from the mean. A healthy DS lives in 75–90. Below 60 means real drift. Below 40 means the DS exists more on paper than in code.
 

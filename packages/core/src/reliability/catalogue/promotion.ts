@@ -27,7 +27,7 @@ export interface PromotionInput {
 }
 
 export function shouldPromote(input: PromotionInput): boolean {
-  const minSamples = input.minSamples ?? 30;
+  const minSamples = input.minSamples ?? 40;
   const threshold = input.threshold ?? 0.90;
   if (input.trials < minSamples) return false;
   if (input.precisionMeasured == null || input.precisionMeasured < 0.90) return false;
