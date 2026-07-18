@@ -8,6 +8,7 @@ import { createLyseRule } from "./_rule-module.js";
 import { getTsMorphProject } from "../parsers/ts-morph-project.js";
 import { makeFixGroup } from "./_fix-group.js";
 import { classifyColorRole } from "./_color-ast-role.js";
+import { isScored, reverseLookup } from "../graph/query.js";
 
 // Allow one level of nested parens so hsl(var(--token)) is captured whole.
 // Pattern: (?:[^)(]|\([^)]*\))* matches any mix of non-paren chars and
@@ -320,23 +321,27 @@ function locationFromIndex(source: string, index: number): { line: number; colum
   return { line, column };
 }
 
+function colorCandidates(ctx: RuleContext, key: string, rawLower: string): string[] {
+  if (ctx.graph) return reverseLookup(ctx.graph, "colors", key);
+  if (!ctx.tokens) return [];
+  return ctx.tokens.colors.get(key) ?? ctx.tokens.colors.get(rawLower) ?? [];
+}
+
 function suggestToken(ctx: RuleContext, raw: string): string | undefined {
-  if (!ctx.tokens) return undefined;
   // Extract the hex from a Tailwind arbitrary value like bg-[#fff]
   const key = raw.replace(/^.*\[(.*)\]$/, "$1").toLowerCase();
-  const tokens = ctx.tokens.colors.get(key) ?? ctx.tokens.colors.get(raw.toLowerCase());
-  if (!tokens || tokens.length === 0) return undefined;
+  const tokens = colorCandidates(ctx, key, raw.toLowerCase());
+  if (tokens.length === 0) return undefined;
   if (tokens.length === 1) return `consider replacing with token ${tokens[0]}`;
   return `consider replacing — multiple candidate tokens: ${tokens.join(", ")}`;
 }
 
 function colorFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {
-  if (!ctx.tokens) return undefined;
   // `from`/`key` use the normalized value (bracket-stripped, lowercased) so
   // case/Tailwind-bracket variants collapse into one drift-class — this is why
   // `fixGroup.from` can differ from the finding's raw `message`.
   const key = raw.replace(/^.*\[(.*)]$/, "$1").toLowerCase();
-  const candidates = ctx.tokens.colors.get(key) ?? ctx.tokens.colors.get(raw.toLowerCase());
+  const candidates = colorCandidates(ctx, key, raw.toLowerCase());
   return makeFixGroup("tokens/no-hardcoded-color", key, candidates);
 }
 
@@ -349,11 +354,10 @@ const evaluate = async (
 
   for (const f of files.ts) {
     if (isPathExcluded(f.path, ctx.excludePaths)) continue;
-    if (isVendoredOrResetFile(f.path)) continue;
-    if (isLowSignalValueFile(f.path)) continue;
-    if (isSchemaOrDataFile(f.path)) continue;
-    if (isColorTokenDefFile(f.path)) continue;
+    // SVG art is content, not a zone — always-on guard, unconditional.
     if (isSvgIconContext(f.path)) continue;
+    if (ctx.graph && !isScored(ctx.graph, f.path)) continue;
+    if (!ctx.graph && (isVendoredOrResetFile(f.path) || isLowSignalValueFile(f.path) || isSchemaOrDataFile(f.path) || isColorTokenDefFile(f.path))) continue;
     const fileExt = f.path.match(/\.[^.]+$/)?.[0] ?? ".ts";
     const hits = detectInText(f.source, f.path);
     const compliantCount = countCompliantColorUses(f.source, fileExt);
@@ -379,12 +383,10 @@ const evaluate = async (
 
   for (const c of files.css) {
     if (isPathExcluded(c.path, ctx.excludePaths)) continue;
-    if (isVendoredOrResetFile(c.path)) continue;
-    if (isGeneratedCssSource(c.source)) continue;
-    if (isLowSignalValueFile(c.path)) continue;
-    if (isSchemaOrDataFile(c.path)) continue;
-    if (isColorTokenDefFile(c.path)) continue;
+    // SVG art is content, not a zone — always-on guard, unconditional.
     if (isSvgIconContext(c.path)) continue;
+    if (ctx.graph && !isScored(ctx.graph, c.path)) continue;
+    if (!ctx.graph && (isVendoredOrResetFile(c.path) || isGeneratedCssSource(c.source) || isLowSignalValueFile(c.path) || isSchemaOrDataFile(c.path) || isColorTokenDefFile(c.path))) continue;
     const fileExt = c.path.match(/\.[^.]+$/)?.[0] ?? ".css";
     const hits = detectInText(c.source, c.path, true);
     const compliantCount = countCompliantColorUses(c.source, fileExt);
@@ -408,11 +410,10 @@ const evaluate = async (
 
   for (const b of files.cssInJs) {
     if (isPathExcluded(b.path, ctx.excludePaths)) continue;
-    if (isVendoredOrResetFile(b.path)) continue;
-    if (isLowSignalValueFile(b.path)) continue;
-    if (isSchemaOrDataFile(b.path)) continue;
-    if (isColorTokenDefFile(b.path)) continue;
+    // SVG art is content, not a zone — always-on guard, unconditional.
     if (isSvgIconContext(b.path)) continue;
+    if (ctx.graph && !isScored(ctx.graph, b.path)) continue;
+    if (!ctx.graph && (isVendoredOrResetFile(b.path) || isLowSignalValueFile(b.path) || isSchemaOrDataFile(b.path) || isColorTokenDefFile(b.path))) continue;
     const fileExt = b.path.match(/\.[^.]+$/)?.[0] ?? ".tsx";
     const hits = detectInText(b.content, b.path);
     const compliantCount = countCompliantColorUses(b.content, fileExt);
