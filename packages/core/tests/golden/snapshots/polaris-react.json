@@ -4,12 +4,12 @@
     {
       "absoluteCap": 100,
       "axis": "tokens",
-      "findings": 135,
+      "findings": 119,
       "opportunities": 2392,
-      "rateScore": 89,
-      "score": 89,
-      "sevPenalty": 270,
-      "weightedFindings": 270
+      "rateScore": 90,
+      "score": 90,
+      "sevPenalty": 238,
+      "weightedFindings": 238
     },
     {
       "absoluteCap": 100,
@@ -63,8 +63,8 @@
     }
   ],
   "finalScore": 84,
-  "findingsCount": 351,
-  "findingsDigest": "15b05b2fb3b46d0941f80ce706d339dd848c60b5cd9064d878543b258cac69ac",
+  "findingsCount": 335,
+  "findingsDigest": "931c830e70d38ad7517a59191648b1f9d03641553b80720011231ef47b5109fe",
   "grade": {
     "autoFailed": false,
     "grade": "A",
@@ -142,7 +142,7 @@
           "ruleId": "a11y/semantic-html"
         }
       ],
-      "totalGainTop3": 7
+      "totalGainTop3": 8
     }
   },
   "repoRoot": "<REPO>/polaris-react",
