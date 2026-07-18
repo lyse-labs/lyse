@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { auditDirectory } from "../../src/commands/audit-pipeline.js";
 import { GOLDEN_CORPUS, type GoldenRepo } from "./corpus.js";
 import { fetchGoldenRepo } from "./fetch.js";
-import { normalizeGolden } from "./normalization.js";
+import { compactGolden } from "./normalization.js";
 
 const NET = process.env.LYSE_GOLDEN === "1";
 const UPDATE = process.env.UPDATE_GOLDEN === "1";
@@ -16,7 +16,7 @@ async function auditRepo(repo: GoldenRepo): Promise<{ json: string; audited: str
   if (!root) return null;
   const audited = repo.auditSubpath === "." ? root : join(root, repo.auditSubpath);
   const { result } = await auditDirectory(audited, { staticOnly: true });
-  return { json: normalizeGolden(result, root), audited };
+  return { json: compactGolden(result, root), audited };
 }
 const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 
