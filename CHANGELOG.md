@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Design System Graph (P1).** A reified `DesignSystemGraph` (tokens, components, stories, zones, multi-source token fusion with conflict reporting) is built between the loaders and the rules and persisted to `.lyse/graph.json` (`--graph-full` for per-file usage edges). Exposed over MCP as `get_design_system_graph`. Rules do not yet consume it (P2).
+
 ### Fixed
 
+- **No more silent `N/A`.** Every extractor writes an `ExtractionReport` (`meta.extraction`); text, JSON, and SARIF output now render a remediation line instead of a bare `—`.
+- **Stories axis on zero-config design systems (Appendix A).** Component candidates are now seeded from Storybook titles when no components module is detected, so Carbon and Polaris report a real stories score instead of silently going N/A. Golden snapshots updated: `carbon-react` stories `N/A → 2` (opportunities 0 → 222, findings 0 → 109; components axis also shifted 81 → 88 as the story-seeded entries entered the derived inventory; finalScore 69 → 59, grade B → C, tier Quantitative → Defined) and `polaris-react` stories `N/A → 89` (opportunities 0 → 18, findings 0 → 1; components axis unchanged; finalScore 82 → 84, grade/tier unchanged). `shadcn-ui` and `tailwind-dashboard` snapshots only gained the additive `meta.extraction` block — no axis score moved. Previous scores for `carbon-react` and `polaris-react` are not comparable across this change.
 - Repaired a broken type-only import in two reliability tests (`auto-label.test.ts`, `judge.test.ts`): they imported `FindingRow` from a non-existent `scripts/harvest-findings.js` path; they now import the canonical type from `src/reliability/measure/finding-row.js`.
 
 ### Internal

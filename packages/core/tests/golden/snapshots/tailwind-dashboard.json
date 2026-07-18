@@ -77,6 +77,46 @@
       "configPath": null,
       "scannedFiles": 49
     },
+    "extraction": {
+      "conflicts": [],
+      "entries": [
+        {
+          "evidence": {
+            "components": 0,
+            "storySeeded": 0
+          },
+          "extractor": "components",
+          "remediation": "No component inventory — set `designSystem.componentsModule` in .lyse.yaml or run `lyse init` (docs/guide/configuration.md).",
+          "status": "degraded"
+        },
+        {
+          "evidence": {
+            "linked": 0,
+            "storyFiles": 0
+          },
+          "extractor": "stories",
+          "remediation": null,
+          "status": "ok"
+        },
+        {
+          "evidence": {
+            "tokenNodes": 68,
+            "tokenSources": 1
+          },
+          "extractor": "tokens",
+          "remediation": null,
+          "status": "ok"
+        },
+        {
+          "evidence": {
+            "files": 49
+          },
+          "extractor": "zones",
+          "remediation": null,
+          "status": "ok"
+        }
+      ]
+    },
     "projection": {
       "top": [
         {

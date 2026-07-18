@@ -1,7 +1,9 @@
 import { loadTokens } from "../loaders/tokens.js";
 import { loadStories } from "../loaders/stories.js";
 import { loadConfig } from "../config/schema.js";
+import { buildGraphForRoot } from "../graph/build-io.js";
 import type { LyseConfig, StoryIndex, TokenMap } from "../types.js";
+import type { DesignSystemGraph } from "../graph/types.js";
 
 /**
  * Repo-level context an `audit_file` call needs: the token registry, the story
@@ -15,6 +17,7 @@ export interface ProjectContext {
   tokens: TokenMap | null;
   storyIndex: StoryIndex | null;
   config: LyseConfig;
+  graph: DesignSystemGraph;
 }
 
 interface CacheEntry {
@@ -35,14 +38,15 @@ const DEFAULT_TTL_MS = 2_000;
 const cache = new Map<string, CacheEntry>();
 
 async function loadProjectContext(projectRoot: string): Promise<ProjectContext> {
-  const [tokens, storyIndex] = await Promise.all([
+  const [tokens, storyIndex, graph] = await Promise.all([
     loadTokens(projectRoot),
     loadStories(projectRoot),
+    buildGraphForRoot(projectRoot),
   ]);
   // degrade (not throw) on malformed config: a single-file audit must never
   // fail because of an unrelated .lyse.yaml error.
   const config = loadConfig(projectRoot, { onError: "degrade" });
-  return { tokens, storyIndex, config };
+  return { tokens, storyIndex, config, graph };
 }
 
 /**
