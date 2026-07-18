@@ -48,7 +48,7 @@ describe("detectTokenConflicts", () => {
 });
 
 describe("extractTokens", () => {
-  it("fuses a DTCG source into nodes with primary set", async () => {
+  it("fuses a DTCG source into nodes", async () => {
     const root = mkdtempSync(join(tmpdir(), "lyse-tok-"));
     writeFileSync(join(root, "a.tokens.json"), JSON.stringify({
       color: { primary: { $value: "#3b82f6", $type: "color" } },
@@ -56,7 +56,6 @@ describe("extractTokens", () => {
     const out = await extractTokens(root, emptyParsed(), new Map());
     expect(out.sources).toContain("dtcg");
     expect(out.nodes.some((n) => n.rawValue === "#3b82f6" && n.axis === "colors")).toBe(true);
-    expect(out.primary).not.toBeNull();
   });
 });
 

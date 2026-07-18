@@ -1,5 +1,5 @@
 import {
-  fromTailwindV3, fromTailwindV4, fromDtcg, fromValueTypeTokens, loadTokens,
+  fromTailwindV3, fromTailwindV4, fromDtcg, fromValueTypeTokens,
 } from "../../loaders/tokens.js";
 import { normalizeToDtcg } from "../../tokens/normalizer.js";
 import { isDtcgToken } from "../../tokens/dtcg-model.js";
@@ -15,7 +15,6 @@ const AXES: TokenAxis[] = [
 export interface TokenExtraction {
   nodes: TokenNode[];
   conflicts: TokenConflict[];
-  primary: TokenMap | null;
   sources: TokenSource[];
 }
 
@@ -191,6 +190,5 @@ export async function extractTokens(
   for (const n of declsToNodes(scssVarDeclsFromContents(fileContents), "scss-variable")) {
     nodes.push(n); sources.add(n.source);
   }
-  const primary = await loadTokens(root);
-  return { nodes, conflicts: detectTokenConflicts(nodes), primary, sources: [...sources].sort() };
+  return { nodes, conflicts: detectTokenConflicts(nodes), sources: [...sources].sort() };
 }
