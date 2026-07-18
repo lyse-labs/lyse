@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { GOLDEN_CORPUS } from "./corpus.js";
@@ -26,4 +26,17 @@ describe.runIf(NET)("fetchGoldenRepo (network)", () => {
     const dest = join(goldenCacheDir(), `carbon-design-system__carbon-${bad.sha}`);
     expect(existsSync(dest)).toBe(false); // not poisoned
   }, 60_000);
+
+  it("two concurrent cold fetches of the same repo don't race-clobber each other", async () => {
+    // Use a repo not touched by any other test in this file so the cache is guaranteed cold —
+    // guards the fix for a real bug where fetch.test.ts and golden.test.ts running in parallel
+    // vitest workers both fetched GOLDEN_CORPUS[0] into the same shared `${dest}.partial` temp
+    // dir, and one worker's rmSync/renameSync clobbered the other's in-progress extraction.
+    const repo = GOLDEN_CORPUS[3]!;
+    const dest = join(goldenCacheDir(), `${repo.slug.replace("/", "__")}-${repo.sha}`);
+    rmSync(dest, { recursive: true, force: true });
+    const [a, b] = await Promise.all([fetchGoldenRepo(repo), fetchGoldenRepo(repo)]);
+    expect(a).not.toBeNull();
+    expect(a).toBe(b);
+  }, 120_000);
 });

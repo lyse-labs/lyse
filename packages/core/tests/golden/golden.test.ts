@@ -42,13 +42,13 @@ const snap = (label: string) =>
   JSON.parse(readFileSync(join(SNAP_DIR, `${label}.json`), "utf8")) as { axes: Axis[] };
 const axis = (label: string, name: string) => snap(label).axes.find((a) => a.axis === name)!;
 
-describe("expected-to-change: Appendix-A failure modes are photographed", () => {
+describe("expected-to-change: known-wrong audit numbers photographed as expected-to-change", () => {
   // P1/P2 fix these. When a number moves: update the snapshot, update the band here,
   // and record the delta in CHANGELOG ("the score got more honest — proof: <repo> tokens 1 → N").
-  it("Carbon: tokens axis floored near 0 (own spacing scale flagged) — Appendix A: 1", () => {
+  it("Carbon: tokens axis floored near 0 (own spacing scale flagged)", () => {
     expect(axis("carbon-react", "tokens").score).toBeLessThanOrEqual(10);
   });
-  it("shadcn: components axis is 0 (native-by-design flagged) — Appendix A: 0", () => {
+  it("shadcn: components axis is 0 (native-by-design flagged)", () => {
     expect(axis("shadcn-ui", "components").score).toBe(0);
   });
   it("Carbon & Polaris: stories silently N/A despite story files on disk", () => {

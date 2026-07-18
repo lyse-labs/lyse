@@ -1,6 +1,7 @@
-// Third-party sources are cloned at test time, never vendored (LYSE-MISSION ruling 5).
+// Third-party sources are cloned at test time, never vendored — golden fixtures stay out of
+// this repo's history and licensing surface entirely.
 // SHAs: Carbon/Polaris/shadcn reuse the 2026-05-23 lyse-bench pins; cruip resolved fresh at P0.
-// Re-pin via PR when bumping (record the audit-number delta in the P0 report + CHANGELOG).
+// Re-pin via PR when bumping (record the audit-number delta in the CHANGELOG).
 export interface GoldenRepo {
   slug: string;
   url: string;
