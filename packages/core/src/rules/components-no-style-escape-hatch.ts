@@ -4,6 +4,7 @@ import { isPathExcluded } from "./_exclude.js";
 import { isVendoredOrResetFile, isLowSignalValueFile, isSchemaOrDataFile } from "./_skip-context.js";
 import { createLyseRule } from "./_rule-module.js";
 import { isDsComponent } from "./_ds-component.js";
+import { isScored } from "../graph/query.js";
 
 const require = createRequire(import.meta.url);
 
@@ -84,6 +85,8 @@ const evaluate = async (
       const tagName = el.getTagNameNode().getText();
 
       if (!isDsComponent(tagName, sourceFile, dsCtx)) continue;
+
+      if (ctx.graph && !isScored(ctx.graph, f.path)) continue;
 
       opportunities++;
 

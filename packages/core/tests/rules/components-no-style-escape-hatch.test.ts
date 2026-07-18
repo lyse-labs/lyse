@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { rule } from "../../src/rules/components-no-style-escape-hatch.js";
 import type { RuleContext, ParsedFiles } from "../../src/types.js";
+import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
 
 const PKG = JSON.stringify({ name: "fx", version: "1.0.0" });
 
@@ -125,5 +126,45 @@ describe("components/no-style-escape-hatch", () => {
       }),
     );
     expect(res.findings).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P2 — graph-aware zone gating (Task 10: components/no-style-escape-hatch migration)
+// ---------------------------------------------------------------------------
+function graphWith(zones: Record<string, string>): DesignSystemGraph {
+  return {
+    schemaVersion: 1,
+    tokens: [], components: [], stories: [], usage: [],
+    zones: { byFile: zones as Record<string, ZoneKind> },
+    extraction: { entries: [], conflicts: [] },
+  };
+}
+
+describe("graph-aware zone gating (P2 migration)", () => {
+  it("does NOT flag inline style on a DS component in a ds-source-zoned file", async () => {
+    const path = "packages/design-system/registry/A.tsx";
+    const graph = graphWith({ [path]: "ds-source" });
+    const res = await rule.evaluate(
+      makeCtx({ graph }),
+      makeParsed({
+        "package.json": PKG,
+        [path]: 'import {Button} from "@org/ui";\nexport const A = () => <Button style={{ color: "red" }} />;',
+      }),
+    );
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("still flags inline style on a DS component in an app-zoned file", async () => {
+    const path = "src/App.tsx";
+    const graph = graphWith({ [path]: "app" });
+    const res = await rule.evaluate(
+      makeCtx({ graph }),
+      makeParsed({
+        "package.json": PKG,
+        [path]: 'import {Button} from "@org/ui";\nexport const A = () => <Button style={{ color: "red" }} />;',
+      }),
+    );
+    expect(res.findings.length).toBeGreaterThan(0);
   });
 });

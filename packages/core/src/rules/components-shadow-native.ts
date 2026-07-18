@@ -3,6 +3,7 @@ import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, ClassifyC
 import { fixShadowNative } from "../codemods/shadow-native.js";
 import { adaptOldCodemodResult } from "./_codemod-adapter.js";
 import { createLyseRule } from "./_rule-module.js";
+import { isScored } from "../graph/query.js";
 
 const NATIVE_TO_DS = new Map<string, string>([
   ["button", "Button"],
@@ -45,6 +46,8 @@ const evaluate = async (
 
     const importsFromDs = f.imports.some((i) => i.module === ctx.componentsModule);
     if (!importsFromDs) continue;
+
+    if (ctx.graph && !isScored(ctx.graph, f.path)) continue;
 
     NATIVE_TAG_RE.lastIndex = 0;
     let m: RegExpExecArray | null;
