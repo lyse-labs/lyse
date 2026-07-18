@@ -159,11 +159,3 @@ This rule (Appendix A static signal \`ai-token-misused-on-non-AI-element\`) catc
   defaultOptions: [],
   create: () => ({ evaluate }),
 });
-
-export const _internal = {
-  findReservedAiTokenUsages,
-  fileDefinesReservedAiToken,
-  fileIsAiContext,
-  isAllowlisted,
-  DISABLE_DIRECTIVE,
-};

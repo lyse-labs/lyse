@@ -16,7 +16,7 @@ const RE_NOOP = /^(?:none|unset|initial|inherit|revert)$/i;
 
 const norm = (s: string): string => s.replace(/\s+/g, "").toLowerCase();
 
-export interface ShadowHit {
+interface ShadowHit {
   raw: string;
   index: number;
 }

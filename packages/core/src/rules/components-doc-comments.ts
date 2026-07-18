@@ -70,7 +70,7 @@ function hasJsDoc(...nodes: (t.Node | null | undefined)[]): boolean {
  * (function, arrow/function const, HOC-wrapped const, default function) and
  * record, per component, whether it carries a leading JSDoc doc-comment.
  */
-export function scanComponentDocs(source: string): DocFinding[] {
+function scanComponentDocs(source: string): DocFinding[] {
   const found: DocFinding[] = [];
   let ast: t.File;
   try {

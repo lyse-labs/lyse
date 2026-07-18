@@ -86,5 +86,3 @@ The check is purely structural — it asks only whether the attribute is present
   create: () => ({ evaluate }),
   singleFileCapable: true,
 });
-
-export const _internal = { scanSvgElements };

@@ -13,12 +13,12 @@ const README_CANDIDATES = ["README.md", "README", "readme.md", "README.mdx"];
 // decision (brand sheen, scrim, …) that belongs in a token, not inline.
 const RE_GRADIENT = /\b(?:repeating-)?(?:linear|radial|conic)-gradient\s*\(/gi;
 
-export interface GradientHit {
+interface GradientHit {
   raw: string;
   index: number;
 }
 
-export function extractGradients(text: string): GradientHit[] {
+function extractGradients(text: string): GradientHit[] {
   const hits: GradientHit[] = [];
   RE_GRADIENT.lastIndex = 0;
   let m: RegExpExecArray | null;

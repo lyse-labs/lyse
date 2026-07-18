@@ -10,7 +10,7 @@ const PENALTY_TO_SCORE = 1.5;
 /** The highest level the deterministic ladder can detect (L5 needs runtime). */
 const MAX_DETECTABLE_LEVEL = 4;
 
-export interface ScoreGapItem {
+interface ScoreGapItem {
   subAxisId: string;
   name: string;
   findings: number;
@@ -19,7 +19,7 @@ export interface ScoreGapItem {
   pointsRecoverable: number;
 }
 
-export interface MaturityGap {
+interface MaturityGap {
   currentLevel: number;
   currentLabel: string;
   /** Next rung, or null when at the detectable cap (L4). */

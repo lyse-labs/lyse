@@ -30,7 +30,7 @@ const ACCESSIBLE_ATTRS = new Set(["aria-hidden", "role", "aria-label", "aria-lab
  * `<title>` child. Returns the offenders plus the total svg count (for the
  * scored opportunity denominator).
  */
-export function scanBareSvgs(source: string): { offenders: { line: number; column: number }[]; total: number } {
+function scanBareSvgs(source: string): { offenders: { line: number; column: number }[]; total: number } {
   const offenders: { line: number; column: number }[] = [];
   let total = 0;
   let ast: t.File;

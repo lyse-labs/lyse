@@ -6,7 +6,7 @@ export interface BadgeInput {
   repoUrl: string | null;
 }
 
-export interface BadgeEndpointJson {
+interface BadgeEndpointJson {
   schemaVersion: 1;
   label: string;
   message: string;

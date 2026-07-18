@@ -26,7 +26,7 @@ function stripComments(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, " ");
 }
 
-export function definesCustomProperty(src: string): boolean {
+function definesCustomProperty(src: string): boolean {
   const clean = stripComments(src);
   return RE_CUSTOM_PROP_DEF.test(clean) || RE_THEME_BLOCK.test(clean);
 }

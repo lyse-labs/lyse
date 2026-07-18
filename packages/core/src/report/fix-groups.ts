@@ -1,8 +1,6 @@
 import type { AxisName, Finding, ProjectionEntry, ProjectionMeta, Severity } from "../types.js";
 import { scoreFromFindings, type ScoreOptions } from "../scorer.js";
 
-export type { ProjectionEntry, ProjectionMeta } from "../types.js";
-
 /**
  * Default distinct-file threshold above which a fix group is flagged
  * `migrationScale` (large blast radius — sample before you sweep).

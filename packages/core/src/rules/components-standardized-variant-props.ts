@@ -55,7 +55,7 @@ interface VariantFinding {
   column: number;
 }
 
-export function scanBooleanVariants(
+function scanBooleanVariants(
   source: string,
 ): { findings: VariantFinding[]; componentCount: number } {
   const findings: VariantFinding[] = [];

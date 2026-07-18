@@ -130,5 +130,3 @@ This rule is presence-only: it verifies that some instrumentation exists in the 
   defaultOptions: [],
   create: () => ({ evaluate }),
 });
-
-export const _internal = { detectInteractionHandlers, hasAnalyticsInstrumentation, isAllowlisted, DISABLE_DIRECTIVE };

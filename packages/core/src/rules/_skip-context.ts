@@ -32,10 +32,10 @@ const VENDORED_RESET_BASENAME_RE =
  * minified CSS bundle — files that are never DS-authored, so hardcoded color
  * values in them are categorically not design-system drift.
  *
- * This complements `isBuiltinExcludedPath` (which covers directory-level
- * vendoring like `.yarn/`, `vendor/`, `bower_components/`) with basename-level
- * signals for normalize/reset files that may live inside the repo's own tree
- * (e.g. `src/base/normalize.scss` in primer-css).
+ * This complements the built-in directory-level vendoring check below
+ * (`.yarn/`, `vendor/`, `bower_components/`) with basename-level signals for
+ * normalize/reset files that may live inside the repo's own tree (e.g.
+ * `src/base/normalize.scss` in primer-css).
  */
 export function isVendoredOrResetFile(filePath: string): boolean {
   const normalised = filePath.replace(/\\/g, "/");

@@ -20,14 +20,6 @@ import {
 
 const RULE_ID = "ai-governance/feedback-control-present";
 const DISABLE_DIRECTIVE = `lyse-disable ${RULE_ID}`;
-const ALLOWLIST_CANDIDATES = [
-  "README.md",
-  "README",
-  "README.mdx",
-  "readme.md",
-  ".lyse.yaml",
-  ".lyse.yml",
-];
 
 const isAllowlisted = makeAllowlistCheck(DISABLE_DIRECTIVE);
 
@@ -262,13 +254,3 @@ The rule uses per-file co-location: a feedback control only earns credit when it
   defaultOptions: [],
   create: () => ({ evaluate }),
 });
-
-export const _internal = {
-  isFeedbackControlName,
-  detectCategorizedFeedback,
-  isAllowlisted,
-  scanForFeedbackControls,
-  DISABLE_DIRECTIVE,
-  ALLOWLIST_CANDIDATES,
-  FEEDBACK_PATTERNS,
-};

@@ -253,7 +253,7 @@ export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreRe
  * Compute the score breakdown for the current repo and return both the
  * structured data (for tests) and a Lighthouse-style text rendering (for stdout).
  */
-export async function explainScore(opts: ExplainScoreOpts): Promise<ExplainScoreResult> {
+async function explainScore(opts: ExplainScoreOpts): Promise<ExplainScoreResult> {
   const repoRoot = resolve(opts.cwd);
   const pipeline = await auditDirectory(
     repoRoot,

@@ -37,7 +37,7 @@ const HTML_GLOB = ["**/*.html", "**/*.htm"];
  * `{ found, missingLang }`: whether any `<html>` JSX root exists and whether
  * at least one lacks a lang attribute.
  */
-export function scanJsxHtmlRoot(source: string): { found: boolean; missingLang: boolean } {
+function scanJsxHtmlRoot(source: string): { found: boolean; missingLang: boolean } {
   if (!/<html\b/i.test(source)) return { found: false, missingLang: false };
   let ast: t.File;
   try {
@@ -67,7 +67,7 @@ export function scanJsxHtmlRoot(source: string): { found: boolean; missingLang: 
 }
 
 /** Returns the opening `<html>` tags in an HTML-file source with no lang attr. */
-export function htmlTagsWithoutLang(source: string): string[] {
+function htmlTagsWithoutLang(source: string): string[] {
   const out: string[] = [];
   RE_HTML_OPEN.lastIndex = 0;
   let m: RegExpExecArray | null;

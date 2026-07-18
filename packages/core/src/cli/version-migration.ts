@@ -2,11 +2,11 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve, dirname } from "node:path";
 
-export interface VersionMigrationPaths {
+interface VersionMigrationPaths {
   cacheFile: string;
 }
 
-export function resolveVersionMigrationPaths(): VersionMigrationPaths {
+function resolveVersionMigrationPaths(): VersionMigrationPaths {
   const base = process.env["LYSE_CACHE_DIR"] ?? resolve(homedir(), ".cache");
   return { cacheFile: resolve(base, "lyse", "last-version") };
 }

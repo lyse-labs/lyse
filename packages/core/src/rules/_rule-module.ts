@@ -1,4 +1,3 @@
-import type { RuleModule } from "@typescript-eslint/utils/ts-eslint";
 import type {
   Rule,
   RuleContext,
@@ -8,8 +7,6 @@ import type {
   Severity,
   RuleMeta,
 } from "../types.js";
-
-export type { RuleModule };
 
 export interface LyseRuleMeta {
   axis: AxisName;
@@ -23,7 +20,7 @@ export interface LyseRuleMeta {
   allowlist: string[];
 }
 
-export type LyseEvaluator = (
+type LyseEvaluator = (
   ctx: RuleContext,
   parsedFiles: ParsedFiles,
 ) => Promise<RuleEvalResult>;

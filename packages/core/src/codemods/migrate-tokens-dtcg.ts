@@ -128,7 +128,7 @@ export function migrateTokenJsonToDtcg(json: unknown): MigrationResult {
 const MAX_TOKEN_FILE_BYTES = 1_000_000;
 const TOKEN_GLOBS = ["**/tokens.json", "**/tokens/**/*.json", "**/*.tokens.json"];
 
-export interface TokenMigration {
+interface TokenMigration {
   /** Repo-relative path of the token file. */
   path: string;
   /** DTCG JSON content to write (2-space indent + trailing newline). */

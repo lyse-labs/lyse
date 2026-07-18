@@ -36,7 +36,7 @@ export function detectStack(repoRoot: string): StackDetection {
   };
 }
 
-export function readPackageJson(repoRoot: string): PackageJsonLike {
+function readPackageJson(repoRoot: string): PackageJsonLike {
   try {
     return JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as PackageJsonLike;
   } catch {
@@ -44,7 +44,7 @@ export function readPackageJson(repoRoot: string): PackageJsonLike {
   }
 }
 
-export function mergeDeps(pkg: PackageJsonLike): Record<string, string> {
+function mergeDeps(pkg: PackageJsonLike): Record<string, string> {
   return { ...pkg.dependencies, ...pkg.devDependencies };
 }
 

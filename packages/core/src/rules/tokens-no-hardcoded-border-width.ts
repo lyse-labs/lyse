@@ -126,5 +126,3 @@ Border thicknesses beyond the default hairline (\`2px\`, \`3px\`, \`0.5px\`) sho
   defaultOptions: [],
   create: () => ({ evaluate }),
 });
-
-export const _internal = { extractBorderWidths, isExemptWidth, isAllowlisted, DISABLE_DIRECTIVE };

@@ -38,7 +38,7 @@ export function writeLyseMd(inputs: LyseMdInputs): { path: string; created: bool
   return { path, created: !exists, updated: exists };
 }
 
-export function buildLyseMd(inputs: LyseMdInputs): string {
+function buildLyseMd(inputs: LyseMdInputs): string {
   const tokens = buildTokenSummary(inputs.repoRoot, inputs.stack.styling);
   const lines: string[] = [];
   lines.push("# LYSE.md");

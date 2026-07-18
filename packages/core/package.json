@@ -74,7 +74,6 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@swc/core": "1.15.40",
     "@typescript-eslint/parser": "^8.60.1",
-    "@typescript-eslint/utils": "^8.60.1",
     "ansis": "^4.3.1",
     "axe-core": "4.10.2",
     "citty": "0.2.2",

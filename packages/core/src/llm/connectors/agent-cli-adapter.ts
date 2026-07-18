@@ -5,7 +5,7 @@ import type { ChatMessage, CompleteOptions, ConnectorClient, ConnectorResult } f
 
 const DEFAULT_TIMEOUT_MS = 180_000;
 
-export interface AgentCliSpawnInput {
+interface AgentCliSpawnInput {
   binary: string;
   model: string;
   systemPrompt: string;
