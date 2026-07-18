@@ -79,4 +79,6 @@ export interface AuditFlags {
   render?: boolean;
   /** Optional Storybook source for the runtime-axe sub-stage: a static dir (relative to repo root or absolute) or a running URL. */
   storybook?: string;
+  /** Opt-in: persist the FULL graph (per-file usage edges) to .lyse/graph.json. */
+  graphFull?: boolean;
 }

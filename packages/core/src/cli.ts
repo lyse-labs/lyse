@@ -57,6 +57,8 @@ import { resolveLlmConsentNonInteractive } from "./llm/consent.js";
 import { runTelemetryOn, runTelemetryOff, runTelemetryStatus } from "./commands/telemetry.js";
 import { runBenchPack } from "./commands/bench-pack.js";
 import { runHandoffCommand } from "./commands/handoff.js";
+import { writeGraph } from "./graph/persist.js";
+import type { DesignSystemGraph } from "./graph/types.js";
 
 import type { TerminalOpts } from "./reporters/terminal-format.js";
 
@@ -125,6 +127,7 @@ interface AuditOutcome {
   componentInventory: ReturnType<typeof buildComponentInventory>;
   fileCount: number;
   hasTokenRegistry: boolean;
+  graph: DesignSystemGraph;
 }
 
 async function runAudit(repoRoot: string, flags?: AuditFlags): Promise<AuditOutcome> {
@@ -149,6 +152,7 @@ async function runAudit(repoRoot: string, flags?: AuditFlags): Promise<AuditOutc
     componentInventory: pipeline.componentInventory,
     fileCount: pipeline.fileCount,
     hasTokenRegistry,
+    graph: pipeline.graph,
   };
 }
 
@@ -255,6 +259,10 @@ const auditCommand = defineCommand({
       type: "string",
       description: "Storybook source for runtime a11y: a pre-built static dir (e.g. storybook-static) or a running URL. Used only with --render.",
     },
+    "graph-full": {
+      type: "boolean" as const,
+      description: "Persist the full graph (per-file usage edges) to .lyse/graph.json",
+    },
     interactive: {
       type: "boolean",
       default: false,
@@ -334,6 +342,7 @@ const auditCommand = defineCommand({
       ...(typeof args["storybook"] === "string" && args["storybook"]
         ? { storybook: args["storybook"] as string }
         : {}),
+      ...(args["graph-full"] === true ? { graphFull: true } : {}),
       ...(args["staged"] === true
         ? { scope: "staged" as const }
         : args["scope"] === "changed" || args["scope"] === "staged" || args["scope"] === "uncommitted"
@@ -364,9 +373,9 @@ const auditCommand = defineCommand({
     const isMachineFormatForSpinner =
       formatForSpinner === "json" || formatForSpinner === "sarif" || formatForSpinner === "html" || formatForSpinner === "tsv";
 
-    let result: AuditResult, fileCount: number, hasTokenRegistry: boolean, config: LyseConfig;
+    let result: AuditResult, fileCount: number, hasTokenRegistry: boolean, config: LyseConfig, graph: DesignSystemGraph;
     try {
-      ({ result, fileCount, hasTokenRegistry, config } = await withSpinner<AuditOutcome>(
+      ({ result, fileCount, hasTokenRegistry, config, graph } = await withSpinner<AuditOutcome>(
         {
           isTTY: isTTYForSpinner,
           quiet: isQuiet,
@@ -427,6 +436,8 @@ const auditCommand = defineCommand({
       },
       findings_count: result.findings.length,
     }, null);
+
+    writeGraph(repoRoot, graph, { full: args["graph-full"] === true });
 
     const isTTY = process.stdout.isTTY ?? false;
     const format = args.format ?? (isTTY ? "text" : "json");
