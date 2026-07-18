@@ -19,7 +19,7 @@ Per-rule documentation. Each rule's `helpUri` (visible in JSON / SARIF output) l
 
 - [All rules](./rules/) — index with severities, axes, fixability.
 
-Highlights from the 65-rule set (full list at [`rules/`](./rules/)):
+Highlights from the 66-rule set (full list at [`rules/`](./rules/)):
 
 | Rule ID | Axis | Severity | Auto-fixable |
 |---|---|---|---|

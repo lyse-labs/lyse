@@ -77,7 +77,7 @@ function ExternalLink() {
 
 A11y fixes require human judgment. An auto-fix for missing `alt` text would invent text that may be wrong; an auto-fix for an `onClick` on a `<div>` could rewrite the element but lose surrounding intent.
 
-Narrow, safe codemods may land in a future version (e.g., adding `lang="en"` to `<html>`), but only for changes that cannot semantically harm the page.
+Narrow, safe fix payloads may land in a future version (e.g., adding `lang="en"` to `<html>`), but only for changes that cannot semantically harm the page. As with every Lyse fix, the payload would be applied by your agent or `git apply` — Lyse never writes source files itself.
 
 ## Allowlist
 

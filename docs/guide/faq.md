@@ -58,7 +58,7 @@ Vanilla HTML / web components — partial (a11y rule covers it; tokens require c
 
 ## Can I add my own rules?
 
-The 65 built-in rules are stable, but `lyse init` with a BYOK LLM (Anthropic / OpenAI / Ollama / IDE-MCP) can generate additional rules tailored to your repo. Generated rules live in `.lyse/generated-rules.yaml`, are committed alongside your code, and run as deterministic static analysis on every audit.
+The 66 built-in rules are deterministic, but `lyse init` with a BYOK LLM (Anthropic / OpenAI / Ollama / IDE-MCP) can generate additional rules tailored to your repo. Generated rules live in `.lyse/generated-rules.yaml`, are committed alongside your code, and run as deterministic static analysis on every audit.
 
 If you want a rule added to the core ruleset, [open an issue](https://github.com/lyse-labs/lyse/issues/new/choose) describing the rule.
 
@@ -160,7 +160,7 @@ Yes. Stories are a documentation-hygiene signal, not a correctness signal — if
 
 ## Why doesn't Lyse have a hosted web dashboard?
 
-Lyse is local-first by design. The CLI and the MCP server are the full surface.
+Lyse is local-first by design. The CLI and the MCP server are the full surface. `lyse audit --format=html` writes a **local** self-contained HTML file you open yourself — it's a local artifact like the JSON/SARIF outputs, not a hosted dashboard or web UI (which Lyse does not ship before v1.0).
 
 ## What does Lyse send to my LLM?
 

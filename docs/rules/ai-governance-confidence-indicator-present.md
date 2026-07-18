@@ -32,7 +32,7 @@ A confidence component only earns credit when it lives in the same file as an AI
 
 ## Scope
 
-Static "affordance present" slice (Track 16.8, manifest area L). Does not verify the indicator appears at every AI-output render site.
+Static "affordance present" slice (manifest area L). Does not verify the indicator appears at every AI-output render site.
 
 ## Disabling
 

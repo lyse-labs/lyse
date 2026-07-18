@@ -10,8 +10,8 @@ import { resolveStableSubAxes, type StableSubAxesOptions } from "./stable-sub-ax
  * gate but which have not yet been promoted into the live (v1) trusted score.
  *
  * This set is READ-ONLY: it never feeds the trusted Health Score. `explain
- * --score` computes a preview score over it so the impact of promoting the moat
- * (the AI-governance + structural sub-axes) can be inspected before any v1 change.
+ * --score` computes a preview score over it so the impact of promoting these
+ * sub-axes (the AI-governance + structural sub-axes) can be inspected before any v1 change.
  */
 export function resolveScoreV2PreviewSubAxes(
   subAxes: readonly SubAxisRecord[],

@@ -11,7 +11,7 @@ everything checkable from code/files (presence, schema, structural patterns).
 But a residual of high-value dimensions need **judgement**, not pattern-matching:
 
 - "Is this hardcoded value real drift, or a legitimate exception (chart palette,
-  embed theme, icon fill)?" — the precision moat on `tokens/no-hardcoded-*`.
+  embed theme, icon fill)?" — the precision ceiling on `tokens/no-hardcoded-*`.
 - "Is this AGENTS.md / disclaimer / explainability affordance actually adequate?"
   — the semantic AI-governance rules (`disclaimer-present`,
   `explainability-affordance`, `human-control-affordances`,

@@ -30,7 +30,7 @@ A reserved AI token used in a file that satisfies none of these (e.g. a generic 
 
 ## Scope
 
-Static "misuse present" slice (Track 9.5, manifest area L). File-level co-location, not element-level — element-precise attribution is later AST work. Ships `experimental` (advisory) until measured precision.
+Static "misuse present" slice (manifest area L). File-level co-location, not element-level — element-precise attribution is later AST work. Ships `experimental` (advisory) until measured precision.
 
 ## Disabling
 

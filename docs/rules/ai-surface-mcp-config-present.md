@@ -2,7 +2,7 @@
 
 > **Axis:** AI surface · **Severity:** warning (escalates to error on malformed config) · **Auto-fixable:** no · **Version:** v1
 
-Detects whether a design system repository declares at least one MCP (Model Context Protocol) server, signaling AI-Consumable readiness. Part of Track 2 — Face A (AI-Consumable).
+Detects whether a design system repository declares at least one MCP (Model Context Protocol) server, signaling AI-Consumable readiness.
 
 ## Why
 

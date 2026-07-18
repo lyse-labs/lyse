@@ -75,13 +75,13 @@ function statusSummary(rows: readonly SubAxisRecord[]): string {
   return [
     `**${rows.length} sub-axes total** — stable: ${counts.stable} · experimental: ${counts.experimental} · disabled: ${counts.disabled}`,
     "",
-    "Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate: N ≥ 30 labeled samples AND Wilson 95 % lower bound ≥ 0.90 on recall. See [`docs/architecture/reliability.md`](./reliability.md) for methodology.",
+    "Only sub-axes with `status: stable` contribute to the Health Score by default. Promotion gate (dual): N ≥ 40 independently-provenanced samples AND Wilson 95 % lower bound ≥ 0.90 on both recall (ships the `stable` claim) and precision (contributes to the Health Score). See [`docs/architecture/reliability.md`](./reliability.md) for methodology.",
     "",
   ].join("\n");
 }
 
 const AXIS_ORDER: Record<string, number> = {
-  tokens: 1, a11y: 2, components: 3, stories: 4, "ai-surface": 5,
+  tokens: 1, a11y: 2, components: 3, stories: 4, "ai-surface": 5, "ai-governance": 6,
 };
 
 const sortedSubAxes = [...SUB_AXES].sort((a, b) => {

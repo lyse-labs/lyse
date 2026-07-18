@@ -48,7 +48,7 @@ End-to-end walkthrough of what happens when you run `npx @lyse-labs/lyse audit`.
         ┌────────────────────────────────────────────────┐
         │  5. Rule runner                                │
         │     - for each rule × each file → visit AST    │
-        │     5a. Built-in rules (65, all static)        │
+        │     5a. Built-in rules (66, all static)        │
         │     5b. Pack loader (optional generated rules) │
         │         — loads .lyse/generated-rules.yaml     │
         │         — merges with built-in rules           │
@@ -116,7 +116,7 @@ packages/core/src/
 │   └── figma.ts             # stub, not yet wired
 ├── rules/
 │   ├── manifest.ts          # RULE_METADATA — derived from META_REGISTRY
-│   ├── registry.ts          # exports ruleObjects (65 rule instances) + ruleMap (O(1) lookup)
+│   ├── registry.ts          # exports ruleObjects (66 rule instances) + ruleMap (O(1) lookup)
 │   ├── pack-loader.ts       # load .lyse/generated-rules.yaml
 │   ├── _skip-context.ts     # shared helpers (isInsideCodeDisplay, isInsideSkippedJsxAttr)
 │   ├── _codemod-adapter.ts  # codemod dispatch wrapper
@@ -268,7 +268,7 @@ interface AuditResult {
   finalScore: number;          // 0–100, equal-weight mean of active axes
   tier: "Foundational" | "Managed" | "Defined" | "Quantitative" | "Autonomous";
   scoringVersion: "scoring-v1";
-  axes: AxisScore[];           // one entry per axis: tokens, a11y, components, stories, ai-surface
+  axes: AxisScore[];           // one entry per axis: tokens, a11y, components, stories, ai-surface, ai-governance
   findings: Finding[];          // sorted by (path, line, column)
   meta: {
     lyseVersion: string;
@@ -280,7 +280,7 @@ interface AuditResult {
 }
 
 interface AxisScore {
-  axisId: "tokens" | "a11y" | "components" | "stories" | "ai-surface";
+  axisId: "tokens" | "a11y" | "components" | "stories" | "ai-surface" | "ai-governance";
   score: number | null;          // null when N/A
   weightedFindings: number;
   opportunities: number;

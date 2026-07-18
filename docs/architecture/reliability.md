@@ -28,21 +28,21 @@ Every Lyse PR runs `pnpm test:recall` in CI; the build blocks if any `stable` su
 
 ### Pillar 3 — Coverage via the public catalogue
 
-Lyse ships **6 axes** (`tokens`, `a11y`, `components`, `stories`, `ai-surface`, `ai-governance`) decomposed into **65 sub-axes** (1 per rule). Every sub-axis is tagged `stable`, `experimental`, or `disabled`. Only `stable` contributes to the Health Score by default. Promotion gate: N ≥ 30 samples AND Wilson 95 % LB ≥ 0.90 on recall — and, for **deterministic validators** (file-presence / JSON-schema / grammar rules whose verdict is structural, not context-dependent), on precision too. As of 2026-06-23, **52 sub-axes are `stable`** and contribute to the Health Score; the rest ship `experimental` (reported-only) and promote as calibration data accrues. The full catalogue is auto-generated at [`docs/architecture/sub-axes.md`](./sub-axes.md).
+Lyse ships **6 axes** (`tokens`, `a11y`, `components`, `stories`, `ai-surface`, `ai-governance`) decomposed into **66 sub-axes** (1 per rule). Every sub-axis is tagged `stable`, `experimental`, or `disabled`. Only `stable` contributes to the Health Score by default. **Promotion gate (dual)** — both computed as a Wilson 95 % lower bound on **N ≥ 40** independently-provenanced samples: **recall ≥ 0.90** for a sub-axis to ship as a claim (`stable`), and **precision ≥ 0.90** for its findings to contribute to the Health Score (a rule that clears recall but not precision is reported at weight 0 until precision clears). **52 sub-axes are currently `stable`.** Honest status: today's `stable` set was calibrated under the earlier synthetic recall suite; migrating every `stable` rule onto the N ≥ 40 independent-provenance dual gate is in progress (per-rule state in [`docs/architecture/per-rule-slo.md`](./per-rule-slo.md)). The rest ship `experimental` (reported-only). The full catalogue is auto-generated at [`docs/architecture/sub-axes.md`](./sub-axes.md).
 
-**score-v2 preview channel (#71).** `lyse explain --score` also reports a read-only **preview** score over a strict superset of the trusted set: the deterministic structural sub-axes whose synthetic recall *and* precision Wilson 95 % lower bounds both clear the 0.90 gate but which are not yet promoted into the live score (flagged `contributesToScoreV2`). The preview never alters the trusted Health Score — it exists so the impact of promoting the AI-governance moat can be inspected before any v1 change. Promoting a preview sub-axis into v1 (flipping `contributesToScore`) remains a deliberate release decision, not an automatic consequence of clearing the gate.
+**score-v2 preview channel.** `lyse explain --score` also reports a read-only **preview** score over a strict superset of the trusted set: the deterministic structural sub-axes whose synthetic recall *and* precision Wilson 95 % lower bounds both clear the 0.90 gate but which are not yet promoted into the live score (flagged `contributesToScoreV2`). The preview never alters the trusted Health Score — it exists so the impact of promoting the AI-governance sub-axes can be inspected before any v1 change. Promoting a preview sub-axis into v1 (flipping `contributesToScore`) remains a deliberate release decision, not an automatic consequence of clearing the gate.
 
 ### Pillar 4 — Auto-improvement with a human gate
 
-When the antivirus detects a regression, an Opus 4.7-driven pipeline runs nightly: failure detection clusters the misses, a diagnosis agent writes a ≤ 200-word explanation of why the rule missed (no code), a patch-proposal agent opens an isolated git worktree and asks Opus for a full-file replacement, then a validation agent re-runs `test:recall` and `pnpm test` inside the worktree. If the patch improves the target rule without regressing any other rule by more than 1 pp, the pipeline opens a **draft** PR. A human approves in ~30 seconds. The pipeline never auto-merges — that would break the deterministic + version-pinned public claim and the audit trail.
+When the antivirus detects a regression, an LLM-driven pipeline runs on a schedule: failure detection clusters the misses, a diagnosis agent writes a ≤ 200-word explanation of why the rule missed (no code), a patch-proposal agent opens an isolated git worktree and asks an LLM for a full-file replacement, then a validation agent re-runs `test:recall` and `pnpm test` inside the worktree. If the patch improves the target rule without regressing any other rule by more than 1 pp, the pipeline opens a **draft** PR. A human approves in ~30 seconds. The pipeline never auto-merges — that would break the deterministic + version-pinned public claim and the audit trail.
 
 ## The 3 falsifiable claims
 
 Marketing surfaces use only these three claims; everything else is a derivative.
 
-1. **100 % deterministic on the JSON artifact** — same input, same Health Score, byte-for-byte. Verifiable: run `lyse audit --format=json` twice on the same git commit; the JSON output is identical. Scoring formula is pinned as `scoring-v1` and stamped on the `AuditResult.scoringVersion` field of every emitted JSON artifact. Bumping to `scoring-v2` is a semver-major event with a CHANGELOG entry.
-2. **≥ 90 % recall on every `stable` sub-axis** — measured against the public gold set, reported as a Wilson 95 % lower bound on N ≥ 30 hand-labelled samples. The per-rule SLO is published at [`docs/architecture/per-rule-slo.md`](./per-rule-slo.md). The table is seeded with all 65 rules; promotion to `stable` happens as calibration data accrues.
-3. **Open catalogue of 65 sub-axes (1 per rule)** — status published per axis at [`docs/architecture/sub-axes.md`](./sub-axes.md). 52 sub-axes are `stable`; the rest ship `experimental` and promote to `stable` as calibration data accrues.
+1. **100 % deterministic — byte-identical output artifacts** — same input, same commit → byte-identical outputs. Verifiable: run `lyse audit --format=json` twice on the same git commit; the JSON output is identical. Scoring formula is pinned as `scoring-v1` and stamped on the `AuditResult.scoringVersion` field of every emitted JSON artifact. Bumping to `scoring-v2` is a semver-major event with a CHANGELOG entry.
+2. **≥ 90 % recall and ≥ 90 % precision on every scoring `stable` sub-axis** — each a Wilson 95 % lower bound on N ≥ 40 independently-provenanced samples (recall gates the `stable` claim; precision gates the score contribution). The per-rule SLO is published at [`docs/architecture/per-rule-slo.md`](./per-rule-slo.md). The table is seeded with all 66 rules; promotion happens as independent calibration data accrues.
+3. **Open catalogue of 66 sub-axes (1 per rule)** — status published per axis at [`docs/architecture/sub-axes.md`](./sub-axes.md). 52 sub-axes are `stable`; the rest ship `experimental` and promote to `stable` as calibration data accrues.
 
 ## Reproducing the numbers
 
@@ -56,7 +56,10 @@ and `annotator: claude-opus-4-7-heuristic-v2`, with a `confidence` score in [0, 
 reflecting heuristic strength.
 
 This is intentional and disclosed: the gold-set seeds the precision/recall machinery before
-community contributions take over. Methodology:
+community contributions take over. Labels that gate a rule's `stable` promotion or its score
+contribution must be **independently provenanced** — human or community, never authored by an
+agent for a rule it implemented; these provisional Claude labels are the seed the independent
+gold set supersedes, not the promotion gate itself. Methodology:
 
 - Candidates mined from 9 pinned-SHA OSS design-system repos.
 - Heuristic per rule (token-reference detection, file-context exclusion).
@@ -74,7 +77,7 @@ remains unchanged — the bench composition is what evolves.
 dimension, Cohen's kappa between the static rule verdict and the LLM grade,
 plus precision/recall and their Wilson lower bounds (reusing
 `wilsonLowerBound` from `promotion.ts`). A low kappa means a static rule has
-drifted from the expert/LLM signal — the divergence signal Track 4.6 builds on.
+drifted from the expert/LLM signal — the divergence signal described below.
 
 The sub-axis calibration fields (`precisionMeasured`, `recallMeasured`,
 `*WilsonLowerBound`, `lastCalibrated`) are **produced by running this
@@ -84,7 +87,7 @@ machinery is exercised against in-repo fixtures only.
 
 See also: [`docs/architecture/sub-axes.md`](./sub-axes.md), [`docs/architecture/per-rule-slo.md`](./per-rule-slo.md).
 
-### Divergence signal (Track 4.6)
+### Divergence signal
 
 `packages/core/src/reliability/llm-eval/divergence.ts` implements the
 self-policing mechanism: when a static rule's kappa falls **strictly below**

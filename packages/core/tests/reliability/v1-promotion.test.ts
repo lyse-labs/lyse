@@ -57,16 +57,14 @@ const PROMOTED_2026_06_20 = [
 
 // Demoted back to experimental after corpus precision-validation (2026-06-20):
 // `tokens.gradient` fires on functional gradients (alpha-checkerboards).
-// Precise but not trustworthy as a scored signal — see
-// internal/corpus-validation/2026-06-20-precision-report.md.
+// Precise but not trustworthy as a scored signal.
 const DEMOTED_2026_06_20 = ["tokens.gradient"];
 
 // Re-promoted 2026-06-20 after the #77 public-API re-scope: doc-comments now
 // flags only components re-exported from their own package entry (per-package
 // scoping), eliminating the cross-package-collision FPs and the ~3585-finding
 // flood (mantine: 3585 → 14 true positives, 0 FP across 5 OSS DS). Synthetic
-// recall LB 0.901 / precision LB 0.929. See
-// internal/corpus-validation/2026-06-20-doc-comments-public-rescope-findings.md.
+// recall LB 0.901 / precision LB 0.929.
 const REPROMOTED_2026_06_20 = ["components.doc-comments"];
 
 describe("v1 promotion of the 2026-06-20 deterministic coverage batch", () => {

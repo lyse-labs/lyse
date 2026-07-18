@@ -17,7 +17,7 @@ The metadata is what users see (in `lyse explain`, in SARIF, in JSON output). Th
 interface RuleMetadata {
   id: string;                   // "tokens/no-hardcoded-color"
   version: string;              // "v1"
-  axis: "tokens" | "a11y" | "components" | "stories" | "ai-surface";
+  axis: "tokens" | "a11y" | "components" | "stories" | "ai-surface" | "ai-governance";
   severity: "error" | "warning" | "info";
   fixable: boolean;
   helpUri: string;              // URL to docs/rules/<slug>.md
@@ -189,7 +189,7 @@ Allowlisted findings are still recorded in the result (with `severity: "off"`) s
 
 ## Rule severity vs axis
 
-A rule has both a `severity` (`error` / `warning` / `info`) and an `axis` (`tokens` / `a11y` / `components` / `stories` / `ai-surface`).
+A rule has both a `severity` (`error` / `warning` / `info`) and an `axis` (`tokens` / `a11y` / `components` / `stories` / `ai-surface` / `ai-governance`).
 
 - **Severity** affects display (color in terminal, level in SARIF) and may affect score weighting in V2 (currently all findings count equally within an axis).
 - **Axis** determines which sub-score the rule contributes to.
@@ -236,7 +236,7 @@ Rules must NOT:
 
 ## Generated rule packs
 
-At `lyse init`, an optional BYOK LLM call generates a custom rule pack saved to `.lyse/generated-rules.yaml`. This file is committed to the repo and loaded by `pack-loader.ts` on every audit run, merging with the 65 built-in rules.
+At `lyse init`, an optional BYOK LLM call generates a custom rule pack saved to `.lyse/generated-rules.yaml`. This file is committed to the repo and loaded by `pack-loader.ts` on every audit run, merging with the 66 built-in rules.
 
 The generated pack uses one of **8 rule templates** from `packages/core/src/rules/templates/`:
 

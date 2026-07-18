@@ -2,7 +2,7 @@
 
 > **Axis:** AI governance · **Severity:** warning (info when found) · **Auto-fixable:** no · **Version:** v1
 
-Detect whether the design system ships a dedicated AI-marker component — a label, badge, avatar, or indicator that visually marks AI-generated output. Part of Track 3 — Face B (AI-Governance).
+Detect whether the design system ships a dedicated AI-marker component — a label, badge, avatar, or indicator that visually marks AI-generated output.
 
 ## Why
 
@@ -10,7 +10,7 @@ AI-marker components are the visual contract between the design system and its c
 
 The most actionable case is a DS that has already shipped reserved AI tokens (Carbon `dragon-fruit`, Polaris `magic`, Workday Canvas `*-ai-*`) but provides no corresponding component for consumers to apply. That mismatch is the `warning` finding: tokens signal AI-surface intent but there is nothing to put in the UI.
 
-When a marker component is found, the rule emits an `info` finding to inventory it — feeding the Track 3.3 composite rule. A DS with no AI surface at all (no reserved tokens, no marker component) emits nothing and is not penalised.
+When a marker component is found, the rule emits an `info` finding to inventory it — feeding sibling AI-governance rules that depend on the AI-marker surface. A DS with no AI surface at all (no reserved tokens, no marker component) emits nothing and is not penalised.
 
 ## How it works
 
@@ -32,9 +32,9 @@ Detection runs in two passes:
 | `GenAI*` prefix | `GenAIAvatar`, `GenAILabel` |
 | `*AIMarker*` substring | `MyAIMarkerBadge` |
 | `magic-*` prefix (Polaris) | `magic-icon`, `magic-sparkle` |
-| Structural word + locale AI noun (Track 9.1) | `BadgeIA`, `IALabel`, `KIBadge`, `人工知能Badge` |
+| Structural word + locale AI noun | `BadgeIA`, `IALabel`, `KIBadge`, `人工知能Badge` |
 
-**Localized markers (Track 9.1).** An identifier also counts as an AI marker when it combines a structural marker word (`label`, `badge`, `tag`, `indicator`, `marker`, `avatar`, `chip`, `pill` — code-identifier vocabulary, kept in English even in localized products) with an AI noun from any active locale (`ai`, `ia`, `ki`, `人工知能`, plus `.lyse.yaml` `i18n.vocabulary.aiNouns`). Latin nouns are boundary-delimited so `ai` never matches inside `Email`, `Detail`, or `Caption`; a structural word alone (`Badge`) never matches.
+**Localized markers.** An identifier also counts as an AI marker when it combines a structural marker word (`label`, `badge`, `tag`, `indicator`, `marker`, `avatar`, `chip`, `pill` — code-identifier vocabulary, kept in English even in localized products) with an AI noun from any active locale (`ai`, `ia`, `ki`, `人工知能`, plus `.lyse.yaml` `i18n.vocabulary.aiNouns`). Latin nouns are boundary-delimited so `ai` never matches inside `Email`, `Detail`, or `Caption`; a structural word alone (`Badge`) never matches.
 
 **Cross-condition warning.** If no marker component is found but `detectReservedAiTokens(repoRoot)` (shared parser from `packages/core/src/parsers/ai-tokens.ts`) returns a non-empty list, the rule emits a `warning`. This is the "tokens without a component" gap.
 

@@ -119,5 +119,5 @@ Use when:
 - WAI-ARIA Authoring Practices — Live Regions (W3C specification)
 - PatternFly — isLiveRegion prop (PatternFly component documentation)
 - WCAG 2.1 SC 4.1.3 — Status Messages (Level AA)
-- ai-governance/ai-marker-component-present — Track 3.2
-- ai-governance/explainability-affordance — Track 3.5
+- `ai-governance/ai-marker-component-present` — establishes the AI-marker surface this rule depends on
+- `ai-governance/explainability-affordance` — related semantic affordance (design-stage, not yet shipped)

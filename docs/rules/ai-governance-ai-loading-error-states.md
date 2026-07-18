@@ -14,7 +14,7 @@ AI-generating surfaces have two failure modes that generic DS rules cannot see:
 
 **Generic error boundaries.** An `ErrorBoundary` communicates nothing AI-specific. When a generation fails, users need to know the AI operation failed — not a generic 500 — and ideally what to do next. A component named `AIError` or `GenerationError` signals this intent at the design-system level.
 
-This rule checks only **static presence**: do the components exist in the component surface? The behavioral recovery flow (retry orchestration, post-error navigation) is explicitly out of scope and tracked in Track 4 (#16).
+This rule checks only **static presence**: do the components exist in the component surface? The behavioral recovery flow (retry orchestration, post-error navigation) is explicitly out of scope and tracked separately (#16).
 
 ---
 
@@ -128,5 +128,5 @@ This completely suppresses all findings for the rule in that repo. Use this for 
 ## 6. See also
 
 - AWS Cloudscape Design System — Generative AI patterns (plain text reference; search "Cloudscape generative AI loading" for current guidance on named loading states and paired text requirements)
-- Track 4 (#16) — behavioral recovery-flow detection (retry orchestration, post-error navigation). This is the planned successor rule; the present rule covers only static presence.
-- `ai-governance/ai-marker-component-present` (Track 3.2) — establishes the AI marker surface (`AILabel`, `AIBadge`, `magic-*` etc.) that this rule uses as its trigger condition. The loading/error states rule fires only when Track 3.2's AI surface is detected.
+- #16 — behavioral recovery-flow detection (retry orchestration, post-error navigation). This is the planned successor rule; the present rule covers only static presence.
+- `ai-governance/ai-marker-component-present` — establishes the AI marker surface (`AILabel`, `AIBadge`, `magic-*` etc.) that this rule uses as its trigger condition. The loading/error states rule fires only when that AI surface is detected.

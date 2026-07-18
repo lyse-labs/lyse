@@ -29,7 +29,7 @@ Heading-only + AI-context gating keeps generic `## History` (changelog) and `## 
 
 ## Scope
 
-Docs-as-object, **presence only** (Track 9.9). Doc *quality* is a separate semantic concern — no NLP in the static engine, in-repo files only, no crawling.
+Docs-as-object, **presence only**. Doc *quality* is a separate semantic concern — no NLP in the static engine, in-repo files only, no crawling.
 
 ## Disabling
 
