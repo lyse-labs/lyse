@@ -185,8 +185,11 @@ describe("renderTerminal (plain-text mode for snapshot stability)", () => {
       ],
     };
     const out = await renderTerminal(naResult, baseOpts);
-    // N/A axes render as em-dash in the clean layout
-    expect(out).toContain("—");
+    // N/A axes render "N/A" in the score cell (not a bare em-dash), and each
+    // gets a printed degradation reason — no silent N/A (task 10).
+    expect(out).toContain("N/A");
+    expect(out).toContain("components: not scored — no components opportunities in scope.");
+    expect(out).toContain("stories: not scored — no stories opportunities in scope.");
   });
 
   it("handles final score = N/A", async () => {

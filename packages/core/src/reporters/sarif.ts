@@ -134,6 +134,16 @@ export function renderSarif(result: AuditResult, options: SarifRenderOptions = {
             ...(options.includeTimestamp && result.timestamp
               ? { startTimeUtc: result.timestamp, endTimeUtc: result.timestamp }
               : {}),
+            ...(() => {
+              const notes = (result.meta?.extraction?.entries ?? [])
+                .filter((e) => e.status !== "ok")
+                .map((e) => ({
+                  descriptor: { id: `lyse.extraction.${e.extractor}` },
+                  level: e.status === "failed" ? "error" : "warning",
+                  message: { text: e.remediation ?? `${e.extractor} extractor ${e.status}` },
+                }));
+              return notes.length > 0 ? { toolExecutionNotifications: notes } : {};
+            })(),
           },
         ],
         originalUriBaseIds: {

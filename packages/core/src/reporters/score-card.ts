@@ -16,7 +16,7 @@ const ASCII_BORDERS: Borders = { tl: "+", tr: "+", bl: "+", br: "+", h: "-", v: 
 function axisRow(a: AxisScore, opts: TerminalOpts, barCells: number): string {
   const gly = statusGlyph(a.score, { color: opts.color, unicode: opts.unicode });
   const name = visiblePad(a.axis, 14);
-  const scoreText = visiblePad(a.score === "N/A" ? "—" : String(a.score), 4, "left");
+  const scoreText = visiblePad(a.score === "N/A" ? "N/A" : String(a.score), 4, "left");
   return `${gly} ${name} ${scoreText}  ${bar(a.score, opts, barCells)}`;
 }
 
