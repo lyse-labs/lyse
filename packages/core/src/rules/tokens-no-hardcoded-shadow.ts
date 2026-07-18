@@ -4,6 +4,7 @@ import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap,
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 import { makeFixGroup } from "./_fix-group.js";
+import { isScored, onScale, reverseLookup } from "../graph/query.js";
 
 const RULE_ID = "tokens/no-hardcoded-shadow";
 const MAX_FILE_BYTES = 1_000_000;
@@ -35,10 +36,20 @@ function extractShadows(text: string): ShadowHit[] {
   return hits;
 }
 
+function shadowOnScale(ctx: RuleContext, normed: string): boolean {
+  if (ctx.graph) return onScale(ctx.graph, "shadows", normed);
+  if (!ctx.tokens) return false;
+  return shadowScaleSet(ctx.tokens).has(normed);
+}
+
+function shadowCandidates(ctx: RuleContext, normed: string): string[] {
+  if (ctx.graph) return reverseLookup(ctx.graph, "shadows", normed);
+  if (!ctx.tokens) return [];
+  return ctx.tokens.shadows.get(normed) ?? [];
+}
+
 function shadowFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {
-  if (!ctx.tokens) return undefined;
-  const normed = norm(raw);
-  const candidates = ctx.tokens.shadows.get(normed);
+  const candidates = shadowCandidates(ctx, norm(raw));
   return makeFixGroup(RULE_ID, raw, candidates);
 }
 
@@ -76,16 +87,16 @@ function lineFromIndex(text: string, index: number): number {
 const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalResult> => {
   const findings: Finding[] = [];
   if (ctx.repoRoot && isAllowlisted(ctx.repoRoot)) return { findings, opportunities: 0 };
-  const scale = shadowScaleSet(ctx.tokens);
   let opportunities = 0;
   const sources = [
     ...files.css.filter((f) => !f.skipped).map((f) => ({ path: f.path, source: f.source })),
     ...files.cssInJs.map((b) => ({ path: b.path, source: b.content })),
   ];
   for (const { path, source } of sources) {
+    if (ctx.graph && !isScored(ctx.graph, path)) continue;
     for (const hit of extractShadows(source)) {
       opportunities++;
-      if (scale.has(norm(hit.raw))) continue;
+      if (shadowOnScale(ctx, norm(hit.raw))) continue;
       const fixGroup = shadowFixGroup(ctx, hit.raw);
       findings.push({
         ruleId: RULE_ID,
