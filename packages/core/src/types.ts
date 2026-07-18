@@ -105,6 +105,12 @@ export interface RuleContext {
    */
   dsSelfMode?: boolean;
   /**
+   * The reified Design System Graph for this audit. Added in P1 (additive). The
+   * flat fields above (`tokens`/`componentInventory`/`storyIndex`) remain as
+   * graph-derived aliases; rules migrate to `graph` in P2.
+   */
+  graph?: import("./graph/types.js").DesignSystemGraph;
+  /**
    * Computed token readings from the opt-in render layer. Present only when
    * `lyse audit --render` ran and the browser was available; absent otherwise.
    * Rules that need rendered data (tokens/rendered-token-fidelity) return N/A
@@ -423,6 +429,8 @@ export interface AuditResult {
     render?: import("./render/types.js").RenderMeta;
     /** Deterministic score projection for the largest fix groups (Sprint 1 actionable findings). */
     projection?: ProjectionMeta;
+    /** P1 extraction report — per-extractor status/evidence/remediation + token conflicts. Deterministic. */
+    extraction?: import("./graph/types.js").ExtractionReport;
   };
 }
 

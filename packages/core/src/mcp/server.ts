@@ -11,9 +11,10 @@ import { VERSION } from "../index.js";
 import { auditFileTool, runAuditFile } from "./tools/audit-file.js";
 import { suggestFixTool, runSuggestFix } from "./tools/suggest-fix.js";
 import { preflightTool, runPreflight } from "./tools/preflight.js";
+import { getDesignSystemGraphTool, runGetDesignSystemGraph } from "./tools/get-design-system-graph.js";
 import { listResources, readResource } from "./resources.js";
 
-const TOOL_DEFINITIONS: Tool[] = [auditFileTool, suggestFixTool, preflightTool];
+const TOOL_DEFINITIONS: Tool[] = [auditFileTool, suggestFixTool, preflightTool, getDesignSystemGraphTool];
 
 export async function startMcpServer(): Promise<void> {
   const server = new Server(
@@ -69,6 +70,13 @@ export async function startMcpServer(): Promise<void> {
     }
     if (name === "preflight_diff") {
       const result = await runPreflight(args ?? {});
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        structuredContent: result,
+      };
+    }
+    if (name === "get_design_system_graph") {
+      const result = await runGetDesignSystemGraph(args ?? {});
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         structuredContent: result,

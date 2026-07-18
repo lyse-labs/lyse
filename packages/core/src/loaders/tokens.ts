@@ -58,7 +58,7 @@ function extractDeclarations(body: string): { prop: string; value: string }[] {
   return decls;
 }
 
-async function fromTailwindV3(root: string): Promise<TokenMap | null> {
+export async function fromTailwindV3(root: string): Promise<TokenMap | null> {
   const candidates = [
     "tailwind.config.js",
     "tailwind.config.ts",
@@ -206,7 +206,7 @@ async function fromTailwindV3(root: string): Promise<TokenMap | null> {
   }
 }
 
-async function fromTailwindV4(root: string): Promise<TokenMap | null> {
+export async function fromTailwindV4(root: string): Promise<TokenMap | null> {
   const cssFiles = await fg(["**/*.css"], {
     cwd: root,
     absolute: true,
@@ -348,7 +348,7 @@ function serializeDtcgShadow(v: unknown): string | null {
   return null;
 }
 
-async function fromDtcg(root: string): Promise<TokenMap | null> {
+export async function fromDtcg(root: string): Promise<TokenMap | null> {
   const files = await fg(["**/*.tokens.json"], {
     cwd: root,
     absolute: true,
@@ -552,7 +552,7 @@ interface JsonObj { [k: string]: unknown }
  * token-map model. DTCG (`$value`/`$type`) files are inert here (handled by
  * `fromDtcg`) since they carry no bare `value`/`type` leaf.
  */
-async function fromValueTypeTokens(root: string): Promise<TokenMap | null> {
+export async function fromValueTypeTokens(root: string): Promise<TokenMap | null> {
   const files = await fg(["**/tokens.json", "**/tokens/**/*.json", "**/*.tokens.json"], {
     cwd: root, absolute: true, ignore: ["**/node_modules/**", "**/dist/**", "**/build/**"], onlyFiles: true, unique: true,
   });

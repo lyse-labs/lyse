@@ -32,14 +32,14 @@
       "weightedFindings": 126
     },
     {
-      "absoluteCap": "N/A",
+      "absoluteCap": 100,
       "axis": "stories",
-      "findings": 0,
-      "opportunities": 0,
-      "rateScore": "N/A",
-      "score": "N/A",
-      "sevPenalty": 0,
-      "weightedFindings": 0
+      "findings": 1,
+      "opportunities": 18,
+      "rateScore": 89,
+      "score": 89,
+      "sevPenalty": 2,
+      "weightedFindings": 2
     },
     {
       "absoluteCap": 100,
@@ -62,9 +62,9 @@
       "weightedFindings": 20
     }
   ],
-  "finalScore": 82,
-  "findingsCount": 350,
-  "findingsDigest": "2c26f60221c809461dbafeef7702b9baab7ba9c425d415504948070ee36345c4",
+  "finalScore": 84,
+  "findingsCount": 351,
+  "findingsDigest": "15b05b2fb3b46d0941f80ce706d339dd848c60b5cd9064d878543b258cac69ac",
   "grade": {
     "autoFailed": false,
     "grade": "A",
@@ -75,12 +75,52 @@
       "configPath": null,
       "scannedFiles": 1170
     },
+    "extraction": {
+      "conflicts": [],
+      "entries": [
+        {
+          "evidence": {
+            "components": 0,
+            "storySeeded": 9
+          },
+          "extractor": "components",
+          "remediation": "No component inventory — set `designSystem.componentsModule` in .lyse.yaml or run `lyse init` (docs/guide/configuration.md).",
+          "status": "degraded"
+        },
+        {
+          "evidence": {
+            "linked": 9,
+            "storyFiles": 9
+          },
+          "extractor": "stories",
+          "remediation": null,
+          "status": "ok"
+        },
+        {
+          "evidence": {
+            "tokenNodes": 75,
+            "tokenSources": 1
+          },
+          "extractor": "tokens",
+          "remediation": null,
+          "status": "ok"
+        },
+        {
+          "evidence": {
+            "files": 1170
+          },
+          "extractor": "zones",
+          "remediation": null,
+          "status": "ok"
+        }
+      ]
+    },
     "projection": {
       "top": [
         {
           "count": 62,
           "files": 16,
-          "gain": 7,
+          "gain": 5,
           "key": "a11y/interactive-role-name",
           "migrationScale": false,
           "ruleId": "a11y/interactive-role-name"
@@ -88,7 +128,7 @@
         {
           "count": 102,
           "files": 102,
-          "gain": 2,
+          "gain": 1,
           "key": "components/doc-comments",
           "migrationScale": true,
           "ruleId": "components/doc-comments"
@@ -96,13 +136,13 @@
         {
           "count": 20,
           "files": 14,
-          "gain": 2,
+          "gain": 1,
           "key": "a11y/semantic-html",
           "migrationScale": false,
           "ruleId": "a11y/semantic-html"
         }
       ],
-      "totalGainTop3": 10
+      "totalGainTop3": 7
     }
   },
   "repoRoot": "<REPO>/polaris-react",

@@ -43,17 +43,20 @@ const snap = (label: string) =>
 const axis = (label: string, name: string) => snap(label).axes.find((a) => a.axis === name)!;
 
 describe("expected-to-change: known-wrong audit numbers photographed as expected-to-change", () => {
-  // P1/P2 fix these. When a number moves: update the snapshot, update the band here,
+  // P2 still owns these two. When a number moves: update the snapshot, update the band here,
   // and record the delta in CHANGELOG ("the score got more honest — proof: <repo> tokens 1 → N").
+  // The stories N/A case below was P1's fix (Appendix-A story-title seeding) — see the CHANGELOG
+  // "Fixed" entry for the exact before/after numbers.
   it("Carbon: tokens axis floored near 0 (own spacing scale flagged)", () => {
     expect(axis("carbon-react", "tokens").score).toBeLessThanOrEqual(10);
   });
   it("shadcn: components axis is 0 (native-by-design flagged)", () => {
     expect(axis("shadcn-ui", "components").score).toBe(0);
   });
-  it("Carbon & Polaris: stories silently N/A despite story files on disk", () => {
-    expect(axis("carbon-react", "stories").score).toBe("N/A");
-    expect(axis("polaris-react", "stories").score).toBe("N/A");
-    // story files DO exist in the clone — the N/A is the silent-degradation bug P1 fixes.
+  it("Carbon & Polaris: stories axis is now populated (P1 Appendix-A fix — no more silent N/A)", () => {
+    expect(axis("carbon-react", "stories").score).not.toBe("N/A");
+    expect(axis("carbon-react", "stories").opportunities).toBeGreaterThan(0);
+    expect(axis("polaris-react", "stories").score).not.toBe("N/A");
+    expect(axis("polaris-react", "stories").opportunities).toBeGreaterThan(0);
   });
 });

@@ -6,11 +6,12 @@ Wire Lyse into Cursor, Claude Code, Codex, or any [Model Context Protocol](https
 
 Without Lyse, your AI agent writes UI code without knowing your design system. It hallucinates components, hardcodes colors, ignores accessibility — silently, every day.
 
-With Lyse's MCP server, your agent can call three tools:
+With Lyse's MCP server, your agent can call four tools:
 
 - Audit a file it's about to save (`audit_file`).
 - Request a unified diff to fix a finding (`suggest_fix`).
 - Validate a proposed edit *before* it lands, with a block/pass verdict (`preflight_diff`).
+- Read the full reified Design System Graph before writing any code (`get_design_system_graph`).
 
 Result: fewer DS violations in AI-generated PRs, fewer review cycles, less drift.
 
@@ -206,6 +207,39 @@ block, so the guardrail never rejects a valid edit on an unproven signal.
 **Use case:** wire `preflight_diff` into the agent's pre-write hook. A diff that
 introduces a stable-rule violation is rejected with an actionable explanation
 (rule, line, message); advisory findings are surfaced but don't block.
+
+### `get_design_system_graph(project_root)`
+
+Returns the reified Design System Graph (tokens, components, stories, zones,
+extraction report) for a project — the machine-consumable surface an agent
+reads before writing code.
+
+**Parameters:**
+
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `project_root` | string | yes | Absolute path to the project root to build the graph for. |
+
+**Returns** (also delivered as `structuredContent`, validated against the tool's `outputSchema`):
+
+```json
+{
+  "schema_version": "1.0.0",
+  "graph": {
+    "schemaVersion": 1,
+    "tokens": [],
+    "components": [],
+    "stories": [],
+    "usage": [],
+    "zones": {},
+    "extraction": {}
+  }
+}
+```
+
+**Use case:** before generating UI, an agent calls `get_design_system_graph` to
+learn the available tokens, components, and stories up front — rather than
+discovering the design system's shape only through repeated `audit_file` calls.
 
 ## Resources exposed
 

@@ -35,6 +35,8 @@ import {
 } from "../loaders/components.js";
 import { ruleObjects } from "../rules/registry.js";
 import { loadGeneratedPack } from "../rules/pack-loader.js";
+import { buildDesignSystemGraph } from "../graph/builder.js";
+import type { DesignSystemGraph } from "../graph/types.js";
 import { runRules } from "../rule-runner.js";
 import { scoreFromFindings } from "../scorer.js";
 import { groupFindings, computeProjection, MIGRATION_SCALE_FILE_COUNT_DEFAULT } from "../report/fix-groups.js";
@@ -86,6 +88,8 @@ export interface AuditPipelineResult {
   componentInventory: ComponentInventoryEntry[];
   /** Number of source files scanned. */
   fileCount: number;
+  /** The reified Design System Graph (P1). */
+  graph: DesignSystemGraph;
 }
 
 function collectTokenCss(parsed: ParsedFiles): string {
@@ -405,14 +409,36 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
       ? buildComponentInventory(componentsModule, parsed.ts, componentSources)
       : [];
 
+  const graph = await buildDesignSystemGraph({
+    repoRoot: absoluteRoot,
+    parsed,
+    fileContents,
+    componentsModule,
+    dsSelfMode,
+    storyIndex,
+    excludePaths,
+    baseInventory: componentInventory,
+    componentFiles: componentSources,
+  });
+  // Legacy alias: preserve the pipeline's ORIGINAL discovery order verbatim
+  // (module-configured / dsSelfMode repos → byte-identical), and only APPEND the
+  // story-seeded entries (the degraded-detection Appendix-A flip). Deriving the
+  // alias from the alphabetically-sorted `graph.components` would reorder it and
+  // flip order-dependent fixtures even when nothing was seeded.
+  const seededEntries: ComponentInventoryEntry[] = graph.components
+    .filter((c) => c.detection === "story-backref")
+    .map((c) => ({ name: c.name, module: c.module, usageCount: c.usageCount }));
+  const derivedInventory: ComponentInventoryEntry[] = [...componentInventory, ...seededEntries];
+
   const ctx: RuleContext = {
     repoRoot: absoluteRoot,
     tokens,
     componentsModule,
-    componentInventory,
+    componentInventory: derivedInventory,
     storyIndex,
     excludePaths,
     dsSelfMode,
+    graph,
   };
 
   // Render stage — opt-in via flags.render. Mirrors the LLM layer degrade
@@ -673,6 +699,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
       ...(layer4Meta ? { layer4: layer4Meta } : {}),
       ...(renderMeta !== undefined ? { render: renderMeta } : {}),
       ...(projection ? { projection } : {}),
+      extraction: graph.extraction,
       coverage: {
         scannedFiles: files.length,
         durationMs: Date.now() - t0,
@@ -686,5 +713,5 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   };
 
   maybePrintRefreshHint(absoluteRoot);
-  return { result, tokens, config, componentInventory, fileCount: files.length };
+  return { result, tokens, config, componentInventory: derivedInventory, fileCount: files.length, graph };
 }

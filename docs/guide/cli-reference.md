@@ -187,10 +187,16 @@ lyse audit [path] [options]
 | `--interactive` | boolean | `false` | After the audit, prompt per finding (`y/n/?/s/q`); verdicts are sent to feedback only with `lyse telemetry on`. |
 | `--render` | boolean | `false` | Opt-in: render the design system in headless Chromium (token-fidelity drift + axe-core a11y on a pre-built Storybook). Requires Playwright. |
 | `--storybook <dir\|url>` | string | (none) | Storybook source for runtime a11y — a pre-built static dir (e.g. `storybook-static`) or a running URL. Used only with `--render`. |
+| `--graph-full` | boolean | `false` | Persist the full graph including per-file usage edges to `.lyse/graph.json` (default: usage edges are omitted for size). |
 | `--llm` / `--no-llm` | boolean | (off) | Enable / disable the LLM precision filter for this run. `--llm` is opt-in and sends source to your configured provider; `--no-llm` forces static-only. |
 | `--llm-provider <name>` | string | (config) | Override the LLM provider (`anthropic` \| `openai` \| `openai-compat` \| `ollama`). |
 | `--llm-model <name>` | string | (config) | Override the LLM model. |
 | `--include-timestamps` | boolean | `false` | Include a timestamp in JSON output. Breaks byte-for-byte determinism. |
+
+Every `lyse audit` run also writes the reified Design System Graph to
+`.lyse/graph.json` (tokens, components, stories, zones, extraction report).
+By default per-file usage edges are omitted to keep the file small; pass
+`--graph-full` to include them.
 
 ### Examples
 
@@ -363,13 +369,14 @@ Start the MCP server over stdio. This is normally invoked by your IDE, not direc
 lyse mcp
 ```
 
-The server exposes three tools:
+The server exposes four tools:
 
 | Tool | Use case |
 |---|---|
 | `audit_file(path, content?)` | Audit a single file. `content` lets the agent pass an unsaved buffer. |
 | `suggest_fix(path, rule_id, line)` | Return a unified diff that fixes a finding. |
 | `preflight_diff(path, content)` | Validate a proposed edit *before* it lands, with a block/pass verdict. |
+| `get_design_system_graph(project_root)` | Return the reified Design System Graph (tokens, components, stories, zones, extraction report) for a project. |
 
 Configure in your IDE's MCP file (`.cursor/mcp.json`, `.mcp.json`). See [`mcp-server.md`](./mcp-server.md) for full setup.
 

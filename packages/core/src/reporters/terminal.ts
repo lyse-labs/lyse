@@ -8,6 +8,7 @@ import {
 } from "./terminal-format.js";
 import { brandHeader } from "../ui/banner.js";
 import { renderScoreCard } from "./score-card.js";
+import { buildDegradationLines } from "./degradation.js";
 import { groupFindings, MIGRATION_SCALE_FILE_COUNT_DEFAULT, type FindingGroup } from "../report/fix-groups.js";
 
 export type { TerminalOpts } from "./terminal-format.js";
@@ -296,6 +297,9 @@ export async function renderTerminal(result: AuditResult, opts: TerminalOpts): P
   }
   if (result.meta?.coverage) {
     lines.push("", `  ${dim(formatCoverageFooter(result.meta.coverage), opts)}`);
+  }
+  for (const note of buildDegradationLines(result)) {
+    lines.push(`  ${dim(note, opts)}`);
   }
   lines.push(footer(result, opts));
   return lines.join("\n");

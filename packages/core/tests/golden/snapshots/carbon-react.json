@@ -24,22 +24,22 @@
     {
       "absoluteCap": 100,
       "axis": "components",
-      "findings": 54,
-      "opportunities": 309,
-      "rateScore": 81,
-      "score": 81,
-      "sevPenalty": 60,
-      "weightedFindings": 60
+      "findings": 56,
+      "opportunities": 535,
+      "rateScore": 88,
+      "score": 88,
+      "sevPenalty": 64,
+      "weightedFindings": 64
     },
     {
-      "absoluteCap": "N/A",
+      "absoluteCap": 100,
       "axis": "stories",
-      "findings": 0,
-      "opportunities": 0,
-      "rateScore": "N/A",
-      "score": "N/A",
-      "sevPenalty": 0,
-      "weightedFindings": 0
+      "findings": 109,
+      "opportunities": 222,
+      "rateScore": 2,
+      "score": 2,
+      "sevPenalty": 218,
+      "weightedFindings": 218
     },
     {
       "absoluteCap": 100,
@@ -62,12 +62,12 @@
       "weightedFindings": 18
     }
   ],
-  "finalScore": 69,
-  "findingsCount": 240,
-  "findingsDigest": "a2d348ab8b93234e50b7ee14b73b630f82bfccb59a23e55ba58d5dce199f8e12",
+  "finalScore": 59,
+  "findingsCount": 351,
+  "findingsDigest": "0b430bf290d310b449f4fdd0323eab20859316dd120f199fa56bc15db5fb5d28",
   "grade": {
     "autoFailed": false,
-    "grade": "B",
+    "grade": "C",
     "reasons": []
   },
   "meta": {
@@ -75,23 +75,63 @@
       "configPath": null,
       "scannedFiles": 980
     },
+    "extraction": {
+      "conflicts": [],
+      "entries": [
+        {
+          "evidence": {
+            "components": 0,
+            "storySeeded": 111
+          },
+          "extractor": "components",
+          "remediation": "No component inventory — set `designSystem.componentsModule` in .lyse.yaml or run `lyse init` (docs/guide/configuration.md).",
+          "status": "degraded"
+        },
+        {
+          "evidence": {
+            "linked": 111,
+            "storyFiles": 111
+          },
+          "extractor": "stories",
+          "remediation": null,
+          "status": "ok"
+        },
+        {
+          "evidence": {
+            "tokenNodes": 4,
+            "tokenSources": 1
+          },
+          "extractor": "tokens",
+          "remediation": null,
+          "status": "ok"
+        },
+        {
+          "evidence": {
+            "files": 980
+          },
+          "extractor": "zones",
+          "remediation": null,
+          "status": "ok"
+        }
+      ]
+    },
     "projection": {
       "top": [
         {
+          "count": 109,
+          "files": 1,
+          "gain": 16,
+          "key": "stories/usage-examples",
+          "migrationScale": false,
+          "ruleId": "stories/usage-examples"
+        },
+        {
           "count": 107,
           "files": 22,
-          "gain": 15,
+          "gain": 13,
           "key": "tokens/no-hardcoded-spacing",
           "migrationScale": false,
           "ruleId": "tokens/no-hardcoded-spacing"
-        },
-        {
-          "count": 48,
-          "files": 30,
-          "gain": 3,
-          "key": "components/doc-comments",
-          "migrationScale": false,
-          "ruleId": "components/doc-comments"
         },
         {
           "count": 11,
@@ -102,7 +142,7 @@
           "ruleId": "versioning/deprecation-markers"
         }
       ],
-      "totalGainTop3": 22
+      "totalGainTop3": 32
     }
   },
   "repoRoot": "<REPO>/packages/react",
@@ -113,7 +153,7 @@
     "react",
     "storybook"
   ],
-  "tier": "Quantitative",
+  "tier": "Defined",
   "timestamp": "",
   "toolVersion": ""
 }
