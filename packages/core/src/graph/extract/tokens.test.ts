@@ -92,7 +92,67 @@ describe("dtcgDocumentToNodes", () => {
       "css-custom-property",
     );
     expect(nodes).toContainEqual({ id: "brand", axis: "colors", rawValue: "#3b82f6", source: "css-custom-property" });
-    expect(nodes).toContainEqual({ id: "gap", axis: "spacing", rawValue: "8px", source: "css-custom-property" });
+    expect(nodes).toContainEqual({ id: "gap", axis: "spacing", rawValue: "8", source: "css-custom-property" });
+  });
+
+  it("canonicalizes dimension/duration/cubicBezier rawValue to match fromDtcg's loader keying", () => {
+    const nodes = dtcgDocumentToNodes(
+      {
+        gap: { $value: "8px", $type: "dimension" },
+        fade: { $value: "200ms", $type: "duration" },
+        ease: { $value: [0.4, 0, 0.2, 1], $type: "cubicBezier" },
+      },
+      "css-custom-property",
+    );
+    expect(nodes).toContainEqual({ id: "gap", axis: "spacing", rawValue: "8", source: "css-custom-property" });
+    expect(nodes).toContainEqual({ id: "fade", axis: "motion", rawValue: "duration/200ms", source: "css-custom-property" });
+    expect(nodes).toContainEqual({
+      id: "ease", axis: "motion", rawValue: "easing/cubic-bezier(0.4, 0, 0.2, 1)", source: "css-custom-property",
+    });
+  });
+});
+
+describe("dtcgDocumentToNodes / loader rawValue parity (conflict-mask regression)", () => {
+  it("does not mask a spacing conflict between a tailwind-v3 TokenMap and a DTCG dimension token", () => {
+    const tm = emptyMap("tailwind-v3");
+    tm.spacing.set("8", ["scale/sm"]);
+    const tailwindNodes = tokenMapToNodes(tm);
+
+    const dtcgNodes = dtcgDocumentToNodes(
+      { gap: { $value: "8px", $type: "dimension" } },
+      "css-custom-property",
+    );
+
+    const conflicts = detectTokenConflicts([...tailwindNodes, ...dtcgNodes]);
+    expect(conflicts).toEqual([
+      {
+        axis: "spacing",
+        value: "8",
+        tokenIds: ["gap", "scale/sm"],
+        sources: ["css-custom-property", "tailwind-v3"],
+      },
+    ]);
+  });
+
+  it("does not mask a motion conflict between a tailwind-v3 TokenMap and a DTCG duration token", () => {
+    const tm = emptyMap("tailwind-v3");
+    tm.motion.set("duration/200ms", ["motion/dur/fast"]);
+    const tailwindNodes = tokenMapToNodes(tm);
+
+    const dtcgNodes = dtcgDocumentToNodes(
+      { fade: { $value: "200ms", $type: "duration" } },
+      "css-custom-property",
+    );
+
+    const conflicts = detectTokenConflicts([...tailwindNodes, ...dtcgNodes]);
+    expect(conflicts).toEqual([
+      {
+        axis: "motion",
+        value: "duration/200ms",
+        tokenIds: ["fade", "motion/dur/fast"],
+        sources: ["css-custom-property", "tailwind-v3"],
+      },
+    ]);
   });
 });
 

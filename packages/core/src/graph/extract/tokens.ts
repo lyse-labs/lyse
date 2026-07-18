@@ -3,7 +3,7 @@ import {
 } from "../../loaders/tokens.js";
 import { normalizeToDtcg } from "../../tokens/normalizer.js";
 import { isDtcgToken } from "../../tokens/dtcg-model.js";
-import type { DtcgDocument, DtcgToken } from "../../tokens/dtcg-model.js";
+import type { DtcgDocument, DtcgToken, DtcgType } from "../../tokens/dtcg-model.js";
 import type { TokenMap, ParsedFiles } from "../../types.js";
 import type { TokenNode, TokenConflict, TokenSource, TokenAxis } from "../types.js";
 
@@ -121,15 +121,37 @@ export function scssVarDeclsFromContents(fileContents: Map<string, string>): Arr
   return decls;
 }
 
+// WHY: detectTokenConflicts groups nodes by raw string equality, so a DTCG-doc
+// node must serialize its rawValue identically to what fromDtcg (loaders/tokens.ts)
+// produces for the same $type, or a real cross-source conflict goes undetected.
+function canonicalRawValue($type: DtcgType, $value: unknown): string {
+  const value = String($value).toLowerCase().trim();
+  switch ($type) {
+    case "dimension":
+      return value.replace(/px$/, "");
+    case "duration":
+      return `duration/${value}`;
+    case "cubicBezier": {
+      const bezier = Array.isArray($value)
+        ? `cubic-bezier(${($value as unknown[]).join(", ")})`
+        : String($value);
+      return `easing/${bezier.toLowerCase()}`;
+    }
+    default:
+      return value;
+  }
+}
+
 export function dtcgDocumentToNodes(doc: DtcgDocument, source: TokenSource): TokenNode[] {
   const nodes: TokenNode[] = [];
   const visit = (node: unknown, path: string[]): void => {
     if (!node || typeof node !== "object") return;
     if (isDtcgToken(node)) {
       const tok = node as DtcgToken<unknown>;
-      const axis = tok.$type ? DTCG_TYPE_TO_AXIS[tok.$type] : undefined;
-      if (axis && tok.$value !== undefined) {
-        nodes.push({ id: path.join("/"), axis, rawValue: String(tok.$value).toLowerCase().trim(), source });
+      const type = tok.$type;
+      const axis = type ? DTCG_TYPE_TO_AXIS[type] : undefined;
+      if (axis && type && tok.$value !== undefined) {
+        nodes.push({ id: path.join("/"), axis, rawValue: canonicalRawValue(type, tok.$value), source });
       }
       return;
     }
