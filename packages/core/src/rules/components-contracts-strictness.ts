@@ -100,7 +100,7 @@ function collectPropFindings(
  * Resolves prop type references to same-file interface / type-alias declarations.
  * Cross-file references are skipped (v0.1 limitation, mirrors loaders/components.ts).
  */
-export function scanComponentContracts(
+function scanComponentContracts(
   source: string,
 ): { findings: ComponentPropFinding[]; componentCount: number } {
   const findings: ComponentPropFinding[] = [];
@@ -254,7 +254,7 @@ type PackageCheckOutcome =
   | { kind: "types-points-to-missing-file"; typesPath: string }
   | { kind: "ok"; typesPath: string };
 
-export function checkPackageJsonTypes(
+function checkPackageJsonTypes(
   pkg: PackageJsonShape,
   packageDir: string,
 ): PackageCheckOutcome {

@@ -389,17 +389,3 @@ The exported \`AI_MARKER_NAMES\` constant is shared with sibling rules (Track 3.
   defaultOptions: [],
   create: () => ({ evaluate }),
 });
-
-export const _internal = {
-  isAiMarkerName,
-  isAllowlisted,
-  scanForMarkerComponents,
-  extractNamesFromSource,
-  DISABLE_DIRECTIVE,
-  ALLOWLIST_CANDIDATES,
-  COMPONENT_GLOB,
-  SCAN_IGNORE,
-  deriveComponentNameFromPath,
-  fileHasAiMarker,
-  makeAllowlistCheck,
-};

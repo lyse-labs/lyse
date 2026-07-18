@@ -174,11 +174,3 @@ This rule (Track 9.9, docs-as-object, presence only) detects whether those patte
   defaultOptions: [],
   create: () => ({ evaluate }),
 });
-
-export const _internal = {
-  detectDocumentedPatterns,
-  isAiContextDoc,
-  isAllowlisted,
-  DISABLE_DIRECTIVE,
-  PATTERN_MATCHERS,
-};

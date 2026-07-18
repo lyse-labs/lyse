@@ -10,7 +10,7 @@ interface McpEntry { command: string; args: string[]; type?: string }
 // Cursor / Claude Code use `mcpServers`; VS Code / Copilot use `servers`.
 interface McpConfig { mcpServers?: Record<string, McpEntry>; servers?: Record<string, McpEntry> }
 
-export type McpTarget = "cursor" | "claude-code" | "copilot" | "both" | "all";
+type McpTarget = "cursor" | "claude-code" | "copilot" | "both" | "all";
 
 export interface McpSetupOptions {
   cwd: string;

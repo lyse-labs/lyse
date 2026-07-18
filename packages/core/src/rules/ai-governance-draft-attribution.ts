@@ -159,11 +159,3 @@ This rule detects whether the convention is adopted at all. It is deliberately p
   defaultOptions: [],
   create: () => ({ evaluate }),
 });
-
-export const _internal = {
-  hasDraftAttribution,
-  isAllowlisted,
-  DISABLE_DIRECTIVE,
-  PHRASE_RE,
-  STRUCTURED_RES,
-};

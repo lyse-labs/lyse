@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-export const LYSE_BLOCK_BEGIN = "<!-- lyse-managed:begin -->";
-export const LYSE_BLOCK_END = "<!-- lyse-managed:end -->";
+const LYSE_BLOCK_BEGIN = "<!-- lyse-managed:begin -->";
+const LYSE_BLOCK_END = "<!-- lyse-managed:end -->";
 
 const LYSE_HEADING = "## Lyse audit (auto-managed)";
 
@@ -16,7 +16,7 @@ export interface WriteAgentsMdResult {
   blockAppended: boolean;
 }
 
-export function buildLyseBlock(): string {
+function buildLyseBlock(): string {
   return [
     LYSE_HEADING,
     "",
@@ -36,7 +36,7 @@ export function buildLyseBlock(): string {
   ].join("\n");
 }
 
-export function replaceOrAppendLyseBlock(existing: string, block: string): { content: string; replaced: boolean } {
+function replaceOrAppendLyseBlock(existing: string, block: string): { content: string; replaced: boolean } {
   const beginIdx = existing.indexOf(LYSE_BLOCK_BEGIN);
   const endIdx = existing.indexOf(LYSE_BLOCK_END);
   if (beginIdx !== -1 && endIdx !== -1 && endIdx > beginIdx) {

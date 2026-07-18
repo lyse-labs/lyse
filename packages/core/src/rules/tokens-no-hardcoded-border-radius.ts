@@ -119,5 +119,3 @@ Inconsistent corner radii (4px here, 6px there, 8px elsewhere) make a system fee
   defaultOptions: [],
   create: () => ({ evaluate }),
 });
-
-export const _internal = { extractRadiusLengths, isAllowlisted, DISABLE_DIRECTIVE };

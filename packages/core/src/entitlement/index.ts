@@ -1,1 +1,1 @@
-export { checkEntitlement, type Plan, type EntitlementResult } from "./check.js";
+export { checkEntitlement } from "./check.js";

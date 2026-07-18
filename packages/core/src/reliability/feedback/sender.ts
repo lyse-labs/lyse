@@ -3,7 +3,7 @@ import { telemetryEnabled } from "../../telemetry/index.js";
 
 export type FeedbackVerdict = "valid" | "invalid" | "skipped";
 
-export interface FeedbackFinding {
+interface FeedbackFinding {
   ruleId: string;
   subAxisId: string;
 }

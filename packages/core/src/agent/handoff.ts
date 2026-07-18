@@ -27,7 +27,7 @@ export interface HandoffInput {
   migrationScaleFileCount?: number;
 }
 
-export type HandoffAction = "launched" | "copied" | "copy-failed" | "skipped" | "none";
+type HandoffAction = "launched" | "copied" | "copy-failed" | "skipped" | "none";
 
 export interface HandoffResult {
   action: HandoffAction;

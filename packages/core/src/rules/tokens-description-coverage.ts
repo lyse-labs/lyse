@@ -84,7 +84,7 @@ function looksLikeDtcg(data: unknown): boolean {
   return hasAnyValueKey(data, 4);
 }
 
-export function isSemanticTokenPath(path: string[]): boolean {
+function isSemanticTokenPath(path: string[]): boolean {
   if (path.length === 0) return false;
   // A path is semantic if any segment matches a known semantic prefix.
   for (const seg of path) {

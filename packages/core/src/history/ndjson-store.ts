@@ -20,7 +20,7 @@ export interface AuditEvent extends AuditEventInput {
   lyse_version: string;
 }
 
-export interface CommandInvokedEvent {
+interface CommandInvokedEvent {
   schema_version: number;
   event_type: "command_invoked";
   timestamp: string;
@@ -29,14 +29,14 @@ export interface CommandInvokedEvent {
   duration_ms: number;
 }
 
-export interface McpSetupCompletedEvent {
+interface McpSetupCompletedEvent {
   schema_version: number;
   event_type: "mcp_setup_completed";
   timestamp: string;
   ide: "cursor" | "claude-code" | "copilot" | "both" | "all";
 }
 
-export interface InitStepCompletedEvent {
+interface InitStepCompletedEvent {
   schema_version: number;
   event_type: "init_step_completed";
   timestamp: string;

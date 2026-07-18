@@ -44,7 +44,7 @@ function deriveNameFromPath(relPath: string): string {
   return file.replace(/\.(tsx|jsx|vue)$/, "");
 }
 
-export function scanForSourceAttribution(repoRoot: string, files?: string[]): string[] {
+function scanForSourceAttribution(repoRoot: string, files?: string[]): string[] {
   const found = new Set<string>();
 
   let componentFiles: string[];
@@ -181,11 +181,3 @@ The rule uses per-file co-location: an attribution component only earns credit w
   defaultOptions: [],
   create: () => ({ evaluate }),
 });
-
-export const _internal = {
-  isSourceAttributionName,
-  scanForSourceAttribution,
-  isAllowlisted,
-  DISABLE_DIRECTIVE,
-  ATTRIBUTION_PATTERNS,
-};

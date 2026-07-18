@@ -45,7 +45,7 @@ function deriveNameFromPath(relPath: string): string {
 
 // Per-file co-location: a confidence indicator only earns credit when it lives
 // in a FILE that also contains an AI marker (component name or JSX tag).
-export function scanForConfidenceIndicators(repoRoot: string, files?: string[]): string[] {
+function scanForConfidenceIndicators(repoRoot: string, files?: string[]): string[] {
   const found = new Set<string>();
 
   let componentFiles: string[];
@@ -182,11 +182,3 @@ The rule uses per-file co-location: a confidence component only earns credit whe
   defaultOptions: [],
   create: () => ({ evaluate }),
 });
-
-export const _internal = {
-  isConfidenceIndicatorName,
-  scanForConfidenceIndicators,
-  isAllowlisted,
-  DISABLE_DIRECTIVE,
-  CONFIDENCE_PATTERNS,
-};

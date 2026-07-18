@@ -30,7 +30,7 @@ export interface FeedbackMissedArgs {
   fetcher?: typeof fetch;
 }
 
-export interface FeedbackMissedPayload {
+interface FeedbackMissedPayload {
   file: string;
   line: number;
   snippet: string;

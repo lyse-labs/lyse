@@ -151,5 +151,3 @@ The check resolves aliases across all token files in one address space, so a cro
   defaultOptions: [],
   create: () => ({ evaluate }),
 });
-
-export const _internal = { collectTokens, discoverDtcgFiles };

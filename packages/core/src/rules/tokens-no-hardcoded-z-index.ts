@@ -17,7 +17,7 @@ const RE_Z_INDEX = /\bz-?index\s*:\s*(-?\d+)\b/gi;
 // Local stacking-context values that are not "z-index war" drift.
 const TRIVIAL = new Set([-1, 0, 1]);
 
-export interface ZIndexHit {
+interface ZIndexHit {
   value: number;
   index: number;
 }

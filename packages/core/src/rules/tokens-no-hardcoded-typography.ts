@@ -20,7 +20,7 @@ const RE_LENGTH = /(-?\d*\.?\d+)(px|rem|em)\b/i;
 // 400 (normal) and 700 (bold) are the canonical defaults — treated as keywords.
 const EXEMPT_WEIGHTS = new Set([400, 700]);
 
-export interface TypoHit {
+interface TypoHit {
   prop: "font-size" | "font-weight" | "letter-spacing";
   raw: string;
   scaleKey: string;

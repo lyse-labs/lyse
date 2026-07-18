@@ -38,7 +38,7 @@ export interface AuditStartedEvent extends BaseEvent {
   stack: { framework?: string; ds_detected?: string };
 }
 
-export interface AuditCompletedEvent extends BaseEvent {
+interface AuditCompletedEvent extends BaseEvent {
   event_type: "audit.completed";
   audit: {
     duration_ms: number;
@@ -48,7 +48,7 @@ export interface AuditCompletedEvent extends BaseEvent {
   };
 }
 
-export interface FindingDiscoveredEvent extends BaseEvent {
+interface FindingDiscoveredEvent extends BaseEvent {
   event_type: "finding.discovered";
   finding: {
     rule_id: string;

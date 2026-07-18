@@ -17,7 +17,7 @@ const RE_TIME = /(-?\d*\.?\d+)(ms|s)\b/gi;
 // Custom easing curves are drift; standard keywords (ease, linear, …) are not.
 const RE_CUBIC_BEZIER = /cubic-bezier\([^)]*\)/gi;
 
-export interface MotionHit {
+interface MotionHit {
   kind: "duration" | "easing";
   raw: string;
   index: number;

@@ -39,7 +39,7 @@ interface StaticInteractiveHit {
  * spread (`{...props}`) is skipped entirely — `role` may be forwarded through
  * the spread, invisible to the AST, so flagging it would be a false positive.
  */
-export function scanStaticInteractive(source: string): { offenders: StaticInteractiveHit[]; total: number } {
+function scanStaticInteractive(source: string): { offenders: StaticInteractiveHit[]; total: number } {
   const offenders: StaticInteractiveHit[] = [];
   let total = 0;
   let ast: t.File;

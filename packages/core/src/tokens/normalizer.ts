@@ -6,7 +6,7 @@ import type {
 } from "./dtcg-model.js";
 import { isDtcgAlias, isDtcgGroup, isDtcgToken } from "./dtcg-model.js";
 
-export type NormalizerSource =
+type NormalizerSource =
   | "tailwind-v3"
   | "tailwind-v4"
   | "css-vars"
@@ -250,7 +250,7 @@ const TAILWIND_V4_PREFIXES: TailwindV4Prefix[] = [
   { prefix: "--border-width-", group: "borderWidth", type: "dimension" },
 ];
 
-export function classifyTailwindV4Prop(
+function classifyTailwindV4Prop(
   prop: string,
 ): { group: string; type: DtcgType; name: string } | null {
   for (const p of TAILWIND_V4_PREFIXES) {

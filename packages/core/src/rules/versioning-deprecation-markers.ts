@@ -138,5 +138,3 @@ The check is deliberately structural, not semantic: it only asks whether *some* 
   create: () => ({ evaluate }),
   singleFileCapable: true,
 });
-
-export const _internal = { scanDeprecationMarkers, DISABLE_DIRECTIVE };

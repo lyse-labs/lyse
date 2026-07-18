@@ -55,7 +55,7 @@ function deriveNameFromPath(relPath: string): string {
   return file.replace(/\.(tsx|jsx|vue)$/, "");
 }
 
-export function scanForBotIdentity(repoRoot: string, files?: string[]): string[] {
+function scanForBotIdentity(repoRoot: string, files?: string[]): string[] {
   const found = new Set<string>();
 
   let componentFiles: string[];
@@ -192,11 +192,3 @@ The rule uses per-file co-location and distinctive compound vocabulary: an ident
   defaultOptions: [],
   create: () => ({ evaluate }),
 });
-
-export const _internal = {
-  isBotIdentityName,
-  scanForBotIdentity,
-  isAllowlisted,
-  DISABLE_DIRECTIVE,
-  IDENTITY_PATTERNS,
-};

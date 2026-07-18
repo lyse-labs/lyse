@@ -2,6 +2,13 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "ignoreBinaries": ["where"],
   "ignoreDependencies": ["@eslint/js", "prettier"],
+  "ignore": [
+    "packages/core/fixtures/**",
+    "packages/core/snapshots/**",
+    "packages/core/tests/**/fixtures/**",
+    "packages/core/validation/**",
+    ".claude/skills/**"
+  ],
   "workspaces": {
     ".": {},
     "packages/core": {

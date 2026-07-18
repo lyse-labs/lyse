@@ -24,7 +24,7 @@ const TERM_RULES: TermRule[] = [
   { re: /\bslaves?\b/gi, suggestion: "replica / secondary / worker" },
 ];
 
-export interface TermHit {
+interface TermHit {
   term: string;
   index: number;
   suggestion: string;

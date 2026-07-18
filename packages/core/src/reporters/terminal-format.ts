@@ -1,7 +1,7 @@
 import stringWidth from "string-width";
 import { color, glyph, statusOf, statusColor, bar as tokenBar, type UiOpts } from "../ui/tokens.js";
 
-export type TerminalMode = "default" | "quiet" | "verbose";
+type TerminalMode = "default" | "quiet" | "verbose";
 
 export interface TerminalOpts {
   mode: TerminalMode;
