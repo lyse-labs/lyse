@@ -1,6 +1,9 @@
 import {
   fromTailwindV3, fromTailwindV4, fromDtcg, fromValueTypeTokens, loadTokens,
 } from "../../loaders/tokens.js";
+import { normalizeToDtcg } from "../../tokens/normalizer.js";
+import { isDtcgToken } from "../../tokens/dtcg-model.js";
+import type { DtcgDocument, DtcgToken } from "../../tokens/dtcg-model.js";
 import type { TokenMap, ParsedFiles } from "../../types.js";
 import type { TokenNode, TokenConflict, TokenSource, TokenAxis } from "../types.js";
 
@@ -75,10 +78,80 @@ export function detectTokenConflicts(nodes: TokenNode[]): TokenConflict[] {
   return conflicts;
 }
 
+const DTCG_TYPE_TO_AXIS: Partial<Record<string, TokenAxis>> = {
+  color: "colors",
+  dimension: "spacing",
+  duration: "motion",
+  cubicBezier: "motion",
+};
+
+const CSS_DECL_RE = /(--[^\s:{}]+)\s*:\s*([^;]+?)\s*;/g;
+const SCSS_VAR_RE = /\$([A-Za-z0-9_-]+)\s*:\s*([^;!]+?)\s*(?:!default)?\s*;/g;
+
+export function cssCustomPropDeclsFromParsed(parsed: ParsedFiles): Array<[string, string]> {
+  const decls: Array<[string, string]> = [];
+  for (const f of parsed.css) {
+    if (f.skipped) continue;
+    if (f.source.includes("@theme")) continue;
+    const cleaned = f.source.replace(/\/\*[\s\S]*?\*\//g, "");
+    let m: RegExpExecArray | null;
+    CSS_DECL_RE.lastIndex = 0;
+    while ((m = CSS_DECL_RE.exec(cleaned)) !== null) {
+      const prop = m[1];
+      const value = m[2];
+      if (prop && value !== undefined) decls.push([prop, value.trim()]);
+    }
+  }
+  return decls;
+}
+
+export function scssVarDeclsFromContents(fileContents: Map<string, string>): Array<[string, string]> {
+  const decls: Array<[string, string]> = [];
+  for (const [rel, src] of fileContents) {
+    if (!rel.endsWith(".scss")) continue;
+    const cleaned = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+    let m: RegExpExecArray | null;
+    SCSS_VAR_RE.lastIndex = 0;
+    while ((m = SCSS_VAR_RE.exec(cleaned)) !== null) {
+      const name = m[1];
+      const value = m[2];
+      if (name && value !== undefined) decls.push([`--${name}`, value.trim()]);
+    }
+  }
+  return decls;
+}
+
+export function dtcgDocumentToNodes(doc: DtcgDocument, source: TokenSource): TokenNode[] {
+  const nodes: TokenNode[] = [];
+  const visit = (node: unknown, path: string[]): void => {
+    if (!node || typeof node !== "object") return;
+    if (isDtcgToken(node)) {
+      const tok = node as DtcgToken<unknown>;
+      const axis = tok.$type ? DTCG_TYPE_TO_AXIS[tok.$type] : undefined;
+      if (axis && tok.$value !== undefined) {
+        nodes.push({ id: path.join("/"), axis, rawValue: String(tok.$value).toLowerCase().trim(), source });
+      }
+      return;
+    }
+    for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+      if (k.startsWith("$")) continue;
+      visit(v, [...path, k]);
+    }
+  };
+  visit(doc, []);
+  return nodes;
+}
+
+function declsToNodes(decls: Array<[string, string]>, source: TokenSource): TokenNode[] {
+  if (decls.length === 0) return [];
+  const { document } = normalizeToDtcg({ source: "css-vars", data: new Map(decls) });
+  return dtcgDocumentToNodes(document, source);
+}
+
 export async function extractTokens(
   root: string,
-  _parsed: ParsedFiles,
-  _fileContents: Map<string, string>,
+  parsed: ParsedFiles,
+  fileContents: Map<string, string>,
 ): Promise<TokenExtraction> {
   const maps = (await Promise.all([
     fromTailwindV3(root), fromTailwindV4(root), fromDtcg(root), fromValueTypeTokens(root),
@@ -89,6 +162,12 @@ export async function extractTokens(
   for (const m of maps) {
     const ns = tokenMapToNodes(m);
     for (const n of ns) { nodes.push(n); sources.add(n.source); }
+  }
+  for (const n of declsToNodes(cssCustomPropDeclsFromParsed(parsed), "css-custom-property")) {
+    nodes.push(n); sources.add(n.source);
+  }
+  for (const n of declsToNodes(scssVarDeclsFromContents(fileContents), "scss-variable")) {
+    nodes.push(n); sources.add(n.source);
   }
   const primary = await loadTokens(root);
   return { nodes, conflicts: detectTokenConflicts(nodes), primary, sources: [...sources].sort() };

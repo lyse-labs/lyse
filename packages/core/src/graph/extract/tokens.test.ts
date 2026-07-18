@@ -2,7 +2,10 @@ import { describe, it, expect } from "vitest";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { tokenMapToNodes, detectTokenConflicts, extractTokens } from "./tokens.js";
+import {
+  tokenMapToNodes, detectTokenConflicts, extractTokens,
+  cssCustomPropDeclsFromParsed, scssVarDeclsFromContents, dtcgDocumentToNodes,
+} from "./tokens.js";
 import type { TokenMap } from "../../types.js";
 import type { ParsedFiles } from "../../types.js";
 
@@ -54,5 +57,52 @@ describe("extractTokens", () => {
     expect(out.sources).toContain("dtcg");
     expect(out.nodes.some((n) => n.rawValue === "#3b82f6" && n.axis === "colors")).toBe(true);
     expect(out.primary).not.toBeNull();
+  });
+});
+
+describe("cssCustomPropDeclsFromParsed", () => {
+  it("mines --x: value from a plain css file but skips @theme files", () => {
+    const parsed: ParsedFiles = {
+      ts: [],
+      css: [
+        { path: "a.css", source: ":root { --brand: #3b82f6; --gap: 8px; }" },
+        { path: "tw.css", source: "@theme { --color-brand: #fff; }" },
+      ],
+      cssInJs: [],
+    };
+    const decls = cssCustomPropDeclsFromParsed(parsed);
+    expect(decls).toContainEqual(["--brand", "#3b82f6"]);
+    expect(decls).toContainEqual(["--gap", "8px"]);
+    expect(decls.some(([p]) => p === "--color-brand")).toBe(false);
+  });
+});
+
+describe("scssVarDeclsFromContents", () => {
+  it("mines $var: value from raw scss and prefixes with --", () => {
+    const fc = new Map<string, string>([["src/_vars.scss", "$primary: #3b82f6;\n$gap: 8px;"]]);
+    const decls = scssVarDeclsFromContents(fc);
+    expect(decls).toContainEqual(["--primary", "#3b82f6"]);
+  });
+});
+
+describe("dtcgDocumentToNodes", () => {
+  it("maps color + dimension leaves to nodes", () => {
+    const nodes = dtcgDocumentToNodes(
+      { brand: { $value: "#3b82f6", $type: "color" }, gap: { $value: "8px", $type: "dimension" } },
+      "css-custom-property",
+    );
+    expect(nodes).toContainEqual({ id: "brand", axis: "colors", rawValue: "#3b82f6", source: "css-custom-property" });
+    expect(nodes).toContainEqual({ id: "gap", axis: "spacing", rawValue: "8px", source: "css-custom-property" });
+  });
+});
+
+describe("extractTokens (css/scss sources)", () => {
+  it("includes css-custom-property nodes from parsed css", async () => {
+    const parsed: ParsedFiles = {
+      ts: [], css: [{ path: "a.css", source: ":root { --brand: #3b82f6; }" }], cssInJs: [],
+    };
+    const out = await extractTokens(process.cwd(), parsed, new Map());
+    expect(out.sources).toContain("css-custom-property");
+    expect(out.nodes.some((n) => n.source === "css-custom-property" && n.rawValue === "#3b82f6")).toBe(true);
   });
 });
