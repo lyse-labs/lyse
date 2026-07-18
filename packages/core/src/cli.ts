@@ -260,7 +260,8 @@ const auditCommand = defineCommand({
       description: "Storybook source for runtime a11y: a pre-built static dir (e.g. storybook-static) or a running URL. Used only with --render.",
     },
     "graph-full": {
-      type: "boolean" as const,
+      type: "boolean",
+      default: false,
       description: "Persist the full graph (per-file usage edges) to .lyse/graph.json",
     },
     interactive: {
@@ -342,7 +343,6 @@ const auditCommand = defineCommand({
       ...(typeof args["storybook"] === "string" && args["storybook"]
         ? { storybook: args["storybook"] as string }
         : {}),
-      ...(args["graph-full"] === true ? { graphFull: true } : {}),
       ...(args["staged"] === true
         ? { scope: "staged" as const }
         : args["scope"] === "changed" || args["scope"] === "staged" || args["scope"] === "uncommitted"
