@@ -36,7 +36,9 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "aiGovernanceGraceWindow": { "type": "integer", "minimum": 1 }
+        "aiGovernanceGraceWindow": { "type": "integer", "minimum": 1 },
+        "model": { "type": "string", "enum": ["v2", "v3"] },
+        "minSampleSize": { "type": "integer", "minimum": 1 }
       }
     },
     "i18n": {

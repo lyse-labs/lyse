@@ -38,15 +38,13 @@ import { loadGeneratedPack } from "../rules/pack-loader.js";
 import { buildDesignSystemGraph } from "../graph/builder.js";
 import type { DesignSystemGraph } from "../graph/types.js";
 import { runRules } from "../rule-runner.js";
-import { scoreFromFindings } from "../scorer.js";
+import { scoreAudit, resolveScoreModel } from "../scorer.js";
 import { groupFindings, computeProjection, MIGRATION_SCALE_FILE_COUNT_DEFAULT } from "../report/fix-groups.js";
 import { posixRelative, toPosix } from "../util/paths.js";
 import { scanForMarkerComponents } from "../rules/ai-governance-ai-marker-component-present.js";
 import { aiGovernanceGraceFactor, DEFAULT_AI_GOVERNANCE_GRACE_WINDOW } from "../reliability/score/grace.js";
-import { computeGrade } from "../reliability/grade.js";
 import { VERSION } from "../index.js";
 import { RULES_VERSION } from "../rules/manifest.js";
-import { CURRENT_SCORING_VERSION } from "../reliability/score/version-pin.js";
 import { runLayer4Stage } from "../llm/layer4-stage.js";
 import { runFilterStage } from "../llm/filter-stage.js";
 import { isSuppressed } from "../suppression/inline.js";
@@ -647,10 +645,18 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   const aiMarkerCount = scanForMarkerComponents(absoluteRoot).length;
   const graceWindow = config.scoring?.aiGovernanceGraceWindow ?? DEFAULT_AI_GOVERNANCE_GRACE_WINDOW;
   const aiGovernanceGrace = aiGovernanceGraceFactor(aiMarkerCount, graceWindow);
-  const scoring = scoreFromFindings(runResult.findings, runResult.opportunitiesByAxis, {
+  // Scoring v3 project (Task 5): dispatch to v2 (legacy, default) or v3 by
+  // --score-model / LYSE_SCORE_MODEL / .lyse.yaml `scoring.model`. Default
+  // stays "v2" until a later task flips DEFAULT_SCORE_MODEL.
+  const scoreModel = resolveScoreModel({
+    ...(flags?.scoreModel !== undefined ? { flag: flags.scoreModel } : {}),
+    ...(process.env.LYSE_SCORE_MODEL !== undefined ? { env: process.env.LYSE_SCORE_MODEL } : {}),
+    ...(config.scoring?.model !== undefined ? { config: config.scoring.model } : {}),
+  });
+  const bundle = scoreAudit(scoreModel, runResult, {
+    ...(config.scoring?.minSampleSize !== undefined ? { minSampleSize: config.scoring.minSampleSize } : {}),
     aiGovernanceGrace,
   });
-  const grade = computeGrade(scoring.finalScore, scoring.autoFail);
 
   // Deterministic score projection (Sprint 1 actionable findings, spec §1/§3):
   // top fix groups by size and their Health Score gain if fixed. Must run on
@@ -663,12 +669,15 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     runResult.findings,
     config.advisory?.migrationScaleFileCount ?? MIGRATION_SCALE_FILE_COUNT_DEFAULT,
   );
+  // Projection stays on the legacy v2 scorer regardless of `scoreModel`
+  // (migrated in a later task); `bundle.finalScore` is the baseline it
+  // compares against, and equals the v2 value under the default model.
   const projection = computeProjection(
     groups,
     runResult.findings,
     runResult.opportunitiesByAxis,
     { aiGovernanceGrace },
-    scoring.finalScore,
+    bundle.finalScore,
   );
 
   // Apply severity display overrides AFTER scoring so user config changes what
@@ -682,17 +691,17 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   });
 
   const result: AuditResult = {
-    schemaVersion: 2,
+    schemaVersion: bundle.schemaVersion,
     rulesVersion: RULES_VERSION,
     toolVersion: VERSION,
-    scoringVersion: CURRENT_SCORING_VERSION,
+    scoringVersion: bundle.scoringVersion,
     repoRoot: absoluteRoot,
     timestamp: new Date().toISOString(),
     stack: detectStack(absoluteRoot),
-    finalScore: scoring.finalScore,
-    tier: scoring.tier,
-    grade,
-    axes: scoring.axes,
+    finalScore: bundle.finalScore,
+    tier: bundle.tier,
+    grade: bundle.grade,
+    axes: bundle.axes,
     findings: displayFindings,
     ...(suppressedFindings.length > 0 ? { suppressedFindings } : {}),
     meta: {

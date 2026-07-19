@@ -259,6 +259,10 @@ const auditCommand = defineCommand({
       type: "string",
       description: "Storybook source for runtime a11y: a pre-built static dir (e.g. storybook-static) or a running URL. Used only with --render.",
     },
+    "score-model": {
+      type: "string",
+      description: "Scoring model: v2 (default, legacy) or v3 (opt-in, experimental).",
+    },
     "graph-full": {
       type: "boolean",
       default: false,
@@ -342,6 +346,12 @@ const auditCommand = defineCommand({
       ...(args["render"] === true ? { render: true } : {}),
       ...(typeof args["storybook"] === "string" && args["storybook"]
         ? { storybook: args["storybook"] as string }
+        : {}),
+      // Precedence (flag > env > config > default) is resolved once inside
+      // the pipeline via resolveScoreModel; here we just thread the raw flag
+      // through. An invalid value surfaces as a thrown error from the pipeline.
+      ...(typeof args["score-model"] === "string" && args["score-model"]
+        ? { scoreModel: args["score-model"] as "v2" | "v3" }
         : {}),
       ...(args["staged"] === true
         ? { scope: "staged" as const }
