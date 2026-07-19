@@ -2,8 +2,7 @@ import { describe, it, expect } from "vitest";
 import { SUB_AXES } from "../../src/reliability/catalogue/sub-axes.js";
 import { resolveStableSubAxes } from "../../src/reliability/score/stable-sub-axes.js";
 import { resolveScoreV2PreviewSubAxes } from "../../src/reliability/score/score-v2-preview.js";
-import { formatExplainScore } from "../../src/commands/explain-score.js";
-import type { Finding, SubAxisRecord } from "../../src/reliability/types.js";
+import type { SubAxisRecord } from "../../src/reliability/types.js";
 
 // #71 — score-v2 PREVIEW channel. A read-only, strict superset of the trusted
 // v1 set: every v1 contributor PLUS any sub-axis flagged `contributesToScoreV2`
@@ -58,36 +57,8 @@ describe("resolveScoreV2PreviewSubAxes (#71)", () => {
   });
 });
 
-describe("formatExplainScore surfaces the read-only preview (#71)", () => {
-  const finding: Finding = {
-    ruleId: "tokens/no-hardcoded-color",
-    subAxisId: "tokens.color",
-    severity: "warning",
-    confidence: "high",
-    message: "hardcoded color",
-    file: "Button.tsx",
-    line: 1,
-    column: null,
-  };
-  const confidenceByAxis: Record<string, number> = { "tokens.color": 0.9 };
-
-  it("reports a scoreV2Preview that counts preview-only sub-axes the trusted score ignores", () => {
-    const stableSubAxes = resolveStableSubAxes(SUB_AXES, { filterRan: false });
-    // tokens.color is NOT promoted (drift, data/LLM-walled) — inject it into the
-    // preview set explicitly to exercise the rendering mechanism.
-    const previewSubAxes = new Set([...stableSubAxes, "tokens.color"]);
-    const r = formatExplainScore({ findings: [finding], stableSubAxes, previewSubAxes, confidenceByAxis });
-    expect(r.scoreV2Preview).toBeDefined();
-    expect(r.countedTotal).toBe(0);
-    expect(r.scoreV2Preview?.countedTotal).toBe(1);
-    expect(r.scoreV2Preview?.score).toBeLessThan(r.score);
-    expect(r.rawText).toContain("score-v2 preview");
-  });
-
-  it("omits the preview entirely when no previewSubAxes set is provided", () => {
-    const stableSubAxes = resolveStableSubAxes(SUB_AXES, { filterRan: false });
-    const r = formatExplainScore({ findings: [finding], stableSubAxes, confidenceByAxis });
-    expect(r.scoreV2Preview).toBeUndefined();
-    expect(r.rawText).not.toContain("score-v2 preview");
-  });
-});
+// The `formatExplainScore` integration (rendering a "score-v2 preview" line)
+// was retired by H4 (explain --score now surfaces only the audit's
+// `finalScore` — see commands/__tests__/explain-score.test.ts). This module
+// and the `resolveScoreV2PreviewSubAxes` unit tests above stay on disk per
+// the H4 task scope (retired in a later cleanup, not deleted here).

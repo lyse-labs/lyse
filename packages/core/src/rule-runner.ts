@@ -1,10 +1,11 @@
-import type { Rule, RuleContext, ParsedFiles, Finding, AxisName, ParseError } from "./types.js";
+import type { Rule, RuleContext, ParsedFiles, Finding, AxisName, ParseError, PerRuleOpportunity } from "./types.js";
 
 export interface RunRulesResult {
   findings: Finding[];
   opportunitiesByAxis: Record<AxisName, number>;
   findingsByAxis: Record<AxisName, number>;
   parseErrors: ParseError[];
+  perRuleOpportunities: PerRuleOpportunity[];
 }
 
 const ZERO: Record<AxisName, number> = { tokens: 0, a11y: 0, components: 0, stories: 0, "ai-surface": 0, "ai-governance": 0 };
@@ -14,6 +15,7 @@ export async function runRules(rules: Rule[], ctx: RuleContext, parsed: ParsedFi
   const opportunitiesByAxis: Record<AxisName, number> = { ...ZERO };
   const findingsByAxis: Record<AxisName, number> = { ...ZERO };
   const parseErrors: ParseError[] = [];
+  const perRuleOpportunities: PerRuleOpportunity[] = [];
 
   // Rules are stateless and receive read-only context, so they run concurrently.
   // Promise.all preserves input order → aggregation stays deterministic.
@@ -24,6 +26,7 @@ export async function runRules(rules: Rule[], ctx: RuleContext, parsed: ParsedFi
     findings.push(...r.findings);
     opportunitiesByAxis[rule.axis] += r.opportunities;
     findingsByAxis[rule.axis] += r.findings.length;
+    perRuleOpportunities.push({ ruleId: rule.id, axis: rule.axis, opportunities: r.opportunities });
     if (r.parseErrors) parseErrors.push(...r.parseErrors);
   }
 
@@ -38,5 +41,5 @@ export async function runRules(rules: Rule[], ctx: RuleContext, parsed: ParsedFi
 
   parseErrors.sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0));
 
-  return { findings, opportunitiesByAxis, findingsByAxis, parseErrors };
+  return { findings, opportunitiesByAxis, findingsByAxis, parseErrors, perRuleOpportunities };
 }

@@ -27,9 +27,15 @@ function stripAnsi(s: string): string {
 }
 
 function breakdownOf(path: string): string {
-  const r = spawnSync("node", [LYSE_CLI_PATH, "explain", "--score", "--static-only", path], {
-    encoding: "utf8",
-  });
+  // Pin v2 so both targets yield a numeric Health Score line. Under the default
+  // v3 model these small repos are below min-N=30 → "N/A"; this test is about
+  // the <path> positional (distinct targets → distinct breakdowns), not the
+  // score model, so it scores against the numeric v2 formula.
+  const r = spawnSync(
+    "node",
+    [LYSE_CLI_PATH, "explain", "--score", "--static-only", "--score-model", "v2", path],
+    { encoding: "utf8" },
+  );
   expect(r.status, `explain --score exited non-zero:\n${r.stderr}`).toBe(0);
   const out = stripAnsi(r.stdout);
   expect(out, "Health Score line not found").toMatch(/Health Score:\s*\d+\s*\/\s*100/);

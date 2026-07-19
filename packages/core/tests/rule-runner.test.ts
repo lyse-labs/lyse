@@ -27,4 +27,55 @@ describe("runRules", () => {
     expect(out.findings).toHaveLength(1);
     expect(out.opportunitiesByAxis.tokens).toBe(5);
   });
+
+  it("exposes per-rule opportunities alongside per-axis sums", async () => {
+    const fakeRule1: Rule = {
+      id: "tokens/no-hardcoded-color",
+      axis: "tokens",
+      async evaluate() {
+        return {
+          findings: [],
+          opportunities: 5,
+        };
+      },
+    };
+    const fakeRule2: Rule = {
+      id: "a11y/essentials",
+      axis: "a11y",
+      async evaluate() {
+        return {
+          findings: [],
+          opportunities: 3,
+        };
+      },
+    };
+    const fakeRule3: Rule = {
+      id: "tokens/no-hardcoded-spacing",
+      axis: "tokens",
+      async evaluate() {
+        return {
+          findings: [],
+          opportunities: 2,
+        };
+      },
+    };
+    const parsed: ParsedFiles = { ts: [], css: [], cssInJs: [] };
+    const res = await runRules([fakeRule1, fakeRule2, fakeRule3], ctx, parsed);
+
+    // every rule that recorded opportunities appears once
+    expect(Array.isArray(res.perRuleOpportunities)).toBe(true);
+    expect(res.perRuleOpportunities).toHaveLength(3);
+
+    // per-axis sum equals the sum of per-rule opportunities for that axis
+    const byAxis: Record<string, number> = {};
+    for (const r of res.perRuleOpportunities) {
+      byAxis[r.axis] = (byAxis[r.axis] ?? 0) + r.opportunities;
+    }
+    for (const [axis, sum] of Object.entries(byAxis)) {
+      expect(res.opportunitiesByAxis[axis as keyof typeof res.opportunitiesByAxis]).toBe(sum);
+    }
+
+    // assert genuine summation: tokens axis has two rules (5 + 2)
+    expect(res.opportunitiesByAxis.tokens).toBe(7);
+  });
 });

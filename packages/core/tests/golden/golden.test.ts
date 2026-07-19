@@ -46,8 +46,8 @@ describe("expected-to-change: known-wrong audit numbers photographed as expected
   // P2 (zone-aware token/component rules) fixed these two — see CHANGELOG "Fixed" entry for the
   // exact before/after numbers (Carbon tokens 0 → 54, shadcn components 0 → 31). Bands stay loose
   // (floors, not equalities) so future rule tuning doesn't require touching this file every time.
-  // The stories N/A case below was P1's fix (Appendix-A story-title seeding) — see the CHANGELOG
-  // "Fixed" entry for the exact before/after numbers.
+  // The stories case below was P1's fix (Appendix-A story-title seeding). Snapshots are now scored
+  // by the v3 default model — axes with < 30 opportunities N/A out by design (min-N sample guard).
   it("Carbon: tokens axis now scored meaningfully above the old zone-blind floor", () => {
     expect(axis("carbon-react", "tokens").score).toBeGreaterThan(40);
   });
@@ -55,9 +55,13 @@ describe("expected-to-change: known-wrong audit numbers photographed as expected
     expect(axis("shadcn-ui", "components").score).toBeGreaterThan(0);
   });
   it("Carbon & Polaris: stories axis is now populated (P1 Appendix-A fix — no more silent N/A)", () => {
+    // Carbon clears v3 min-N (222 story opportunities) so it scores.
     expect(axis("carbon-react", "stories").score).not.toBe("N/A");
     expect(axis("carbon-react", "stories").opportunities).toBeGreaterThan(0);
-    expect(axis("polaris-react", "stories").score).not.toBe("N/A");
+    // Polaris's stories ARE seeded (opportunities > 0 — the P1 fix), but under
+    // the v3 default they fall below min-N=30 (o=18) so the axis N/A's by design.
+    // This asserts the seeding fix; the N/A is v3's small-sample guard, not a
+    // regression to the old silent-N/A bug (which had 0 opportunities).
     expect(axis("polaris-react", "stories").opportunities).toBeGreaterThan(0);
   });
 });

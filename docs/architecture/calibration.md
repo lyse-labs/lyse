@@ -1,5 +1,13 @@
 # How Lyse calibrates its score
 
+> **This page describes the legacy `scoring-v1.x` formula** (severity-weighted
+> findings, the log-scaled `K` cap, the 8-repo calibration corpus). The
+> default scorer since `scoring-v3` is a parameter-free opportunity-weighted
+> adoption ratio — no fitted constant, so there is nothing to calibrate the
+> way this page describes. See [`scoring.md`](./scoring.md) for the current
+> model. This page stays accurate for repos still on the `--score-model v2`
+> escape hatch.
+
 This page documents how the Lyse Health Score is calibrated, the current error margin, and how you can reproduce any of these claims against the source repo.
 
 ## Why Lyse publishes calibration data

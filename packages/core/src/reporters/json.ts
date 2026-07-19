@@ -2,8 +2,10 @@ import type { AuditResult } from "../types.js";
 import { sortFindings } from "./finding-order.js";
 import { sortKeysDeep } from "../json-sort-keys.js";
 
-const SCHEMA_URL =
+const SCHEMA_URL_V1 =
   "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-result.json";
+const SCHEMA_URL_V3 =
+  "https://github.com/lyse-labs/lyse/raw/main/schemas/v3/lyse-result.json";
 
 export interface JsonRenderOptions {
   includeTimestamp?: boolean;
@@ -32,7 +34,8 @@ export function renderJson(result: AuditResult, options: JsonRenderOptions = {})
   }
 
   // Merge $schema as the first key (will land alphabetically anyway — `$` comes before letters).
-  const withSchema = { $schema: SCHEMA_URL, ...cloned } as Record<string, unknown>;
+  const schemaUrl = result.schemaVersion === 3 ? SCHEMA_URL_V3 : SCHEMA_URL_V1;
+  const withSchema = { $schema: schemaUrl, ...cloned } as Record<string, unknown>;
 
   // Sort keys recursively, JSON.stringify with 2-space indent, add trailing newline.
   return JSON.stringify(sortKeysDeep(withSchema), null, 2) + "\n";

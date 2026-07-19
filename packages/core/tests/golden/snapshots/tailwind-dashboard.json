@@ -1,76 +1,50 @@
 {
-  "$schema": "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-result.json",
+  "$schema": "https://github.com/lyse-labs/lyse/raw/main/schemas/v3/lyse-result.json",
   "axes": [
     {
-      "absoluteCap": 100,
       "axis": "tokens",
       "findings": 40,
       "opportunities": 2018,
-      "rateScore": 96,
-      "score": 96,
-      "sevPenalty": 80,
-      "weightedFindings": 80
+      "score": 98
     },
     {
-      "absoluteCap": 100,
       "axis": "a11y",
       "findings": 33,
       "opportunities": 137,
-      "rateScore": 52,
-      "score": 52,
-      "sevPenalty": 66,
-      "weightedFindings": 66
+      "score": 76
     },
     {
-      "absoluteCap": 100,
       "axis": "components",
       "findings": 96,
       "opportunities": 176,
-      "rateScore": -9,
-      "score": 0,
-      "sevPenalty": 192,
-      "weightedFindings": 192
+      "score": 45
     },
     {
-      "absoluteCap": "N/A",
       "axis": "stories",
       "findings": 0,
       "opportunities": 0,
-      "rateScore": "N/A",
-      "score": "N/A",
-      "sevPenalty": 0,
-      "weightedFindings": 0
+      "score": "N/A"
     },
     {
-      "absoluteCap": 100,
       "axis": "ai-surface",
       "findings": 6,
       "opportunities": 8,
-      "rateScore": -25,
-      "score": 0,
-      "sevPenalty": 10,
-      "weightedFindings": 10
+      "score": "N/A"
     },
     {
-      "absoluteCap": 100,
       "axis": "ai-governance",
       "findings": 0,
       "opportunities": 43,
-      "rateScore": 100,
-      "score": 100,
-      "sevPenalty": 0,
-      "weightedFindings": 0
+      "score": 100
     }
   ],
-  "finalScore": 39,
+  "finalScore": 80,
   "findingsCount": 175,
   "findingsDigest": "c03bac1e1757d7c3b8774a836ff16004b734f715fc967b90c00218b95f1a6924",
   "grade": {
-    "autoFailed": true,
-    "grade": "Fail",
-    "reasons": [
-      "2 axes scored 0: ai-surface, components"
-    ]
+    "autoFailed": false,
+    "grade": "A",
+    "reasons": []
   },
   "meta": {
     "coverage": {
@@ -122,32 +96,40 @@
         {
           "count": 76,
           "files": 19,
-          "gain": 26,
+          "gain": 11,
           "key": "components/icon-decorative-aria",
           "migrationScale": false,
           "ruleId": "components/icon-decorative-aria"
         },
         {
+          "count": 31,
+          "files": 14,
+          "gain": 6,
+          "key": "a11y/interactive-role-name",
+          "migrationScale": false,
+          "ruleId": "a11y/interactive-role-name"
+        },
+        {
           "count": 19,
           "files": 7,
-          "gain": 13,
+          "gain": 3,
           "key": "components/no-arbitrary-tailwind",
           "migrationScale": false,
           "ruleId": "components/no-arbitrary-tailwind"
         }
       ],
-      "totalGainTop3": 30
+      "totalGainTop3": 19
     }
   },
   "repoRoot": "<REPO>",
   "rulesVersion": "0.1.0",
-  "schemaVersion": 2,
-  "scoringVersion": "scoring-v1.1",
+  "schemaVersion": 3,
+  "scoringVersion": "scoring-v3",
   "stack": [
     "react",
     "tailwind"
   ],
-  "tier": "Managed",
+  "tier": "Autonomous",
   "timestamp": "",
   "toolVersion": ""
 }

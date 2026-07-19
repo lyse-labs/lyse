@@ -38,15 +38,13 @@ import { loadGeneratedPack } from "../rules/pack-loader.js";
 import { buildDesignSystemGraph } from "../graph/builder.js";
 import type { DesignSystemGraph } from "../graph/types.js";
 import { runRules } from "../rule-runner.js";
-import { scoreFromFindings } from "../scorer.js";
+import { scoreAudit, resolveScoreModel } from "../scorer.js";
 import { groupFindings, computeProjection, MIGRATION_SCALE_FILE_COUNT_DEFAULT } from "../report/fix-groups.js";
 import { posixRelative, toPosix } from "../util/paths.js";
 import { scanForMarkerComponents } from "../rules/ai-governance-ai-marker-component-present.js";
 import { aiGovernanceGraceFactor, DEFAULT_AI_GOVERNANCE_GRACE_WINDOW } from "../reliability/score/grace.js";
-import { computeGrade } from "../reliability/grade.js";
 import { VERSION } from "../index.js";
 import { RULES_VERSION } from "../rules/manifest.js";
-import { CURRENT_SCORING_VERSION } from "../reliability/score/version-pin.js";
 import { runLayer4Stage } from "../llm/layer4-stage.js";
 import { runFilterStage } from "../llm/filter-stage.js";
 import { isSuppressed } from "../suppression/inline.js";
@@ -638,19 +636,29 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   };
   // -----------------------------------------------------------------------
 
-  // Phase 4.1 — v2 scorer: severity-weighted rate + log-scaled absolute cap.
-  // We pass the flat findings list (post-suppression, post-Layer-4) directly;
-  // the adapter aggregates into per-axis severity buckets internally.
+  // Phase 4.1 — scoring: dispatches by model to the v2 (severity-weighted
+  // rate + log-scaled absolute cap) or v3 (adoption-ratio) formula. We pass
+  // the flat findings list (post-suppression, post-Layer-4) directly; the
+  // adapter aggregates into per-axis severity buckets internally.
   flags?.progress?.update("Scoring…");
   // Early-adopter grace (#89 / ADR-0018): ramp the ai-governance axis weight in
   // by AI-surface maturity so a nascent surface (one AIBadge) isn't cratered.
   const aiMarkerCount = scanForMarkerComponents(absoluteRoot).length;
   const graceWindow = config.scoring?.aiGovernanceGraceWindow ?? DEFAULT_AI_GOVERNANCE_GRACE_WINDOW;
   const aiGovernanceGrace = aiGovernanceGraceFactor(aiMarkerCount, graceWindow);
-  const scoring = scoreFromFindings(runResult.findings, runResult.opportunitiesByAxis, {
-    aiGovernanceGrace,
+  // Scoring v3 project (Task 5): dispatch to v3 (default, DEFAULT_SCORE_MODEL)
+  // or v2 (opt-in legacy) by --score-model / LYSE_SCORE_MODEL / .lyse.yaml
+  // `scoring.model`.
+  const scoreModel = resolveScoreModel({
+    ...(flags?.scoreModel !== undefined ? { flag: flags.scoreModel } : {}),
+    ...(process.env.LYSE_SCORE_MODEL !== undefined ? { env: process.env.LYSE_SCORE_MODEL } : {}),
+    ...(config.scoring?.model !== undefined ? { config: config.scoring.model } : {}),
   });
-  const grade = computeGrade(scoring.finalScore, scoring.autoFail);
+  const scoreOpts = {
+    ...(config.scoring?.minSampleSize !== undefined ? { minSampleSize: config.scoring.minSampleSize } : {}),
+    aiGovernanceGrace,
+  };
+  const bundle = scoreAudit(scoreModel, runResult, scoreOpts);
 
   // Deterministic score projection (Sprint 1 actionable findings, spec §1/§3):
   // top fix groups by size and their Health Score gain if fixed. Must run on
@@ -663,12 +671,17 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     runResult.findings,
     config.advisory?.migrationScaleFileCount ?? MIGRATION_SCALE_FILE_COUNT_DEFAULT,
   );
+  // Projection re-scores under the SAME `scoreModel` as the headline bundle,
+  // so projected gains are consistent with `bundle.finalScore` (the baseline
+  // it compares against). On a repo where every axis is below min-N the v3
+  // finalScore is "N/A" and `computeProjection` returns undefined early.
   const projection = computeProjection(
     groups,
     runResult.findings,
-    runResult.opportunitiesByAxis,
-    { aiGovernanceGrace },
-    scoring.finalScore,
+    runResult,
+    scoreModel,
+    scoreOpts,
+    bundle.finalScore,
   );
 
   // Apply severity display overrides AFTER scoring so user config changes what
@@ -682,17 +695,17 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   });
 
   const result: AuditResult = {
-    schemaVersion: 2,
+    schemaVersion: bundle.schemaVersion,
     rulesVersion: RULES_VERSION,
     toolVersion: VERSION,
-    scoringVersion: CURRENT_SCORING_VERSION,
+    scoringVersion: bundle.scoringVersion,
     repoRoot: absoluteRoot,
     timestamp: new Date().toISOString(),
     stack: detectStack(absoluteRoot),
-    finalScore: scoring.finalScore,
-    tier: scoring.tier,
-    grade,
-    axes: scoring.axes,
+    finalScore: bundle.finalScore,
+    tier: bundle.tier,
+    grade: bundle.grade,
+    axes: bundle.axes,
     findings: displayFindings,
     ...(suppressedFindings.length > 0 ? { suppressedFindings } : {}),
     meta: {

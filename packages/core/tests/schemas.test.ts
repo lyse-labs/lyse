@@ -5,10 +5,15 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderJson } from "../src/reporters/json.js";
+import { auditDirectory } from "../src/commands/audit-pipeline.js";
 import type { AuditResult } from "../src/types.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCHEMAS_DIR = join(__dirname, "../schemas/v1");
+const SCHEMAS_V3_DIR = join(__dirname, "../schemas/v3");
+
+// fixtures/full-ds is under packages/core/ — tests/ → .. → core/, then fixtures/full-ds.
+const FULL_DS = join(import.meta.dirname, "..", "fixtures", "full-ds");
 
 /** Create a fresh Ajv instance so schema IDs don't collide between tests. */
 function makeAjv(): Ajv2020 {
@@ -43,7 +48,7 @@ describe("lyse-result.json validates real audit output", () => {
     const validate = makeAjv().compile(schema);
 
     const sample: AuditResult = {
-      schemaVersion: 2, rulesVersion: "0.1.0", toolVersion: "0.0.1", scoringVersion: "scoring-v1",
+      schemaVersion: 2, rulesVersion: "0.1.0", toolVersion: "0.0.1", scoringVersion: "scoring-v1.1",
       repoRoot: "/r", timestamp: "2026-05-15T10:00:00Z", stack: ["react"],
       finalScore: 50,
       axes: [{ axis: "tokens", score: 50, findings: 1, opportunities: 2 }],
@@ -61,7 +66,7 @@ describe("lyse-result.json validates real audit output", () => {
   it("validates an AuditResult with N/A axis score and finalScore N/A", () => {
     const validate = makeAjv().compile(schema);
     const sample: AuditResult = {
-      schemaVersion: 2, rulesVersion: "0.1.0", toolVersion: "0.0.1", scoringVersion: "scoring-v1",
+      schemaVersion: 2, rulesVersion: "0.1.0", toolVersion: "0.0.1", scoringVersion: "scoring-v1.1",
       repoRoot: "/r", timestamp: "", stack: [],
       finalScore: "N/A",
       axes: [{ axis: "stories", score: "N/A", findings: 0, opportunities: 0 }],
@@ -74,7 +79,7 @@ describe("lyse-result.json validates real audit output", () => {
   it("rejects an AuditResult with extra fields in finding", () => {
     const validate = makeAjv().compile(schema);
     const bad = {
-      $schema: "x", schemaVersion: 2, rulesVersion: "0.1.0", toolVersion: "0.0.1", scoringVersion: "scoring-v1",
+      $schema: "x", schemaVersion: 2, rulesVersion: "0.1.0", toolVersion: "0.0.1", scoringVersion: "scoring-v1.1",
       repoRoot: "/r", stack: [], finalScore: 50, axes: [],
       findings: [{
         ruleId: "x", axis: "tokens", severity: "warning",
@@ -83,6 +88,97 @@ describe("lyse-result.json validates real audit output", () => {
       }],
     };
     expect(validate(bad)).toBe(false);
+  });
+});
+
+describe("JSON Schemas v3 — Draft 2020-12 validity", () => {
+  const files = readdirSync(SCHEMAS_V3_DIR);
+
+  it("ships exactly 1 schema", () => {
+    expect(files).toHaveLength(1);
+  });
+
+  it.each(files)("%s compiles without errors", (file) => {
+    const schema = JSON.parse(readFileSync(join(SCHEMAS_V3_DIR, file), "utf8"));
+    expect(() => makeAjv().compile(schema)).not.toThrow();
+  });
+
+  it.each(files)("%s has $id and $schema", (file) => {
+    const schema = JSON.parse(readFileSync(join(SCHEMAS_V3_DIR, file), "utf8"));
+    expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
+    expect(schema.$id).toMatch(/^https:\/\/github\.com\/lyse-labs\/lyse\/raw\/main\/schemas\/v3\/.+\.json$/);
+  });
+});
+
+describe("lyse-result.json (v3) validates a v3 AuditResult", () => {
+  const schema = JSON.parse(readFileSync(join(SCHEMAS_V3_DIR, "lyse-result.json"), "utf8"));
+
+  it("validates a v3 AuditResult with a numeric axis, an N/A axis, and ai-governance", () => {
+    const validate = makeAjv().compile(schema);
+
+    const sample: AuditResult = {
+      schemaVersion: 3, rulesVersion: "0.1.0", toolVersion: "0.0.1", scoringVersion: "scoring-v3",
+      repoRoot: "/r", timestamp: "2026-07-19T10:00:00Z", stack: ["react"],
+      finalScore: 62,
+      axes: [
+        { axis: "tokens", score: 62, findings: 3, opportunities: 40 },
+        { axis: "stories", score: "N/A", findings: 0, opportunities: 0 },
+        { axis: "ai-governance", score: 80, findings: 1, opportunities: 12 },
+      ],
+      findings: [{
+        ruleId: "ai-governance/no-unmarked-ai-output", axis: "ai-governance", severity: "warning",
+        location: { file: "a.tsx", line: 1, column: 1 }, message: "hi",
+      }],
+    };
+    const rendered = JSON.parse(renderJson(sample));
+    const valid = validate(rendered);
+    if (!valid) console.error(validate.errors);
+    expect(valid).toBe(true);
+    expect(rendered.$schema).toContain("schemas/v3/lyse-result.json");
+  });
+
+  it("rejects a v3 axis carrying a v2-only rateScore field", () => {
+    const validate = makeAjv().compile(schema);
+    const bad = {
+      $schema: "x", schemaVersion: 3, rulesVersion: "0.1.0", toolVersion: "0.0.1", scoringVersion: "scoring-v3",
+      repoRoot: "/r", stack: [], finalScore: 50,
+      axes: [{ axis: "tokens", score: 50, findings: 1, opportunities: 2, rateScore: 50 }],
+      findings: [],
+    };
+    expect(validate(bad)).toBe(false);
+  });
+});
+
+describe("lyse-result schemas validate REAL audit output (not just hand-built samples)", () => {
+  // Regression guard: real findings can carry `fixGroup` (and `llmJudgement`)
+  // beyond the 8 fields the hand-built samples above exercise. A rendered
+  // AuditResult must validate against the very `$schema` URL it stamps.
+  it("validates real v3 audit output from fixtures/full-ds, including fixGroup-bearing findings", async () => {
+    const schema = JSON.parse(readFileSync(join(SCHEMAS_V3_DIR, "lyse-result.json"), "utf8"));
+    const validate = makeAjv().compile(schema);
+
+    const { result } = await auditDirectory(FULL_DS, { staticOnly: true });
+    const rendered = JSON.parse(renderJson(result));
+    const valid = validate(rendered);
+    if (!valid) console.error(validate.errors);
+    expect(valid).toBe(true);
+
+    // Sanity check: the fixture must actually exercise fixGroup, or this
+    // assertion wouldn't have caught the original bug.
+    expect(result.findings.some((f) => f.fixGroup !== undefined)).toBe(true);
+  });
+
+  it("validates real v1 (v2 formula) audit output from fixtures/full-ds, including fixGroup-bearing findings", async () => {
+    const schema = JSON.parse(readFileSync(join(SCHEMAS_DIR, "lyse-result.json"), "utf8"));
+    const validate = makeAjv().compile(schema);
+
+    const { result } = await auditDirectory(FULL_DS, { staticOnly: true, scoreModel: "v2" });
+    const rendered = JSON.parse(renderJson(result));
+    const valid = validate(rendered);
+    if (!valid) console.error(validate.errors);
+    expect(valid).toBe(true);
+
+    expect(result.findings.some((f) => f.fixGroup !== undefined)).toBe(true);
   });
 });
 

@@ -1,24 +1,19 @@
 import { resolve } from "node:path";
 import { auditDirectory } from "./audit-pipeline.js";
 import { SUB_AXES } from "../reliability/catalogue/sub-axes.js";
-import { computeScoreV1 } from "../reliability/score/formula-v1.js";
-import { CURRENT_SCORING_VERSION } from "../reliability/score/version-pin.js";
 import { findingWeight } from "../reliability/score/weight.js";
 import { BUNDLED_MANIFEST } from "../reliability/confidence/bundled-manifest.js";
 import { resolveStableSubAxes } from "../reliability/score/stable-sub-axes.js";
-import { resolveScoreV2PreviewSubAxes } from "../reliability/score/score-v2-preview.js";
 import { computeGovernanceMaturityLevel, MATURITY_LABELS } from "../reliability/governance-maturity.js";
 import type { GovernanceSignals } from "../reliability/governance-maturity.js";
 import { generateGapReport } from "../reliability/gap-report.js";
 import type { GapReport } from "../reliability/gap-report.js";
 import { extractGovernanceSignals, gatherAiContext } from "../reliability/governance-signals.js";
-import { scanForMarkerComponents } from "../rules/ai-governance-ai-marker-component-present.js";
-import { aiGovernanceGraceFactor, DEFAULT_AI_GOVERNANCE_GRACE_WINDOW } from "../reliability/score/grace.js";
 import { judgeGovernanceMaturity } from "../llm/governance-maturity-judge.js";
 import { resolveConnector } from "../llm/connectors/resolver.js";
 import { loadConfig } from "../config/schema.js";
 import type { Finding as ReliabilityFinding } from "../reliability/types.js";
-import type { Finding as LegacyFinding } from "../types.js";
+import type { Finding as LegacyFinding, AxisScore } from "../types.js";
 
 function maturityDetail(s: GovernanceSignals): string {
   const present: string[] = [];
@@ -32,6 +27,8 @@ function maturityDetail(s: GovernanceSignals): string {
 export interface ExplainScoreOpts {
   cwd: string;
   staticOnly?: boolean;
+  /** Scoring model override (default resolves to `DEFAULT_SCORE_MODEL` = v3). */
+  scoreModel?: "v2" | "v3";
   /** Injected for tests — defaults to the resolved connector. */
   maturityConnector?: import("../llm/connectors/types.js").ConnectorClient;
   maturityTimeoutMs?: number;
@@ -77,7 +74,8 @@ function legacyToReliability(f: LegacyFinding): ReliabilityFinding {
 }
 
 export interface ExplainScoreResult {
-  score: number;
+  /** The audit's `finalScore` (H4: byte-identical to `lyse audit`'s Health Score). */
+  score: number | "N/A";
   version: string;
   countedTotal: number;
   reportedOnlyTotal: number;
@@ -85,46 +83,24 @@ export interface ExplainScoreResult {
   rawText: string;
   maturityLevel?: number;
   gapReport: GapReport;
-  /**
-   * Read-only score-v2 preview (#71): what the Health Score would be if the
-   * deterministic gate-clearing sub-axes were promoted into the trusted score.
-   * Present only when `previewSubAxes` was supplied. Never the live score.
-   */
-  scoreV2Preview?: { score: number; countedTotal: number };
 }
 
 export interface FormatExplainScoreArgs {
   findings: ReliabilityFinding[];
   stableSubAxes: Set<string>;
   confidenceByAxis: Record<string, number>;
-  /**
-   * score-v2 PREVIEW sub-axis set (#71). When provided, a read-only preview score
-   * over this strict superset of `stableSubAxes` is computed and surfaced. Never
-   * alters the trusted (v1) score.
-   */
-  previewSubAxes?: Set<string>;
-  /** Early-adopter grace factor for ai-governance findings (#89 / ADR-0018). Default 1 = inert. */
-  aiGovernanceGrace?: number;
+  /** The audit's `finalScore` — the single source of truth for the headline number (H4). */
+  finalScore: number | "N/A";
+  /** The audit's `scoringVersion` — reported alongside `finalScore`, not a locally-pinned value. */
+  scoringVersion: string;
+  /** Per-axis adoption breakdown from the audit result, rendered as ratio sentences. */
+  axes: AxisScore[];
   /** AI-Governance Maturity Level (Track #72/#155) — reported alongside the score. */
   maturity?: { level: number; signals: GovernanceSignals; llmDerived?: boolean };
 }
 
 export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreResult {
-  const { findings, stableSubAxes, confidenceByAxis } = args;
-  const aiGovernanceGrace = args.aiGovernanceGrace ?? 1;
-  // DIVERGENCE (audit sweep, follow-up): `lyse explain --score` computes the
-  // score with formula-v1 (`clamp(100 - penalty × 1.5)`, no auto-fail cap),
-  // while `lyse audit` (commands/audit-pipeline.ts → scorer.ts/scoreFromFindings)
-  // uses the v1.1 rate-based scorer with a log-scaled cap + autoFail. The two can
-  // report DIFFERENT Health Scores for the same repo. Unifying is intentionally
-  // deferred — the formulas take different inputs (formula-v1 has no per-axis
-  // opportunity denominator) and reconciling them changes user-visible output.
-  // Tracked for a dedicated follow-up; do not silently swap one for the other.
-  const scoring = computeScoreV1({ findings, stableSubAxes, confidenceByAxis, aiGovernanceGrace });
-  const preview =
-    args.previewSubAxes !== undefined
-      ? computeScoreV1({ findings, stableSubAxes: args.previewSubAxes, confidenceByAxis, aiGovernanceGrace })
-      : undefined;
+  const { findings, stableSubAxes, confidenceByAxis, finalScore, scoringVersion, axes } = args;
   const bucketsBySubAxis = new Map<string, AxisBucket>();
   for (const f of findings) {
     const sa = SUB_AXES.find((s) => s.id === f.subAxisId);
@@ -158,15 +134,14 @@ export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreRe
     return a.subAxisId.localeCompare(b.subAxisId);
   });
 
+  const countedTotal = buckets.reduce((sum, b) => sum + b.countedFindings, 0);
+  const reportedOnlyTotal = buckets.reduce((sum, b) => sum + b.reportedOnlyFindings, 0);
+
   const lines: string[] = [];
   lines.push("");
-  lines.push(`  Health Score: ${scoring.score} / 100  ·  ${CURRENT_SCORING_VERSION}`);
-  lines.push(`  Counted findings: ${scoring.findingsCountedInScore}  ·  experimental (reported only): ${scoring.findingsReportedOnly}`);
-  if (preview) {
-    lines.push(
-      `  score-v2 preview: ${preview.score} / 100  ·  ${preview.findingsCountedInScore} counted  (read-only — trusted score unchanged)`,
-    );
-  }
+  const scoreText = finalScore === "N/A" ? "N/A" : `${finalScore} / 100`;
+  lines.push(`  Health Score: ${scoreText}  ·  ${scoringVersion}`);
+  lines.push(`  Counted findings: ${countedTotal}  ·  experimental (reported only): ${reportedOnlyTotal}`);
   if (args.maturity) {
     const m = args.maturity;
     const label = MATURITY_LABELS[m.level] ?? "unknown";
@@ -174,9 +149,17 @@ export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreRe
     lines.push(`  AI-Governance Maturity: L${m.level} — ${label}${maturityDetail(m.signals)}${tier}`);
   }
   lines.push("");
-  lines.push("  Formula:  score = clamp(100 - penalty × 1.5, 0, 100)");
-  lines.push("            penalty per finding = severity_weight × axis_confidence");
-  lines.push("            severity weights: error=4 · warning=2 · info=1");
+  lines.push("  Adoption by axis:");
+  for (const a of axes) {
+    if (typeof a.score === "number") {
+      const clean = Math.max(0, a.opportunities - a.findings);
+      lines.push(`    • ${a.axis}: ${a.score}% adoption (${clean}/${a.opportunities} usages)`);
+    } else if (a.opportunities > 0) {
+      lines.push(`    • ${a.axis}: insufficient sample (n=${a.opportunities}) — not scored`);
+    } else {
+      lines.push(`    • ${a.axis}: not scored — no ${a.axis} opportunities in scope`);
+    }
+  }
   lines.push("");
 
   if (buckets.length === 0) {
@@ -233,19 +216,16 @@ export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreRe
   lines.push("");
 
   return {
-    score: scoring.score,
-    // formula-v1's own identity ("scoring-v1"), NOT the active scorer's
-    // CURRENT_SCORING_VERSION — explain --score previews the v1 formula, which
-    // did not get the v1.1 auto-fail cap. Keep them distinct if this is ever
-    // surfaced (e.g. a future --format json).
-    version: scoring.version,
-    countedTotal: scoring.findingsCountedInScore,
-    reportedOnlyTotal: scoring.findingsReportedOnly,
+    // H4: the headline number IS the audit's finalScore — byte-identical to
+    // `lyse audit`, not a separately-computed preview formula.
+    score: finalScore,
+    version: scoringVersion,
+    countedTotal,
+    reportedOnlyTotal,
     buckets,
     rawText: lines.join("\n"),
     gapReport,
     ...(args.maturity ? { maturityLevel: args.maturity.level } : {}),
-    ...(preview ? { scoreV2Preview: { score: preview.score, countedTotal: preview.findingsCountedInScore } } : {}),
   };
 }
 
@@ -253,17 +233,16 @@ export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreRe
  * Compute the score breakdown for the current repo and return both the
  * structured data (for tests) and a Lighthouse-style text rendering (for stdout).
  */
-async function explainScore(opts: ExplainScoreOpts): Promise<ExplainScoreResult> {
+export async function explainScore(opts: ExplainScoreOpts): Promise<ExplainScoreResult> {
   const repoRoot = resolve(opts.cwd);
-  const pipeline = await auditDirectory(
-    repoRoot,
-    opts.staticOnly === true ? { staticOnly: true } : undefined,
-  );
+  const pipeline = await auditDirectory(repoRoot, {
+    ...(opts.staticOnly === true ? { staticOnly: true } : {}),
+    ...(opts.scoreModel !== undefined ? { scoreModel: opts.scoreModel } : {}),
+  });
   const findings = pipeline.result.findings.map(legacyToReliability);
 
   const filterRan = pipeline.result.meta?.layer4?.filterRan === true;
   const stableSubAxes = resolveStableSubAxes(SUB_AXES, { filterRan });
-  const previewSubAxes = resolveScoreV2PreviewSubAxes(SUB_AXES, { filterRan });
   const confidenceByAxis: Record<string, number> = {};
   for (const sa of SUB_AXES) {
     const manifestEntry = BUNDLED_MANIFEST.subAxes[sa.id];
@@ -306,12 +285,15 @@ async function explainScore(opts: ExplainScoreOpts): Promise<ExplainScoreResult>
   }
   const maturity = { level: computeGovernanceMaturityLevel(signals), signals, llmDerived };
 
-  // Early-adopter grace (#89 / ADR-0018) — ramp ai-governance in by AI-surface maturity.
-  const cfg = loadConfig(repoRoot, { onError: "degrade" });
-  const graceWindow = cfg.scoring?.aiGovernanceGraceWindow ?? DEFAULT_AI_GOVERNANCE_GRACE_WINDOW;
-  const aiGovernanceGrace = aiGovernanceGraceFactor(scanForMarkerComponents(repoRoot).length, graceWindow);
-
-  return formatExplainScore({ findings, stableSubAxes, previewSubAxes, confidenceByAxis, maturity, aiGovernanceGrace });
+  return formatExplainScore({
+    findings,
+    stableSubAxes,
+    confidenceByAxis,
+    finalScore: pipeline.result.finalScore,
+    scoringVersion: pipeline.result.scoringVersion,
+    axes: pipeline.result.axes,
+    maturity,
+  });
 }
 
 export async function runExplainScore(opts: ExplainScoreOpts): Promise<void> {

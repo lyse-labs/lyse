@@ -45,7 +45,10 @@ describe("runShare: spinner integration", () => {
     }
     const all = writes.join("");
     expect(all).toMatch(/Summary copied/);
-    expect(all).toMatch(/score \d+\/100/);
+    // Default model is v3; this tiny fixture is below min-N=30 on every axis, so
+    // the success line shows "score N/A/100". Accept a number or N/A — the test
+    // asserts the score is surfaced, not its magnitude.
+    expect(all).toMatch(/score (\d+|N\/A)\/100/);
   });
 
   it("is silent when quiet=true (no spinner output)", async () => {

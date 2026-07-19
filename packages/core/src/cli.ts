@@ -29,6 +29,7 @@ import { runExplainScore } from "./commands/explain-score.js";
 import { feedbackMissed } from "./commands/feedback.js";
 import { auditDirectory, RefuseToRunError, ScopeError } from "./commands/audit-pipeline.js";
 import type { AuditFlags } from "./commands/audit-pipeline.js";
+import { resolveScoreModel } from "./scorer.js";
 import { runShare } from "./commands/share.js";
 import { runBadge } from "./commands/badge.js";
 import { runInit } from "./commands/init.js";
@@ -259,6 +260,10 @@ const auditCommand = defineCommand({
       type: "string",
       description: "Storybook source for runtime a11y: a pre-built static dir (e.g. storybook-static) or a running URL. Used only with --render.",
     },
+    "score-model": {
+      type: "string",
+      description: "Scoring model: v3 (default) or v2 (legacy escape hatch, removed after one minor).",
+    },
     "graph-full": {
       type: "boolean",
       default: false,
@@ -291,6 +296,25 @@ const auditCommand = defineCommand({
         process.stderr.write(mig.warning);
       }
       persistCurrentVersion({ currentVersion: VERSION });
+    }
+
+    // Validate --score-model / LYSE_SCORE_MODEL at the CLI boundary so a bad
+    // value yields a clean [lyse] Error (exit 64), not a raw stack trace from
+    // resolveScoreModel deep in the pipeline. Config `scoring.model` is
+    // already validated by loadConfig's zod enum, so flag+env is the full set
+    // of unvalidated sources that could reach resolveScoreModel.
+    try {
+      resolveScoreModel({
+        ...(typeof args["score-model"] === "string" && args["score-model"]
+          ? { flag: args["score-model"] as string }
+          : {}),
+        ...(process.env.LYSE_SCORE_MODEL !== undefined
+          ? { env: process.env.LYSE_SCORE_MODEL }
+          : {}),
+      });
+    } catch (err) {
+      console.error(`[lyse] Error: ${(err as Error).message}`);
+      process.exit(64); // EX_USAGE
     }
 
     const entitlement = await checkEntitlement("audit");
@@ -342,6 +366,12 @@ const auditCommand = defineCommand({
       ...(args["render"] === true ? { render: true } : {}),
       ...(typeof args["storybook"] === "string" && args["storybook"]
         ? { storybook: args["storybook"] as string }
+        : {}),
+      // Precedence (flag > env > config > default) is resolved once inside
+      // the pipeline via resolveScoreModel; here we just thread the raw flag
+      // through. An invalid value surfaces as a thrown error from the pipeline.
+      ...(typeof args["score-model"] === "string" && args["score-model"]
+        ? { scoreModel: args["score-model"] as "v2" | "v3" }
         : {}),
       ...(args["staged"] === true
         ? { scope: "staged" as const }
@@ -712,18 +742,36 @@ const explainCommand = defineCommand({
     ruleId: { type: "positional", required: false, description: "rule id (e.g. tokens/no-hardcoded-color), or a repo path with --score (default: cwd)" },
     score: { type: "boolean", default: false, description: "Show a Lighthouse-style score breakdown of the target repo's Health Score" },
     "static-only": { type: "boolean", default: false, description: "(with --score) skip the LLM augmentation step" },
+    "score-model": { type: "string", description: "(with --score) scoring model: v3 (default) or v2 (legacy escape hatch)." },
     format: { type: "string", default: "text", description: "text | md (default: text)" },
     ...GLOBAL_FLAGS,
   },
   async run({ args }) {
     applyGlobalFlags(args);
     if (args.score === true) {
+      // Validate --score-model / LYSE_SCORE_MODEL at the boundary so a bad value
+      // yields a clean [lyse] Error (exit 64), not a raw stack trace from
+      // resolveScoreModel deep in the pipeline (mirrors the audit command).
+      try {
+        resolveScoreModel({
+          ...(typeof args["score-model"] === "string" && args["score-model"]
+            ? { flag: args["score-model"] as string }
+            : {}),
+          ...(process.env.LYSE_SCORE_MODEL !== undefined ? { env: process.env.LYSE_SCORE_MODEL } : {}),
+        });
+      } catch (err) {
+        console.error(`[lyse] Error: ${(err as Error).message}`);
+        process.exit(64); // EX_USAGE
+      }
       // With --score the positional is a repo PATH (not a ruleId); default to cwd.
       const target =
         typeof args.ruleId === "string" && args.ruleId.length > 0 ? args.ruleId : process.cwd();
       await runExplainScore({
         cwd: target,
         ...(args["static-only"] === true ? { staticOnly: true } : {}),
+        ...(typeof args["score-model"] === "string" && args["score-model"]
+          ? { scoreModel: args["score-model"] as "v2" | "v3" }
+          : {}),
       });
       return;
     }

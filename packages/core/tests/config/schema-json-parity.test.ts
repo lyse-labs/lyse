@@ -34,6 +34,7 @@ const VALID: ReadonlyArray<[string, unknown]> = [
   ["rules tolerance", { rules: { "tokens/no-hardcoded-color": { tolerance: 5 } } }],
   ["rules disable", { rules: { "a11y/essentials": { disable: ["alt-text"] } } }],
   ["scoring grace window", { scoring: { aiGovernanceGraceWindow: 3 } }],
+  ["scoring model + minSampleSize", { scoring: { model: "v3", minSampleSize: 10 } }],
   ["i18n locales + vocabulary", { i18n: { locales: ["fr"], vocabulary: { aiNouns: ["assistant"], disclaimerPhrases: ["beta"], controlLabels: ["undo"], gatePhrases: ["confirm"], loadingPhrases: ["thinking"] } } }],
   ["llm provider agent-cli", { llm: { provider: "agent-cli", connector: "agent-cli" } }],
   ["llm provider none (deprecated but accepted)", { llm: { provider: "none" } }],
@@ -47,6 +48,8 @@ const INVALID: ReadonlyArray<[string, unknown]> = [
   ["bad llm connector", { llm: { connector: "smoke-signals" } }],
   ["costCapUsd not positive", { llm: { costCapUsd: 0 } }],
   ["grace window below min", { scoring: { aiGovernanceGraceWindow: 0 } }],
+  ["bad scoring model", { scoring: { model: "v4" } }],
+  ["minSampleSize below min", { scoring: { minSampleSize: 0 } }],
   ["tolerance wrong type", { rules: { "x/y": { tolerance: "lots" } } }],
   ["advisory migrationScaleFileCount below min", { advisory: { migrationScaleFileCount: 1 } }],
 ];

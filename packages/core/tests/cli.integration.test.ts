@@ -42,7 +42,12 @@ describe("cli audit integration (full-ds fixture)", () => {
     if (!existsSync(cli)) {
       throw new Error(`CLI not built — run \`pnpm --filter lyse build\` first. Looked at: ${cli}`);
     }
-    runCli(cli, ["audit", root, "--static-only", "--output", out]);
+    // Pin v2 for the numeric finalScore assertion: under the default v3 model
+    // every full-ds axis is below min-N=30 → finalScore "N/A". This test checks
+    // the end-to-end lyse.json carries a real score + findings; the numeric
+    // score comes from the v2 formula. (The determinism test below stays on the
+    // default v3 model.)
+    runCli(cli, ["audit", root, "--static-only", "--score-model", "v2", "--output", out]);
     const json = JSON.parse(readFileSync(join(out, "lyse.json"), "utf8"));
     expect(json.finalScore).not.toBe("N/A");
     expect(json.findings.length).toBeGreaterThan(0);

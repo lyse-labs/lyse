@@ -40,7 +40,7 @@ When the antivirus detects a regression, an LLM-driven pipeline runs on a schedu
 
 Marketing surfaces use only these three claims; everything else is a derivative.
 
-1. **100 % deterministic — byte-identical output artifacts** — same input, same commit → byte-identical outputs. Verifiable: run `lyse audit --format=json` twice on the same git commit; the JSON output is identical. Scoring formula is pinned as `scoring-v1` and stamped on the `AuditResult.scoringVersion` field of every emitted JSON artifact. Bumping to `scoring-v2` is a semver-major event with a CHANGELOG entry.
+1. **100 % deterministic — byte-identical output artifacts** — same input, same commit → byte-identical outputs. Verifiable: run `lyse audit --format=json` twice on the same git commit; the JSON output is identical. The scoring formula is version-pinned and stamped on the `AuditResult.scoringVersion` field of every emitted JSON artifact — currently `scoring-v3` by default (see [`scoring.md`](./scoring.md)). Any change to the score output is a semver-major event with a CHANGELOG entry and a new locked contract-test row.
 2. **≥ 90 % recall and ≥ 90 % precision on every scoring `stable` sub-axis** — each a Wilson 95 % lower bound on N ≥ 40 independently-provenanced samples (recall gates the `stable` claim; precision gates the score contribution). The per-rule SLO is published at [`docs/architecture/per-rule-slo.md`](./per-rule-slo.md). The table is seeded with all 66 rules; promotion happens as independent calibration data accrues.
 3. **Open catalogue of 66 sub-axes (1 per rule)** — status published per axis at [`docs/architecture/sub-axes.md`](./sub-axes.md). 52 sub-axes are `stable`; the rest ship `experimental` and promote to `stable` as calibration data accrues.
 

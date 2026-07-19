@@ -383,6 +383,22 @@ describe("renderTerminal (plain-text mode for snapshot stability)", () => {
     expect(out).not.toContain("more findings");
   });
 
+  it("shows the v3 comparability banner only when scoringVersion is scoring-v3", async () => {
+    const v3 = { ...sample, scoringVersion: "scoring-v3" };
+    const outV3 = await renderTerminal(v3, baseOpts);
+    expect(outV3).toContain(
+      "Scores use the v3 adoption-ratio model — not comparable to earlier scoring-v1.x.",
+    );
+
+    // sample.scoringVersion is "scoring-v1" — banner must not appear for non-v3 versions.
+    const outV1 = await renderTerminal(sample, baseOpts);
+    expect(outV1).not.toContain("adoption-ratio model");
+
+    const v2 = { ...sample, scoringVersion: "scoring-v1.1" };
+    const outV2 = await renderTerminal(v2, baseOpts);
+    expect(outV2).not.toContain("adoption-ratio model");
+  });
+
   it("prints a 'Scanned: N files in Xs.' footer line when meta.coverage is present", async () => {
     const covResult: AuditResult = {
       ...sample,

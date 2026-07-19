@@ -2,31 +2,60 @@
 
 A single number (0–100), a CMMI-style maturity tier, and an A/B/C/Fail letter grade that summarize how closely your codebase follows its own design system — and how prepared that codebase is for coding agents (Claude, Cursor, Copilot) to ship coherent UI without re-deriving the design system from scratch.
 
-## The formula (`scoring-v1`)
+## The formula (`scoring-v3`)
 
-For each axis with `opportunities > 0`:
+Each axis measures **adoption**: of every opportunity a rule could have
+flagged on that axis, how many came out clean?
 
 ```
-weightedFindings = 4·errorCount + 2·warningCount + 1·infoCount
-rateScore        = max(0, 100 · (1 − weightedFindings / opportunities))
-absoluteCap      = 100 − K · log10(1 + weightedFindings)
-axisScore        = min(rateScore, absoluteCap)
+For each rule:  cleanᵣ = max(0, opportunitiesᵣ − findingsᵣ)
 
-finalScore = equal-weight mean of axisScore across active axes (opportunities > 0)
+adoption  = Σ cleanᵣ / Σ opportunitiesᵣ            // across the axis's rules
+axisScore = Σ cleanᵣ > 0 ? max(1, round(100 · adoption)) : 0
+
+finalScore = round(equal-weight mean of axisScore, over axes with opportunities ≥ 30)
 tier       = scoreToTier(finalScore)
              // 0–19   Foundational
              // 20–39  Managed
              // 40–59  Defined
              // 60–79  Quantitative
              // 80–100 Autonomous
-grade      = computeGrade(finalScore, axes)
-             // A ≥ 80 · B ≥ 60 · C ≥ 40 · Fail < 40
-             // auto-fail (→ Fail regardless of score): ≥ 2 axes scored 0
+grade      = bandGrade(finalScore)
+             // A ≥ 80 · B ≥ 60 · C ≥ 40 · Fail < 40 — a pure band lookup, no auto-fail
 ```
 
-`K` is calibrated against a public 8-repo corpus. Current calibrated value: **K = 0** (rounded from 0.048); LOO MAE = **10.36 pts**. The cap slot is preserved structurally so future re-fits can drop in without a migration.
+The `max(1, …)` floor means a positive-adoption axis never rounds down to
+`0` — a score of `0` is reserved for genuine zero adoption. This holds no
+matter how many opportunities the axis has (the "no cliff" property): see
+[`docs/architecture/scoring.md`](../architecture/scoring.md) for the full
+per-rule derivation.
 
-The Health Score is the equal-weight mean of every active axis (axes with `opportunities > 0`). Users can disable axes they don't care about via `.lyse.yaml`.
+**Axes need at least 30 opportunities to count** (`scoring.minSampleSize` in
+`.lyse.yaml`, default 30). Below that, the axis reports `insufficient sample
+(n=<opportunities>) — not scored` and is excluded from the mean; at exactly
+`0` opportunities it reports `not scored — no <axis> opportunities in scope`
+instead. If every axis falls below the threshold, `finalScore` is `N/A`. Real
+repos clear 30 opportunities per axis easily — this mainly affects tiny or
+synthetic codebases.
+
+Severity (`error`/`warning`/`info`) does **not** feed the score arithmetic in
+`scoring-v3` — it drives finding display order and CI-gate policy
+independently. See [`docs/architecture/scoring.md`](../architecture/scoring.md#severity-is-displayci-only-not-score).
+
+The Health Score is the equal-weight mean of every axis that clears the
+minimum sample size. Users can disable axes they don't care about via
+`.lyse.yaml`.
+
+### Previous scores are not comparable
+
+`scoring-v3` scores are **not comparable** to scores from earlier
+`scoring-v1.x` releases — the formula changed (opportunity-weighted clean
+ratio, no severity weighting, no fitted constant), and a repo's number can
+move by tens of points with no code change at all. The old formula stays
+reachable for one minor release via `lyse audit --score-model v2` (stamps
+`scoringVersion: "scoring-v1.1"`) if you need it for a migration comparison.
+Every audit artifact stamps `scoringVersion`, so tooling can detect a formula
+change and refuse to diff across it.
 
 ## The 6 axes
 
@@ -76,26 +105,30 @@ Rules on this axis:
 
 Does a design system that ships AI surfaces govern them responsibly — AI-generated content marked, loading/error and live-region states present, feedback and confidence affordances, source attribution, non-human (bot) labeling, and AI-reserved tokens used only on AI surfaces? Lyse's differentiated axis. Silent on design systems with no AI surface (so non-AI systems are never penalized). See [`docs/architecture/sub-axes.md`](../architecture/sub-axes.md) for the full ai-governance sub-axis list.
 
-#### Early-adopter grace ramp (ADR-0018)
+#### No more early-adopter grace ramp — min-N replaced it
 
-The ai-governance axis activates the moment a design system ships *any* AI surface. Without a ramp, adding a single `AIBadge` to a healthy DS would suddenly apply the full weight of ~10 governance affordances it hasn't built yet — cratering the score (~−20 pts) and punishing teams for *starting* to do AI governance.
+Earlier scoring versions ramped the ai-governance axis's *contribution* in
+gradually as a design system shipped more AI markers (ADR-0018), because
+without a ramp, adding a single `AIBadge` to a healthy DS would apply the
+full weight of ~10 governance affordances it hadn't built yet, cratering the
+score for teams just starting AI governance.
 
-Instead the axis's contribution **ramps in with AI-surface maturity**:
-
-```
-graceFactor = min(1, aiMarkerCount / window)      # window default 5
-```
-
-The ai-governance contribution is scaled by `graceFactor`: at 1 AI marker it weighs `1/window` (≈20 %), at `window`+ markers it weighs fully. Findings are **still reported** at every stage — only their score *contribution* ramps in, so the guidance is visible from day one without the cliff. The window is configurable via `scoring.aiGovernanceGraceWindow` in `.lyse.yaml` (set `1` to disable the ramp). This grace applies **only** to ai-governance — every other axis is scored fully from the first finding.
+`scoring-v3` retires the ramp: the general **min-N gate** (30 opportunities,
+above) is the honest replacement. A design system with only 1–2 AI markers
+typically has too few `ai-governance` opportunities to clear 30 and the axis
+reports `insufficient sample` rather than a volatile low number — the same
+"don't crater the score on a thin sample" outcome, achieved by the same
+mechanism every other axis already uses, instead of an axis-specific ramp.
+`scoring.aiGovernanceGraceWindow` in `.lyse.yaml` is no longer read by the v3
+scorer (still consulted by the `--score-model v2` escape hatch).
 
 ## Axis score, fields, and N/A
 
-- **`errorCount` / `warningCount` / `infoCount`** — findings on this axis per severity, after allowlists.
+- **`findings`** — count of findings on this axis, after allowlists (a raw unit count — severity does not weight it).
 - **`opportunities`** — code locations the rule visited (potential violation sites + compliant usages).
-- **`K`** — global calibration constant (currently 0; the cap slot is preserved so future re-fits drop in without a migration).
-- **`opportunities == 0`** → axis is N/A and excluded from the equal-weight mean. There are no hand-picked weights to redistribute.
-
-Severity weighting (4 / 2 / 1) ensures one broken-token `error` is not equivalent to one missing-description `info`.
+- **`opportunities === 0`** → axis reports `not scored — no <axis> opportunities in scope` and is excluded from the mean.
+- **`0 < opportunities < 30`** → axis reports `insufficient sample (n=<opportunities>) — not scored` and is excluded from the mean.
+- **`opportunities ≥ 30`** → axis is activated and contributes its score to the equal-weight mean. There are no hand-picked weights to redistribute.
 
 ## Rounding
 
@@ -154,7 +187,7 @@ Lyse ships **66 deterministic static rules across 6 axes**. Default audits are s
 | Components | `components/no-native-shadows`, `naming/component-pascalcase`, `naming/hook-prefix` | Reusable components over native HTML + predictable identifier conventions |
 | Stories | `stories/coverage` | Storybook or alternative documentation per component |
 | AI surface | `ai-surface/agents-md-quality`, `ai-surface/component-manifest-json`, `ai-surface/ds-index-exported` | Machine-readable signals coding agents rely on |
-| AI governance | `ai-governance/ai-content-live-region`, `ai-governance/ai-loading-error-states`, `ai-governance/ai-marker-component-present`, `ai-governance/confidence-indicator-present`, `ai-governance/bot-identity-labeling`, `ai-governance/draft-attribution`, `ai-governance/interaction-pattern-docs`, `ai-governance/ai-token-misuse`, `ai-governance/product-analytics`, `ai-governance/source-attribution-present`, `ai-governance/feedback-control-present` | Governs AI surfaces responsibly; ramps in with AI-surface maturity (see grace ramp above) |
+| AI governance | `ai-governance/ai-content-live-region`, `ai-governance/ai-loading-error-states`, `ai-governance/ai-marker-component-present`, `ai-governance/confidence-indicator-present`, `ai-governance/bot-identity-labeling`, `ai-governance/draft-attribution`, `ai-governance/interaction-pattern-docs`, `ai-governance/ai-token-misuse`, `ai-governance/product-analytics`, `ai-governance/source-attribution-present`, `ai-governance/feedback-control-present` | Governs AI surfaces responsibly; silent (min-N excluded) until a design system has enough AI-surface opportunities to score (see min-N above) |
 
 Each rule contributes 1 sub-axis to the reliability catalogue (66 sub-axes total, 52 currently `stable` and scored). The full catalogue lives at [`docs/architecture/sub-axes.md`](../architecture/sub-axes.md); promotion to `stable` requires N ≥ 40 independently-provenanced samples + Wilson 95 % LB ≥ 0.90 on recall (and ≥ 0.90 on precision to contribute to the score).
 
@@ -163,12 +196,28 @@ Known limitations:
 1. **Contrast WCAG** is not measured — `a11y/essentials` wraps `eslint-plugin-jsx-a11y` only. Full WCAG-ratio coverage waits on a browser engine integration (planned, Playwright + axe-core).
 2. **No LLM augmentation by default.** Default audits are fully static; areas like themes, motion, deep documentation, and cross-platform parity are out of scope for the static pipeline.
 3. **Provisional gold set.** The calibration corpus is small and community re-labels via the public `lyse-bench` repo supersede the seed annotations.
+4. **`ai-governance` can read misleadingly high (~100) on a repo with no real AI surface.** Its opportunity denominator is currently structural (project-level presence checks), so a repo with zero AI-surface findings and a large denominator scores near-perfect adoption by default rather than N/A — a graph-derived denominator that scales with actual AI-surface size is planned for a later phase. Don't read a lone 100 on `ai-governance` as "this DS governs AI well"; check whether it ships an AI surface at all first.
 
 ## Compliance counters and cross-repo comparison
 
 Several rules ship with **compliance counters** that recognize Tailwind utility classes, `var(--token-name)` references, and theme function calls as compliant token usage. This adds thousands of "compliant usage" hits to the denominator on utility-first codebases — a higher score reflects genuine discipline, not a missed finding.
 
-This makes cross-repo comparisons fragile. Tracking your repo's Health Score **over time** is meaningful; comparing scores **across different repos** is less so because their `opportunities` populations and compliance-counter paradigms differ. At very small counts (< 50 opportunities) scores get noisy — don't over-interpret a 7-point swing on a tiny codebase.
+This makes cross-repo comparisons fragile. Tracking your repo's Health Score **over time** is meaningful; comparing scores **across different repos** is less so because their `opportunities` populations and compliance-counter paradigms differ.
+
+**Below 30 opportunities, an axis doesn't score at all** — the min-N gate
+excludes it from the mean rather than let a handful of samples swing the
+number (see [The formula](#the-formula-scoring-v3) above). This is a hard
+cutoff, not a soft noise warning: a tiny or synthetic repo can legitimately
+report `finalScore: N/A` if every axis falls short.
+
+**Honest caveat on the score distribution.** Because the model measures a
+clean-adoption ratio rather than a severity-weighted penalty, scores across
+real-world repos compress toward the high 70s–90s more than under earlier
+scoring versions — most production codebases have a high (if imperfect)
+adoption ratio on any axis with real opportunities, and the min-N gate drops
+out the volatile small-sample axes that used to pull scores down. A score in
+that range does not mean "no drift"; check the per-axis and per-finding
+detail before treating a high number as a clean bill of health.
 
 ## Trend over time
 

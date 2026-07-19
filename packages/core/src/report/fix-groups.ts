@@ -1,5 +1,24 @@
-import type { AxisName, Finding, ProjectionEntry, ProjectionMeta, Severity } from "../types.js";
-import { scoreFromFindings, type ScoreOptions } from "../scorer.js";
+import type {
+  AxisName,
+  Finding,
+  PerRuleOpportunity,
+  ProjectionEntry,
+  ProjectionMeta,
+  Severity,
+} from "../types.js";
+import { scoreAudit, type ScoreModel } from "../scorer.js";
+
+/** The subset of scoring inputs `computeProjection` re-scores against. */
+export interface ProjectionRun {
+  opportunitiesByAxis: Record<AxisName, number>;
+  perRuleOpportunities: PerRuleOpportunity[];
+}
+
+/** Scorer options threaded through to the projection re-score (per model). */
+export interface ProjectionScoreOpts {
+  minSampleSize?: number;
+  aiGovernanceGrace?: number;
+}
 
 /**
  * Default distinct-file threshold above which a fix group is flagged
@@ -77,11 +96,20 @@ function removeGroupFindings(allFindings: Finding[], toRemove: ReadonlySet<Findi
 
 function projectedFinalScore(
   remaining: Finding[],
-  opportunitiesByAxis: Record<AxisName, number>,
-  scoreOpts: ScoreOptions,
+  run: ProjectionRun,
+  model: ScoreModel,
+  scoreOpts: ProjectionScoreOpts,
   fallback: number,
 ): number {
-  const result = scoreFromFindings(remaining, opportunitiesByAxis, scoreOpts);
+  const result = scoreAudit(
+    model,
+    {
+      findings: remaining,
+      opportunitiesByAxis: run.opportunitiesByAxis,
+      perRuleOpportunities: run.perRuleOpportunities,
+    },
+    scoreOpts,
+  );
   return result.finalScore === "N/A" ? fallback : result.finalScore;
 }
 
@@ -100,12 +128,16 @@ function projectedFinalScore(
  * silently yields zero gain for every candidate.
  *
  * Returns undefined when `finalScore` is `"N/A"` or no group has gain > 0.
+ *
+ * The re-score runs under the SAME `model` (v2 or v3) that produced
+ * `finalScore`, so projected gains are consistent with the headline score.
  */
 export function computeProjection(
   groups: FindingGroup[],
   allFindings: Finding[],
-  opportunitiesByAxis: Record<AxisName, number>,
-  scoreOpts: ScoreOptions,
+  run: ProjectionRun,
+  model: ScoreModel,
+  scoreOpts: ProjectionScoreOpts,
   finalScore: number | "N/A",
   cap = 3,
 ): ProjectionMeta | undefined {
@@ -118,7 +150,7 @@ export function computeProjection(
   for (const group of candidates) {
     const toRemove = new Set(group.findings);
     const remaining = removeGroupFindings(allFindings, toRemove);
-    const projected = projectedFinalScore(remaining, opportunitiesByAxis, scoreOpts, baseline);
+    const projected = projectedFinalScore(remaining, run, model, scoreOpts, baseline);
     const gain = Math.max(0, projected - baseline);
     if (gain <= 0) continue;
     entries.push({
@@ -142,7 +174,7 @@ export function computeProjection(
   const topGroups = groups.filter((group) => topKeys.has(group.key));
   const topRemoved = new Set(topGroups.flatMap((group) => group.findings));
   const remainingAfterTop = removeGroupFindings(allFindings, topRemoved);
-  const afterTop = projectedFinalScore(remainingAfterTop, opportunitiesByAxis, scoreOpts, baseline);
+  const afterTop = projectedFinalScore(remainingAfterTop, run, model, scoreOpts, baseline);
   const totalGainTop3 = Math.max(0, afterTop - baseline);
 
   return { top, totalGainTop3 };

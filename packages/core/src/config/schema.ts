@@ -44,6 +44,12 @@ export const LyseConfigSchema = z.object({
       // is graced so adding one AIBadge doesn't crater a healthy score. Set 1 to
       // disable the ramp. Default 5.
       aiGovernanceGraceWindow: z.number().int().min(1).optional(),
+      // Scoring v3 project (Task 5): pick the scoring formula and the v3
+      // minimum-sample-size floor. `model` mirrors ScoreModel in scorer.ts;
+      // "v3" is the default (DEFAULT_SCORE_MODEL), "v2" is the opt-in
+      // legacy escape hatch.
+      model: z.enum(["v2", "v3"]).optional(),
+      minSampleSize: z.number().int().min(1).optional(),
     })
     .nullish()
     .transform((v) => v ?? undefined),

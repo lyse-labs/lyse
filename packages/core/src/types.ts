@@ -89,6 +89,12 @@ export interface Finding {
   fixGroup?: FixGroup;
 }
 
+export interface PerRuleOpportunity {
+  ruleId: string;
+  axis: AxisName;
+  opportunities: number;
+}
+
 export interface RuleContext {
   repoRoot: string;
   tokens: TokenMap | null;
@@ -396,7 +402,7 @@ export interface GradeResult {
 }
 
 export interface AuditResult {
-  schemaVersion: 2;
+  schemaVersion: 2 | 3;
   rulesVersion: string;
   toolVersion: string;
   /**
@@ -484,6 +490,10 @@ export interface LyseConfig {
   /** Scoring tuning. `aiGovernanceGraceWindow` ramps the ai-governance axis in over N AI markers (#89 / ADR-0018; default 5). */
   scoring?: {
     aiGovernanceGraceWindow?: number;
+    /** Scoring formula to use: "v2" (legacy, default) or "v3" (opt-in). See `scoreAudit` in scorer.ts. */
+    model?: "v2" | "v3";
+    /** v3 only: minimum per-axis opportunity count before an axis scores (else "N/A"). Default `MIN_SAMPLE_SIZE` (30). */
+    minSampleSize?: number;
   };
   i18n?: {
     locales?: string[];

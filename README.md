@@ -44,7 +44,7 @@ lyse share        # copy a Markdown summary to your clipboard
 
 ## What it audits
 
-A Health Score (0–100) across **6 axes** — tokens, a11y, components, stories, ai-surface, ai-governance — from deterministic static rules. CMMI-style maturity tier (Foundational → Autonomous) mapped from the score. No LLM, no network, fully local by default. Full formula and per-rule docs in [`docs/`](./docs/).
+A Health Score (0–100) across **6 axes** — tokens, a11y, components, stories, ai-surface, ai-governance — from deterministic static rules. Each axis is an opportunity-weighted clean-adoption ratio (`scoring-v3`); axes need 30+ opportunities to count. CMMI-style maturity tier (Foundational → Autonomous) mapped from the score. No LLM, no network, fully local by default. The previous severity-weighted formula stays reachable for one minor release via `--score-model v2` — scores are not comparable across the two. Full formula and per-rule docs in [`docs/`](./docs/).
 
 The optional **render layer** (`lyse audit --render`) runs additional checks against a pre-built Storybook (`storybook-static/` or a URL): `tokens/rendered-token-fidelity` (CSS custom property drift) and `a11y/runtime-axe` (axe-core a11y violations). Both are experimental and do not affect the Health Score.
 

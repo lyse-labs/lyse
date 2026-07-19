@@ -1,68 +1,44 @@
 {
-  "$schema": "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-result.json",
+  "$schema": "https://github.com/lyse-labs/lyse/raw/main/schemas/v3/lyse-result.json",
   "axes": [
     {
-      "absoluteCap": 100,
       "axis": "tokens",
       "findings": 119,
       "opportunities": 2392,
-      "rateScore": 90,
-      "score": 90,
-      "sevPenalty": 238,
-      "weightedFindings": 238
+      "score": 95
     },
     {
-      "absoluteCap": 100,
       "axis": "a11y",
       "findings": 85,
       "opportunities": 395,
-      "rateScore": 57,
-      "score": 57,
-      "sevPenalty": 170,
-      "weightedFindings": 170
+      "score": 78
     },
     {
-      "absoluteCap": 100,
       "axis": "components",
       "findings": 114,
       "opportunities": 1494,
-      "rateScore": 92,
-      "score": 92,
-      "sevPenalty": 126,
-      "weightedFindings": 126
+      "score": 92
     },
     {
-      "absoluteCap": 100,
       "axis": "stories",
       "findings": 1,
       "opportunities": 18,
-      "rateScore": 89,
-      "score": 89,
-      "sevPenalty": 2,
-      "weightedFindings": 2
+      "score": "N/A"
     },
     {
-      "absoluteCap": 100,
       "axis": "ai-surface",
       "findings": 6,
       "opportunities": 39,
-      "rateScore": 74,
-      "score": 74,
-      "sevPenalty": 10,
-      "weightedFindings": 10
+      "score": 85
     },
     {
-      "absoluteCap": 100,
       "axis": "ai-governance",
       "findings": 10,
       "opportunities": 598,
-      "rateScore": 97,
-      "score": 100,
-      "sevPenalty": 20,
-      "weightedFindings": 20
+      "score": 98
     }
   ],
-  "finalScore": 84,
+  "finalScore": 90,
   "findingsCount": 335,
   "findingsDigest": "931c830e70d38ad7517a59191648b1f9d03641553b80720011231ef47b5109fe",
   "grade": {
@@ -120,7 +96,7 @@
         {
           "count": 62,
           "files": 16,
-          "gain": 5,
+          "gain": 3,
           "key": "a11y/interactive-role-name",
           "migrationScale": false,
           "ruleId": "a11y/interactive-role-name"
@@ -142,13 +118,13 @@
           "ruleId": "a11y/semantic-html"
         }
       ],
-      "totalGainTop3": 8
+      "totalGainTop3": 5
     }
   },
   "repoRoot": "<REPO>/polaris-react",
   "rulesVersion": "0.1.0",
-  "schemaVersion": 2,
-  "scoringVersion": "scoring-v1.1",
+  "schemaVersion": 3,
+  "scoringVersion": "scoring-v3",
   "stack": [
     "react",
     "storybook"
