@@ -7,14 +7,22 @@ dist/
 build/
 *.tsbuildinfo
 
+# Stray compiled output from a local `tsc` run next to its .ts source
+packages/core/validation/*.js
+packages/core/validation/*.js.map
+
 # Test artifacts
 coverage/
 .nyc_output/
 
 # Environment
-.env
-.env.local
-.env.*.local
+.env*
+
+# Credential / key material (defense in depth — none should ever be committed)
+*.pem
+*.key
+*.p12
+id_rsa*
 
 # Editor
 .vscode/
