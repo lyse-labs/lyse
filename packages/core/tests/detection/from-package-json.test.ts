@@ -133,3 +133,26 @@ describe("detectComponentsModule — workspace DS-self detection", () => {
     expect(r.componentsModule.confidence).toBe("high");
   });
 });
+
+describe("detectComponentsModule — self-DS vs consumer (P0)", () => {
+  it("self-DS monorepo: workspace-owned @org/components → workspace DS export (dsSelfMode-eligible)", async () => {
+    writeFileSync(join(dir, "package.json"), JSON.stringify({
+      private: true,
+      workspaces: ["packages/*"],
+      dependencies: { "@acme/components": "workspace:*" },
+    }));
+    mkdirSync(join(dir, "packages", "components"), { recursive: true });
+    writeFileSync(join(dir, "packages", "components", "package.json"), JSON.stringify({ name: "@acme/components" }));
+    const r = await detectFromPackageJson(dir);
+    expect(r.componentsModule.source.startsWith("workspace DS export")).toBe(true);
+  });
+
+  it("consumer app: external @org/ui dependency → internal-named UI package (NOT self-DS)", async () => {
+    writeFileSync(join(dir, "package.json"), JSON.stringify({
+      dependencies: { "@acme/ui": "^1.2.3" },
+    }));
+    const r = await detectFromPackageJson(dir);
+    expect(r.componentsModule.source.startsWith("workspace DS export")).toBe(false);
+    expect(r.componentsModule.value).toBe("@acme/ui");
+  });
+});
