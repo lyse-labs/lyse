@@ -1,16 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-result.json",
+  "$id": "https://github.com/lyse-labs/lyse/raw/main/schemas/v3/lyse-result.json",
   "title": "Lyse audit result",
   "type": "object",
   "required": ["schemaVersion", "rulesVersion", "toolVersion", "scoringVersion", "repoRoot", "stack", "finalScore", "axes", "findings"],
   "additionalProperties": true,
   "properties": {
     "$schema": { "type": "string", "format": "uri" },
-    "schemaVersion": { "const": 2 },
+    "schemaVersion": { "const": 3 },
     "rulesVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
     "toolVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+" },
-    "scoringVersion": { "type": "string", "const": "scoring-v1.1" },
+    "scoringVersion": { "type": "string", "const": "scoring-v3" },
     "repoRoot": { "type": "string" },
     "timestamp": { "type": "string" },
     "stack": { "type": "array", "items": { "type": "string" } },
@@ -35,31 +35,7 @@
             ]
           },
           "findings": { "type": "integer", "minimum": 0 },
-          "opportunities": { "type": "integer", "minimum": 0 },
-          "rateScore": {
-            "description": "100·(1 − weightedFindings/opportunities), pre-cap. Phase 4.1 scorer v2.",
-            "oneOf": [
-              { "type": "integer" },
-              { "type": "string", "const": "N/A" }
-            ]
-          },
-          "absoluteCap": {
-            "description": "100 − K·log₁₀(1 + sevPenalty). Phase 4.1 scorer v2.",
-            "oneOf": [
-              { "type": "integer" },
-              { "type": "string", "const": "N/A" }
-            ]
-          },
-          "sevPenalty": {
-            "description": "4·errorCount + 2·warningCount + 1·infoCount. Phase 4.1 scorer v2.",
-            "type": "integer",
-            "minimum": 0
-          },
-          "weightedFindings": {
-            "description": "Alias of sevPenalty exposed for clarity. Phase 4.1 scorer v2.",
-            "type": "integer",
-            "minimum": 0
-          }
+          "opportunities": { "type": "integer", "minimum": 0 }
         }
       }
     },
