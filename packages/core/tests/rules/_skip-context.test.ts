@@ -12,4 +12,8 @@ describe("isColorTokenDefFile — token-definition conventions (P0)", () => {
     expect(isColorTokenDefFile("src/components/Button/Button.tsx")).toBe(false);
     expect(isColorTokenDefFile("src/pages/dashboard.tsx")).toBe(false);
   });
+  it("does NOT suppress components living under theme/tokens or semantic-tokens dirs (M2)", () => {
+    expect(isColorTokenDefFile("packages/react/src/theme/tokens/Button.tsx")).toBe(false);
+    expect(isColorTokenDefFile("packages/react/src/theme/semantic-tokens/Panel.jsx")).toBe(false);
+  });
 });

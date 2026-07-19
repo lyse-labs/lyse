@@ -85,7 +85,7 @@ export function isGeneratedCssSource(source: string): boolean {
 // ---------------------------------------------------------------------------
 
 const COLOR_DEF_FILE_RE =
-  /(?:^|[\\/])(?:colors|palette)\.(?:ts|js|css|scss)$|(?:^|[\\/])[^/\\]*-colors\.(?:ts|js)$|(?:^|[\\/])_legacy-colors\.(?:ts|js)$|(?:^|[\\/])[^/\\]*\.colors\.(?:ts|css|scss)$|(?:^|[\\/])demos[\\/]|(?:\.demo\.[cm]?[jt]sx?)$|(?:^|[\\/])stories[\\/][^/\\]*\.(?:css|scss)$|(?:^|[\\/])_?themes?\.(?:ts|tsx|js|jsx|mjs|cjs)$|(?:^|[\\/])_?variables\.(?:css|scss|sass|less)$|(?:^|[\\/])[^/\\]*-variables\.(?:css|scss|sass|less)$|(?:^|[\\/])[^/\\]*variables[^/\\]*\.(?:css|scss|sass|less)$|(?:^|[\\/])_?tokens\.(?:scss|sass|less)$|(?:^|[\\/])_?vars?\.(?:scss|sass|less)$|(?:^|[\\/])theme[\\/]tokens[\\/]|(?:^|[\\/])semantic-tokens[\\/]/;
+  /(?:^|[\\/])(?:colors|palette)\.(?:ts|js|css|scss)$|(?:^|[\\/])[^/\\]*-colors\.(?:ts|js)$|(?:^|[\\/])_legacy-colors\.(?:ts|js)$|(?:^|[\\/])[^/\\]*\.colors\.(?:ts|css|scss)$|(?:^|[\\/])demos[\\/]|(?:\.demo\.[cm]?[jt]sx?)$|(?:^|[\\/])stories[\\/][^/\\]*\.(?:css|scss)$|(?:^|[\\/])_?themes?\.(?:ts|tsx|js|jsx|mjs|cjs)$|(?:^|[\\/])_?variables\.(?:css|scss|sass|less)$|(?:^|[\\/])[^/\\]*-variables\.(?:css|scss|sass|less)$|(?:^|[\\/])[^/\\]*variables[^/\\]*\.(?:css|scss|sass|less)$|(?:^|[\\/])_?tokens\.(?:scss|sass|less)$|(?:^|[\\/])_?vars?\.(?:scss|sass|less)$|(?:^|[\\/])theme[\\/]tokens[\\/].*\.(?:ts|js|mjs|cjs|json|css|scss|sass|less)$|(?:^|[\\/])semantic-tokens[\\/].*\.(?:ts|js|mjs|cjs|json|css|scss|sass|less)$/;
 
 /**
  * Returns true if the file is a color token definition file, demo, or a CSS/SCSS
@@ -104,7 +104,10 @@ const COLOR_DEF_FILE_RE =
  *     for TS files, but not stories/x.module.css)
  *   - _?tokens.{scss,sass,less} / _?vars?.{scss,sass,less} (e.g. var.scss, vars.scss,
  *     _tokens.scss — Element Plus / Ant Design style Sass token partials)
- *   - theme/tokens/** / semantic-tokens/** (e.g. Chakra UI's token-definition dirs)
+ *   - theme/tokens/ and semantic-tokens/ definition files — restricted to
+ *     definition-file extensions (.ts/.js/.mjs/.cjs/.json/.css/.scss/.sass/.less)
+ *     so a consumer component like theme/tokens/Button.tsx is NOT suppressed
+ *     (e.g. Chakra UI's token-definition dirs)
  *
  * Note: theme.ts / theme.css are intentionally excluded — they are borderline
  * (theme files can be component stylesheets, not purely token definitions).
