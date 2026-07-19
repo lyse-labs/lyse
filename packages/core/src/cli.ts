@@ -29,6 +29,7 @@ import { runExplainScore } from "./commands/explain-score.js";
 import { feedbackMissed } from "./commands/feedback.js";
 import { auditDirectory, RefuseToRunError, ScopeError } from "./commands/audit-pipeline.js";
 import type { AuditFlags } from "./commands/audit-pipeline.js";
+import { resolveScoreModel } from "./scorer.js";
 import { runShare } from "./commands/share.js";
 import { runBadge } from "./commands/badge.js";
 import { runInit } from "./commands/init.js";
@@ -295,6 +296,25 @@ const auditCommand = defineCommand({
         process.stderr.write(mig.warning);
       }
       persistCurrentVersion({ currentVersion: VERSION });
+    }
+
+    // Validate --score-model / LYSE_SCORE_MODEL at the CLI boundary so a bad
+    // value yields a clean [lyse] Error (exit 64), not a raw stack trace from
+    // resolveScoreModel deep in the pipeline. Config `scoring.model` is
+    // already validated by loadConfig's zod enum, so flag+env is the full set
+    // of unvalidated sources that could reach resolveScoreModel.
+    try {
+      resolveScoreModel({
+        ...(typeof args["score-model"] === "string" && args["score-model"]
+          ? { flag: args["score-model"] as string }
+          : {}),
+        ...(process.env.LYSE_SCORE_MODEL !== undefined
+          ? { env: process.env.LYSE_SCORE_MODEL }
+          : {}),
+      });
+    } catch (err) {
+      console.error(`[lyse] Error: ${(err as Error).message}`);
+      process.exit(64); // EX_USAGE
     }
 
     const entitlement = await checkEntitlement("audit");

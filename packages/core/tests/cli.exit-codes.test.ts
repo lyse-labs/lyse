@@ -33,4 +33,19 @@ describe("cli exit codes", () => {
     const r = runAuditTest({ path: fixture, extraArgs: ["--threshold", "not-a-number"] });
     expect(r.status).toBe(64);
   });
+
+  it("exits 64 with a clean message (no stack trace) for invalid --score-model", () => {
+    const r = runAuditTest({ path: fixture, format: "json", extraArgs: ["--score-model", "v9000"] });
+    expect(r.status).toBe(64);
+    expect(r.stderr).toContain('[lyse] Error: Invalid scoring model "v9000" — expected "v2" or "v3".');
+    // A clean CLI error — never a raw uncaught stack trace.
+    expect(r.stderr).not.toMatch(/at Object\.<anonymous>|at async |\.js:\d+:\d+/);
+  });
+
+  it("exits 64 with a clean message for an invalid LYSE_SCORE_MODEL env value", () => {
+    const r = runAuditTest({ path: fixture, format: "json", env: { LYSE_SCORE_MODEL: "bogus" } });
+    expect(r.status).toBe(64);
+    expect(r.stderr).toContain('[lyse] Error: Invalid scoring model "bogus" — expected "v2" or "v3".');
+    expect(r.stderr).not.toMatch(/at Object\.<anonymous>|at async |\.js:\d+:\d+/);
+  });
 });

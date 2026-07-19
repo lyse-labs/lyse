@@ -9,8 +9,8 @@ import { SCORING_V2_LEGACY, SCORING_V3 } from "../src/reliability/score/version-
 import { auditDirectory } from "../src/commands/audit-pipeline.js";
 import type { AxisName, Finding, PerRuleOpportunity } from "../src/types.js";
 
-// Repo root from packages/core/tests/ → up 3 (tests → core → packages → root).
-const FULL_DS = join(import.meta.dirname, "..", "..", "..", "fixtures", "full-ds");
+// fixtures/full-ds is under packages/core/ → up 1 (tests → core), then fixtures/.
+const FULL_DS = join(import.meta.dirname, "..", "fixtures", "full-ds");
 
 function finding(ruleId: string, axis: AxisName, severity: Finding["severity"], file: string): Finding {
   return { ruleId, axis, severity, location: { file, line: 1, column: 1 }, message: "drift" };
@@ -132,12 +132,6 @@ describe("scoreAudit — v3 branch", () => {
     expect(bundle.finalScore).toBe("N/A");
     expect(bundle.tier).toBe("N/A");
     expect(bundle.grade.grade).toBe("N/A");
-  });
-});
-
-describe("scoreAudit — invalid model", () => {
-  it("throws via resolveScoreModel before scoreAudit would even be called with a bad model", () => {
-    expect(() => resolveScoreModel({ flag: "v9000" })).toThrow();
   });
 });
 
