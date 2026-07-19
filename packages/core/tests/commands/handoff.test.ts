@@ -159,6 +159,12 @@ describe("runHandoffCommand — interactive, action=launched", () => {
     const skillModule = await import("../../src/agent/skill.js");
     const skillSpy = vi.spyOn(skillModule, "installLyseSkill").mockReturnValue({ path: "/fake", installed: true });
 
+    // The default (non-review) path now traverses the real `confirmBypass`
+    // safety gate. Force its non-interactive branch (auto-proceed) explicitly
+    // instead of relying on the ambient test stdout being non-TTY.
+    const origIsTTY = process.stdout.isTTY;
+    Object.defineProperty(process.stdout, "isTTY", { value: false, configurable: true });
+
     try {
       await runHandoffCommand(root, {
         isInteractive: () => true,
@@ -172,6 +178,7 @@ describe("runHandoffCommand — interactive, action=launched", () => {
       expect(stdoutOutput).toContain("Agent launched");
       expect(stdoutOutput).toContain(agentId);
     } finally {
+      Object.defineProperty(process.stdout, "isTTY", { value: origIsTTY, configurable: true });
       isAvailableSpy.mockRestore();
       skillSpy.mockRestore();
     }
@@ -342,10 +349,17 @@ describe("runHandoffCommand — reviewMode resolution (--review / LYSE_HANDOFF_R
 
     const { isAvailableSpy, skillSpy } = await stubAgentAvailability();
 
+    // Default (non-review) path hits the real `confirmBypass` gate — force its
+    // non-interactive branch (auto-proceed) so the test never depends on the
+    // ambient stdout being non-TTY.
+    const origIsTTY = process.stdout.isTTY;
+    Object.defineProperty(process.stdout, "isTTY", { value: false, configurable: true });
+
     try {
       await runHandoffCommand(root, { isInteractive: () => true, prompt: promptSpy, launch: launchSpy });
       expect(launchOpts).toEqual({ reviewMode: false });
     } finally {
+      Object.defineProperty(process.stdout, "isTTY", { value: origIsTTY, configurable: true });
       isAvailableSpy.mockRestore();
       skillSpy.mockRestore();
     }

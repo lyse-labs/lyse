@@ -330,17 +330,29 @@ describe("runHandoff — agent launch", () => {
 });
 
 describe("runHandoff — confirmation gate (default/unattended mode)", () => {
-  async function stubAgentAvailability(): Promise<{ isAvailableSpy: ReturnType<typeof vi.spyOn>; skillSpy: ReturnType<typeof vi.spyOn> }> {
+  // Deterministic agent detection: stub `detectAgents` to always return the
+  // claude-code spec, so the confirm-gate assertions never depend on the
+  // ambient filesystem/PATH (whether `~/.claude` exists or `claude` is
+  // installed). Without this the message falls back to the raw agent id in a
+  // clean env (e.g. CI) instead of the "Claude Code" displayName.
+  async function stubAgentAvailability(): Promise<{
+    detectSpy: ReturnType<typeof vi.spyOn>;
+    isAvailableSpy: ReturnType<typeof vi.spyOn>;
+    skillSpy: ReturnType<typeof vi.spyOn>;
+  }> {
     const registryModule = await import("../../src/agent/registry.js");
+    const claudeSpec = registryModule.AGENTS.find((a) => a.id === "claude-code");
+    if (claudeSpec === undefined) throw new Error("claude-code spec missing from AGENTS");
+    const detectSpy = vi.spyOn(registryModule, "detectAgents").mockResolvedValue([claudeSpec]);
     const isAvailableSpy = vi.spyOn(registryModule, "isCommandAvailable").mockResolvedValue(true);
     const skillModule = await import("../../src/agent/skill.js");
     const skillSpy = vi.spyOn(skillModule, "installLyseSkill").mockReturnValue({ path: "/fake", installed: true });
-    return { isAvailableSpy, skillSpy };
+    return { detectSpy, isAvailableSpy, skillSpy };
   }
 
   it("prompts with a safety message naming the agent before launching, and launches when confirmed", async () => {
     const root = makeTempRoot();
-    const { isAvailableSpy, skillSpy } = await stubAgentAvailability();
+    const { detectSpy, isAvailableSpy, skillSpy } = await stubAgentAvailability();
 
     const confirmSpy = vi.fn().mockResolvedValue(true);
     const launch = vi.fn().mockResolvedValue(0);
@@ -360,6 +372,7 @@ describe("runHandoff — confirmation gate (default/unattended mode)", () => {
       expect(launch).toHaveBeenCalledOnce();
       expect(result).toEqual({ action: "launched", agentId: "claude-code" });
     } finally {
+      detectSpy.mockRestore();
       isAvailableSpy.mockRestore();
       skillSpy.mockRestore();
     }
@@ -367,7 +380,7 @@ describe("runHandoff — confirmation gate (default/unattended mode)", () => {
 
   it("returns { action: 'skipped' } and never calls launch when the user declines", async () => {
     const root = makeTempRoot();
-    const { isAvailableSpy, skillSpy } = await stubAgentAvailability();
+    const { detectSpy, isAvailableSpy, skillSpy } = await stubAgentAvailability();
 
     const confirmSpy = vi.fn().mockResolvedValue(false);
     const launch = vi.fn().mockResolvedValue(0);
@@ -383,6 +396,7 @@ describe("runHandoff — confirmation gate (default/unattended mode)", () => {
       expect(launch).not.toHaveBeenCalled();
       expect(result).toEqual({ action: "skipped" });
     } finally {
+      detectSpy.mockRestore();
       isAvailableSpy.mockRestore();
       skillSpy.mockRestore();
     }
@@ -390,7 +404,7 @@ describe("runHandoff — confirmation gate (default/unattended mode)", () => {
 
   it("does not call deps.confirm when reviewMode is true, and passes reviewMode through to launch", async () => {
     const root = makeTempRoot();
-    const { isAvailableSpy, skillSpy } = await stubAgentAvailability();
+    const { detectSpy, isAvailableSpy, skillSpy } = await stubAgentAvailability();
 
     const confirmSpy = vi.fn().mockResolvedValue(false); // would abort if (wrongly) called
     let launchOpts: { reviewMode?: boolean } | undefined;
@@ -411,6 +425,7 @@ describe("runHandoff — confirmation gate (default/unattended mode)", () => {
       expect(launchOpts).toEqual({ reviewMode: true });
       expect(result).toEqual({ action: "launched", agentId: "claude-code" });
     } finally {
+      detectSpy.mockRestore();
       isAvailableSpy.mockRestore();
       skillSpy.mockRestore();
     }
@@ -418,7 +433,7 @@ describe("runHandoff — confirmation gate (default/unattended mode)", () => {
 
   it("passes reviewMode: false through to launch by default", async () => {
     const root = makeTempRoot();
-    const { isAvailableSpy, skillSpy } = await stubAgentAvailability();
+    const { detectSpy, isAvailableSpy, skillSpy } = await stubAgentAvailability();
 
     let launchOpts: { reviewMode?: boolean } | undefined;
     const launch = vi.fn().mockImplementation(async (..._args: unknown[]) => {
@@ -438,14 +453,20 @@ describe("runHandoff — confirmation gate (default/unattended mode)", () => {
       );
       expect(launchOpts).toEqual({ reviewMode: false });
     } finally {
+      detectSpy.mockRestore();
       isAvailableSpy.mockRestore();
       skillSpy.mockRestore();
     }
   });
 
-  it("uses the real confirmBypass default (auto-proceeds in the non-TTY test env) when deps.confirm is not provided", async () => {
+  it("falls back to the real confirmBypass when deps.confirm is omitted (deterministic non-TTY → auto-proceeds)", async () => {
     const root = makeTempRoot();
-    const { isAvailableSpy, skillSpy } = await stubAgentAvailability();
+    const { detectSpy, isAvailableSpy, skillSpy } = await stubAgentAvailability();
+
+    // Force the non-interactive branch of the real confirmBypass explicitly,
+    // instead of relying on the ambient (usually non-TTY) test stdout.
+    const origIsTTY = process.stdout.isTTY;
+    Object.defineProperty(process.stdout, "isTTY", { value: false, configurable: true });
 
     const launch = vi.fn().mockResolvedValue(0);
 
@@ -458,6 +479,8 @@ describe("runHandoff — confirmation gate (default/unattended mode)", () => {
       expect(launch).toHaveBeenCalledOnce();
       expect(result).toEqual({ action: "launched", agentId: "claude-code" });
     } finally {
+      Object.defineProperty(process.stdout, "isTTY", { value: origIsTTY, configurable: true });
+      detectSpy.mockRestore();
       isAvailableSpy.mockRestore();
       skillSpy.mockRestore();
     }
