@@ -23,7 +23,7 @@ export function scoreV3(
   perRuleOpportunities: PerRuleOpportunity[],
   opts: { minSampleSize?: number } = {},
 ): ScoreV3Result {
-  const minN = opts.minSampleSize ?? MIN_SAMPLE_SIZE;
+  const minN = Math.max(1, opts.minSampleSize ?? MIN_SAMPLE_SIZE);
 
   // findings count per ruleId (only rules that recorded opportunities contribute)
   const findingsByRule = new Map<string, number>();
@@ -50,7 +50,7 @@ export function scoreV3(
       continue;
     }
     const clean = cleanByAxis.get(axis) ?? 0;
-    const s = Math.round((100 * clean) / opp);
+    const s = clean > 0 ? Math.max(1, Math.round((100 * clean) / opp)) : 0;
     axes.push({ axis, score: s, findings: fnd, opportunities: opp });
     activated.push(s);
   }

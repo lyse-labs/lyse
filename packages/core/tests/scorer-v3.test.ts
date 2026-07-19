@@ -42,9 +42,40 @@ describe("scoreV3 — adoption ratios", () => {
     expect(r.finalScore).toBe(100); // tokens only
   });
 
-  it("opportunities == 0 → axis N/A", () => {
-    const r = scoreV3([], [O("A", "tokens", 100)]);
-    expect(r.axes.find((a) => a.axis === "a11y")!.score).toBe("N/A");
+  it("no cliff at scale: tiny-but-positive adoption floors at 1, never rounds to 0", () => {
+    // one tokens rule: opp 300, 299 findings → clean 1 → 100*1/300 = 0.33 → plain round = 0, must floor to 1
+    const opps = [O("A", "tokens", 300)];
+    const finds = [...Array(299).fill(0).map(() => F("A", "tokens"))];
+    const r = scoreV3(finds, opps);
+    expect(r.axes.find((a) => a.axis === "tokens")!.score).toBe(1);
+  });
+
+  it("zero adoption still scores 0", () => {
+    // one tokens rule: opp 50, 50 findings → clean 0 → score 0
+    const opps = [O("A", "tokens", 50)];
+    const finds = [...Array(50).fill(0).map(() => F("A", "tokens"))];
+    const r = scoreV3(finds, opps);
+    expect(r.axes.find((a) => a.axis === "tokens")!.score).toBe(0);
+  });
+
+  it("min-N boundary: opp == 30 activates, opp == 29 is N/A", () => {
+    const at = scoreV3([], [O("A", "tokens", 30)]);
+    expect(at.axes.find((a) => a.axis === "tokens")!.score).toBe(100);
+    const below = scoreV3([], [O("A", "tokens", 29)]);
+    expect(below.axes.find((a) => a.axis === "tokens")!.score).toBe("N/A");
+  });
+
+  it("explicit zero-opportunity entry → axis N/A", () => {
+    const r = scoreV3([], [O("A", "tokens", 0)]);
+    expect(r.axes.find((a) => a.axis === "tokens")!.score).toBe("N/A");
+    expect(r.axes.find((a) => a.axis === "tokens")!.opportunities).toBe(0);
+  });
+
+  it("minSampleSize <= 0 does not resurrect a zero-opportunity axis (no NaN tier)", () => {
+    const r = scoreV3([], [O("A", "tokens", 0)], { minSampleSize: 0 });
+    expect(r.axes.find((a) => a.axis === "tokens")!.score).toBe("N/A");
+    expect(r.finalScore).toBe("N/A");
+    expect(r.tier).toBe("N/A");
   });
 
   it("all axes below N → finalScore N/A", () => {
