@@ -1,7 +1,3 @@
-import type { AxisName } from "./types.js";
-
-const AXIS_ORDER: AxisName[] = ["tokens", "a11y", "components", "stories", "ai-surface", "ai-governance"];
-
 export type MaturityTier =
   | "Foundational"
   | "Managed"
