@@ -431,6 +431,8 @@ export interface AuditResult {
     projection?: ProjectionMeta;
     /** P1 extraction report — per-extractor status/evidence/remediation + token conflicts. Deterministic. */
     extraction?: import("./graph/types.js").ExtractionReport;
+    /** P0: true when this was a self-DS audit (the repo IS the design system). Additive. */
+    dsSelfMode?: boolean;
   };
 }
 
