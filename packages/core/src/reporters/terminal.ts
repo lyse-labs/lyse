@@ -301,6 +301,9 @@ export async function renderTerminal(result: AuditResult, opts: TerminalOpts): P
   for (const note of buildDegradationLines(result)) {
     lines.push(`  ${dim(note, opts)}`);
   }
+  if (result.scoringVersion === "scoring-v3") {
+    lines.push("", `  ${dim("Scores use the v3 adoption-ratio model — not comparable to earlier scoring-v1.x.", opts)}`);
+  }
   lines.push(footer(result, opts));
   return lines.join("\n");
 }

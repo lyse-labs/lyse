@@ -63,8 +63,8 @@ At `lyse init`, an optional LLM-generated rule pack can be saved to `.lyse/gener
                               ▼
         ┌────────────────────────────────────────────────┐
         │  6. Scorer                                     │
-        │     - per-axis: weightedFindings / opps → 0..100 │
-        │     - equal-weight mean over active axes       │
+        │     - per-axis: Σ max(0,opp−findings) / Σopp   │
+        │     - equal-weight mean over activated axes    │
         │     - round                                    │
         │     produce: AuditResult                       │
         └────────────────────────────────────────────────┘
@@ -265,9 +265,9 @@ The final shape, fed to reporters.
 
 ```ts
 interface AuditResult {
-  finalScore: number;          // 0–100, equal-weight mean of active axes
-  tier: "Foundational" | "Managed" | "Defined" | "Quantitative" | "Autonomous";
-  scoringVersion: "scoring-v1";
+  finalScore: number | "N/A";  // 0–100, equal-weight mean of activated axes; "N/A" if none activate
+  tier: "Foundational" | "Managed" | "Defined" | "Quantitative" | "Autonomous" | "N/A";
+  scoringVersion: string;      // "scoring-v3" by default; "scoring-v1.1" under --score-model v2
   axes: AxisScore[];           // one entry per axis: tokens, a11y, components, stories, ai-surface, ai-governance
   findings: Finding[];          // sorted by (path, line, column)
   meta: {
@@ -280,9 +280,9 @@ interface AuditResult {
 }
 
 interface AxisScore {
-  axisId: "tokens" | "a11y" | "components" | "stories" | "ai-surface" | "ai-governance";
-  score: number | null;          // null when N/A
-  weightedFindings: number;
+  axis: "tokens" | "a11y" | "components" | "stories" | "ai-surface" | "ai-governance";
+  score: number | "N/A";       // "N/A" below the min-N sample-size gate (see scoring.md)
+  findings: number;
   opportunities: number;
 }
 ```
