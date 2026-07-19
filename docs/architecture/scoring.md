@@ -268,23 +268,26 @@ tooling can detect a formula change and refuse to compare across it.
 
 ## What "the score got more honest" means, concretely
 
-Two pre-existing false negatives were also fixed as part of this release
-(Design System Graph zone-awareness — see [`rules-engine.md`](./rules-engine.md)),
-and their effect is much more visible under the adoption-ratio model than it
-was under the old severity/log-cap formula:
+On the *same* findings, the adoption-ratio model scores an axis higher than
+the old severity/log-cap formula did, because it reports "how much of this
+axis is clean" directly instead of applying a severity-weighted penalty. Two
+axes whose original false negatives were already fixed on `main` — by the P2
+Design System Graph zone-awareness migration (see
+[`rules-engine.md`](./rules-engine.md)), a *separate* change, not this release —
+show the difference most clearly:
 
-- **`carbon-react` `tokens` axis: `1` → `77`.** The old formula's log-scaled
-  cap kept a repo with any nonzero drift near the floor regardless of how
-  small the drift was relative to opportunities; the new ratio directly
-  reflects "how much of this axis is clean," so fixing the token-scale false
-  positives moves the axis score by the full proportional amount.
-- **`shadcn-ui` `components` axis: `0` → `66`.** Same shape of fix (a false
-  "no design-system components used" reading caused by unrecognized
-  registry/theme-variant paths), same proportional payoff once corrected.
+- **`carbon-react` `tokens` axis: `54` → `77`** (19 findings / 82
+  opportunities). v2's severity-weighted rate held the axis at 54; v3's
+  unit-count adoption ratio reports 63/82 clean = 77. (The *original* pre-P2
+  false negative read `1`; P2's zone-awareness fix lifted it to 54 under v2,
+  and v3 removes the severity penalty on top.)
+- **`shadcn-ui` `components` axis: `31` → `66`** (1466 / 4251). Same shape: P2
+  corrected the "no design-system components used" false reading (`0` → `31`
+  under v2) caused by unrecognized registry/theme-variant paths, and v3's
+  clean ratio reports 66.
 
-These are not scoring-formula artifacts — they are the score becoming an
-honest reflection of drift that was always there (or, in these two cases, was
-being miscounted). The full golden-corpus deltas are in the
+These are not scoring-formula artifacts — the v3 number is the literal share
+of clean opportunities on each axis. The full golden-corpus deltas are in the
 [CHANGELOG](../../CHANGELOG.md).
 
 ## Score's verbal interpretation
