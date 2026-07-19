@@ -50,6 +50,32 @@ function baseResultP0(over: Partial<AuditResult>): AuditResult {
   } as AuditResult;
 }
 
+describe("buildDegradationLines — insufficient sample (min-N, v3, P3 Task 7)", () => {
+  it("emits an insufficient-sample line for an N/A axis with 0 < opportunities < 30", () => {
+    const r = baseResultP0({
+      axes: [{ axis: "a11y", score: "N/A", findings: 0, opportunities: 13 }],
+      meta: { extraction: { entries: [], conflicts: [] } },
+    });
+    expect(buildDegradationLines(r)).toEqual(["a11y: insufficient sample (n=13) — not scored."]);
+  });
+
+  it("still emits the no-opportunities-in-scope line when opportunities is 0 (regression guard)", () => {
+    const r = baseResultP0({
+      axes: [{ axis: "a11y", score: "N/A", findings: 0, opportunities: 0 }],
+      meta: { extraction: { entries: [], conflicts: [] } },
+    });
+    expect(buildDegradationLines(r)).toEqual(["a11y: not scored — no a11y opportunities in scope."]);
+  });
+
+  it("emits no degradation line for a numeric-score axis regardless of opportunities count", () => {
+    const r = baseResultP0({
+      axes: [{ axis: "a11y", score: 42, findings: 3, opportunities: 13 }],
+      meta: { extraction: { entries: [], conflicts: [] } },
+    });
+    expect(buildDegradationLines(r)).toEqual([]);
+  });
+});
+
 describe("buildDegradationLines — caveats on numeric axes (P0)", () => {
   it("emits a caveat for a DEGRADED extractor even when the axis has a numeric score", () => {
     const r = baseResultP0({

@@ -20,8 +20,13 @@ export function buildDegradationLines(result: AuditResult): string[] {
     const entry = extractor ? byExtractor.get(extractor) : undefined;
 
     if (a.score === "N/A") {
-      if (entry?.remediation) lines.push(`${a.axis}: ${entry.remediation}`);
-      else lines.push(`${a.axis}: not scored — no ${a.axis} opportunities in scope.`);
+      if (a.opportunities > 0) {
+        lines.push(`${a.axis}: insufficient sample (n=${a.opportunities}) — not scored.`);
+      } else if (entry?.remediation) {
+        lines.push(`${a.axis}: ${entry.remediation}`);
+      } else {
+        lines.push(`${a.axis}: not scored — no ${a.axis} opportunities in scope.`);
+      }
       continue;
     }
 
