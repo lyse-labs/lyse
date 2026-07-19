@@ -24,6 +24,24 @@ export async function choice<T extends string>(
   return r.v as T;
 }
 
+/**
+ * Confirmation gate for an action that skips a normal safety check (e.g.
+ * spawning an agent with permission prompts bypassed). Unlike `confirm()`,
+ * the two "default" concepts are deliberately decoupled:
+ *
+ * - Shown on a real TTY: defaults to **no** (`initial: false`) — the user
+ *   must explicitly opt in.
+ * - Not interactive (no TTY, `CI`, `--yes`, `--no-prompt`): the prompt is
+ *   skipped entirely and this **proceeds** (`true`) — those signals mean the
+ *   caller already asked not to be blocked, and the outer command flow
+ *   already gated on having consent to run at all.
+ */
+export async function confirmBypass(message: string): Promise<boolean> {
+  if (!isInteractive()) return true;
+  const r = await prompts({ type: "confirm", name: "v", message, initial: false });
+  return (r.v as boolean | undefined) ?? false;
+}
+
 export function isInteractive(): boolean {
   if (process.env.LYSE_YES === "1") return false;
   if (process.env.LYSE_NO_PROMPT === "1") return false;

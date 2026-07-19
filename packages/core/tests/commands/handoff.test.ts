@@ -235,3 +235,146 @@ describe("runHandoffCommand — RefuseToRunError", () => {
     }
   });
 });
+
+describe("runHandoffCommand — top-level gate: --yes bypasses the TTY requirement", () => {
+  let originalIsTTY: boolean | undefined;
+
+  beforeEach(() => {
+    originalIsTTY = process.stdout.isTTY;
+  });
+
+  afterEach(() => {
+    Object.defineProperty(process.stdout, "isTTY", { value: originalIsTTY, configurable: true });
+    delete process.env.LYSE_YES;
+  });
+
+  it("proceeds (no 'needs an interactive terminal' bail) when LYSE_YES=1, even without a real TTY", async () => {
+    Object.defineProperty(process.stdout, "isTTY", { value: false, configurable: true });
+    process.env.LYSE_YES = "1";
+
+    const root = makeTempRoot();
+    mockAuditDirectory.mockResolvedValueOnce(makeAuditResult(1, root));
+
+    const promptSpy = vi.fn().mockResolvedValue("skip");
+    const launchSpy = vi.fn();
+
+    // No `isInteractive` override — exercises the real default gate.
+    await runHandoffCommand(root, { prompt: promptSpy, launch: launchSpy });
+
+    expect(stdoutOutput).not.toContain("needs an interactive terminal");
+    expect(mockAuditDirectory).toHaveBeenCalledWith(root);
+  });
+
+  it("still bails with 'needs an interactive terminal' when there is no real TTY and no --yes", async () => {
+    Object.defineProperty(process.stdout, "isTTY", { value: false, configurable: true });
+
+    await runHandoffCommand("/fake/root", {});
+
+    expect(stdoutOutput).toContain("needs an interactive terminal");
+    expect(mockAuditDirectory).not.toHaveBeenCalled();
+  });
+
+  it("proceeds on a genuinely real TTY with no --yes at all (unchanged baseline behavior)", async () => {
+    Object.defineProperty(process.stdout, "isTTY", { value: true, configurable: true });
+
+    const root = makeTempRoot();
+    mockAuditDirectory.mockResolvedValueOnce(makeAuditResult(1, root));
+
+    const promptSpy = vi.fn().mockResolvedValue("skip");
+    const launchSpy = vi.fn();
+
+    await runHandoffCommand(root, { prompt: promptSpy, launch: launchSpy });
+
+    expect(stdoutOutput).not.toContain("needs an interactive terminal");
+    expect(mockAuditDirectory).toHaveBeenCalledWith(root);
+  });
+});
+
+describe("runHandoffCommand — reviewMode resolution (--review / LYSE_HANDOFF_REVIEW / config)", () => {
+  afterEach(() => {
+    delete process.env.LYSE_HANDOFF_REVIEW;
+  });
+
+  async function stubAgentAvailability(): Promise<{ isAvailableSpy: ReturnType<typeof vi.spyOn>; skillSpy: ReturnType<typeof vi.spyOn> }> {
+    const registryModule = await import("../../src/agent/registry.js");
+    const isAvailableSpy = vi.spyOn(registryModule, "isCommandAvailable").mockResolvedValue(true);
+    const skillModule = await import("../../src/agent/skill.js");
+    const skillSpy = vi.spyOn(skillModule, "installLyseSkill").mockReturnValue({ path: "/fake", installed: true });
+    return { isAvailableSpy, skillSpy };
+  }
+
+  it("threads reviewMode: true through to launch when LYSE_HANDOFF_REVIEW=1", async () => {
+    const root = makeTempRoot();
+    mockAuditDirectory.mockResolvedValueOnce(makeAuditResult(1, root));
+    process.env.LYSE_HANDOFF_REVIEW = "1";
+
+    const agentId: AgentId = "claude-code";
+    const promptSpy = vi.fn().mockResolvedValue(agentId);
+    let launchOpts: unknown;
+    const launchSpy = vi.fn().mockImplementation(async (..._args: unknown[]) => {
+      launchOpts = _args[3];
+      return 0;
+    });
+
+    const { isAvailableSpy, skillSpy } = await stubAgentAvailability();
+
+    try {
+      await runHandoffCommand(root, { isInteractive: () => true, prompt: promptSpy, launch: launchSpy });
+      expect(launchSpy).toHaveBeenCalledOnce();
+      expect(launchOpts).toEqual({ reviewMode: true });
+    } finally {
+      isAvailableSpy.mockRestore();
+      skillSpy.mockRestore();
+    }
+  });
+
+  it("defaults to reviewMode: false when no env var or config field is set", async () => {
+    const root = makeTempRoot();
+    mockAuditDirectory.mockResolvedValueOnce(makeAuditResult(1, root));
+
+    const agentId: AgentId = "claude-code";
+    const promptSpy = vi.fn().mockResolvedValue(agentId);
+    let launchOpts: unknown;
+    const launchSpy = vi.fn().mockImplementation(async (..._args: unknown[]) => {
+      launchOpts = _args[3];
+      return 0;
+    });
+
+    const { isAvailableSpy, skillSpy } = await stubAgentAvailability();
+
+    try {
+      await runHandoffCommand(root, { isInteractive: () => true, prompt: promptSpy, launch: launchSpy });
+      expect(launchOpts).toEqual({ reviewMode: false });
+    } finally {
+      isAvailableSpy.mockRestore();
+      skillSpy.mockRestore();
+    }
+  });
+
+  it("honors .lyse.yaml config.handoff.review: true when no env var is set", async () => {
+    const root = makeTempRoot();
+    const auditResult = makeAuditResult(1, root);
+    (auditResult as unknown as { config: { handoff?: { review?: boolean } } }).config = {
+      handoff: { review: true },
+    };
+    mockAuditDirectory.mockResolvedValueOnce(auditResult);
+
+    const agentId: AgentId = "claude-code";
+    const promptSpy = vi.fn().mockResolvedValue(agentId);
+    let launchOpts: unknown;
+    const launchSpy = vi.fn().mockImplementation(async (..._args: unknown[]) => {
+      launchOpts = _args[3];
+      return 0;
+    });
+
+    const { isAvailableSpy, skillSpy } = await stubAgentAvailability();
+
+    try {
+      await runHandoffCommand(root, { isInteractive: () => true, prompt: promptSpy, launch: launchSpy });
+      expect(launchOpts).toEqual({ reviewMode: true });
+    } finally {
+      isAvailableSpy.mockRestore();
+      skillSpy.mockRestore();
+    }
+  });
+});

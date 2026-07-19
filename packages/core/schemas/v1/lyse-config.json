@@ -85,6 +85,13 @@
       "properties": {
         "migrationScaleFileCount": { "type": "integer", "minimum": 2 }
       }
+    },
+    "handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "review": { "type": "boolean" }
+      }
     }
   }
 }

@@ -40,7 +40,7 @@ lyse add ci-gate  # install the score-regression CI gate (.github/workflows/lyse
 lyse share        # copy a Markdown summary to your clipboard
 ```
 
-> **Trust boundary.** `lyse handoff` launches your coding agent with its permission prompts bypassed so it can apply fixes unattended. Only run it on repositories you trust.
+> **Trust boundary.** By default, `lyse handoff` launches your coding agent with its permission prompts bypassed so it can apply fixes unattended — only run it on repositories you trust. It confirms before spawning (`Continue? [y/N]`, skipped under `--yes` or non-interactively); pass `--review` to keep the agent's own per-action permission prompts instead.
 
 ## What it audits
 

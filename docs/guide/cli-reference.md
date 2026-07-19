@@ -89,20 +89,27 @@ Audit, then hand the findings to your coding agent to fix. **Lyse never edits yo
 lyse handoff [path]
 ```
 
-`path` defaults to `.` (current directory). Needs an interactive terminal.
+`path` defaults to `.` (current directory). Needs an interactive terminal (or `--yes`, see below).
 
 ### What it does
 
 1. **Audits** the repo (same as `lyse audit`).
 2. **Writes the handoff payload** to `.lyse/handoff/` — `findings.json` (every finding) + `tokens.json` (your full token map).
 3. **Groups findings by drift class** with the resolved token mapping (e.g. `#3b82f6 → color/brand/primary`), so the agent applies one consistent decision across every site instead of inventing N divergent ones.
-4. **Prompts you to pick an agent** (or copy the prompt to your clipboard), installs the Lyse skill into it, and **launches it** on the payload. Your choice is remembered for next time.
+4. **Prompts you to pick an agent** (or copy the prompt to your clipboard), installs the Lyse skill into it. In the default mode, **confirms** it's about to bypass the agent's permission prompts, then **launches it** on the payload. Your agent choice is remembered for next time.
 
 The agent edits the **working tree only** — it never commits or opens a PR, so you review the diff before anything is permanent. When it's done, run `lyse audit` (or `lyse handoff` again) to confirm the score went up.
 
-> **Trust boundary.** `lyse handoff` launches your coding agent with its permission prompts bypassed so it can apply fixes unattended. Only run it on repositories you trust.
+> **Trust boundary.** By default, `lyse handoff` launches your coding agent with its permission prompts bypassed so it can apply fixes unattended — only run it on repositories you trust. Before spawning, it prints a one-line warning and asks `Continue? [y/N]` on an interactive terminal; the prompt is skipped (and the run proceeds) under `--yes` or a non-interactive shell. Use `--review` to keep the agent's own permission prompts instead of bypassing them.
 
 > **`lyse fix` is retired.** Lyse no longer applies codemods itself — `lyse fix` prints a notice and redirects here. Its two non-fix extras moved to the setup wizard: `lyse init --scaffold` and `lyse init --migrate-tokens`.
+
+### Options
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--review` | boolean | `false` | Launch the agent under its own default permissions (it prompts you per-action) instead of bypassing its permission prompts. Skips the pre-spawn confirmation — the agent's own prompts are the safety net in this mode. Also settable via `LYSE_HANDOFF_REVIEW=1` or `.lyse.yaml` `handoff.review: true`. |
+| `--yes` | boolean | `false` | Accept all defaults: auto-picks the first prompted option (agent, or clipboard-copy if none are launchable) and skips the pre-spawn confirmation (proceeds as if you'd confirmed). Also lets `handoff` run without a real TTY. |
 
 ### Exit codes
 

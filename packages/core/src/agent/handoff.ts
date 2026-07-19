@@ -9,12 +9,25 @@ import { isCommandAvailable, detectAgents } from "./registry.js";
 import { buildHandoffPayload, serializeTokenMap } from "./payload.js";
 import { installLyseSkill } from "./skill.js";
 import { getRegisteredRuleMeta } from "../rules/_rule-module.js";
+import { confirmBypass } from "../menu/prompts.js";
+
+/** Passed through to `deps.launch` so it can build the right argv (`--review` omits the permission-bypass flag). */
+export interface LaunchOpts {
+  reviewMode?: boolean;
+}
 
 export interface HandoffDeps {
   prompt: (choices: { value: string; label: string }[]) => Promise<string | null>;
-  launch: (agentId: AgentId, prompt: string, cwd: string) => Promise<number>;
+  launch: (agentId: AgentId, prompt: string, cwd: string, opts?: LaunchOpts) => Promise<number>;
   /** Injected path for the handoff-target persistence file (tests only). */
   targetFilePath?: string;
+  /**
+   * Pre-spawn safety confirmation, shown only in the default (unattended,
+   * permission-bypassed) mode — skipped entirely when `reviewMode` is set.
+   * Defaults to {@link confirmBypass} (real TTY prompt; auto-proceeds when
+   * non-interactive/CI/`--yes`).
+   */
+  confirm?: (message: string) => Promise<boolean>;
 }
 
 export interface HandoffInput {
@@ -25,6 +38,14 @@ export interface HandoffInput {
   topN?: number;
   /** `.lyse.yaml` `advisory.migrationScaleFileCount` override; falls back to the payload default. */
   migrationScaleFileCount?: number;
+  /**
+   * `--review` / `LYSE_HANDOFF_REVIEW=1` / `.lyse.yaml` `handoff.review`:
+   * launch the agent under its own default permission model (it prompts
+   * per-action) instead of bypassing permission prompts. Also skips the
+   * pre-spawn safety confirmation — the agent's own prompts are the safety
+   * net in this mode. Default `false`.
+   */
+  reviewMode?: boolean;
 }
 
 type HandoffAction = "launched" | "copied" | "copy-failed" | "skipped" | "none";
@@ -125,17 +146,36 @@ export async function runHandoff(input: HandoffInput, deps: HandoffDeps): Promis
     installLyseSkill(agentSpec, root);
   }
 
+  const reviewMode = input.reviewMode ?? false;
+
+  if (!reviewMode) {
+    const confirmFn = deps.confirm ?? confirmBypass;
+    const agentLabel = agentSpec?.displayName ?? agentId;
+    const proceed = await confirmFn(
+      `Lyse will run ${agentLabel} with permission prompts bypassed to edit your working tree. ` +
+        `Nothing is committed or pushed; you review the git diff afterward. Continue?`,
+    );
+    if (!proceed) {
+      return { action: "skipped" };
+    }
+  }
+
   const targetFilePath =
     deps.targetFilePath ?? join(homedir(), ".lyse", "handoff-target.json");
   persistTarget(targetFilePath, agentId);
 
-  await deps.launch(agentId, payload, root);
+  await deps.launch(agentId, payload, root, { reviewMode });
 
   return { action: "launched", agentId };
 }
 
-export async function spawnAgentLauncher(agentId: AgentId, prompt: string, cwd: string): Promise<number> {
-  const args = launchArgs(agentId);
+export async function spawnAgentLauncher(
+  agentId: AgentId,
+  prompt: string,
+  cwd: string,
+  opts?: LaunchOpts,
+): Promise<number> {
+  const args = launchArgs(agentId, opts?.reviewMode ?? false);
   if (!args.launchSupported) return 1;
   const { binary, bypassFlags } = args;
   return new Promise((resolve) => {
