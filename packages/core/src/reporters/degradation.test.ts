@@ -40,3 +40,40 @@ describe("buildDegradationLines", () => {
     expect(buildDegradationLines(r)).toEqual([]);
   });
 });
+
+function baseResultP0(over: Partial<AuditResult>): AuditResult {
+  return {
+    schemaVersion: 2, rulesVersion: "0.1.0", toolVersion: "", scoringVersion: "scoring-v1.1",
+    repoRoot: "/r", timestamp: "", stack: [], finalScore: 50, tier: "Defined",
+    axes: [], findings: [],
+    ...over,
+  } as AuditResult;
+}
+
+describe("buildDegradationLines — caveats on numeric axes (P0)", () => {
+  it("emits a caveat for a DEGRADED extractor even when the axis has a numeric score", () => {
+    const r = baseResultP0({
+      axes: [{ axis: "tokens", score: 1, findings: 120, opportunities: 243 }],
+      meta: { extraction: { entries: [{ extractor: "tokens", status: "degraded", evidence: {}, remediation: "SCSS token maps not fully parsed." }], conflicts: [] } },
+    });
+    const lines = buildDegradationLines(r);
+    expect(lines.some((l) => l.includes("tokens") && /degraded|unreliable|SCSS token maps/i.test(l))).toBe(true);
+  });
+
+  it("emits a self-DS caveat for consumer-adoption axes when meta.dsSelfMode is true", () => {
+    const r = baseResultP0({
+      axes: [{ axis: "tokens", score: 100, findings: 0, opportunities: 4 }],
+      meta: { dsSelfMode: true, extraction: { entries: [{ extractor: "tokens", status: "ok", evidence: {}, remediation: null }], conflicts: [] } },
+    });
+    const lines = buildDegradationLines(r);
+    expect(lines.some((l) => l.includes("tokens") && /self-DS|own source|consumer adoption/i.test(l))).toBe(true);
+  });
+
+  it("does NOT emit spurious caveats for a clean consumer audit", () => {
+    const r = baseResultP0({
+      axes: [{ axis: "tokens", score: 90, findings: 10, opportunities: 100 }],
+      meta: { extraction: { entries: [{ extractor: "tokens", status: "ok", evidence: {}, remediation: null }], conflicts: [] } },
+    });
+    expect(buildDegradationLines(r)).toEqual([]);
+  });
+});

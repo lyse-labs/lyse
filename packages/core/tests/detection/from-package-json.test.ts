@@ -133,3 +133,54 @@ describe("detectComponentsModule — workspace DS-self detection", () => {
     expect(r.componentsModule.confidence).toBe("high");
   });
 });
+
+describe("detectComponentsModule — self-DS vs consumer (P0)", () => {
+  it("self-DS monorepo: workspace-owned @org/components → workspace DS export (dsSelfMode-eligible)", async () => {
+    writeFileSync(join(dir, "package.json"), JSON.stringify({
+      private: true,
+      workspaces: ["packages/*"],
+      dependencies: { "@acme/components": "workspace:*" },
+    }));
+    mkdirSync(join(dir, "packages", "components"), { recursive: true });
+    writeFileSync(join(dir, "packages", "components", "package.json"), JSON.stringify({ name: "@acme/components" }));
+    const r = await detectFromPackageJson(dir);
+    expect(r.componentsModule.source.startsWith("workspace DS export")).toBe(true);
+  });
+
+  it("consumer app: external @org/ui dependency → internal-named UI package (NOT self-DS)", async () => {
+    writeFileSync(join(dir, "package.json"), JSON.stringify({
+      dependencies: { "@acme/ui": "^1.2.3" },
+    }));
+    const r = await detectFromPackageJson(dir);
+    expect(r.componentsModule.source.startsWith("workspace DS export")).toBe(false);
+    expect(r.componentsModule.value).toBe("@acme/ui");
+  });
+});
+
+describe("detectComponentsModule — ownership guard gated on pkg.private (regression)", () => {
+  it("non-private root with workspaces + workspace-member UI dep → still returns internal-named UI package", async () => {
+    writeFileSync(join(dir, "package.json"), JSON.stringify({
+      workspaces: ["packages/*"],
+      dependencies: { "@acme/ui": "^1.0.0" },
+    }));
+    mkdirSync(join(dir, "packages", "ui"), { recursive: true });
+    writeFileSync(join(dir, "packages", "ui", "package.json"), JSON.stringify({ name: "@acme/ui" }));
+    const r = await detectFromPackageJson(dir);
+    expect(r.componentsModule.value).toBe("@acme/ui");
+    expect(r.componentsModule.source).toBe("internal-named UI package");
+  });
+
+  it("private monorepo with an external, non-member UI dep → internal-named UI package (not self-DS)", async () => {
+    writeFileSync(join(dir, "package.json"), JSON.stringify({
+      private: true,
+      workspaces: ["packages/*"],
+      dependencies: { "@external/ui": "^2.0.0" },
+    }));
+    mkdirSync(join(dir, "packages", "core"), { recursive: true });
+    writeFileSync(join(dir, "packages", "core", "package.json"), JSON.stringify({ name: "@acme/core" }));
+    const r = await detectFromPackageJson(dir);
+    expect(r.componentsModule.value).toBe("@external/ui");
+    expect(r.componentsModule.source).toBe("internal-named UI package");
+    expect(r.componentsModule.source.startsWith("workspace DS export")).toBe(false);
+  });
+});

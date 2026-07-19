@@ -699,6 +699,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
       ...(layer4Meta ? { layer4: layer4Meta } : {}),
       ...(renderMeta !== undefined ? { render: renderMeta } : {}),
       ...(projection ? { projection } : {}),
+      ...(dsSelfMode ? { dsSelfMode: true } : {}),
       extraction: graph.extraction,
       coverage: {
         scannedFiles: files.length,

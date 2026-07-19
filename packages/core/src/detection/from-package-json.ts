@@ -103,9 +103,16 @@ async function detectComponentsModule(
 
   // Branch 1 — internal-named UI package in deps (consumer apps / app repos).
   // Filter through denylist first to avoid false positives like @vitest/ui.
+  // Skip a match that the repo OWNS (workspace protocol or a workspace member)
+  // ONLY when Branch 3 (self-DS) can actually run for it (private root) —
+  // otherwise Branch 3 returns null and we'd have skipped Branch 1 for nothing.
+  const workspaceNames = pkg.private ? await resolveWorkspacePackageNames(pkg, rootDir) : new Set<string>();
   const internal = names.find(n => {
     if (DENYLIST_PREFIXES.some(prefix => n.startsWith(prefix))) return false;
-    return /^@[^/]+\/(ui|components|design)/.test(n);
+    if (!/^@[^/]+\/(ui|components|design)/.test(n)) return false;
+    const version = deps[n];
+    const ownedByWorkspace = (pkg.private ?? false) && ((version?.startsWith("workspace:") ?? false) || workspaceNames.has(n));
+    return !ownedByWorkspace;
   });
   if (internal) return { value: internal, confidence: "high", source: "internal-named UI package" };
 
@@ -140,6 +147,40 @@ async function readPnpmWorkspaceGlobs(rootDir: string): Promise<string[] | null>
 }
 
 /**
+ * Resolve workspace globs (package.json `"workspaces"` or pnpm-workspace.yaml)
+ * to the set of package `name`s owned by this monorepo. Used both to skip
+ * workspace-owned deps in Branch 1 and to walk sub-packages in Branch 3.
+ */
+async function resolveWorkspacePackageNames(pkg: PackageJson, rootDir: string): Promise<Set<string>> {
+  const names = new Set<string>();
+
+  let globs: string[] | null = null;
+  if (pkg.workspaces) {
+    // Normalise workspaces to a string array (Yarn classic uses { packages: [] })
+    globs = Array.isArray(pkg.workspaces) ? pkg.workspaces : pkg.workspaces.packages ?? [];
+  } else {
+    globs = await readPnpmWorkspaceGlobs(rootDir);
+  }
+  if (!globs || globs.length === 0) return names;
+
+  const pkgJsonPaths = await fg(
+    globs.map(g => `${g}/package.json`),
+    { cwd: rootDir, absolute: true, onlyFiles: true },
+  );
+
+  for (const pkgPath of pkgJsonPaths) {
+    try {
+      const sub = JSON.parse(await readFile(pkgPath, "utf8")) as { name?: string };
+      if (sub.name) names.add(sub.name);
+    } catch {
+      // skip unreadable
+    }
+  }
+
+  return names;
+}
+
+/**
  * Walk workspace sub-packages and look for one whose `name` matches the
  * DS-export pattern.  Returns a DetectionResult or null if nothing found.
  *
@@ -153,34 +194,9 @@ async function detectWorkspaceDsPackage(
 ): Promise<DetectionResult<string> | null> {
   if (!pkg.private) return null;
 
-  // Resolve workspace globs from package.json or pnpm-workspace.yaml
-  let globs: string[] | null = null;
+  const names = await resolveWorkspacePackageNames(pkg, rootDir);
 
-  if (pkg.workspaces) {
-    // Normalise workspaces to a string array (Yarn classic uses { packages: [] })
-    globs = Array.isArray(pkg.workspaces) ? pkg.workspaces : pkg.workspaces.packages ?? [];
-  } else {
-    globs = await readPnpmWorkspaceGlobs(rootDir);
-  }
-
-  if (!globs || globs.length === 0) return null;
-
-  // Resolve each glob to matching package.json paths
-  const pkgJsonPaths = await fg(
-    globs.map(g => `${g}/package.json`),
-    { cwd: rootDir, absolute: true, onlyFiles: true },
-  );
-
-  for (const pkgPath of pkgJsonPaths) {
-    let subPkg: { name?: string } | null = null;
-    try {
-      subPkg = JSON.parse(await readFile(pkgPath, "utf8")) as { name?: string };
-    } catch {
-      continue;
-    }
-    const name = subPkg.name;
-    if (!name) continue;
-
+  for (const name of names) {
     // Skip known internal/tooling packages
     if (WORKSPACE_EXCLUDE_SUFFIXES.some(suffix => name.endsWith(suffix))) continue;
 
