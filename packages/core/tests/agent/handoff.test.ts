@@ -328,3 +328,161 @@ describe("runHandoff — agent launch", () => {
     }
   });
 });
+
+describe("runHandoff — confirmation gate (default/unattended mode)", () => {
+  // Deterministic agent detection: stub `detectAgents` to always return the
+  // claude-code spec, so the confirm-gate assertions never depend on the
+  // ambient filesystem/PATH (whether `~/.claude` exists or `claude` is
+  // installed). Without this the message falls back to the raw agent id in a
+  // clean env (e.g. CI) instead of the "Claude Code" displayName.
+  async function stubAgentAvailability(): Promise<{
+    detectSpy: ReturnType<typeof vi.spyOn>;
+    isAvailableSpy: ReturnType<typeof vi.spyOn>;
+    skillSpy: ReturnType<typeof vi.spyOn>;
+  }> {
+    const registryModule = await import("../../src/agent/registry.js");
+    const claudeSpec = registryModule.AGENTS.find((a) => a.id === "claude-code");
+    if (claudeSpec === undefined) throw new Error("claude-code spec missing from AGENTS");
+    const detectSpy = vi.spyOn(registryModule, "detectAgents").mockResolvedValue([claudeSpec]);
+    const isAvailableSpy = vi.spyOn(registryModule, "isCommandAvailable").mockResolvedValue(true);
+    const skillModule = await import("../../src/agent/skill.js");
+    const skillSpy = vi.spyOn(skillModule, "installLyseSkill").mockReturnValue({ path: "/fake", installed: true });
+    return { detectSpy, isAvailableSpy, skillSpy };
+  }
+
+  it("prompts with a safety message naming the agent before launching, and launches when confirmed", async () => {
+    const root = makeTempRoot();
+    const { detectSpy, isAvailableSpy, skillSpy } = await stubAgentAvailability();
+
+    const confirmSpy = vi.fn().mockResolvedValue(true);
+    const launch = vi.fn().mockResolvedValue(0);
+
+    try {
+      const deps = makeDeps({ prompt: vi.fn().mockResolvedValue("claude-code"), launch, confirm: confirmSpy });
+      const result = await runHandoff(
+        { findings: baseFindings, tokens: null, root, projectName: "acme" },
+        deps,
+      );
+
+      expect(confirmSpy).toHaveBeenCalledOnce();
+      const [message] = confirmSpy.mock.calls[0] as [string];
+      expect(message).toContain("Claude Code");
+      expect(message).toContain("permission prompts bypassed");
+      expect(message).toContain("Nothing is committed or pushed");
+      expect(launch).toHaveBeenCalledOnce();
+      expect(result).toEqual({ action: "launched", agentId: "claude-code" });
+    } finally {
+      detectSpy.mockRestore();
+      isAvailableSpy.mockRestore();
+      skillSpy.mockRestore();
+    }
+  });
+
+  it("returns { action: 'skipped' } and never calls launch when the user declines", async () => {
+    const root = makeTempRoot();
+    const { detectSpy, isAvailableSpy, skillSpy } = await stubAgentAvailability();
+
+    const confirmSpy = vi.fn().mockResolvedValue(false);
+    const launch = vi.fn().mockResolvedValue(0);
+
+    try {
+      const deps = makeDeps({ prompt: vi.fn().mockResolvedValue("claude-code"), launch, confirm: confirmSpy });
+      const result = await runHandoff(
+        { findings: baseFindings, tokens: null, root, projectName: "acme" },
+        deps,
+      );
+
+      expect(confirmSpy).toHaveBeenCalledOnce();
+      expect(launch).not.toHaveBeenCalled();
+      expect(result).toEqual({ action: "skipped" });
+    } finally {
+      detectSpy.mockRestore();
+      isAvailableSpy.mockRestore();
+      skillSpy.mockRestore();
+    }
+  });
+
+  it("does not call deps.confirm when reviewMode is true, and passes reviewMode through to launch", async () => {
+    const root = makeTempRoot();
+    const { detectSpy, isAvailableSpy, skillSpy } = await stubAgentAvailability();
+
+    const confirmSpy = vi.fn().mockResolvedValue(false); // would abort if (wrongly) called
+    let launchOpts: { reviewMode?: boolean } | undefined;
+    const launch = vi.fn().mockImplementation(async (..._args: unknown[]) => {
+      launchOpts = _args[3] as { reviewMode?: boolean } | undefined;
+      return 0;
+    });
+
+    try {
+      const deps = makeDeps({ prompt: vi.fn().mockResolvedValue("claude-code"), launch, confirm: confirmSpy });
+      const result = await runHandoff(
+        { findings: baseFindings, tokens: null, root, projectName: "acme", reviewMode: true },
+        deps,
+      );
+
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(launch).toHaveBeenCalledOnce();
+      expect(launchOpts).toEqual({ reviewMode: true });
+      expect(result).toEqual({ action: "launched", agentId: "claude-code" });
+    } finally {
+      detectSpy.mockRestore();
+      isAvailableSpy.mockRestore();
+      skillSpy.mockRestore();
+    }
+  });
+
+  it("passes reviewMode: false through to launch by default", async () => {
+    const root = makeTempRoot();
+    const { detectSpy, isAvailableSpy, skillSpy } = await stubAgentAvailability();
+
+    let launchOpts: { reviewMode?: boolean } | undefined;
+    const launch = vi.fn().mockImplementation(async (..._args: unknown[]) => {
+      launchOpts = _args[3] as { reviewMode?: boolean } | undefined;
+      return 0;
+    });
+
+    try {
+      const deps = makeDeps({
+        prompt: vi.fn().mockResolvedValue("claude-code"),
+        launch,
+        confirm: vi.fn().mockResolvedValue(true),
+      });
+      await runHandoff(
+        { findings: baseFindings, tokens: null, root, projectName: "acme" },
+        deps,
+      );
+      expect(launchOpts).toEqual({ reviewMode: false });
+    } finally {
+      detectSpy.mockRestore();
+      isAvailableSpy.mockRestore();
+      skillSpy.mockRestore();
+    }
+  });
+
+  it("falls back to the real confirmBypass when deps.confirm is omitted (deterministic non-TTY → auto-proceeds)", async () => {
+    const root = makeTempRoot();
+    const { detectSpy, isAvailableSpy, skillSpy } = await stubAgentAvailability();
+
+    // Force the non-interactive branch of the real confirmBypass explicitly,
+    // instead of relying on the ambient (usually non-TTY) test stdout.
+    const origIsTTY = process.stdout.isTTY;
+    Object.defineProperty(process.stdout, "isTTY", { value: false, configurable: true });
+
+    const launch = vi.fn().mockResolvedValue(0);
+
+    try {
+      const deps = makeDeps({ prompt: vi.fn().mockResolvedValue("claude-code"), launch });
+      const result = await runHandoff(
+        { findings: baseFindings, tokens: null, root, projectName: "acme" },
+        deps,
+      );
+      expect(launch).toHaveBeenCalledOnce();
+      expect(result).toEqual({ action: "launched", agentId: "claude-code" });
+    } finally {
+      Object.defineProperty(process.stdout, "isTTY", { value: origIsTTY, configurable: true });
+      detectSpy.mockRestore();
+      isAvailableSpy.mockRestore();
+      skillSpy.mockRestore();
+    }
+  });
+});

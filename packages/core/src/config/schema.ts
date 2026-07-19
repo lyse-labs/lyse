@@ -93,6 +93,12 @@ export const LyseConfigSchema = z.object({
       migrationScaleFileCount: z.number().int().min(2).optional(),
     })
     .optional(),
+  // `lyse handoff` safety mode — see LyseConfig.handoff in ../types.ts.
+  handoff: z
+    .object({
+      review: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export type LyseConfigValidated = z.infer<typeof LyseConfigSchema>;

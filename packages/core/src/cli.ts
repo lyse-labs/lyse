@@ -856,10 +856,16 @@ const fixCommand = defineCommand({
   meta: { name: "fix", description: "Deprecated — Lyse now hands fixes to your coding agent (see `lyse handoff`)" },
   args: {
     path: { type: "positional", required: false, default: ".", description: "repository root" },
+    review: {
+      type: "boolean",
+      default: false,
+      description: "See `lyse handoff --review`.",
+    },
     ...GLOBAL_FLAGS,
   },
   async run({ args }) {
     applyGlobalFlags(args);
+    if (args.review === true) process.env.LYSE_HANDOFF_REVIEW = "1";
     const cwd = resolve(args.path ?? ".");
     process.stderr.write(
       "[lyse] `lyse fix` is retired — Lyse hands fixes to your coding agent now.\n" +
@@ -1106,10 +1112,17 @@ const handoffCommand = defineCommand({
   meta: { name: "handoff", description: "Audit then hand findings to your coding agent (Claude Code, Cursor, Codex)" },
   args: {
     directory: { type: "positional", required: false, default: ".", description: "repository root (defaults to current working directory)" },
+    review: {
+      type: "boolean",
+      default: false,
+      description:
+        "Launch the agent under its own default permissions (it prompts you per-action) instead of bypassing its permission prompts. Also settable via LYSE_HANDOFF_REVIEW=1 or .lyse.yaml `handoff.review`.",
+    },
     ...GLOBAL_FLAGS,
   },
   async run({ args }) {
     applyGlobalFlags(args);
+    if (args.review === true) process.env.LYSE_HANDOFF_REVIEW = "1";
     const dir = resolve(typeof args.directory === "string" ? args.directory : ".");
     await runHandoffCommand(dir);
   },

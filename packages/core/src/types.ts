@@ -524,6 +524,15 @@ export interface LyseConfig {
   advisory?: {
     migrationScaleFileCount?: number;
   };
+  /**
+   * `lyse handoff` safety mode. `review: true` is the same as passing
+   * `--review`: the agent launches under its own default permission model
+   * (prompts per-action) instead of bypassed permissions, and skips the
+   * pre-spawn confirmation. Overridden by `--review` / `LYSE_HANDOFF_REVIEW=1`.
+   */
+  handoff?: {
+    review?: boolean;
+  };
 }
 
 export interface ClassifyContext {

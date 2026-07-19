@@ -40,6 +40,7 @@ const VALID: ReadonlyArray<[string, unknown]> = [
   ["llm provider none (deprecated but accepted)", { llm: { provider: "none" } }],
   ["llm full", { llm: { provider: "anthropic", model: "claude", endpoint: "https://x", connector: "direct-api-key", costCapUsd: 1, cacheMaxAgeDays: 7, staticOnly: false } }],
   ["advisory migrationScaleFileCount", { advisory: { migrationScaleFileCount: 25 } }],
+  ["handoff review", { handoff: { review: true } }],
 ];
 
 const INVALID: ReadonlyArray<[string, unknown]> = [
@@ -52,6 +53,7 @@ const INVALID: ReadonlyArray<[string, unknown]> = [
   ["minSampleSize below min", { scoring: { minSampleSize: 0 } }],
   ["tolerance wrong type", { rules: { "x/y": { tolerance: "lots" } } }],
   ["advisory migrationScaleFileCount below min", { advisory: { migrationScaleFileCount: 1 } }],
+  ["handoff review wrong type", { handoff: { review: "yes" } }],
 ];
 
 describe("lyse-config.json ↔ zod contract parity", () => {

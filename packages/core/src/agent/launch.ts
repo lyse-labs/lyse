@@ -10,7 +10,9 @@ export interface LaunchArgs {
 // `bypassFlags` intentionally disable the agent's permission prompts so it can
 // edit the working tree unattended. This is injection-safe — the handoff
 // payload is passed as a single argv (no shell interpolation) — and is only
-// reached after the user explicitly chose handoff; run on trusted repos only.
+// reached after the user explicitly chose handoff *and* confirmed the
+// pre-spawn safety prompt (see `runHandoff` in `handoff.ts`); run on trusted
+// repos only. `--review` (reviewMode) opts out of the bypass entirely.
 const LAUNCH_MAP: Record<AgentId, LaunchArgs> = {
   "claude-code": { binary: "claude", bypassFlags: ["--dangerously-skip-permissions"], launchSupported: true },
   codex: { binary: "codex", bypassFlags: ["--yolo"], launchSupported: true },
@@ -18,8 +20,15 @@ const LAUNCH_MAP: Record<AgentId, LaunchArgs> = {
   opencode: { binary: "opencode", bypassFlags: [], launchSupported: false },
 };
 
-export function launchArgs(agentId: AgentId): LaunchArgs {
-  return LAUNCH_MAP[agentId];
+/**
+ * `reviewMode: true` (the `--review` handoff flag) omits `bypassFlags`
+ * entirely so the agent launches under its own default permission model —
+ * it prompts per-action instead of editing the working tree unattended.
+ */
+export function launchArgs(agentId: AgentId, reviewMode: boolean = false): LaunchArgs {
+  const base = LAUNCH_MAP[agentId];
+  if (!reviewMode) return base;
+  return { ...base, bypassFlags: [] };
 }
 
 /**
