@@ -90,6 +90,27 @@
             "type": "string",
             "enum": ["high", "medium", "low"],
             "description": "Confidence that the rule's auto-fix is safe. Optional."
+          },
+          "llmJudgement": {
+            "type": "object",
+            "description": "Layer 4 LLM precision-filter judgement attached to a kept finding. Optional.",
+            "required": ["verdict", "confidence"],
+            "additionalProperties": false,
+            "properties": {
+              "verdict": { "type": "string", "enum": ["violation", "fp", "uncertain"] },
+              "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          },
+          "fixGroup": {
+            "type": "object",
+            "description": "A root-cause fix shared by N findings: one drifted value → one token. Optional.",
+            "required": ["key", "from"],
+            "additionalProperties": false,
+            "properties": {
+              "key": { "type": "string" },
+              "from": { "type": "string" },
+              "to": { "type": "string" }
+            }
           }
         }
       }

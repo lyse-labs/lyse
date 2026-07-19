@@ -80,9 +80,10 @@ export interface AuditFlags {
   /** Optional Storybook source for the runtime-axe sub-stage: a static dir (relative to repo root or absolute) or a running URL. */
   storybook?: string;
   /**
-   * Override the scoring formula for this run: "v2" (legacy) or "v3" (opt-in).
-   * Highest-precedence source in `resolveScoreModel` (flag > env > config >
-   * `DEFAULT_SCORE_MODEL`). Omitted = fall through to env/config/default.
+   * Override the scoring formula for this run: "v3" (default) or "v2" (opt-in
+   * legacy escape hatch). Highest-precedence source in `resolveScoreModel`
+   * (flag > env > config > `DEFAULT_SCORE_MODEL`). Omitted = fall through to
+   * env/config/default.
    */
   scoreModel?: "v2" | "v3";
 }

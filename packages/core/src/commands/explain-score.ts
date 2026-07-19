@@ -9,8 +9,6 @@ import type { GovernanceSignals } from "../reliability/governance-maturity.js";
 import { generateGapReport } from "../reliability/gap-report.js";
 import type { GapReport } from "../reliability/gap-report.js";
 import { extractGovernanceSignals, gatherAiContext } from "../reliability/governance-signals.js";
-import { scanForMarkerComponents } from "../rules/ai-governance-ai-marker-component-present.js";
-import { aiGovernanceGraceFactor, DEFAULT_AI_GOVERNANCE_GRACE_WINDOW } from "../reliability/score/grace.js";
 import { judgeGovernanceMaturity } from "../llm/governance-maturity-judge.js";
 import { resolveConnector } from "../llm/connectors/resolver.js";
 import { loadConfig } from "../config/schema.js";
@@ -97,8 +95,6 @@ export interface FormatExplainScoreArgs {
   scoringVersion: string;
   /** Per-axis adoption breakdown from the audit result, rendered as ratio sentences. */
   axes: AxisScore[];
-  /** Early-adopter grace factor for ai-governance findings (#89 / ADR-0018). Default 1 = inert. */
-  aiGovernanceGrace?: number;
   /** AI-Governance Maturity Level (Track #72/#155) — reported alongside the score. */
   maturity?: { level: number; signals: GovernanceSignals; llmDerived?: boolean };
 }
@@ -289,11 +285,6 @@ export async function explainScore(opts: ExplainScoreOpts): Promise<ExplainScore
   }
   const maturity = { level: computeGovernanceMaturityLevel(signals), signals, llmDerived };
 
-  // Early-adopter grace (#89 / ADR-0018) — ramp ai-governance in by AI-surface maturity.
-  const cfg = loadConfig(repoRoot, { onError: "degrade" });
-  const graceWindow = cfg.scoring?.aiGovernanceGraceWindow ?? DEFAULT_AI_GOVERNANCE_GRACE_WINDOW;
-  const aiGovernanceGrace = aiGovernanceGraceFactor(scanForMarkerComponents(repoRoot).length, graceWindow);
-
   return formatExplainScore({
     findings,
     stableSubAxes,
@@ -302,7 +293,6 @@ export async function explainScore(opts: ExplainScoreOpts): Promise<ExplainScore
     scoringVersion: pipeline.result.scoringVersion,
     axes: pipeline.result.axes,
     maturity,
-    aiGovernanceGrace,
   });
 }
 

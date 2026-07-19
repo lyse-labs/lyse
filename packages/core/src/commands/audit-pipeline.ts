@@ -636,18 +636,19 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   };
   // -----------------------------------------------------------------------
 
-  // Phase 4.1 — v2 scorer: severity-weighted rate + log-scaled absolute cap.
-  // We pass the flat findings list (post-suppression, post-Layer-4) directly;
-  // the adapter aggregates into per-axis severity buckets internally.
+  // Phase 4.1 — scoring: dispatches by model to the v2 (severity-weighted
+  // rate + log-scaled absolute cap) or v3 (adoption-ratio) formula. We pass
+  // the flat findings list (post-suppression, post-Layer-4) directly; the
+  // adapter aggregates into per-axis severity buckets internally.
   flags?.progress?.update("Scoring…");
   // Early-adopter grace (#89 / ADR-0018): ramp the ai-governance axis weight in
   // by AI-surface maturity so a nascent surface (one AIBadge) isn't cratered.
   const aiMarkerCount = scanForMarkerComponents(absoluteRoot).length;
   const graceWindow = config.scoring?.aiGovernanceGraceWindow ?? DEFAULT_AI_GOVERNANCE_GRACE_WINDOW;
   const aiGovernanceGrace = aiGovernanceGraceFactor(aiMarkerCount, graceWindow);
-  // Scoring v3 project (Task 5): dispatch to v2 (legacy, default) or v3 by
-  // --score-model / LYSE_SCORE_MODEL / .lyse.yaml `scoring.model`. Default
-  // stays "v2" until a later task flips DEFAULT_SCORE_MODEL.
+  // Scoring v3 project (Task 5): dispatch to v3 (default, DEFAULT_SCORE_MODEL)
+  // or v2 (opt-in legacy) by --score-model / LYSE_SCORE_MODEL / .lyse.yaml
+  // `scoring.model`.
   const scoreModel = resolveScoreModel({
     ...(flags?.scoreModel !== undefined ? { flag: flags.scoreModel } : {}),
     ...(process.env.LYSE_SCORE_MODEL !== undefined ? { env: process.env.LYSE_SCORE_MODEL } : {}),
