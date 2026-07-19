@@ -4,6 +4,7 @@ import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, FixGroup 
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 import { makeFixGroup } from "./_fix-group.js";
+import { isScored, onScale, reverseLookup } from "../graph/query.js";
 
 const RULE_ID = "tokens/no-hardcoded-opacity";
 const MAX_FILE_BYTES = 1_000_000;
@@ -52,25 +53,41 @@ function extractOpacity(text: string): Hit[] {
   return hits;
 }
 
+function opacityOnScale(ctx: RuleContext, hit: { raw: string; norm: number }): boolean {
+  if (ctx.graph) {
+    return onScale(ctx.graph, "opacity", hit.raw) || onScale(ctx.graph, "opacity", String(hit.norm));
+  }
+  const scale = ctx.tokens?.opacity ?? null;
+  return scale !== null && (scale.has(hit.raw) || scale.has(String(hit.norm)));
+}
+
+function opacityCandidates(ctx: RuleContext, hit: { raw: string; norm: number }): string[] {
+  if (ctx.graph) {
+    const byRaw = reverseLookup(ctx.graph, "opacity", hit.raw);
+    return byRaw.length > 0 ? byRaw : reverseLookup(ctx.graph, "opacity", String(hit.norm));
+  }
+  if (!ctx.tokens) return [];
+  return ctx.tokens.opacity.get(hit.raw) ?? ctx.tokens.opacity.get(String(hit.norm)) ?? [];
+}
+
 function opacityFixGroup(ctx: RuleContext, hit: { raw: string; norm: number }): FixGroup | undefined {
-  if (!ctx.tokens) return undefined;
-  const candidates = ctx.tokens.opacity.get(hit.raw) ?? ctx.tokens.opacity.get(String(hit.norm));
+  const candidates = opacityCandidates(ctx, hit);
   return makeFixGroup(RULE_ID, hit.raw, candidates);
 }
 
 const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalResult> => {
   const findings: Finding[] = [];
   if (ctx.repoRoot && isAllowlisted(ctx.repoRoot)) return { findings, opportunities: 0 };
-  const scale = ctx.tokens?.opacity ?? null;
   let opportunities = 0;
   const sources = [
     ...files.css.filter((f) => !f.skipped).map((f) => ({ path: f.path, source: f.source })),
     ...files.cssInJs.map((b) => ({ path: b.path, source: b.content })),
   ];
   for (const { path, source } of sources) {
+    if (ctx.graph && !isScored(ctx.graph, path)) continue;
     for (const hit of extractOpacity(source)) {
       opportunities++;
-      if (scale !== null && (scale.has(hit.raw) || scale.has(String(hit.norm)))) continue;
+      if (opacityOnScale(ctx, hit)) continue;
       const fixGroup = opacityFixGroup(ctx, hit);
       findings.push({
         ruleId: RULE_ID,

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { rule, _internal } from "../../src/rules/tokens-no-hardcoded-z-index.js";
 import type { RuleContext, ParsedFiles, TokenMap, ExtractedCssInJsBlock } from "../../src/types.js";
+import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
 
 function makeCtx(repoRoot: string, tokens: TokenMap | null = null): RuleContext {
   return { repoRoot, tokens, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [] };
@@ -82,5 +83,44 @@ describe("rule tokens/no-hardcoded-z-index", () => {
       expect(_internal.extractZIndexValues(".a{z-index:0}.b{z-index:1}.c{z-index:-1}")).toEqual([]);
       expect(_internal.extractZIndexValues(".a{z-index:var(--z)}")).toEqual([]);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P2 — graph-aware zone gating (Task 8: z-index migration)
+// ---------------------------------------------------------------------------
+function graphWith(zones: Record<string, string>, zIndex: string[] = []): DesignSystemGraph {
+  return {
+    schemaVersion: 1,
+    tokens: zIndex.map((v, i) => ({ id: `zIndex.${i}`, axis: "zIndex" as const, rawValue: v, source: "dtcg" as const })),
+    components: [], stories: [], usage: [],
+    zones: { byFile: zones as Record<string, ZoneKind> },
+    extraction: { entries: [], conflicts: [] },
+  };
+}
+function ctxWith(graph: DesignSystemGraph): RuleContext {
+  return { repoRoot: "/r", tokens: null, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [], graph };
+}
+
+describe("graph-aware zone gating (P2 migration)", () => {
+  it("does NOT flag a hardcoded z-index in a story-zoned file", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/Story.css", source: ".modal { z-index: 9999; }" }], cssInJs: [] };
+    const graph = graphWith({ "a/Story.css": "story" });
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("flags a hardcoded z-index in an app-zoned file", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source: ".modal { z-index: 9999; }" }], cssInJs: [] };
+    const graph = graphWith({ "a/Real.css": "app" });
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(1);
+  });
+
+  it("treats a value present in the fused graph tokens as on-scale (no finding)", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source: ".modal { z-index: 9999; }" }], cssInJs: [] };
+    const graph = graphWith({ "a/Real.css": "app" }, ["9999"]);
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
   });
 });

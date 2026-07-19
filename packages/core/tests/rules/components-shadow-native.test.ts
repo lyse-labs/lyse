@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { rule } from "../../src/rules/components-shadow-native.js";
 import type { RuleContext, ParsedFiles } from "../../src/types.js";
+import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
 
 const ctx: RuleContext = {
   repoRoot: "/r",
@@ -96,5 +97,49 @@ describe("components/no-native-shadows in DS-self mode", () => {
     };
     const result = await rule.evaluate({ ...ctx, dsSelfMode: false }, parsed);
     expect(result.findings).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P2 — graph-aware zone gating (Task 10: components/no-native-shadows migration)
+// ---------------------------------------------------------------------------
+function graphWith(zones: Record<string, string>): DesignSystemGraph {
+  return {
+    schemaVersion: 1,
+    tokens: [], components: [], stories: [], usage: [],
+    zones: { byFile: zones as Record<string, ZoneKind> },
+    extraction: { entries: [], conflicts: [] },
+  };
+}
+
+describe("graph-aware zone gating (P2 migration)", () => {
+  it("does NOT flag native <button> in a ds-source-zoned file that imports the DS module", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "apps/ds-repo/registry/button.tsx",
+        source: 'import { Card } from "@acme/ui";\nexport default () => (<button>x</button>);',
+        imports: [{ module: "@acme/ui", named: ["Card"], default: null, line: 1 }],
+        ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const graph = graphWith({ "apps/ds-repo/registry/button.tsx": "ds-source" });
+    const result = await rule.evaluate({ ...ctx, graph }, parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it("still flags native <button> in an app-zoned file that imports the DS module", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{
+        path: "src/Page.tsx",
+        source: 'import { Card } from "@acme/ui";\nexport default () => (<button>x</button>);',
+        imports: [{ module: "@acme/ui", named: ["Card"], default: null, line: 1 }],
+        ast: null,
+      }],
+      css: [], cssInJs: [],
+    };
+    const graph = graphWith({ "src/Page.tsx": "app" });
+    const result = await rule.evaluate({ ...ctx, graph }, parsed);
+    expect(result.findings.length).toBeGreaterThan(0);
   });
 });

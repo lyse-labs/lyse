@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { rule } from "../../src/rules/components-no-arbitrary-tailwind.js";
 import type { RuleContext, ParsedFiles } from "../../src/types.js";
+import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
 
 const ctx: RuleContext = {
   repoRoot: "/repo",
@@ -64,5 +65,42 @@ describe("components/no-arbitrary-tailwind", () => {
     expect(res.findings[0]?.ruleId).toBe("components/no-arbitrary-tailwind");
     expect(res.findings[0]?.axis).toBe("components");
     expect(res.findings[0]?.severity).toBe("warning");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P2 — graph-aware zone gating (Task 9: components/no-arbitrary-tailwind migration)
+// ---------------------------------------------------------------------------
+function graphWith(zones: Record<string, string>): DesignSystemGraph {
+  return {
+    schemaVersion: 1,
+    tokens: [], components: [], stories: [], usage: [],
+    zones: { byFile: zones as Record<string, ZoneKind> },
+    extraction: { entries: [], conflicts: [] },
+  };
+}
+function ctxWith(graph: DesignSystemGraph): RuleContext {
+  return { repoRoot: "/r", tokens: null, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [], graph };
+}
+
+describe("graph-aware zone gating (P2 migration)", () => {
+  it("does NOT flag arbitrary tailwind in a ds-source registry component", async () => {
+    const files: ParsedFiles = {
+      ts: [{ path: "apps/v4/styles/base-luma/ui/button.tsx", source: 'export const B = () => <div className="p-[12px]" />;', ast: null, imports: [] }],
+      css: [], cssInJs: [],
+    };
+    const graph = graphWith({ "apps/v4/styles/base-luma/ui/button.tsx": "ds-source" });
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("still flags arbitrary tailwind in an app file", async () => {
+    const files: ParsedFiles = {
+      ts: [{ path: "src/App.tsx", source: 'export const A = () => <div className="p-[12px]" />;', ast: null, imports: [] }],
+      css: [], cssInJs: [],
+    };
+    const graph = graphWith({ "src/App.tsx": "app" });
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings.length).toBeGreaterThan(0);
   });
 });

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { rule, _internal } from "../../src/rules/tokens-no-hardcoded-gradient.js";
 import type { RuleContext, ParsedFiles, ExtractedCssInJsBlock } from "../../src/types.js";
+import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
 
 function makeCtx(repoRoot: string): RuleContext {
   return { repoRoot, tokens: null, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [] };
@@ -69,5 +70,37 @@ describe("rule tokens/no-hardcoded-gradient", () => {
   it("exposes internals for testing", () => {
     expect(typeof _internal.isAllowlisted).toBe("function");
     expect(typeof _internal.extractGradients).toBe("function");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P2 — graph-aware zone gating (Task 7: gradient migration)
+// ---------------------------------------------------------------------------
+function graphWith(zones: Record<string, string>): DesignSystemGraph {
+  return {
+    schemaVersion: 1,
+    tokens: [],
+    components: [], stories: [], usage: [],
+    zones: { byFile: zones as Record<string, ZoneKind> },
+    extraction: { entries: [], conflicts: [] },
+  };
+}
+function ctxWith(graph: DesignSystemGraph): RuleContext {
+  return { repoRoot: "/r", tokens: null, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [], graph };
+}
+
+describe("graph-aware zone gating (P2 migration)", () => {
+  it("does NOT flag a hardcoded gradient in a story-zoned file", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/Story.css", source: ".hero { background: linear-gradient(90deg, #f00, #00f); }" }], cssInJs: [] };
+    const graph = graphWith({ "a/Story.css": "story" });
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("flags a hardcoded gradient in an app-zoned file", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source: ".hero { background: linear-gradient(90deg, #f00, #00f); }" }], cssInJs: [] };
+    const graph = graphWith({ "a/Real.css": "app" });
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(1);
   });
 });

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { rule, detectInText, countCompliantColorUses } from "../../src/rules/tokens-no-hardcoded-color.js";
 import { isSchemaOrDataFile, isLowSignalValueFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile } from "../../src/rules/_skip-context.js";
 import type { RuleContext, ParsedFiles, TokenMap } from "../../src/types.js";
+import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
 
 const emptyTokens: TokenMap = {
   colors: new Map([["#2563eb", ["color/action/primary"]]]),
@@ -1172,6 +1173,47 @@ describe("data-palette guard — CSS multi-color contexts must still flag (recal
     };
     const result = await rule.evaluate(ctx, parsed);
     expect(result.findings.length).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P2 — graph-aware zone gating (Task 5: color migration)
+// ---------------------------------------------------------------------------
+function graphWith(zones: Record<string, string>, colors: string[] = []): DesignSystemGraph {
+  return {
+    schemaVersion: 1,
+    tokens: colors.map((v, i) => ({ id: `color.${i}`, axis: "colors" as const, rawValue: v, source: "dtcg" as const })),
+    components: [], stories: [], usage: [],
+    zones: { byFile: zones as Record<string, ZoneKind> },
+    extraction: { entries: [], conflicts: [] },
+  };
+}
+function ctxWith(graph: DesignSystemGraph): RuleContext {
+  return { repoRoot: "/r", tokens: null, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [], graph };
+}
+
+describe("graph-aware zone gating (P2 migration)", () => {
+  it("does NOT flag a hardcoded color in a ds-source registry file", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "registry/ui/button.css", source: ".x{color:#2563eb}", root: null }], cssInJs: [] };
+    const graph = graphWith({ "registry/ui/button.css": "ds-source" });
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("still flags a hardcoded color in an app file", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "src/Real.css", source: ".x{color:#2563eb}", root: null }], cssInJs: [] };
+    const graph = graphWith({ "src/Real.css": "app" });
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings.length).toBeGreaterThan(0);
+  });
+
+  it("resolves the suggestion from the fused graph tokens via reverse lookup", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "src/Real.css", source: ".x{color:#2563eb}", root: null }], cssInJs: [] };
+    const graph = graphWith({ "src/Real.css": "app" }, ["#2563eb"]);
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]!.suggestion).toContain("color.0");
+    expect(res.findings[0]!.fixGroup).toMatchObject({ from: "#2563eb", to: "color.0" });
   });
 });
 

@@ -43,15 +43,16 @@ const snap = (label: string) =>
 const axis = (label: string, name: string) => snap(label).axes.find((a) => a.axis === name)!;
 
 describe("expected-to-change: known-wrong audit numbers photographed as expected-to-change", () => {
-  // P2 still owns these two. When a number moves: update the snapshot, update the band here,
-  // and record the delta in CHANGELOG ("the score got more honest — proof: <repo> tokens 1 → N").
+  // P2 (zone-aware token/component rules) fixed these two — see CHANGELOG "Fixed" entry for the
+  // exact before/after numbers (Carbon tokens 0 → 54, shadcn components 0 → 31). Bands stay loose
+  // (floors, not equalities) so future rule tuning doesn't require touching this file every time.
   // The stories N/A case below was P1's fix (Appendix-A story-title seeding) — see the CHANGELOG
   // "Fixed" entry for the exact before/after numbers.
-  it("Carbon: tokens axis floored near 0 (own spacing scale flagged)", () => {
-    expect(axis("carbon-react", "tokens").score).toBeLessThanOrEqual(10);
+  it("Carbon: tokens axis now scored meaningfully above the old zone-blind floor", () => {
+    expect(axis("carbon-react", "tokens").score).toBeGreaterThan(40);
   });
-  it("shadcn: components axis is 0 (native-by-design flagged)", () => {
-    expect(axis("shadcn-ui", "components").score).toBe(0);
+  it("shadcn: components axis now scored above 0 (ds-source zone findings no longer counted)", () => {
+    expect(axis("shadcn-ui", "components").score).toBeGreaterThan(0);
   });
   it("Carbon & Polaris: stories axis is now populated (P1 Appendix-A fix — no more silent N/A)", () => {
     expect(axis("carbon-react", "stories").score).not.toBe("N/A");

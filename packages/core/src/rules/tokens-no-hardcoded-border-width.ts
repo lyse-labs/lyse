@@ -4,6 +4,7 @@ import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, FixGroup 
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 import { makeFixGroup } from "./_fix-group.js";
+import { isScored, onScale, reverseLookup } from "../graph/query.js";
 
 const RULE_ID = "tokens/no-hardcoded-border-width";
 const MAX_FILE_BYTES = 1_000_000;
@@ -69,25 +70,36 @@ function extractBorderWidths(text: string): Hit[] {
   return hits.sort((a, b) => a.index - b.index);
 }
 
+function borderWidthOnScale(ctx: RuleContext, raw: string): boolean {
+  if (ctx.graph) return onScale(ctx.graph, "borderWidth", raw);
+  if (!ctx.tokens) return false;
+  return ctx.tokens.borderWidth.has(raw);
+}
+
+function borderWidthCandidates(ctx: RuleContext, raw: string): string[] {
+  if (ctx.graph) return reverseLookup(ctx.graph, "borderWidth", raw);
+  if (!ctx.tokens) return [];
+  return ctx.tokens.borderWidth.get(raw) ?? [];
+}
+
 function borderWidthFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {
-  if (!ctx.tokens) return undefined;
-  const candidates = ctx.tokens.borderWidth.get(raw);
+  const candidates = borderWidthCandidates(ctx, raw);
   return makeFixGroup(RULE_ID, raw, candidates);
 }
 
 const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalResult> => {
   const findings: Finding[] = [];
   if (ctx.repoRoot && isAllowlisted(ctx.repoRoot)) return { findings, opportunities: 0 };
-  const scale = ctx.tokens?.borderWidth ?? null;
   let opportunities = 0;
   const sources = [
     ...files.css.filter((f) => !f.skipped).map((f) => ({ path: f.path, source: f.source })),
     ...files.cssInJs.map((b) => ({ path: b.path, source: b.content })),
   ];
   for (const { path, source } of sources) {
+    if (ctx.graph && !isScored(ctx.graph, path)) continue;
     for (const hit of extractBorderWidths(source)) {
       opportunities++;
-      if (scale !== null && scale.has(hit.raw)) continue;
+      if (borderWidthOnScale(ctx, hit.raw)) continue;
       const fixGroup = borderWidthFixGroup(ctx, hit.raw);
       findings.push({
         ruleId: RULE_ID,

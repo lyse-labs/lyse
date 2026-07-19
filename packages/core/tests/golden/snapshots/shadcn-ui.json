@@ -4,12 +4,12 @@
     {
       "absoluteCap": 100,
       "axis": "tokens",
-      "findings": 690,
-      "opportunities": 22982,
-      "rateScore": 94,
-      "score": 94,
-      "sevPenalty": 1380,
-      "weightedFindings": 1380
+      "findings": 97,
+      "opportunities": 3903,
+      "rateScore": 95,
+      "score": 95,
+      "sevPenalty": 194,
+      "weightedFindings": 194
     },
     {
       "absoluteCap": 100,
@@ -24,12 +24,12 @@
     {
       "absoluteCap": 100,
       "axis": "components",
-      "findings": 10263,
-      "opportunities": 13048,
-      "rateScore": -57,
-      "score": 0,
-      "sevPenalty": 20526,
-      "weightedFindings": 20526
+      "findings": 1466,
+      "opportunities": 4251,
+      "rateScore": 31,
+      "score": 31,
+      "sevPenalty": 2932,
+      "weightedFindings": 2932
     },
     {
       "absoluteCap": "N/A",
@@ -62,12 +62,12 @@
       "weightedFindings": 0
     }
   ],
-  "finalScore": 54,
-  "findingsCount": 11224,
-  "findingsDigest": "5b9f324df88bdb4e830eda0c4aaa866563e78cf5676ee9f1bc6de826485433cd",
+  "finalScore": 61,
+  "findingsCount": 1834,
+  "findingsDigest": "e695938730c90da5dfe950c87e297ced2adbfc7fba204db77864d590f1d0fb94",
   "grade": {
     "autoFailed": false,
-    "grade": "C",
+    "grade": "B",
     "reasons": []
   },
   "meta": {
@@ -118,9 +118,9 @@
     "projection": {
       "top": [
         {
-          "count": 10198,
-          "files": 1007,
-          "gain": 20,
+          "count": 1401,
+          "files": 160,
+          "gain": 13,
           "key": "components/no-arbitrary-tailwind",
           "migrationScale": true,
           "ruleId": "components/no-arbitrary-tailwind"
@@ -136,13 +136,13 @@
         {
           "count": 121,
           "files": 68,
-          "gain": 4,
+          "gain": 3,
           "key": "a11y/interactive-role-name",
           "migrationScale": true,
           "ruleId": "a11y/interactive-role-name"
         }
       ],
-      "totalGainTop3": 28
+      "totalGainTop3": 21
     }
   },
   "repoRoot": "<REPO>",
@@ -153,7 +153,7 @@
     "react",
     "tailwind"
   ],
-  "tier": "Defined",
+  "tier": "Quantitative",
   "timestamp": "",
   "toolVersion": ""
 }

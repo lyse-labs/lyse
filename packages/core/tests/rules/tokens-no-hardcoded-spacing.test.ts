@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { rule, countCompliantSpacingUses } from "../../src/rules/tokens-no-hardcoded-spacing.js";
 import { isSchemaOrDataFile, isLowSignalValueFile, isInExampleOrSchemaValuePosition, isNotSpacingPropertyContext } from "../../src/rules/_skip-context.js";
 import type { RuleContext, ParsedFiles, TokenMap } from "../../src/types.js";
+import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
 
 const tokens: TokenMap = {
   colors: new Map(),
@@ -865,4 +866,43 @@ it("two findings for the same spacing value share one fixGroup key", async () =>
   const keys = findings.filter((f) => f.fixGroup).map((f) => f.fixGroup!.key);
   expect(keys).toHaveLength(2);
   expect(new Set(keys).size).toBe(1);
+});
+
+// ---------------------------------------------------------------------------
+// P2 — graph-aware zone gating (Task 4 reference migration)
+// ---------------------------------------------------------------------------
+function graphWith(zones: Record<string, string>, spacing: string[] = []): DesignSystemGraph {
+  return {
+    schemaVersion: 1,
+    tokens: spacing.map((v, i) => ({ id: `spacing.${i}`, axis: "spacing" as const, rawValue: v, source: "dtcg" as const })),
+    components: [], stories: [], usage: [],
+    zones: { byFile: zones as Record<string, ZoneKind> },
+    extraction: { entries: [], conflicts: [] },
+  };
+}
+function ctxWith(graph: DesignSystemGraph): RuleContext {
+  return { repoRoot: "/r", tokens: null, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [], graph };
+}
+
+describe("graph-aware zone gating (P2 migration)", () => {
+  it("does NOT flag off-scale spacing in a story-zoned file", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/ailabel-story.scss", source: ".x{padding:13px}", root: null }], cssInJs: [] };
+    const graph = graphWith({ "a/ailabel-story.scss": "story" });
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("flags off-scale spacing in an app-zoned file", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source: ".x{padding:13px}", root: null }], cssInJs: [] };
+    const graph = graphWith({ "a/Real.css": "app" });
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(1);
+  });
+
+  it("treats a value present in the fused graph tokens as on-scale (no finding)", async () => {
+    const files: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source: ".x{padding:13px}", root: null }], cssInJs: [] };
+    const graph = graphWith({ "a/Real.css": "app" }, ["13"]);
+    const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
+  });
 });

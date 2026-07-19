@@ -7,6 +7,7 @@ import {
   isInCommentOrUrl,
 } from "./_skip-context.js";
 import { createLyseRule } from "./_rule-module.js";
+import { isScored } from "../graph/query.js";
 
 // ─── Value-type classification ────────────────────────────────────────────────
 //
@@ -128,9 +129,8 @@ const evaluate = async (
 
   for (const f of files.ts) {
     if (isPathExcluded(f.path, ctx.excludePaths)) continue;
-    if (isVendoredOrResetFile(f.path)) continue;
-    if (isLowSignalValueFile(f.path)) continue;
-    if (isSchemaOrDataFile(f.path)) continue;
+    if (ctx.graph && !isScored(ctx.graph, f.path)) continue;
+    if (!ctx.graph && (isVendoredOrResetFile(f.path) || isLowSignalValueFile(f.path) || isSchemaOrDataFile(f.path))) continue;
 
     const source = f.source;
     TW_ARBITRARY_RE.lastIndex = 0;
@@ -166,8 +166,8 @@ const evaluate = async (
 
   for (const b of files.cssInJs) {
     if (isPathExcluded(b.path, ctx.excludePaths)) continue;
-    if (isVendoredOrResetFile(b.path)) continue;
-    if (isLowSignalValueFile(b.path)) continue;
+    if (ctx.graph && !isScored(ctx.graph, b.path)) continue;
+    if (!ctx.graph && (isVendoredOrResetFile(b.path) || isLowSignalValueFile(b.path))) continue;
 
     const source = b.content;
     TW_ARBITRARY_RE.lastIndex = 0;

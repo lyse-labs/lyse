@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
+import { isScored } from "../graph/query.js";
 
 const RULE_ID = "tokens/no-hardcoded-gradient";
 const MAX_FILE_BYTES = 1_000_000;
@@ -65,6 +66,7 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
     ...files.cssInJs.map((b) => ({ path: b.path, source: b.content, blockLine: b.line })),
   ];
   for (const { path, source, blockLine } of sources) {
+    if (ctx.graph && !isScored(ctx.graph, path)) continue;
     for (const hit of extractGradients(source)) {
       opportunities++;
       const line = blockLine > 0 ? blockLine : lineFromIndex(source, hit.index);

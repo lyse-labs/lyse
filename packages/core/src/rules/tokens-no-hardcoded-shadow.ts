@@ -4,6 +4,8 @@ import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap,
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 import { makeFixGroup } from "./_fix-group.js";
+import { isScored } from "../graph/query.js";
+import type { DesignSystemGraph } from "../graph/types.js";
 
 const RULE_ID = "tokens/no-hardcoded-shadow";
 const MAX_FILE_BYTES = 1_000_000;
@@ -35,10 +37,36 @@ function extractShadows(text: string): ShadowHit[] {
   return hits;
 }
 
+function shadowOnScale(ctx: RuleContext, normed: string): boolean {
+  if (ctx.graph) return graphShadowScaleSet(ctx.graph).has(normed);
+  if (!ctx.tokens) return false;
+  return shadowScaleSet(ctx.tokens).has(normed);
+}
+
+function shadowCandidates(ctx: RuleContext, normed: string): string[] {
+  if (ctx.graph) return graphShadowReverseLookup(ctx.graph, normed);
+  if (!ctx.tokens) return [];
+  return ctx.tokens.shadows.get(normed) ?? [];
+}
+
+// graph.tokens[].rawValue is copied verbatim from the loader maps (whitespace
+// preserved) — normalize it with the same norm() the rule uses for hit keys,
+// since the hit key is whitespace-stripped. See graph/extract/tokens.ts.
+function graphShadowScaleSet(graph: DesignSystemGraph): Set<string> {
+  const set = new Set<string>();
+  for (const t of graph.tokens) if (t.axis === "shadows") set.add(norm(t.rawValue));
+  return set;
+}
+
+function graphShadowReverseLookup(graph: DesignSystemGraph, normed: string): string[] {
+  return graph.tokens
+    .filter((t) => t.axis === "shadows" && norm(t.rawValue) === normed)
+    .map((t) => t.id)
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+}
+
 function shadowFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {
-  if (!ctx.tokens) return undefined;
-  const normed = norm(raw);
-  const candidates = ctx.tokens.shadows.get(normed);
+  const candidates = shadowCandidates(ctx, norm(raw));
   return makeFixGroup(RULE_ID, raw, candidates);
 }
 
@@ -76,16 +104,16 @@ function lineFromIndex(text: string, index: number): number {
 const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalResult> => {
   const findings: Finding[] = [];
   if (ctx.repoRoot && isAllowlisted(ctx.repoRoot)) return { findings, opportunities: 0 };
-  const scale = shadowScaleSet(ctx.tokens);
   let opportunities = 0;
   const sources = [
     ...files.css.filter((f) => !f.skipped).map((f) => ({ path: f.path, source: f.source })),
     ...files.cssInJs.map((b) => ({ path: b.path, source: b.content })),
   ];
   for (const { path, source } of sources) {
+    if (ctx.graph && !isScored(ctx.graph, path)) continue;
     for (const hit of extractShadows(source)) {
       opportunities++;
-      if (scale.has(norm(hit.raw))) continue;
+      if (shadowOnScale(ctx, norm(hit.raw))) continue;
       const fixGroup = shadowFixGroup(ctx, hit.raw);
       findings.push({
         ruleId: RULE_ID,
