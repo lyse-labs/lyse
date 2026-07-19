@@ -28,13 +28,12 @@ Lyse is designed to **minimise the attack surface** by handling everything clien
 | Concern | Mechanism |
 |---|---|
 | npm release integrity | `npm publish --provenance` (Sigstore attestation) |
-| Release tag integrity | GPG-signed git tags |
 | License JWT | Ed25519 (EdDSA), public key embedded in the package, private key offline. Rotated on major-version bumps. |
 | `repo_bucket` anonymisation | SHA-256 with a server-side salt rotated daily |
 
 ## Out of scope
 
-- Vulnerabilities in dependencies upstream from Lyse (report to those projects). We monitor advisories and ship `dependabot` patches.
+- Vulnerabilities in dependencies upstream from Lyse (report to those projects). We monitor advisories and ship `Renovate` patches.
 - Issues that require the user to have already compromised their own machine.
 - Theoretical timing attacks against the rule engine (the engine produces public output by design).
 - Anything related to the user's own design system content — Lyse does not introspect runtime data.
