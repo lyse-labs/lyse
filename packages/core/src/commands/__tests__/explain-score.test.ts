@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatExplainScore } from "../explain-score.js";
 import type { Finding } from "../../reliability/types.js";
+import type { AxisScore } from "../../types.js";
 
 const F = (overrides: Partial<Finding>): Finding => ({
   ruleId: "tokens/no-hardcoded-color",
@@ -14,13 +15,46 @@ const F = (overrides: Partial<Finding>): Finding => ({
   ...overrides,
 });
 
+const NO_AXES: AxisScore[] = [];
+
 describe("formatExplainScore", () => {
-  it("reports 100 / 100 and 'No findings' when the finding list is empty", () => {
-    const r = formatExplainScore({ findings: [], stableSubAxes: new Set(), confidenceByAxis: {} });
-    expect(r.score).toBe(100);
-    expect(r.version).toBe("scoring-v1");
-    expect(r.rawText).toContain("Health Score: 100 / 100");
+  it("headline number IS the passed-in finalScore/scoringVersion (H4: never recomputed locally)", () => {
+    const r = formatExplainScore({
+      findings: [],
+      stableSubAxes: new Set(),
+      confidenceByAxis: {},
+      finalScore: 87,
+      scoringVersion: "scoring-v2",
+      axes: NO_AXES,
+    });
+    expect(r.score).toBe(87);
+    expect(r.version).toBe("scoring-v2");
+    expect(r.rawText).toContain("Health Score: 87 / 100  ·  scoring-v2");
+  });
+
+  it("reports 'No findings' when the finding list is empty", () => {
+    const r = formatExplainScore({
+      findings: [],
+      stableSubAxes: new Set(),
+      confidenceByAxis: {},
+      finalScore: 100,
+      scoringVersion: "scoring-v2",
+      axes: NO_AXES,
+    });
     expect(r.rawText).toContain("No findings");
+  });
+
+  it("renders 'N/A' headline when finalScore is N/A (insufficient sample)", () => {
+    const r = formatExplainScore({
+      findings: [],
+      stableSubAxes: new Set(),
+      confidenceByAxis: {},
+      finalScore: "N/A",
+      scoringVersion: "scoring-v2",
+      axes: NO_AXES,
+    });
+    expect(r.score).toBe("N/A");
+    expect(r.rawText).toContain("Health Score: N/A  ·  scoring-v2");
   });
 
   it("renders a gap report: score gap (points recoverable) + maturity next-rung", () => {
@@ -38,6 +72,9 @@ describe("formatExplainScore", () => {
       findings: [finding],
       stableSubAxes: new Set(["tokens.dtcg-conformance"]),
       confidenceByAxis: { "tokens.dtcg-conformance": 1 },
+      finalScore: 94,
+      scoringVersion: "scoring-v2",
+      axes: NO_AXES,
       maturity: {
         level: 2,
         signals: {
@@ -61,6 +98,9 @@ describe("formatExplainScore", () => {
       findings: [],
       stableSubAxes: new Set(),
       confidenceByAxis: {},
+      finalScore: 100,
+      scoringVersion: "scoring-v2",
+      axes: NO_AXES,
       maturity: {
         level: 2,
         signals: {
@@ -80,6 +120,9 @@ describe("formatExplainScore", () => {
       findings: [],
       stableSubAxes: new Set(),
       confidenceByAxis: {},
+      finalScore: 100,
+      scoringVersion: "scoring-v2",
+      axes: NO_AXES,
       maturity: {
         level: 3,
         signals: {
@@ -100,6 +143,9 @@ describe("formatExplainScore", () => {
       findings: [],
       stableSubAxes: new Set(),
       confidenceByAxis: {},
+      finalScore: 100,
+      scoringVersion: "scoring-v2",
+      axes: NO_AXES,
       maturity: {
         level: 0,
         signals: {
@@ -114,20 +160,30 @@ describe("formatExplainScore", () => {
   });
 
   it("omits the maturity line when no maturity is provided (back-compat)", () => {
-    const r = formatExplainScore({ findings: [], stableSubAxes: new Set(), confidenceByAxis: {} });
+    const r = formatExplainScore({
+      findings: [],
+      stableSubAxes: new Set(),
+      confidenceByAxis: {},
+      finalScore: 100,
+      scoringVersion: "scoring-v2",
+      axes: NO_AXES,
+    });
     expect(r.rawText).not.toContain("AI-Governance Maturity");
     expect(r.maturityLevel).toBeUndefined();
   });
 
-  it("includes the pinned scoring-v1 version string", () => {
-    const r = formatExplainScore({ findings: [], stableSubAxes: new Set(), confidenceByAxis: {} });
-    expect(r.rawText).toContain("scoring-v1");
-  });
-
-  it("describes the formula (penalty × 1.5, clamped 0-100)", () => {
-    const r = formatExplainScore({ findings: [], stableSubAxes: new Set(), confidenceByAxis: {} });
-    expect(r.rawText).toContain("100 - penalty");
-    expect(r.rawText).toContain("× 1.5");
+  it("does not describe formula-v1 (penalty × 1.5) or a score-v2 preview line — the score is the audit's, not a local formula", () => {
+    const r = formatExplainScore({
+      findings: [],
+      stableSubAxes: new Set(),
+      confidenceByAxis: {},
+      finalScore: 100,
+      scoringVersion: "scoring-v2",
+      axes: NO_AXES,
+    });
+    expect(r.rawText).not.toContain("Formula:");
+    expect(r.rawText).not.toContain("penalty × 1.5");
+    expect(r.rawText).not.toContain("score-v2 preview");
   });
 
   it("buckets findings by sub-axis with name, count, confidence weight, and penalty", () => {
@@ -136,13 +192,17 @@ describe("formatExplainScore", () => {
       findings,
       stableSubAxes: new Set(["tokens.color"]),
       confidenceByAxis: { "tokens.color": 1.0 },
+      finalScore: 88,
+      scoringVersion: "scoring-v2",
+      axes: NO_AXES,
     });
-    expect(r.score).toBeLessThan(100);
     expect(r.buckets).toHaveLength(1);
     expect(r.buckets[0]!.subAxisId).toBe("tokens.color");
     expect(r.buckets[0]!.countedFindings).toBe(2);
     expect(r.buckets[0]!.confidence).toBe(1.0);
     expect(r.buckets[0]!.penalty).toBe(6);
+    expect(r.countedTotal).toBe(2);
+    expect(r.reportedOnlyTotal).toBe(0);
     expect(r.rawText).toContain("Color tokens");
     expect(r.rawText).toContain("2 findings");
     expect(r.rawText).toContain("confidence 1.00");
@@ -154,8 +214,10 @@ describe("formatExplainScore", () => {
       findings,
       stableSubAxes: new Set(),
       confidenceByAxis: {},
+      finalScore: 100,
+      scoringVersion: "scoring-v2",
+      axes: NO_AXES,
     });
-    expect(r.score).toBe(100);
     expect(r.countedTotal).toBe(0);
     expect(r.reportedOnlyTotal).toBe(1);
     expect(r.rawText).toContain("Reported only");
@@ -172,6 +234,9 @@ describe("formatExplainScore", () => {
       findings,
       stableSubAxes: new Set(["tokens.color", "a11y.essentials"]),
       confidenceByAxis: { "tokens.color": 1.0, "a11y.essentials": 1.0 },
+      finalScore: 80,
+      scoringVersion: "scoring-v2",
+      axes: NO_AXES,
     });
     expect(r.buckets[0]!.status).toBe("stable");
     expect(r.buckets[1]!.status).toBe("stable");
@@ -180,13 +245,53 @@ describe("formatExplainScore", () => {
     expect(r.buckets[1]!.subAxisId).toBe("tokens.color");
   });
 
-  it("clamps the score at 0 when penalties are massive", () => {
-    const findings = Array.from({ length: 100 }, () => F({}));
-    const r = formatExplainScore({
-      findings,
-      stableSubAxes: new Set(["tokens.color"]),
-      confidenceByAxis: { "tokens.color": 1.0 },
+  describe("per-axis adoption breakdown", () => {
+    it("renders a ratio sentence for a scored axis", () => {
+      const r = formatExplainScore({
+        findings: [],
+        stableSubAxes: new Set(),
+        confidenceByAxis: {},
+        finalScore: 90,
+        scoringVersion: "scoring-v2",
+        axes: [{ axis: "tokens", score: 90, findings: 2, opportunities: 20 }],
+      });
+      expect(r.rawText).toContain("• tokens: 90% adoption (18/20 usages)");
     });
-    expect(r.score).toBe(0);
+
+    it("renders an insufficient-sample sentence for N/A with opportunities > 0", () => {
+      const r = formatExplainScore({
+        findings: [],
+        stableSubAxes: new Set(),
+        confidenceByAxis: {},
+        finalScore: "N/A",
+        scoringVersion: "scoring-v2",
+        axes: [{ axis: "a11y", score: "N/A", findings: 0, opportunities: 3 }],
+      });
+      expect(r.rawText).toContain("• a11y: insufficient sample (n=3) — not scored");
+    });
+
+    it("renders a not-scored sentence for an axis with zero opportunities", () => {
+      const r = formatExplainScore({
+        findings: [],
+        stableSubAxes: new Set(),
+        confidenceByAxis: {},
+        finalScore: "N/A",
+        scoringVersion: "scoring-v2",
+        axes: [{ axis: "stories", score: "N/A", findings: 0, opportunities: 0 }],
+      });
+      expect(r.rawText).toContain("• stories: not scored — no stories opportunities in scope");
+    });
+
+    it("clamps 'clean' usages at 0 when findings exceed opportunities", () => {
+      const r = formatExplainScore({
+        findings: [],
+        stableSubAxes: new Set(),
+        confidenceByAxis: {},
+        finalScore: 50,
+        scoringVersion: "scoring-v2",
+        axes: [{ axis: "components", score: 50, findings: 5, opportunities: 2 }],
+      });
+      expect(r.rawText).toContain("• components: 50% adoption (0/2 usages)");
+    });
   });
 });
