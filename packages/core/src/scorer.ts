@@ -31,14 +31,14 @@ export type { AxisFindings, AxisScoreV2, ScoreResult, ScoreOptions } from "./sco
 // ---------------------------------------------------------------------------
 // scoreAudit — dispatcher over the v2 (legacy) and v3 scoring formulas.
 //
-// DEFAULT_SCORE_MODEL stays "v2": a plain `lyse audit` must keep producing
-// byte-identical output until a later task flips the default. v3 is opt-in
-// via --score-model / LYSE_SCORE_MODEL / .lyse.yaml `scoring.model`.
+// DEFAULT_SCORE_MODEL is "v3": a plain `lyse audit` runs the v3 adoption-ratio
+// scorer. The legacy v2 formula stays reachable (one minor, then removed) via
+// --score-model v2 / LYSE_SCORE_MODEL=v2 / .lyse.yaml `scoring.model: v2`.
 // ---------------------------------------------------------------------------
 
 export type ScoreModel = "v2" | "v3";
 
-export const DEFAULT_SCORE_MODEL: ScoreModel = "v2";
+export const DEFAULT_SCORE_MODEL: ScoreModel = "v3";
 
 export interface AuditScoreBundle {
   schemaVersion: 2 | 3;

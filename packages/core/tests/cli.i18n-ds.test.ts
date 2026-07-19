@@ -11,7 +11,12 @@ const FR_DS = join(__dirname, "../fixtures/i18n-fr-ds");
 const DE_DS = join(__dirname, "../fixtures/i18n-de-ds");
 
 function audit(path: string): AuditResult {
-  const r = runAuditTest({ path, format: "json" });
+  // Pin v2: these probes assert the ai-governance axis is ACTIVE (not N/A) once
+  // Face B recognises the localized AI marker. Under the default v3 model the
+  // axis is below min-N=30 on these tiny i18n fixtures → N/A, which is a
+  // sample-size artifact, not a detection failure. The marker findings asserted
+  // below are model-independent; scoring v2 keeps the "axis active" claim valid.
+  const r = runAuditTest({ path, format: "json", extraArgs: ["--score-model", "v2"] });
   expect(r.status).toBe(0);
   return JSON.parse(r.stdout) as AuditResult;
 }

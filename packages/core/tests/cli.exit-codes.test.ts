@@ -13,7 +13,15 @@ describe("cli exit codes", () => {
   });
 
   it("exits 1 with --threshold above score", () => {
-    const r = runAuditTest({ path: fixture, format: "json", extraArgs: ["--threshold", "99"] });
+    // Pin v2: --threshold gates on a numeric finalScore. Under the default v3
+    // model every full-ds axis is below min-N=30 → finalScore "N/A", which
+    // can't be compared to a threshold (no gate → exit 0). This test exercises
+    // the gating mechanism, so it scores against the numeric v2 formula.
+    const r = runAuditTest({
+      path: fixture,
+      format: "json",
+      extraArgs: ["--threshold", "99", "--score-model", "v2"],
+    });
     expect(r.status).toBe(1);
   });
 

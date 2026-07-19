@@ -29,6 +29,8 @@ function maturityDetail(s: GovernanceSignals): string {
 export interface ExplainScoreOpts {
   cwd: string;
   staticOnly?: boolean;
+  /** Scoring model override (default resolves to `DEFAULT_SCORE_MODEL` = v3). */
+  scoreModel?: "v2" | "v3";
   /** Injected for tests — defaults to the resolved connector. */
   maturityConnector?: import("../llm/connectors/types.js").ConnectorClient;
   maturityTimeoutMs?: number;
@@ -237,10 +239,10 @@ export function formatExplainScore(args: FormatExplainScoreArgs): ExplainScoreRe
  */
 export async function explainScore(opts: ExplainScoreOpts): Promise<ExplainScoreResult> {
   const repoRoot = resolve(opts.cwd);
-  const pipeline = await auditDirectory(
-    repoRoot,
-    opts.staticOnly === true ? { staticOnly: true } : undefined,
-  );
+  const pipeline = await auditDirectory(repoRoot, {
+    ...(opts.staticOnly === true ? { staticOnly: true } : {}),
+    ...(opts.scoreModel !== undefined ? { scoreModel: opts.scoreModel } : {}),
+  });
   const findings = pipeline.result.findings.map(legacyToReliability);
 
   const filterRan = pipeline.result.meta?.layer4?.filterRan === true;

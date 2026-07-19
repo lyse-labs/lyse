@@ -262,7 +262,7 @@ const auditCommand = defineCommand({
     },
     "score-model": {
       type: "string",
-      description: "Scoring model: v2 (default, legacy) or v3 (opt-in, experimental).",
+      description: "Scoring model: v3 (default) or v2 (legacy escape hatch, removed after one minor).",
     },
     "graph-full": {
       type: "boolean",
@@ -742,18 +742,36 @@ const explainCommand = defineCommand({
     ruleId: { type: "positional", required: false, description: "rule id (e.g. tokens/no-hardcoded-color), or a repo path with --score (default: cwd)" },
     score: { type: "boolean", default: false, description: "Show a Lighthouse-style score breakdown of the target repo's Health Score" },
     "static-only": { type: "boolean", default: false, description: "(with --score) skip the LLM augmentation step" },
+    "score-model": { type: "string", description: "(with --score) scoring model: v3 (default) or v2 (legacy escape hatch)." },
     format: { type: "string", default: "text", description: "text | md (default: text)" },
     ...GLOBAL_FLAGS,
   },
   async run({ args }) {
     applyGlobalFlags(args);
     if (args.score === true) {
+      // Validate --score-model / LYSE_SCORE_MODEL at the boundary so a bad value
+      // yields a clean [lyse] Error (exit 64), not a raw stack trace from
+      // resolveScoreModel deep in the pipeline (mirrors the audit command).
+      try {
+        resolveScoreModel({
+          ...(typeof args["score-model"] === "string" && args["score-model"]
+            ? { flag: args["score-model"] as string }
+            : {}),
+          ...(process.env.LYSE_SCORE_MODEL !== undefined ? { env: process.env.LYSE_SCORE_MODEL } : {}),
+        });
+      } catch (err) {
+        console.error(`[lyse] Error: ${(err as Error).message}`);
+        process.exit(64); // EX_USAGE
+      }
       // With --score the positional is a repo PATH (not a ruleId); default to cwd.
       const target =
         typeof args.ruleId === "string" && args.ruleId.length > 0 ? args.ruleId : process.cwd();
       await runExplainScore({
         cwd: target,
         ...(args["static-only"] === true ? { staticOnly: true } : {}),
+        ...(typeof args["score-model"] === "string" && args["score-model"]
+          ? { scoreModel: args["score-model"] as "v2" | "v3" }
+          : {}),
       });
       return;
     }

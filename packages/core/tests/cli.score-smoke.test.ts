@@ -49,9 +49,15 @@ describe("cli explain --score smoke (Track 8.10)", () => {
       );
     }
 
-    const r = spawnSync("node", [LYSE_CLI_PATH, "explain", "--score", "--static-only", fixture], {
-      encoding: "utf8",
-    });
+    // Pin v2: this smoke test guards the numeric audit score against regression.
+    // The default is now v3, under which full-ds is below min-N=30 on every axis
+    // → "N/A" (no number to band). The reachable v2-legacy formula still
+    // produces the numeric [34,40] signal this guard exists to protect.
+    const r = spawnSync(
+      "node",
+      [LYSE_CLI_PATH, "explain", "--score", "--static-only", "--score-model", "v2", fixture],
+      { encoding: "utf8" },
+    );
 
     expect(r.status, `explain --score exited non-zero:\n${r.stderr}`).toBe(0);
 

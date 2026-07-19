@@ -44,7 +44,7 @@ function findingsFixture(): Finding[] {
 describe("resolveScoreModel — precedence", () => {
   it("defaults to DEFAULT_SCORE_MODEL when nothing is provided", () => {
     expect(resolveScoreModel({})).toBe(DEFAULT_SCORE_MODEL);
-    expect(resolveScoreModel({})).toBe("v2");
+    expect(resolveScoreModel({})).toBe("v3");
   });
 
   it("config wins over the default", () => {
@@ -135,14 +135,20 @@ describe("scoreAudit — v3 branch", () => {
   });
 });
 
-describe("auditDirectory — integration: default stays v2, --score-model v3 opts in", () => {
-  it("default (no scoreModel flag) yields schemaVersion 2 / scoring-v1.1", async () => {
+describe("auditDirectory — integration: default is v3, --score-model v2 opts out", () => {
+  it("default (no scoreModel flag) yields schemaVersion 3 / scoring-v3", async () => {
     const { result } = await auditDirectory(FULL_DS, { staticOnly: true });
+    expect(result.schemaVersion).toBe(3);
+    expect(result.scoringVersion).toBe("scoring-v3");
+  });
+
+  it("scoreModel: 'v2' (escape hatch) yields schemaVersion 2 / scoring-v1.1", async () => {
+    const { result } = await auditDirectory(FULL_DS, { staticOnly: true, scoreModel: "v2" });
     expect(result.schemaVersion).toBe(2);
     expect(result.scoringVersion).toBe("scoring-v1.1");
   });
 
-  it("scoreModel: 'v3' yields schemaVersion 3 / scoring-v3", async () => {
+  it("scoreModel: 'v3' (explicit) still yields schemaVersion 3 / scoring-v3", async () => {
     const { result } = await auditDirectory(FULL_DS, { staticOnly: true, scoreModel: "v3" });
     expect(result.schemaVersion).toBe(3);
     expect(result.scoringVersion).toBe("scoring-v3");

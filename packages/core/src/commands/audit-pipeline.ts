@@ -653,10 +653,11 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     ...(process.env.LYSE_SCORE_MODEL !== undefined ? { env: process.env.LYSE_SCORE_MODEL } : {}),
     ...(config.scoring?.model !== undefined ? { config: config.scoring.model } : {}),
   });
-  const bundle = scoreAudit(scoreModel, runResult, {
+  const scoreOpts = {
     ...(config.scoring?.minSampleSize !== undefined ? { minSampleSize: config.scoring.minSampleSize } : {}),
     aiGovernanceGrace,
-  });
+  };
+  const bundle = scoreAudit(scoreModel, runResult, scoreOpts);
 
   // Deterministic score projection (Sprint 1 actionable findings, spec §1/§3):
   // top fix groups by size and their Health Score gain if fixed. Must run on
@@ -669,14 +670,16 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     runResult.findings,
     config.advisory?.migrationScaleFileCount ?? MIGRATION_SCALE_FILE_COUNT_DEFAULT,
   );
-  // Projection stays on the legacy v2 scorer regardless of `scoreModel`
-  // (migrated in a later task); `bundle.finalScore` is the baseline it
-  // compares against, and equals the v2 value under the default model.
+  // Projection re-scores under the SAME `scoreModel` as the headline bundle,
+  // so projected gains are consistent with `bundle.finalScore` (the baseline
+  // it compares against). On a repo where every axis is below min-N the v3
+  // finalScore is "N/A" and `computeProjection` returns undefined early.
   const projection = computeProjection(
     groups,
     runResult.findings,
-    runResult.opportunitiesByAxis,
-    { aiGovernanceGrace },
+    runResult,
+    scoreModel,
+    scoreOpts,
     bundle.finalScore,
   );
 

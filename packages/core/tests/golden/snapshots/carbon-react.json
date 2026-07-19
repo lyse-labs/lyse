@@ -1,73 +1,49 @@
 {
-  "$schema": "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-result.json",
+  "$schema": "https://github.com/lyse-labs/lyse/raw/main/schemas/v3/lyse-result.json",
   "axes": [
     {
-      "absoluteCap": 100,
       "axis": "tokens",
       "findings": 19,
       "opportunities": 82,
-      "rateScore": 54,
-      "score": 54,
-      "sevPenalty": 38,
-      "weightedFindings": 38
+      "score": 77
     },
     {
-      "absoluteCap": 100,
       "axis": "a11y",
       "findings": 21,
       "opportunities": 975,
-      "rateScore": 96,
-      "score": 96,
-      "sevPenalty": 42,
-      "weightedFindings": 42
+      "score": 98
     },
     {
-      "absoluteCap": 100,
       "axis": "components",
       "findings": 56,
       "opportunities": 451,
-      "rateScore": 86,
-      "score": 86,
-      "sevPenalty": 64,
-      "weightedFindings": 64
+      "score": 88
     },
     {
-      "absoluteCap": 100,
       "axis": "stories",
       "findings": 109,
       "opportunities": 222,
-      "rateScore": 2,
-      "score": 2,
-      "sevPenalty": 218,
-      "weightedFindings": 218
+      "score": 51
     },
     {
-      "absoluteCap": 100,
       "axis": "ai-surface",
       "findings": 19,
       "opportunities": 117,
-      "rateScore": 68,
-      "score": 68,
-      "sevPenalty": 37,
-      "weightedFindings": 37
+      "score": 84
     },
     {
-      "absoluteCap": 100,
       "axis": "ai-governance",
       "findings": 10,
       "opportunities": 1165,
-      "rateScore": 98,
-      "score": 98,
-      "sevPenalty": 18,
-      "weightedFindings": 18
+      "score": 99
     }
   ],
-  "finalScore": 67,
+  "finalScore": 83,
   "findingsCount": 234,
   "findingsDigest": "539bb78fff51753250f0f1d785b714fc7593cee07ae467b029c1174351a15c93",
   "grade": {
     "autoFailed": false,
-    "grade": "B",
+    "grade": "A",
     "reasons": []
   },
   "meta": {
@@ -120,18 +96,10 @@
         {
           "count": 109,
           "files": 1,
-          "gain": 17,
+          "gain": 8,
           "key": "stories/usage-examples",
           "migrationScale": false,
           "ruleId": "stories/usage-examples"
-        },
-        {
-          "count": 11,
-          "files": 2,
-          "gain": 4,
-          "key": "versioning/deprecation-markers",
-          "migrationScale": false,
-          "ruleId": "versioning/deprecation-markers"
         },
         {
           "count": 48,
@@ -140,20 +108,28 @@
           "key": "components/doc-comments",
           "migrationScale": false,
           "ruleId": "components/doc-comments"
+        },
+        {
+          "count": 11,
+          "files": 2,
+          "gain": 1,
+          "key": "versioning/deprecation-markers",
+          "migrationScale": false,
+          "ruleId": "versioning/deprecation-markers"
         }
       ],
-      "totalGainTop3": 22
+      "totalGainTop3": 11
     }
   },
   "repoRoot": "<REPO>/packages/react",
   "rulesVersion": "0.1.0",
-  "schemaVersion": 2,
-  "scoringVersion": "scoring-v1.1",
+  "schemaVersion": 3,
+  "scoringVersion": "scoring-v3",
   "stack": [
     "react",
     "storybook"
   ],
-  "tier": "Quantitative",
+  "tier": "Autonomous",
   "timestamp": "",
   "toolVersion": ""
 }
