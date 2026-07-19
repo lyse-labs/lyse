@@ -50,6 +50,7 @@ jobs:
             --exclude "^https?://(www\.)?conventionalcommits\.org"
             --exclude "^https?://(www\.)?canvas\.workday\.com"
             --exclude "^https?://(www\.)?cnil\.fr"
+            --exclude "^https?://(.+\.)?shields\.io"
             --accept 200,206,429
             './**/*.md'
           fail: true
