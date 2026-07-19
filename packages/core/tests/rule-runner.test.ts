@@ -49,12 +49,22 @@ describe("runRules", () => {
         };
       },
     };
+    const fakeRule3: Rule = {
+      id: "tokens/no-hardcoded-spacing",
+      axis: "tokens",
+      async evaluate() {
+        return {
+          findings: [],
+          opportunities: 2,
+        };
+      },
+    };
     const parsed: ParsedFiles = { ts: [], css: [], cssInJs: [] };
-    const res = await runRules([fakeRule1, fakeRule2], ctx, parsed);
+    const res = await runRules([fakeRule1, fakeRule2, fakeRule3], ctx, parsed);
 
     // every rule that recorded opportunities appears once
     expect(Array.isArray(res.perRuleOpportunities)).toBe(true);
-    expect(res.perRuleOpportunities).toHaveLength(2);
+    expect(res.perRuleOpportunities).toHaveLength(3);
 
     // per-axis sum equals the sum of per-rule opportunities for that axis
     const byAxis: Record<string, number> = {};
@@ -62,7 +72,10 @@ describe("runRules", () => {
       byAxis[r.axis] = (byAxis[r.axis] ?? 0) + r.opportunities;
     }
     for (const [axis, sum] of Object.entries(byAxis)) {
-      expect(res.opportunitiesByAxis[axis as any]).toBe(sum);
+      expect(res.opportunitiesByAxis[axis as keyof typeof res.opportunitiesByAxis]).toBe(sum);
     }
+
+    // assert genuine summation: tokens axis has two rules (5 + 2)
+    expect(res.opportunitiesByAxis.tokens).toBe(7);
   });
 });
