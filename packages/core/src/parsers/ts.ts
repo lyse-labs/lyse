@@ -2,9 +2,14 @@ import { parse } from "@swc/core";
 import type { Module, ImportDeclaration, NamedImportSpecifier, ImportDefaultSpecifier } from "@swc/core";
 import type { ParsedTsFile, ImportRecord } from "../types.js";
 
-function extToSyntax(path: string): "typescript" | "ecmascript" {
-  return /\.(tsx?|jsx?)$/.test(path) ? "typescript" : "ecmascript";
-}
+// swc parses JavaScript as a subset of TypeScript, so we always select the
+// TypeScript syntax (covering .ts/.tsx/.js/.jsx/.mjs/.cjs and SFC <script>
+// blocks) and only toggle JSX. `tsx` must be true for JSX-bearing files —
+// including `.jsx` (swc honours `tsx`, not the legacy `jsx` flag, under the
+// typescript syntax) and Vue/Svelte SFC scripts (which arrive with their
+// `.vue`/`.svelte` path). It must stay false for plain `.ts` so angle-bracket
+// type assertions (`<T>x`, legal only outside TSX) keep parsing.
+const JSX_CAPABLE_RE = /\.(tsx|jsx|vue|svelte)$/;
 
 function isImportDeclaration(node: { type: string }): node is ImportDeclaration {
   return node.type === "ImportDeclaration";
@@ -22,9 +27,8 @@ export async function parseTs(path: string, source: string): Promise<ParsedTsFil
   let ast: Module | null = null;
   try {
     ast = await parse(source, {
-      syntax: extToSyntax(path),
-      tsx: /\.tsx$/.test(path),
-      jsx: /\.jsx$/.test(path),
+      syntax: "typescript",
+      tsx: JSX_CAPABLE_RE.test(path),
       decorators: true,
       dynamicImport: true,
       target: "es2022",

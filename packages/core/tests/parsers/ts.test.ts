@@ -37,4 +37,45 @@ export const X = () => <Button />;
       expect(result.ast).toBeNull();
     });
   });
+
+  describe("parseTs syntax selection across file kinds", () => {
+    it("parses a typed Vue SFC <script> block (passed with the .vue path)", async () => {
+      const script = [
+        `import { Button } from "@acme/ui";`,
+        `interface Props { label: string }`,
+        `const props = defineProps<Props>();`,
+      ].join("\n");
+      const out = await parseTs("components/Comp.vue", script);
+      expect(out.ast).not.toBeNull();
+      expect(out.imports).toHaveLength(1);
+      expect(out.imports[0]).toMatchObject({ module: "@acme/ui", named: ["Button"] });
+    });
+
+    it("parses a typed Svelte SFC <script> block (passed with the .svelte path)", async () => {
+      const script = [
+        `import { Icon } from "@acme/ui";`,
+        `export let size: number = 16;`,
+      ].join("\n");
+      const out = await parseTs("components/Comp.svelte", script);
+      expect(out.ast).not.toBeNull();
+      expect(out.imports).toHaveLength(1);
+      expect(out.imports[0]).toMatchObject({ module: "@acme/ui", named: ["Icon"] });
+    });
+
+    it("parses a .jsx file containing real JSX", async () => {
+      const source = [
+        `import { Card } from "@acme/ui";`,
+        `export function X() { return <div className="a"><Card /></div>; }`,
+      ].join("\n");
+      const out = await parseTs("Card.jsx", source);
+      expect(out.ast).not.toBeNull();
+      expect(out.imports).toHaveLength(1);
+      expect(out.imports[0]).toMatchObject({ module: "@acme/ui", named: ["Card"] });
+    });
+
+    it("still parses a .ts angle-bracket type assertion (no TSX regression)", async () => {
+      const out = await parseTs("cast.ts", `const y = 1; const x = <number>y;`);
+      expect(out.ast).not.toBeNull();
+    });
+  });
 });
