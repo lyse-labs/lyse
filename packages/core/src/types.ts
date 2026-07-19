@@ -89,6 +89,12 @@ export interface Finding {
   fixGroup?: FixGroup;
 }
 
+export interface PerRuleOpportunity {
+  ruleId: string;
+  axis: AxisName;
+  opportunities: number;
+}
+
 export interface RuleContext {
   repoRoot: string;
   tokens: TokenMap | null;
