@@ -103,14 +103,15 @@ async function detectComponentsModule(
 
   // Branch 1 — internal-named UI package in deps (consumer apps / app repos).
   // Filter through denylist first to avoid false positives like @vitest/ui.
-  // Skip a match that the repo OWNS (workspace protocol or a workspace member):
-  // that is a DS the repo DEFINES, so let Branch 3 (self-DS) detect it instead.
-  const workspaceNames = await resolveWorkspacePackageNames(pkg, rootDir);
+  // Skip a match that the repo OWNS (workspace protocol or a workspace member)
+  // ONLY when Branch 3 (self-DS) can actually run for it (private root) —
+  // otherwise Branch 3 returns null and we'd have skipped Branch 1 for nothing.
+  const workspaceNames = pkg.private ? await resolveWorkspacePackageNames(pkg, rootDir) : new Set<string>();
   const internal = names.find(n => {
     if (DENYLIST_PREFIXES.some(prefix => n.startsWith(prefix))) return false;
     if (!/^@[^/]+\/(ui|components|design)/.test(n)) return false;
     const version = deps[n];
-    const ownedByWorkspace = (version?.startsWith("workspace:") ?? false) || workspaceNames.has(n);
+    const ownedByWorkspace = (pkg.private ?? false) && ((version?.startsWith("workspace:") ?? false) || workspaceNames.has(n));
     return !ownedByWorkspace;
   });
   if (internal) return { value: internal, confidence: "high", source: "internal-named UI package" };
