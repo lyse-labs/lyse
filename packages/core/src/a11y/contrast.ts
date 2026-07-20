@@ -2,6 +2,8 @@
  * WCAG 2.x contrast ratio utilities (pure, deterministic).
  */
 
+import { oklabToLinearSrgb } from "../graph/resolve/oklab.js";
+
 export interface Color {
   r: number;
   g: number;
@@ -35,6 +37,58 @@ const NAMED_COLORS: Record<string, readonly [number, number, number]> = {
   orange: [255, 165, 0],
 };
 
+function linearSrgbTo255(v: number): number {
+  const c = v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
+  return Math.max(0, Math.min(255, Math.round(c * 255)));
+}
+
+// oklch is polar OKLab: a = C·cos(H), b = C·sin(H). Both syntaxes are converted
+// back to sRGB so the rest of the pipeline keeps a single { r, g, b, a } shape.
+function parseOkFunction(s: string): Color | null {
+  const m = /^ok(lch|lab)\(\s*([^)]+)\)$/i.exec(s.trim());
+  if (!m) return null;
+  const kind = m[1]?.toLowerCase();
+  const body = m[2];
+  if (!kind || !body) return null;
+
+  const parts = body.split("/");
+  const coords = (parts[0] ?? "").trim().split(/[\s,]+/).filter(Boolean);
+  if (coords.length < 3) return null;
+
+  const num = (raw: string | undefined, pctBase: number): number | null => {
+    if (raw === undefined) return null;
+    const isPct = raw.endsWith("%");
+    const n = Number.parseFloat(isPct ? raw.slice(0, -1) : raw);
+    if (!Number.isFinite(n)) return null;
+    return isPct ? (n / 100) * pctBase : n;
+  };
+
+  const L = num(coords[0], 1);
+  const c1 = num(coords[1], 0.4);
+  const c2 = num(coords[2], 0.4);
+  if (L === null || c1 === null || c2 === null) return null;
+
+  let alpha = 1;
+  if (parts.length > 1) {
+    const parsedAlpha = num((parts[1] ?? "").trim(), 1);
+    if (parsedAlpha === null) return null;
+    alpha = Math.max(0, Math.min(1, parsedAlpha));
+  }
+
+  const lab =
+    kind === "lch"
+      ? { L, a: c1 * Math.cos((c2 * Math.PI) / 180), b: c1 * Math.sin((c2 * Math.PI) / 180) }
+      : { L, a: c1, b: c2 };
+
+  const lin = oklabToLinearSrgb(lab);
+  return {
+    r: linearSrgbTo255(lin.r),
+    g: linearSrgbTo255(lin.g),
+    b: linearSrgbTo255(lin.b),
+    a: alpha,
+  };
+}
+
 /**
  * Parse a color string into RGBA components.
  * Handles: #rgb, #rgba, #rrggbb, #rrggbbaa, rgb(), rgba(), hsl(), hsla(), and named colors.
@@ -51,6 +105,11 @@ export function parseColor(s: string): Color | null {
       const [r, g, b] = color;
       return { r, g, b, a: 1 };
     }
+  }
+
+  // oklch() / oklab()
+  if (/^ok(lch|lab)\(/i.test(lower)) {
+    return parseOkFunction(s);
   }
 
   // Hex color
