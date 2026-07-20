@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { srgbToOklab, deltaEOk } from "../oklab.js";
-import { parseColor } from "../../../a11y/contrast.js";
+import { srgbToOklab, deltaEOk } from "./oklab.js";
+import { parseColor } from "../../a11y/contrast.js";
 
 describe("srgbToOklab", () => {
   it("maps white to L=1, a=0, b=0", () => {
