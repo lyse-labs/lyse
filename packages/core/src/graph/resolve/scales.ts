@@ -13,13 +13,24 @@ const DEFAULT_SCALES: Partial<Record<TokenAxis, readonly number[]>> = {
   spacing: DEFAULT_SPACING_SCALE,
 };
 
+// Both patterns are anchored end-to-end and carry an explicit unit allow-list.
+// An unanchored parse would silently coerce a relative value onto an absolute
+// scale — `--radius-full: 50%` next to `--radius-sm: 4px` would derive [4, 50],
+// putting a percentage and a pixel count on the same axis. normalizer.ts types
+// %, vh, vw, ch, ex, pt, pc, cm, mm and in as dimensions too, so rejecting
+// anything outside the allow-list is the only safe default.
+const DIMENSION_VALUE = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em)?$/;
+const DURATION_VALUE = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:ms|s)?$/;
+
 /**
  * WHY: graph raw values are not uniformly bare numbers — only `spacing` is
  * px-stripped upstream, and `motion` carries a `duration/` or `easing/` prefix
- * (see graph/extract/tokens.ts#canonicalRawValue). The existing token rules
- * compare the bare number and discard the unit (tokens-no-hardcoded-spacing.ts
- * calls isOnScale(parseFloat(num)) for px, rem and em alike), so this mirrors
- * that established behaviour rather than introducing a second convention.
+ * (see graph/extract/tokens.ts#canonicalRawValue).
+ *
+ * The px/rem/em allow-list matches the units `tokens-no-hardcoded-spacing.ts`
+ * already accepts, and like that rule this discards the unit and compares the
+ * bare number. It does NOT unify rem and px (1rem !== 16px here) — that is the
+ * pre-existing convention, not a new claim about equivalence.
  */
 export function numericValue(rawValue: string): number | null {
   const v = rawValue.trim().toLowerCase();
@@ -28,9 +39,8 @@ export function numericValue(rawValue: string): number | null {
   const duration = v.startsWith("duration/");
   const body = duration ? v.slice("duration/".length) : v;
 
-  const m = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)/.exec(body);
-  if (!m) return null;
-  const n = Number.parseFloat(m[0]);
+  if (!(duration ? DURATION_VALUE : DIMENSION_VALUE).test(body)) return null;
+  const n = Number.parseFloat(body);
   if (!Number.isFinite(n)) return null;
 
   // Durations are normalised to milliseconds so `0.2s` and `200ms` compare equal.

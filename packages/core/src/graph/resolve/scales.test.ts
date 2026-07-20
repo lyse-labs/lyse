@@ -155,3 +155,44 @@ describe("stepDistance", () => {
     });
   });
 });
+
+describe("numericValue — unit allow-list (rejects relative and malformed values)", () => {
+  it("accepts unitless, px, rem and em", () => {
+    expect(numericValue("16")).toBe(16);
+    expect(numericValue("4px")).toBe(4);
+    expect(numericValue("1rem")).toBe(1);
+    expect(numericValue("0.5em")).toBe(0.5);
+    expect(numericValue(".5")).toBe(0.5);
+    expect(numericValue("-4px")).toBe(-4);
+  });
+
+  it("rejects relative units that would land on an absolute scale", () => {
+    // --radius-full: 50% next to --radius-sm: 4px must not derive [4, 50].
+    expect(numericValue("50%")).toBeNull();
+    expect(numericValue("100vh")).toBeNull();
+    expect(numericValue("50vw")).toBeNull();
+    expect(numericValue("2ch")).toBeNull();
+  });
+
+  it("rejects compound and malformed values instead of truncating them", () => {
+    expect(numericValue("16px solid")).toBeNull();
+    expect(numericValue("1e3")).toBeNull();
+    expect(numericValue("auto")).toBeNull();
+    expect(numericValue("")).toBeNull();
+  });
+
+  it("still normalises durations to milliseconds", () => {
+    expect(numericValue("duration/200ms")).toBe(200);
+    expect(numericValue("duration/0.2s")).toBe(200);
+    expect(numericValue("duration/2s")).toBe(2000);
+    expect(numericValue("easing/cubic-bezier(0,0,1,1)")).toBeNull();
+  });
+
+  it("does not mix a percentage radius into a pixel radii scale", () => {
+    const g = graphWith([
+      { id: "radii.sm", axis: "radii", rawValue: "4px", source: "css-custom-property" },
+      { id: "radii.full", axis: "radii", rawValue: "50%", source: "css-custom-property" },
+    ]);
+    expect(deriveScale(g, "radii")).toEqual([4]);
+  });
+});
