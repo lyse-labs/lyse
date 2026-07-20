@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deriveScale, stepDistance, DEFAULT_SPACING_SCALE } from "./scales.js";
+import { deriveScale, stepDistance, numericValue, DEFAULT_SPACING_SCALE } from "./scales.js";
 import type { DesignSystemGraph, TokenNode } from "../types.js";
 
 function graphWith(tokens: TokenNode[]): DesignSystemGraph {
@@ -45,12 +45,68 @@ describe("deriveScale", () => {
     expect(deriveScale(g, "spacing")).toEqual([4, 8]);
   });
 
-  it("is deterministic", () => {
-    const g = graphWith([
-      { id: "b", axis: "spacing", rawValue: "4", source: "dtcg" },
-      { id: "a", axis: "spacing", rawValue: "8", source: "dtcg" },
+  it("is order-independent: token array order doesn't change the result", () => {
+    const gAscending = graphWith([
+      { id: "a", axis: "spacing", rawValue: "4", source: "dtcg" },
+      { id: "b", axis: "spacing", rawValue: "8", source: "dtcg" },
+      { id: "c", axis: "spacing", rawValue: "2", source: "dtcg" },
     ]);
-    expect(deriveScale(g, "spacing")).toEqual(deriveScale(g, "spacing"));
+    const gShuffled = graphWith([
+      { id: "c", axis: "spacing", rawValue: "2", source: "dtcg" },
+      { id: "b", axis: "spacing", rawValue: "8", source: "dtcg" },
+      { id: "a", axis: "spacing", rawValue: "4", source: "dtcg" },
+    ]);
+    expect(deriveScale(gShuffled, "spacing")).toEqual(deriveScale(gAscending, "spacing"));
+  });
+
+  it("derives a radii scale from px-suffixed raw values instead of dropping them", () => {
+    const g = graphWith([
+      { id: "radii.sm", axis: "radii", rawValue: "4px", source: "dtcg" },
+      { id: "radii.md", axis: "radii", rawValue: "8px", source: "dtcg" },
+    ]);
+    expect(deriveScale(g, "radii")).toEqual([4, 8]);
+  });
+});
+
+describe("numericValue", () => {
+  it("extracts the number from a px-suffixed value", () => {
+    expect(numericValue("4px")).toBe(4);
+  });
+
+  it("extracts the number from a rem-suffixed value", () => {
+    expect(numericValue("1rem")).toBe(1);
+  });
+
+  it("extracts the number from a fractional rem value", () => {
+    expect(numericValue("0.5rem")).toBe(0.5);
+  });
+
+  it("extracts the number from a leading-dot decimal", () => {
+    expect(numericValue(".5")).toBe(0.5);
+  });
+
+  it("extracts the number from a bare numeric string", () => {
+    expect(numericValue("16")).toBe(16);
+  });
+
+  it("extracts and normalises a duration/ms value", () => {
+    expect(numericValue("duration/200ms")).toBe(200);
+  });
+
+  it("extracts and normalises a duration/s value to milliseconds", () => {
+    expect(numericValue("duration/0.2s")).toBe(200);
+  });
+
+  it("returns null for an easing/ value", () => {
+    expect(numericValue("easing/cubic-bezier(0,0,1,1)")).toBeNull();
+  });
+
+  it("returns null for a non-numeric keyword", () => {
+    expect(numericValue("auto")).toBeNull();
+  });
+
+  it("returns null for an empty string", () => {
+    expect(numericValue("")).toBeNull();
   });
 });
 
@@ -75,5 +131,27 @@ describe("stepDistance", () => {
 
   it("returns Infinity for an empty scale", () => {
     expect(stepDistance([], 8)).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  describe("single-entry scale", () => {
+    it("returns 0 for the on-scale value", () => {
+      expect(stepDistance([5], 5)).toBe(0);
+    });
+
+    it("returns a small distance for a value close to the entry", () => {
+      const d = stepDistance([5], 6);
+      expect(d).toBeGreaterThan(0);
+      expect(d).toBeLessThan(stepDistance([5], 100000));
+    });
+
+    it("grows for a value far from the entry", () => {
+      expect(stepDistance([5], 100000)).toBeGreaterThan(1);
+    });
+
+    it("does not divide by zero or return Infinity when the entry is 0", () => {
+      const d = stepDistance([0], 100);
+      expect(Number.isFinite(d)).toBe(true);
+      expect(d).toBeGreaterThan(0);
+    });
   });
 });

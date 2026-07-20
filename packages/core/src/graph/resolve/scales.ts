@@ -13,12 +13,37 @@ const DEFAULT_SCALES: Partial<Record<TokenAxis, readonly number[]>> = {
   spacing: DEFAULT_SPACING_SCALE,
 };
 
+/**
+ * WHY: graph raw values are not uniformly bare numbers — only `spacing` is
+ * px-stripped upstream, and `motion` carries a `duration/` or `easing/` prefix
+ * (see graph/extract/tokens.ts#canonicalRawValue). The existing token rules
+ * compare the bare number and discard the unit (tokens-no-hardcoded-spacing.ts
+ * calls isOnScale(parseFloat(num)) for px, rem and em alike), so this mirrors
+ * that established behaviour rather than introducing a second convention.
+ */
+export function numericValue(rawValue: string): number | null {
+  const v = rawValue.trim().toLowerCase();
+  if (v.startsWith("easing/")) return null;
+
+  const duration = v.startsWith("duration/");
+  const body = duration ? v.slice("duration/".length) : v;
+
+  const m = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)/.exec(body);
+  if (!m) return null;
+  const n = Number.parseFloat(m[0]);
+  if (!Number.isFinite(n)) return null;
+
+  // Durations are normalised to milliseconds so `0.2s` and `200ms` compare equal.
+  if (duration) return body.endsWith("ms") ? n : body.endsWith("s") ? n * 1000 : n;
+  return n;
+}
+
 export function deriveScale(graph: DesignSystemGraph, axis: TokenAxis): number[] {
   const own: number[] = [];
   for (const t of graph.tokens) {
     if (t.axis !== axis) continue;
-    const n = Number.parseFloat(t.rawValue);
-    if (Number.isFinite(n) && String(n) === t.rawValue.trim()) own.push(n);
+    const n = numericValue(t.rawValue);
+    if (n !== null) own.push(n);
   }
   if (own.length > 0) {
     return [...new Set(own)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
@@ -26,6 +51,8 @@ export function deriveScale(graph: DesignSystemGraph, axis: TokenAxis): number[]
   return [...(DEFAULT_SCALES[axis] ?? [])];
 }
 
+// PRECONDITION: `scale` must be sorted ascending (as deriveScale returns it) —
+// neighbour lookups by index assume that order.
 export function stepDistance(scale: readonly number[], value: number): number {
   if (scale.length === 0) return Number.POSITIVE_INFINITY;
 
@@ -49,12 +76,20 @@ export function stepDistance(scale: readonly number[], value: number): number {
   // local scale granularity fit inside the distance to the nearest entry.
   const lower = scale[nearestIndex - 1];
   const upper = scale[nearestIndex + 1];
-  const localGap =
-    value > nearest && upper !== undefined
-      ? Math.abs(upper - nearest)
-      : value < nearest && lower !== undefined
-        ? Math.abs(nearest - lower)
-        : Math.abs((upper ?? lower ?? nearest) - nearest);
+  let localGap: number;
+  if (value > nearest && upper !== undefined) {
+    localGap = Math.abs(upper - nearest);
+  } else if (value < nearest && lower !== undefined) {
+    localGap = Math.abs(nearest - lower);
+  } else if (upper !== undefined || lower !== undefined) {
+    localGap = Math.abs((upper ?? lower ?? nearest) - nearest);
+  } else {
+    // Single-entry scale: no adjacent gap to measure against. Fall back to
+    // the entry's own magnitude as the gap unit so the distance still grows
+    // with |value - nearest| instead of pinning at 1; guard against 0 (which
+    // would otherwise divide by zero / never grow).
+    localGap = Math.abs(nearest) || 1;
+  }
 
   if (!Number.isFinite(localGap) || localGap === 0) return 1;
   return Math.max(1, Math.ceil(nearestDelta / localGap));
