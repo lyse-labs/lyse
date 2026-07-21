@@ -12,14 +12,12 @@ const PKG = JSON.stringify({ name: "fx-mq", version: "1.0.0" });
 // deliberately different) breakpoint scale is what makes 768px/1024px land
 // `near` (warning) instead.
 //
-// This must be a DTCG tokens.json, not a plain `:root { --breakpoint-*: … }`
-// custom property: the graph's CSS-custom-property extraction path derives
-// the axis solely from the DTCG `$type` (dtcgDocumentToNodes's
-// DTCG_TYPE_TO_AXIS), and every `dimension` collapses onto `spacing`
-// regardless of property name. A tokens.json instead routes through
-// loaders/tokens.ts#fromDtcg's path heuristic (`/breakpoint|screen/i`),
-// landing correctly on `breakpoints` — verified empirically, see Task 7's
-// report.
+// A DTCG tokens.json is one of several fixtures that would work: it routes
+// through loaders/tokens.ts#fromDtcg's path heuristic (`/breakpoint|screen/i`).
+// A plain `:root { --breakpoint-*: … }` custom property now lands on
+// `breakpoints` too (graph/extract/tokens.ts#axisFor applies the same
+// heuristic), as does a Tailwind v4 `@theme` block. The tokens.json is kept
+// because it exercises the DTCG loader specifically.
 const BREAKPOINT_TOKENS = JSON.stringify({
   breakpoint: {
     sm: { $value: "320px", $type: "dimension" },

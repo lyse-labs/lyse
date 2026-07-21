@@ -77,12 +77,44 @@ export function detectTokenConflicts(nodes: TokenNode[]): TokenConflict[] {
   return conflicts;
 }
 
-const DTCG_TYPE_TO_AXIS: Partial<Record<string, TokenAxis>> = {
-  color: "colors",
-  dimension: "spacing",
-  duration: "motion",
-  cubicBezier: "motion",
-};
+// WHY: `dimension` and `number` are each shared by several axes, so the $type
+// alone cannot name one — the token's own PATH has to break the tie. These are
+// the same heuristics loaders/tokens.ts#fromDtcg applies to the identical job,
+// kept deliberately in lockstep with it: the two must agree or a token means a
+// different axis depending on which file format declared it.
+//
+// The one deliberate addition is `^z/`. A css custom property is split on `-`
+// into path segments (tokens/normalizer.ts#normalizeCssVars), so the idiomatic
+// `--z-modal` — the same prefix Tailwind v4 uses for z-index — becomes the path
+// `z/modal`, which `z.?index` does not match. The trailing `/` anchor keeps it
+// from swallowing unrelated `z`-initial names like `zoom/level`.
+const RADIUS_PATH = /radius/i;
+const BORDER_WIDTH_PATH = /border.?width/i;
+const BREAKPOINT_PATH = /breakpoint|screen/i;
+const Z_INDEX_PATH = /z.?index/i;
+const Z_PREFIX_PATH = /^z(\/|$)/i;
+const OPACITY_PATH = /opacity/i;
+
+export function axisFor(type: DtcgType, tokenPath: string): TokenAxis | undefined {
+  switch (type) {
+    case "color":
+      return "colors";
+    case "duration":
+    case "cubicBezier":
+      return "motion";
+    case "dimension":
+      if (RADIUS_PATH.test(tokenPath)) return "radii";
+      if (BORDER_WIDTH_PATH.test(tokenPath)) return "borderWidth";
+      if (BREAKPOINT_PATH.test(tokenPath)) return "breakpoints";
+      return "spacing";
+    case "number":
+      if (Z_INDEX_PATH.test(tokenPath) || Z_PREFIX_PATH.test(tokenPath)) return "zIndex";
+      if (OPACITY_PATH.test(tokenPath)) return "opacity";
+      return undefined;
+    default:
+      return undefined;
+  }
+}
 
 const CSS_DECL_RE = /(--[^\s:{}]+)\s*:\s*([^;]+?)\s*;/g;
 const SCSS_VAR_RE = /\$([A-Za-z0-9_-]+)\s*:\s*([^;!]+?)\s*(?:!default)?\s*;/g;
@@ -120,14 +152,18 @@ export function scssVarDeclsFromContents(fileContents: Map<string, string>): Arr
   return decls;
 }
 
-// WHY: detectTokenConflicts groups nodes by raw string equality, so a DTCG-doc
+// WHY: detectTokenConflicts groups nodes by raw string equality (and
+// graph/query.ts#onScale / #reverseLookup match on it exactly), so a DTCG-doc
 // node must serialize its rawValue identically to what fromDtcg (loaders/tokens.ts)
-// produces for the same $type, or a real cross-source conflict goes undetected.
-function canonicalRawValue($type: DtcgType, $value: unknown): string {
+// produces for the same token, or a real cross-source conflict goes undetected.
+// That is an AXIS-level contract, not a $type-level one: the loaders px-strip
+// `dimension` only on `spacing`, and keep the suffix on radii / borderWidth /
+// breakpoints (fromTailwindV4 does the same).
+function canonicalRawValue(axis: TokenAxis, $type: DtcgType, $value: unknown): string {
   const value = String($value).toLowerCase().trim();
   switch ($type) {
     case "dimension":
-      return value.replace(/px$/, "");
+      return axis === "spacing" ? value.replace(/px$/, "") : value;
     case "duration":
       return `duration/${value}`;
     case "cubicBezier": {
@@ -148,9 +184,10 @@ export function dtcgDocumentToNodes(doc: DtcgDocument, source: TokenSource): Tok
     if (isDtcgToken(node)) {
       const tok = node as DtcgToken<unknown>;
       const type = tok.$type;
-      const axis = type ? DTCG_TYPE_TO_AXIS[type] : undefined;
+      const id = path.join("/");
+      const axis = type ? axisFor(type, id) : undefined;
       if (axis && type && tok.$value !== undefined) {
-        nodes.push({ id: path.join("/"), axis, rawValue: canonicalRawValue(type, tok.$value), source });
+        nodes.push({ id, axis, rawValue: canonicalRawValue(axis, type, tok.$value), source });
       }
       return;
     }

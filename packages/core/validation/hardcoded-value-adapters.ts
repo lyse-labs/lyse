@@ -19,25 +19,26 @@ export interface HardcodedValueSpec {
    * `isCssCustomPropertyDeclaration` already guard-suppresses the declaration
    * itself, so this file never produces a finding of its own.
    *
-   * Only `spacing` can use this: a plain `:root { --custom-prop: … }`
+   * Every numeric axis can use this. A plain `:root { --custom-prop: … }`
    * declaration goes through the graph's CSS-custom-property extraction path
-   * (graph/extract/tokens.ts#dtcgDocumentToNodes), which derives the axis
-   * SOLELY from the DTCG `$type` (`DTCG_TYPE_TO_AXIS`) — every `dimension`
-   * collapses onto `spacing` regardless of property name, and `number`
-   * (z-index/opacity) isn't mapped at all, so the token is dropped. That
-   * collapse happens to be a no-op for `spacing` (dimension's own default
-   * target), which is the only reason this mechanism ever worked. For every
-   * other numeric axis use `tokensJson` instead.
+   * (graph/extract/tokens.ts#dtcgDocumentToNodes), which derives the axis from
+   * the DTCG `$type` AND the token's own path (`axisFor`) — so
+   * `--radius-sm` / `--border-width-thin` / `--breakpoint-md` / `--z-modal` /
+   * `--opacity-disabled` each land on their own axis. Name the property with
+   * the matching prefix or the token falls through to `spacing`, which is
+   * `dimension`'s default target.
+   *
+   * Tailwind v4 `@theme` blocks (loaders/tokens.ts#fromTailwindV4) reach the
+   * same axes via their own prefix table, and did so before that fix.
    */
   tokenSource?: string;
   /**
-   * DTCG tokens.json content for axes where `tokenSource` (see above) cannot
-   * reach the right axis. Routes through loaders/tokens.ts#fromDtcg instead,
-   * which infers the axis from a per-axis PATH heuristic (`/radius/i`,
-   * `/border.?width/i`, `/breakpoint|screen/i`, `/z.?index/i`, `/opacity/i`)
-   * rather than collapsing on `$type` — verified empirically (see Task 7's
-   * report) to land radii/borderWidth/breakpoints/zIndex/opacity tokens on
-   * their own axis, not `spacing`.
+   * DTCG tokens.json content, routed through loaders/tokens.ts#fromDtcg. Its
+   * axis heuristics (`/radius/i`, `/border.?width/i`, `/breakpoint|screen/i`,
+   * `/z.?index/i`, `/opacity/i`) are the same ones `tokenSource` now gets, so
+   * this is an alternative spelling rather than the only way to reach a
+   * non-spacing axis — use it when a fixture should exercise the DTCG loader
+   * specifically.
    */
   tokensJson?: Record<string, unknown>;
 }
