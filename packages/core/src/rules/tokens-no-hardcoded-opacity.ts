@@ -1,10 +1,11 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, FixGroup } from "../types.js";
+import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, FixGroup, Confidence } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 import { makeFixGroup } from "./_fix-group.js";
 import { isScored, onScale, reverseLookup } from "../graph/query.js";
+import type { ResolveClass } from "../graph/resolve/types.js";
 
 const RULE_ID = "tokens/no-hardcoded-opacity";
 const MAX_FILE_BYTES = 1_000_000;
@@ -75,6 +76,74 @@ function opacityFixGroup(ctx: RuleContext, hit: { raw: string; norm: number }): 
   return makeFixGroup(RULE_ID, hit.raw, candidates);
 }
 
+interface OpacityVerdict {
+  severity: "warning" | "info";
+  /**
+   * Left unset on the legacy (no-resolver) path so `populateConfidence`'s
+   * `classifyConfidence` hook still governs it, exactly as before the migration.
+   */
+  confidence?: Confidence;
+  suggestion?: string;
+  fixGroup?: FixGroup;
+}
+
+/**
+ * The class→finding mapping for THIS axis. `exact` means the value IS on the
+ * repo's own opacity scale — compliant, not drift — so it is handled as an
+ * early skip below rather than appearing here. `unresolved` is also a skip:
+ * the resolver could not judge this value, and (unlike colours) that
+ * abstention is legitimate here, so it stays silent. See
+ * tokens-no-hardcoded-spacing.ts's identical mapping for the full rationale.
+ */
+const VERDICT_BY_CLASS: Record<
+  Extract<ResolveClass, "near" | "novel">,
+  { severity: "warning" | "info"; confidence: Confidence }
+> = {
+  near: { severity: "warning", confidence: "medium" },
+  novel: { severity: "info", confidence: "low" },
+};
+
+/**
+ * Builds the finding fields for one detected opacity literal, or `undefined`
+ * when nothing should be emitted. Mirrors tokens-no-hardcoded-spacing.ts's
+ * `spacingVerdict` — see that file's docstring for the full rationale (legacy
+ * vs. resolver path, why `near` carries a candidate but `novel` never does,
+ * why `exact`/`unresolved` skip).
+ *
+ * The resolve key is `hit.norm` (the 0–1 normalised fraction), not
+ * `hit.raw`: a `65%` literal has no numeric parse under `numericValue`
+ * (percent is not px/rem/em/unitless), so it must be compared against the
+ * axis's fractional scale in its normalised form, same as `opacityOnScale`
+ * already does for the legacy path.
+ */
+function opacityVerdict(ctx: RuleContext, hit: { raw: string; norm: number }): OpacityVerdict | undefined {
+  if (!ctx.resolver) {
+    if (opacityOnScale(ctx, hit)) return undefined;
+    const fixGroup = opacityFixGroup(ctx, hit);
+    return {
+      severity: "warning",
+      suggestion: "reference an opacity token (e.g. `--opacity-disabled`) instead of a raw value",
+      ...(fixGroup !== undefined && { fixGroup }),
+    };
+  }
+
+  const resolution = ctx.resolver.resolve("opacity", String(hit.norm));
+  if (resolution.class === "exact" || resolution.class === "unresolved") return undefined;
+
+  const { severity, confidence } = VERDICT_BY_CLASS[resolution.class];
+  const fixGroup = makeFixGroup(RULE_ID, hit.raw, []);
+  const suggestion =
+    resolution.class === "near" && resolution.tokenIds[0] !== undefined
+      ? `probably \`${resolution.tokenIds[0]}\` — verify before replacing`
+      : undefined;
+  return {
+    severity,
+    confidence,
+    ...(suggestion !== undefined && { suggestion }),
+    ...(fixGroup !== undefined && { fixGroup }),
+  };
+}
+
 const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalResult> => {
   const findings: Finding[] = [];
   if (ctx.repoRoot && isAllowlisted(ctx.repoRoot)) return { findings, opportunities: 0 };
@@ -87,16 +156,17 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
     if (ctx.graph && !isScored(ctx.graph, path)) continue;
     for (const hit of extractOpacity(source)) {
       opportunities++;
-      if (opacityOnScale(ctx, hit)) continue;
-      const fixGroup = opacityFixGroup(ctx, hit);
+      const verdict = opacityVerdict(ctx, hit);
+      if (!verdict) continue;
       findings.push({
         ruleId: RULE_ID,
         axis: "tokens",
-        severity: "warning",
+        severity: verdict.severity,
+        ...(verdict.confidence !== undefined && { confidence: verdict.confidence }),
         location: { file: path, line: lineFromIndex(source, hit.index), column: 1 },
         message: `Hardcoded opacity \`${hit.raw}\` — opacity should come from a token scale`,
-        suggestion: "reference an opacity token (e.g. `--opacity-disabled`) instead of a raw value",
-        ...(fixGroup !== undefined && { fixGroup }),
+        ...(verdict.suggestion !== undefined && { suggestion: verdict.suggestion }),
+        ...(verdict.fixGroup !== undefined && { fixGroup: verdict.fixGroup }),
       });
     }
   }
