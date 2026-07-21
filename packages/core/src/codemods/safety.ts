@@ -53,13 +53,16 @@ export function classifyConfidence(finding: Finding, ctx: ClassifyContext): Conf
 }
 
 /**
- * Populate `Finding.confidence` on every finding in an AuditResult by running
- * each through the owning rule's `classifyConfidence`. The audit pipeline emits
- * findings without a confidence field (rules don't know their own classification
- * at emit time — the context needed for classification is repo-wide, not
- * rule-local). Downstream CLI consumers (score gauge, ESLint-style tag,
- * post-audit menu) all read `finding.confidence`, so this helper closes the
- * gap once per run instead of having every consumer recompute it.
+ * Populate `Finding.confidence` on every finding in an AuditResult. Most rules
+ * still emit findings without a confidence field (the context needed for
+ * classification is repo-wide, not rule-local), so this helper closes the gap
+ * once per run via the owning rule's `classifyConfidence` instead of having
+ * every consumer recompute it. Resolver-driven rules (graph/resolve; see
+ * tokens/no-hardcoded-color) are the exception — the resolver IS repo-wide
+ * context available at emit time, so those rules set `confidence` themselves
+ * and that value wins here; `classifyConfidence` remains the fallback for
+ * every rule that does not set one. Downstream CLI consumers (score gauge,
+ * ESLint-style tag, post-audit menu) all read `finding.confidence`.
  *
  * Returns a NEW result with new finding objects (no in-place mutation) so
  * cached or reused references stay untouched.
@@ -69,7 +72,7 @@ export function populateConfidence(result: AuditResult, ctx: ClassifyContext): A
     ...result,
     findings: result.findings.map((f) => ({
       ...f,
-      confidence: classifyConfidence(f, ctx),
+      confidence: f.confidence ?? classifyConfidence(f, ctx),
     })),
   };
 }

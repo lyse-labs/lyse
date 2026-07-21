@@ -1,8 +1,33 @@
 import { describe, it, expect } from "vitest";
 import { rule, detectInText, countCompliantColorUses } from "../../src/rules/tokens-no-hardcoded-color.js";
 import { isSchemaOrDataFile, isLowSignalValueFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile } from "../../src/rules/_skip-context.js";
+import { createResolver } from "../../src/graph/resolve/index.js";
 import type { RuleContext, ParsedFiles, TokenMap } from "../../src/types.js";
-import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
+import type { DesignSystemGraph, ZoneKind, TokenNode } from "../../src/graph/types.js";
+
+async function runRuleWithGraph(source: string, tokens: TokenNode[]) {
+  const graph: DesignSystemGraph = {
+    schemaVersion: 1,
+    tokens,
+    components: [],
+    stories: [],
+    usage: [],
+    zones: { byFile: { "src/a.ts": "app" } },
+    extraction: { entries: [], conflicts: [] },
+  };
+  const ctx = {
+    repoRoot: "/repo",
+    tokens: null,
+    componentsModule: null,
+    componentInventory: [],
+    storyIndex: null,
+    excludePaths: [],
+    graph,
+    resolver: createResolver(graph),
+  } as unknown as RuleContext;
+  const parsed = { css: [], cssInJs: [], ts: [{ path: "src/a.ts", source, skipped: false }] } as unknown as ParsedFiles;
+  return rule.evaluate(ctx, parsed);
+}
 
 const emptyTokens: TokenMap = {
   colors: new Map([["#2563eb", ["color/action/primary"]]]),
@@ -1214,6 +1239,41 @@ describe("graph-aware zone gating (P2 migration)", () => {
     expect(res.findings).toHaveLength(1);
     expect(res.findings[0]!.suggestion).toContain("color.0");
     expect(res.findings[0]!.fixGroup).toMatchObject({ from: "#2563eb", to: "color.0" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 5 — resolver-driven verdicts (ctx.resolver present)
+// ---------------------------------------------------------------------------
+describe("resolver-driven verdicts", () => {
+  it("marks an exact token match high-confidence with a replacement", async () => {
+    const res = await runRuleWithGraph(
+      `const a = { color: "#3b82f6" };`,
+      [{ id: "color.brand", axis: "colors", rawValue: "#3b82f6", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings[0]?.confidence).toBe("high");
+    expect(res.findings[0]?.fixGroup?.to).toBe("color.brand");
+  });
+
+  it("marks a near-miss medium-confidence with no auto-replacement", async () => {
+    const res = await runRuleWithGraph(
+      `const a = { color: "#3c82f5" };`,
+      [{ id: "color.brand", axis: "colors", rawValue: "#3b82f6", source: "dtcg" }],
+    );
+    expect(res.findings[0]?.confidence).toBe("medium");
+    expect(res.findings[0]?.fixGroup?.to).toBeUndefined();
+  });
+
+  it("degrades a novel value to info/low instead of silencing it", async () => {
+    const res = await runRuleWithGraph(
+      `const a = { color: "#ff00aa" };`,
+      [{ id: "color.brand", axis: "colors", rawValue: "#3b82f6", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.confidence).toBe("low");
   });
 });
 

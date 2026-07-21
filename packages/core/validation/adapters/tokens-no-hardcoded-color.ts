@@ -5,6 +5,18 @@ const PKG = JSON.stringify({ name: "fx-color", version: "1.0.0" });
 function clean(): FixtureFiles {
   return {
     "package.json": PKG,
+    // Real token source (extracted into the graph as color tokens) so each
+    // mutation's literal has a candidate to resolve against — without this,
+    // every mutation would resolve `novel` (no known match) regardless of
+    // which color it injects, understating recall on the four-class resolver.
+    // `--color-accent` covers the css-hsl mutation separately: hsl(217, 83%,
+    // 53%) is ~0.031 ΔEOK from #2563eb — just outside the 0.02 `near`
+    // threshold — so it needs its own token to resolve `exact` rather than
+    // `novel`. Deliberately NOT named `--color-fg-*` (a prefix of
+    // `--color-fg`): the css-vars normalizer (src/tokens/normalizer.ts
+    // `setAt`/`ensureGroup`) silently drops a shallower custom property when
+    // a longer one nests under its name as a path segment.
+    "src/theme.css": ":root { --color-fg: #2563eb; --color-accent: hsl(217, 83%, 53%); --color-bg: #ffffff; }",
     "src/Box.css": ".box { color: var(--color-fg); background: var(--color-bg); }",
     "src/Btn.tsx": 'export const Btn = () => <button className="text-fg" />;',
   };
@@ -312,17 +324,22 @@ export const colorAdapter: OracleAdapter = {
     { name: "css-hsl", apply: (f) => ({ ...f, "src/Box.css": ".box { color: hsl(217, 83%, 53%); }" }) },
     { name: "tailwind-arbitrary", apply: (f) => ({ ...f, "src/Btn.tsx": 'export const Btn = () => <button className="bg-[#ffffff]" />;' }) },
   ],
+  // Each pair inlines a `:root { --color-a: #ffffff; }` token definition (the
+  // custom-property declaration itself is guard-suppressed, never a finding)
+  // so both sides resolve `exact` against a real candidate — otherwise both
+  // would resolve `novel` (no known token), still consistent with each other
+  // but never matching `expectViolation: true` under the four-class resolver.
   metamorphic: [
     {
       name: "hex-eq-rgb",
-      a: { "package.json": PKG, "src/m.css": ".a { color: #ffffff; }" },
-      b: { "package.json": PKG, "src/m.css": ".a { color: rgb(255, 255, 255); }" },
+      a: { "package.json": PKG, "src/m.css": ":root { --color-a: #ffffff; } .a { color: #ffffff; }" },
+      b: { "package.json": PKG, "src/m.css": ":root { --color-a: #ffffff; } .a { color: rgb(255, 255, 255); }" },
       expectViolation: true,
     },
     {
       name: "shorthand-eq-longhand-hex",
-      a: { "package.json": PKG, "src/m.css": ".a { color: #fff; }" },
-      b: { "package.json": PKG, "src/m.css": ".a { color: #ffffff; }" },
+      a: { "package.json": PKG, "src/m.css": ":root { --color-a: #ffffff; } .a { color: #fff; }" },
+      b: { "package.json": PKG, "src/m.css": ":root { --color-a: #ffffff; } .a { color: #ffffff; }" },
       expectViolation: true,
     },
   ],
