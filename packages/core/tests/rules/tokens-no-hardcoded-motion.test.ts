@@ -212,21 +212,23 @@ describe("easing sub-path (composite — near is unreachable)", () => {
     expect(res.findings).toHaveLength(0);
   });
 
-  it("degrades a non-matching easing curve to info/low", async () => {
+  it("reports a non-matching easing curve as a warning and sets no emit-time confidence", async () => {
     const res = await runRuleWithGraph(
       ".x { transition-timing-function: cubic-bezier(0.1, 0.7, 1, 0.1); }",
       [{ id: "motion.standard", axis: "motion", rawValue: "easing/cubic-bezier(0.4, 0, 0.2, 1)", source: "dtcg" }],
     );
     expect(res.findings).toHaveLength(1);
-    expect(res.findings[0]?.severity).toBe("info");
-    expect(res.findings[0]?.confidence).toBe("low");
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings[0]?.confidence).toBeUndefined();
   });
 
-  it("never emits a medium-confidence finding for an easing curve one parameter off its token — `near` is unreachable on this sub-path", async () => {
+  it("reports an easing curve one parameter off its token as a warning too — `near` is unreachable on this sub-path", async () => {
     const res = await runRuleWithGraph(
       ".x { transition-timing-function: cubic-bezier(0.4, 0, 0.2, 0.9); }",
       [{ id: "motion.standard", axis: "motion", rawValue: "easing/cubic-bezier(0.4, 0, 0.2, 1)", source: "dtcg" }],
     );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
     expect(res.findings.every((f) => f.confidence !== "medium")).toBe(true);
   });
 });

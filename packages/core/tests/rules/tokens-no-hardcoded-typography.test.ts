@@ -155,14 +155,14 @@ describe("composite resolution", () => {
     expect(res.findings).toHaveLength(0);
   });
 
-  it("degrades a non-matching font-size to info/low and never to medium", async () => {
+  it("reports a non-matching font-size as a warning and sets no emit-time confidence", async () => {
     const res = await runRuleWithGraph(
       ".t { font-size: 15px; }",
       [{ id: "fontSize.sm", axis: "typography", rawValue: "13px", source: "dtcg" }],
     );
     expect(res.findings).toHaveLength(1);
-    expect(res.findings[0]?.severity).toBe("info");
-    expect(res.findings[0]?.confidence).toBe("low");
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings[0]?.confidence).toBeUndefined();
   });
 
   it("does not flag a font-weight that exactly matches a token", async () => {
@@ -173,17 +173,17 @@ describe("composite resolution", () => {
     expect(res.findings).toHaveLength(0);
   });
 
-  it("degrades a non-matching font-weight to info/low", async () => {
+  it("reports a non-matching font-weight as a warning", async () => {
     const res = await runRuleWithGraph(
       ".t { font-weight: 650; }",
       [{ id: "weight.semibold", axis: "typography", rawValue: "weight/600", source: "dtcg" }],
     );
     expect(res.findings).toHaveLength(1);
-    expect(res.findings[0]?.severity).toBe("info");
-    expect(res.findings[0]?.confidence).toBe("low");
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings[0]?.confidence).toBeUndefined();
   });
 
-  it("never emits a medium-confidence finding — `near` is unreachable on this axis", async () => {
+  it("reports one-step-off values as warnings too — `near` is unreachable, so `novel` must carry them", async () => {
     const res = await runRuleWithGraph(
       ".t { font-size: 14px; font-weight: 601; letter-spacing: 0.6px; }",
       [
@@ -192,7 +192,8 @@ describe("composite resolution", () => {
         { id: "ls.wide", axis: "typography", rawValue: "letter-spacing/0.5px", source: "dtcg" },
       ],
     );
-    expect(res.findings.length).toBeGreaterThan(0);
-    expect(res.findings.every((f) => f.confidence !== "medium")).toBe(true);
+    expect(res.findings).toHaveLength(3);
+    expect(res.findings.every((f) => f.severity === "warning")).toBe(true);
+    expect(res.findings.every((f) => f.confidence === undefined)).toBe(true);
   });
 });

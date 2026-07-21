@@ -154,22 +154,32 @@ describe("composite resolution", () => {
     expect(res.findings).toHaveLength(0);
   });
 
-  it("degrades a non-matching shadow to info/low and never to medium", async () => {
+  it("reports a non-matching shadow as a warning and sets no emit-time confidence", async () => {
     const res = await runRuleWithGraph(
       ".c { box-shadow: 0 9px 30px rgba(0,0,0,.4); }",
       [{ id: "shadow.sm", axis: "shadows", rawValue: "0 1px 2px rgba(0,0,0,.1)", source: "dtcg" }],
     );
     expect(res.findings).toHaveLength(1);
-    expect(res.findings[0]?.severity).toBe("info");
-    expect(res.findings[0]?.confidence).toBe("low");
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings[0]?.confidence).toBeUndefined();
   });
 
-  it("never emits a medium-confidence finding for a near-identical shadow — `near` is unreachable on this axis", async () => {
+  it("reports a near-identical shadow as a warning too — `near` is unreachable, so `novel` must carry it", async () => {
     const res = await runRuleWithGraph(
       ".c { box-shadow: 0 1px 3px rgba(0,0,0,.1); }",
       [{ id: "shadow.sm", axis: "shadows", rawValue: "0 1px 2px rgba(0,0,0,.1)", source: "dtcg" }],
     );
-    expect(res.findings.every((f) => f.confidence !== "medium")).toBe(true);
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings.every((f) => f.confidence === undefined)).toBe(true);
+  });
+
+  it("resolves `exact` through the resolver's normalization, not raw string equality", async () => {
+    const res = await runRuleWithGraph(
+      ".c { box-shadow: 0   1PX  2px   RGBA(0,0,0,.1); }",
+      [{ id: "shadow.sm", axis: "shadows", rawValue: "0 1px 2px rgba(0,0,0,.1)", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(0);
   });
 
   it("abstains (no finding) on an opaque literal the resolver cannot judge", async () => {

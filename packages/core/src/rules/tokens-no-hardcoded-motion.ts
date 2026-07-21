@@ -186,11 +186,15 @@ function motionVerdict(
 
   if (hit.kind === "easing") {
     // Composite path — see the docstring above: structurally never `near`.
+    // With no `near` band to absorb the "one bezier parameter off" case,
+    // `novel` here means both that and "an unrelated curve", so it emits
+    // `warning` (as the pre-migration rule did) and leaves `confidence` to
+    // `populateConfidence`'s hook. Only durations, which really do reach
+    // `near`, keep the numeric `near`/`novel` split below.
     if (resolution.class !== "novel") return undefined;
     const fixGroup = makeFixGroup(RULE_ID, hit.raw, []);
     return {
-      severity: "info",
-      confidence: "low",
+      severity: "warning",
       ...(fixGroup !== undefined && { fixGroup }),
     };
   }

@@ -125,20 +125,15 @@ export const hardcodedValueAdapters: OracleAdapter[] = [
     tokensJson: { "border-width": { thin: { $value: "1px", $type: "dimension" }, thick: { $value: "4px", $type: "dimension" } } },
   }),
   // tokens/no-hardcoded-typography is resolver-migrated (Task 8), but UNLIKE
-  // spacing/radii/z-index/opacity/border-width, it is a pure COMPOSITE axis
+  // spacing/radii/z-index/opacity/border-width it is a pure COMPOSITE axis
   // (graph/resolve/index.ts#classifyComposite): a font-size literal is either
   // an exact string match (compliant) or `novel` — there is no defensible
   // distance between "13px" and "14px" the way there is between two numbers
   // on one scale, so `near` never happens here, no matter what token scale
-  // this fixture declares. `novel` is reported at `info` (a real value with
-  // no known token — see tokens-no-hardcoded-typography.ts's
-  // `typographyVerdict`), which `ruleFlagged` cannot see (error/warning
-  // only — see validation/audit-probe.ts). This adapter's mutations are
-  // therefore now permanently invisible to `ruleFlagged`-based scoring
-  // (J=0) — a structural consequence of the migration for a
-  // `contributesToScore: true` rule (src/reliability/catalogue/sub-axes.ts),
-  // not a fixable fixture-configuration problem. Flagged in the Task 8
-  // report rather than worked around here.
+  // this fixture declares. That is exactly why `novel` emits `warning` on the
+  // composite axes: with no `near` band, it is the only class left to carry
+  // real drift, and `ruleFlagged` (error/warning) sees it. No `tokenSource` is
+  // needed — unlike the numeric adapters above, there is no `near` to land on.
   makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-typography", property: "font-size", cleanValue: "var(--font-size-md)", literalValue: "16px", altLiteralValue: "1rem" }),
   // tokens/no-hardcoded-motion is resolver-migrated (Task 8) and SPLIT: a
   // duration literal (`200ms` / `0.2s`) is parsed to milliseconds and takes

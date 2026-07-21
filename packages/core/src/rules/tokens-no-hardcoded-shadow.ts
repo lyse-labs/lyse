@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap, FixGroup, Confidence } from "../types.js";
+import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap, FixGroup } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 import { makeFixGroup } from "./_fix-group.js";
@@ -71,12 +71,7 @@ function shadowFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {
 }
 
 interface ShadowVerdict {
-  severity: "warning" | "info";
-  /**
-   * Left unset on the legacy (no-resolver) path so `populateConfidence`'s
-   * `classifyConfidence` hook still governs it, exactly as before the migration.
-   */
-  confidence?: Confidence;
+  severity: "warning";
   suggestion?: string;
   fixGroup?: FixGroup;
 }
@@ -92,13 +87,21 @@ interface ShadowVerdict {
  * Resolver path: a shadow is a tuple (offsets, blur, spread, colour) with no
  * defensible single-scalar distance, so `classifyComposite` (see
  * graph/resolve/index.ts) never returns `near` for this axis — only `exact`
- * (whitespace/case-insensitive string match, compliant, skip), `novel` (a
- * real value with no known token: report it, don't claim it's drift), and
+ * (whitespace/case-insensitive string match, compliant, skip), `novel`, and
  * `unresolved` (opaque literal — `var()`, `none`/`inherit`/…, already
  * filtered out upstream by `extractShadows`, but the resolver also abstains
  * on its own normalized-empty case). `near` is therefore not modeled here at
  * all: there is no branch to write, so there is nothing that could silently
  * become dead code.
+ *
+ * `novel` emits `warning`, not `info`. The `info` downgrade is only defensible
+ * where a `near` band exists to absorb the "one step off, probably a typo"
+ * case — on a composite axis `near` is deliberately unreachable, so `novel`
+ * collapses "a shadow differing by one pixel of blur" and "a completely
+ * unrelated shadow" into one class. Grading that whole class `info` would
+ * under-report the first, which is real drift, and is exactly what the
+ * pre-migration rule reported as `warning`. No emit-time `confidence` is set,
+ * so `populateConfidence`'s hook governs it as it did before the migration.
  */
 function shadowVerdict(ctx: RuleContext, raw: string): ShadowVerdict | undefined {
   if (!ctx.resolver) {
@@ -115,8 +118,7 @@ function shadowVerdict(ctx: RuleContext, raw: string): ShadowVerdict | undefined
   if (resolution.class !== "novel") return undefined;
   const fixGroup = makeFixGroup(RULE_ID, raw, []);
   return {
-    severity: "info",
-    confidence: "low",
+    severity: "warning",
     ...(fixGroup !== undefined && { fixGroup }),
   };
 }
@@ -170,7 +172,6 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
         ruleId: RULE_ID,
         axis: "tokens",
         severity: verdict.severity,
-        ...(verdict.confidence !== undefined && { confidence: verdict.confidence }),
         location: { file: path, line: lineFromIndex(source, hit.index), column: 1 },
         message: `Hardcoded box-shadow \`${hit.raw}\` — elevation should come from a shadow token scale`,
         ...(verdict.suggestion !== undefined && { suggestion: verdict.suggestion }),

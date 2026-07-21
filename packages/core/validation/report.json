@@ -551,20 +551,13 @@
       "ruleId": "tokens/no-hardcoded-shadow",
       "oracleKind": "construction",
       "matrix": {
-        "tp": 0,
+        "tp": 4,
         "fp": 0,
         "tn": 31,
-        "fn": 4
+        "fn": 0
       },
-      "youdensJ": 0,
-      "metamorphicInconsistencies": [
-        {
-          "pair": "two-literal-spellings",
-          "expectViolation": true,
-          "aFlagged": false,
-          "bFlagged": false
-        }
-      ],
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
       "mutationsRun": 4
     },
     {
@@ -584,20 +577,13 @@
       "ruleId": "tokens/no-hardcoded-typography",
       "oracleKind": "construction",
       "matrix": {
-        "tp": 0,
+        "tp": 2,
         "fp": 0,
         "tn": 1,
-        "fn": 2
+        "fn": 0
       },
-      "youdensJ": 0,
-      "metamorphicInconsistencies": [
-        {
-          "pair": "two-literal-spellings",
-          "expectViolation": true,
-          "aFlagged": false,
-          "bFlagged": false
-        }
-      ],
+      "youdensJ": 1,
+      "metamorphicInconsistencies": [],
       "mutationsRun": 2
     },
     {

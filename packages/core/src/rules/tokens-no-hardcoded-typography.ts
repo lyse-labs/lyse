@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, FixGroup, Confidence } from "../types.js";
+import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, FixGroup } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 import { makeFixGroup } from "./_fix-group.js";
@@ -110,12 +110,7 @@ function typographyFixGroup(ctx: RuleContext, hit: TypoHit): FixGroup | undefine
 }
 
 interface TypographyVerdict {
-  severity: "warning" | "info";
-  /**
-   * Left unset on the legacy (no-resolver) path so `populateConfidence`'s
-   * `classifyConfidence` hook still governs it, exactly as before the migration.
-   */
-  confidence?: Confidence;
+  severity: "warning";
   suggestion?: string;
   fixGroup?: FixGroup;
 }
@@ -134,10 +129,16 @@ interface TypographyVerdict {
  * `13px` and `650` and `0.4px` share no unit — so this axis is routed through
  * `classifyComposite` (string equality on `hit.scaleKey`), exactly like
  * shadows. It never returns `near`: only `exact` (on-scale, compliant, skip),
- * `novel` (a real value with no known token — report it, don't claim it's
- * drift), and `unresolved` (opaque literal, already filtered out upstream by
+ * `novel`, and `unresolved` (opaque literal, already filtered out upstream by
  * `extractTypography`'s `var()` guard). No `near` branch is written — there is
  * nothing to write.
+ *
+ * `novel` emits `warning`, not `info`. Without a reachable `near` band, `novel`
+ * on this axis collapses "one step off the type scale" and "a value unrelated
+ * to anything" into a single class; grading it `info` would under-report the
+ * former, which is genuine drift and what the pre-migration rule reported as
+ * `warning`. No emit-time `confidence` is set, so `populateConfidence`'s hook
+ * governs it as it did before the migration.
  */
 function typographyVerdict(ctx: RuleContext, hit: TypoHit): TypographyVerdict | undefined {
   if (!ctx.resolver) {
@@ -154,8 +155,7 @@ function typographyVerdict(ctx: RuleContext, hit: TypoHit): TypographyVerdict | 
   if (resolution.class !== "novel") return undefined;
   const fixGroup = makeFixGroup(RULE_ID, hit.scaleKey, []);
   return {
-    severity: "info",
-    confidence: "low",
+    severity: "warning",
     ...(fixGroup !== undefined && { fixGroup }),
   };
 }
@@ -178,7 +178,6 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
         ruleId: RULE_ID,
         axis: "tokens",
         severity: verdict.severity,
-        ...(verdict.confidence !== undefined && { confidence: verdict.confidence }),
         location: { file: path, line: lineFromIndex(source, hit.index), column: 1 },
         message: `Hardcoded ${hit.prop} \`${hit.raw}\` — typography should come from a type token scale`,
         ...(verdict.suggestion !== undefined && { suggestion: verdict.suggestion }),
