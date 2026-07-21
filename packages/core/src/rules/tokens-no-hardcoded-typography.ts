@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, FixGroup } from "../types.js";
+import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, FixGroup, Confidence } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 import { makeFixGroup } from "./_fix-group.js";
@@ -109,6 +109,57 @@ function typographyFixGroup(ctx: RuleContext, hit: TypoHit): FixGroup | undefine
   return makeFixGroup(RULE_ID, hit.scaleKey, candidates);
 }
 
+interface TypographyVerdict {
+  severity: "warning" | "info";
+  /**
+   * Left unset on the legacy (no-resolver) path so `populateConfidence`'s
+   * `classifyConfidence` hook still governs it, exactly as before the migration.
+   */
+  confidence?: Confidence;
+  suggestion?: string;
+  fixGroup?: FixGroup;
+}
+
+/**
+ * Builds the finding fields for one detected typography literal, or
+ * `undefined` when nothing should be emitted.
+ *
+ * Legacy path (no `ctx.resolver`): byte-identical to the pre-resolver rule —
+ * always `warning`, the static suggestion text, fixGroup from the flat
+ * `hit.scaleKey` lookup (already prefixed `weight/` / `letter-spacing/` where
+ * relevant — see `extractTypography`).
+ *
+ * Resolver path: font-size/font-weight/letter-spacing are each a single
+ * scalar, but they are NOT comparable across each other on one numeric line —
+ * `13px` and `650` and `0.4px` share no unit — so this axis is routed through
+ * `classifyComposite` (string equality on `hit.scaleKey`), exactly like
+ * shadows. It never returns `near`: only `exact` (on-scale, compliant, skip),
+ * `novel` (a real value with no known token — report it, don't claim it's
+ * drift), and `unresolved` (opaque literal, already filtered out upstream by
+ * `extractTypography`'s `var()` guard). No `near` branch is written — there is
+ * nothing to write.
+ */
+function typographyVerdict(ctx: RuleContext, hit: TypoHit): TypographyVerdict | undefined {
+  if (!ctx.resolver) {
+    if (typographyOnScale(ctx, hit.scaleKey)) return undefined;
+    const fixGroup = typographyFixGroup(ctx, hit);
+    return {
+      severity: "warning",
+      suggestion: "reference a typography token (e.g. `--font-size-md`, `--font-weight-semibold`) instead of a raw value",
+      ...(fixGroup !== undefined && { fixGroup }),
+    };
+  }
+
+  const resolution = ctx.resolver.resolve("typography", hit.scaleKey);
+  if (resolution.class !== "novel") return undefined;
+  const fixGroup = makeFixGroup(RULE_ID, hit.scaleKey, []);
+  return {
+    severity: "info",
+    confidence: "low",
+    ...(fixGroup !== undefined && { fixGroup }),
+  };
+}
+
 const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalResult> => {
   const findings: Finding[] = [];
   if (ctx.repoRoot && isAllowlisted(ctx.repoRoot)) return { findings, opportunities: 0 };
@@ -121,16 +172,17 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
     if (ctx.graph && !isScored(ctx.graph, path)) continue;
     for (const hit of extractTypography(source)) {
       opportunities++;
-      if (typographyOnScale(ctx, hit.scaleKey)) continue;
-      const fixGroup = typographyFixGroup(ctx, hit);
+      const verdict = typographyVerdict(ctx, hit);
+      if (!verdict) continue;
       findings.push({
         ruleId: RULE_ID,
         axis: "tokens",
-        severity: "warning",
+        severity: verdict.severity,
+        ...(verdict.confidence !== undefined && { confidence: verdict.confidence }),
         location: { file: path, line: lineFromIndex(source, hit.index), column: 1 },
         message: `Hardcoded ${hit.prop} \`${hit.raw}\` — typography should come from a type token scale`,
-        suggestion: "reference a typography token (e.g. `--font-size-md`, `--font-weight-semibold`) instead of a raw value",
-        ...(fixGroup !== undefined && { fixGroup }),
+        ...(verdict.suggestion !== undefined && { suggestion: verdict.suggestion }),
+        ...(verdict.fixGroup !== undefined && { fixGroup: verdict.fixGroup }),
       });
     }
   }

@@ -3,8 +3,9 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { rule, _internal } from "../../src/rules/tokens-no-hardcoded-typography.js";
+import { createResolver } from "../../src/graph/resolve/index.js";
 import type { RuleContext, ParsedFiles, TokenMap, ExtractedCssInJsBlock } from "../../src/types.js";
-import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
+import type { DesignSystemGraph, ZoneKind, TokenNode } from "../../src/graph/types.js";
 
 function makeCtx(repoRoot: string, tokens: TokenMap | null = null): RuleContext {
   return { repoRoot, tokens, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [] };
@@ -114,5 +115,84 @@ describe("graph-aware zone gating (P2 migration)", () => {
     const graph = graphWith({ "a/Real.css": "app" }, ["13px"]);
     const res = await rule.evaluate(ctxWith(graph), files);
     expect(res.findings).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 8 — resolver-driven verdicts (mirrors Task 7's z-index/spacing pattern,
+// with the composite-axis inversion: `exact` is compliant, `near` never occurs).
+// ---------------------------------------------------------------------------
+async function runRuleWithGraph(source: string, tokens: TokenNode[]) {
+  const graph: DesignSystemGraph = {
+    schemaVersion: 1,
+    tokens,
+    components: [],
+    stories: [],
+    usage: [],
+    zones: { byFile: { "a/Real.css": "app" } },
+    extraction: { entries: [], conflicts: [] },
+  };
+  const ctx = {
+    repoRoot: "/repo",
+    tokens: null,
+    componentsModule: null,
+    componentInventory: [],
+    storyIndex: null,
+    excludePaths: [],
+    graph,
+    resolver: createResolver(graph),
+  } as unknown as RuleContext;
+  const parsed: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source }], cssInJs: [] };
+  return rule.evaluate(ctx, parsed);
+}
+
+describe("composite resolution", () => {
+  it("does not flag a font-size that exactly matches a token", async () => {
+    const res = await runRuleWithGraph(
+      ".t { font-size: 13px; }",
+      [{ id: "fontSize.sm", axis: "typography", rawValue: "13px", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("degrades a non-matching font-size to info/low and never to medium", async () => {
+    const res = await runRuleWithGraph(
+      ".t { font-size: 15px; }",
+      [{ id: "fontSize.sm", axis: "typography", rawValue: "13px", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.confidence).toBe("low");
+  });
+
+  it("does not flag a font-weight that exactly matches a token", async () => {
+    const res = await runRuleWithGraph(
+      ".t { font-weight: 600; }",
+      [{ id: "weight.semibold", axis: "typography", rawValue: "weight/600", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("degrades a non-matching font-weight to info/low", async () => {
+    const res = await runRuleWithGraph(
+      ".t { font-weight: 650; }",
+      [{ id: "weight.semibold", axis: "typography", rawValue: "weight/600", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.confidence).toBe("low");
+  });
+
+  it("never emits a medium-confidence finding — `near` is unreachable on this axis", async () => {
+    const res = await runRuleWithGraph(
+      ".t { font-size: 14px; font-weight: 601; letter-spacing: 0.6px; }",
+      [
+        { id: "fontSize.sm", axis: "typography", rawValue: "13px", source: "dtcg" },
+        { id: "weight.semibold", axis: "typography", rawValue: "weight/600", source: "dtcg" },
+        { id: "ls.wide", axis: "typography", rawValue: "letter-spacing/0.5px", source: "dtcg" },
+      ],
+    );
+    expect(res.findings.length).toBeGreaterThan(0);
+    expect(res.findings.every((f) => f.confidence !== "medium")).toBe(true);
   });
 });
