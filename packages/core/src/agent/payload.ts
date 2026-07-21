@@ -47,8 +47,12 @@ export function buildHandoffPayload(findings: Finding[], opts: PayloadOptions): 
     const title = fg ? `${ruleId} · ${fg.from}${fg.to ? ` → ${fg.to}` : ""}` : ruleId;
     lines.push(`${i + 1}. ${first.severity.toUpperCase()} ${first.axis}: ${title} (${badge})`);
     lines.push(`   ${first.message}`);
-    if (fg && !fg.to) lines.push(`   no single token matched ${fg.from} — pick one from tokens.json and apply it to every site`);
-    else if (first.suggestion) lines.push(`   fix: ${first.suggestion}`);
+    // The rule's own suggestion wins over the generic hint. A resolver `near`
+    // deliberately produces a fixGroup with NO `to` (never auto-apply) but WITH
+    // a candidate token in `suggestion`; testing `!fg.to` first swallowed every
+    // one of those, which is exactly the information the agent needs.
+    if (first.suggestion) lines.push(`   fix: ${first.suggestion}`);
+    else if (fg && !fg.to) lines.push(`   no single token matched ${fg.from} — pick one from tokens.json and apply it to every site`);
     if (help) lines.push(`   recipe: ${help}  (or run \`lyse explain ${ruleId}\`)`);
     const scale = scaleByKey.get(key);
     if (scale?.migrationScale) {
