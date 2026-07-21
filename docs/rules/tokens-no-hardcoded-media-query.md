@@ -25,9 +25,13 @@ On a full `lyse audit`, every breakpoint literal is resolved against the repo's 
 | Class | Meaning | What this rule emits |
 |---|---|---|
 | `exact` | The value is on the repo's own breakpoint scale | nothing — this is compliant usage, not drift |
-| `near` | One scale step away from a token | **warning**, confidence medium; the candidate token is named in the suggestion |
+| `near` | One scale step away from a token (needs a scale with at least two entries — see below) | **warning**, confidence medium; the candidate token is named in the suggestion |
 | `novel` | A real value that resembles no token on this axis | **info**, confidence low |
-| `unresolved` | Not judgeable statically (`var(--x)`, a SCSS `$var`, a CSS-wide keyword) | nothing — counted in the audit's `meta.abstentions` |
+| `unresolved` | Not judgeable statically (`var(--x)`, a SCSS `$var`, a CSS-wide keyword) | nothing — counted in the audit's `meta.abstentions`. **Unreachable on this axis** (see below) |
+
+**`near` needs at least two tokens on the axis.** A one-token axis has no adjacent gap, so it has no observable step unit and "one step away" would be a manufactured number — every non-matching value on such an axis resolves `novel` instead. An exact hit on a one-token axis still resolves `exact`.
+
+`unresolved` is listed for completeness only: this rule's extractor matches a numeric literal and nothing else, so `var(--x)` / `$var` / keyword values never reach the resolver and this axis contributes 0 to `meta.abstentions`.
 
 Lengths normalize to px assuming a **16px root** (`rem` / `em` × 16), so `@media (max-width: 40rem)` compares correctly against a `640px` breakpoint token and vice versa. A repo that overrides the root font size sees advisory `near` / `novel`, never a false `exact`.
 

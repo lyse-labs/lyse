@@ -24,9 +24,11 @@ On a full `lyse audit`, every spacing literal is resolved against the repo's own
 | Class | Meaning | What this rule emits |
 |---|---|---|
 | `exact` | The value is on the repo's own scale | nothing — this is compliant usage, not drift |
-| `near` | One scale step away from a token | **warning**, confidence medium; the candidate token is named in the suggestion |
+| `near` | One scale step away from a token (needs a scale with at least two entries — see below) | **warning**, confidence medium; the candidate token is named in the suggestion |
 | `novel` | A real value that resembles no token on this axis | **info**, confidence low |
 | `unresolved` | Not judgeable statically (`var(--x)`, a SCSS `$var`, a CSS-wide keyword) | nothing — counted in the audit's `meta.abstentions` |
+
+**`near` needs at least two tokens on the axis.** A one-token axis has no adjacent gap, so it has no observable step unit and "one step away" would be a manufactured number — every non-matching value on such an axis resolves `novel` instead. An exact hit on a one-token axis still resolves `exact`.
 
 Note that `exact` here means the opposite of what it means on the colour axis: a spacing value identical to a token is a value *on the scale*, so it is silence, not a finding.
 

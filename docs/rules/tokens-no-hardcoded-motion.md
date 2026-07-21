@@ -26,9 +26,11 @@ On a full `lyse audit`, every motion literal is resolved against the repo's own 
 | Class | Meaning | What this rule emits for a duration |
 |---|---|---|
 | `exact` | The value is on the repo's own duration scale | nothing — this is compliant usage, not drift |
-| `near` | One scale step away from a duration token | **warning**, confidence medium; the candidate token is named in the suggestion |
+| `near` | One scale step away from a duration token (needs at least two duration tokens — see below) | **warning**, confidence medium; the candidate token is named in the suggestion |
 | `novel` | A real duration that resembles no token | **info**, confidence low |
 | `unresolved` | Not judgeable statically (`var(--x)`, a SCSS `$var`, a CSS-wide keyword) | nothing — counted in the audit's `meta.abstentions` |
+
+**`near` needs at least two tokens on the axis.** A one-token axis has no adjacent gap, so it has no observable step unit and "one step away" would be a manufactured number — every non-matching value on such an axis resolves `novel` instead. An exact hit on a one-token axis still resolves `exact`.
 
 **Easings** are a composite axis: a bezier curve has no defensible single-scalar distance, so the comparison is normalized string equality (lowercased, whitespace-collapsed) and the `near` band is structurally unreachable.
 
