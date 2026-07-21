@@ -1,8 +1,12 @@
 import type { DesignSystemGraph, TokenAxis } from "../types.js";
 
+// Tailwind's default spacing scale, expressed in px (step n = n × 4px, so
+// step 4 = 16px) rather than Tailwind's own step numbers — this must stay in
+// the same unit as numericValue's output (px), which is why it's ×4 vs. the
+// step list you'd find in Tailwind's docs.
 export const DEFAULT_SPACING_SCALE: readonly number[] = [
-  0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14,
-  16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80, 96,
+  0, 2, 4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 36, 40, 44, 48, 56,
+  64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240, 256, 288, 320, 384,
 ];
 
 export const NUMERIC_AXES: readonly TokenAxis[] = [
@@ -27,10 +31,17 @@ const DURATION_VALUE = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:ms|s)?$/;
  * px-stripped upstream, and `motion` carries a `duration/` or `easing/` prefix
  * (see graph/extract/tokens.ts#canonicalRawValue).
  *
- * The px/rem/em allow-list matches the units `tokens-no-hardcoded-spacing.ts`
- * already accepts, and like that rule this discards the unit and compares the
- * bare number. It does NOT unify rem and px (1rem !== 16px here) — that is the
- * pre-existing convention, not a new claim about equivalence.
+ * Lengths normalize to px, assuming a 16px root font size: `rem`/`em` are
+ * multiplied by 16, `px` and unitless (graph dimension values are already
+ * px-stripped upstream, so unitless already means px) pass through unchanged.
+ * 16px is the CSS default and near-universal in real stylesheets, so this is
+ * the right default assumption — without it, a scale authored in rem (e.g.
+ * `--space-1: 0.25rem`) never matches code that uses the equivalent px value
+ * (`padding: 4px`), silently under-reporting real drift as `novel` instead of
+ * `exact`. A repo that overrides the root font size will see its rem/em
+ * tokens land a fixed offset away from matching px code — that surfaces as
+ * the advisory `near`/`novel` classes, never as a false `exact`, so the
+ * blast radius of the assumption being wrong is bounded by the class system.
  */
 export function numericValue(rawValue: string): number | null {
   const v = rawValue.trim().toLowerCase();
@@ -45,7 +56,12 @@ export function numericValue(rawValue: string): number | null {
 
   // Durations are normalised to milliseconds so `0.2s` and `200ms` compare equal.
   if (duration) return body.endsWith("ms") ? n : body.endsWith("s") ? n * 1000 : n;
-  return n;
+
+  // Lengths normalise to px at a 16px root. `"1rem".endsWith("em")` is true,
+  // so this single check already catches both suffixes — and both need the
+  // same ×16, so there is no ordering hazard to get wrong.
+  if (body.endsWith("em")) return n * 16;
+  return n; // px suffix or unitless — already px.
 }
 
 export function deriveScale(graph: DesignSystemGraph, axis: TokenAxis): number[] {

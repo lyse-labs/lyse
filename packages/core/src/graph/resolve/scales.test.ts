@@ -73,12 +73,12 @@ describe("numericValue", () => {
     expect(numericValue("4px")).toBe(4);
   });
 
-  it("extracts the number from a rem-suffixed value", () => {
-    expect(numericValue("1rem")).toBe(1);
+  it("extracts the number from a rem-suffixed value, normalised to px at a 16px root", () => {
+    expect(numericValue("1rem")).toBe(16);
   });
 
-  it("extracts the number from a fractional rem value", () => {
-    expect(numericValue("0.5rem")).toBe(0.5);
+  it("extracts the number from a fractional rem value, normalised to px", () => {
+    expect(numericValue("0.5rem")).toBe(8);
   });
 
   it("extracts the number from a leading-dot decimal", () => {
@@ -107,6 +107,41 @@ describe("numericValue", () => {
 
   it("returns null for an empty string", () => {
     expect(numericValue("")).toBeNull();
+  });
+});
+
+describe("numericValue — px normalization at a 16px root", () => {
+  it("normalises rem and em to px, leaves px and unitless as px", () => {
+    expect(numericValue("0.25rem")).toBe(4);
+    expect(numericValue("1rem")).toBe(16);
+    expect(numericValue("1em")).toBe(16);
+    expect(numericValue("4px")).toBe(4);
+    expect(numericValue("4")).toBe(4);
+  });
+
+  it("still rejects relative units and malformed values", () => {
+    expect(numericValue("50%")).toBeNull();
+    expect(numericValue("100vh")).toBeNull();
+    expect(numericValue("16px solid")).toBeNull();
+    expect(numericValue("1e3")).toBeNull();
+    expect(numericValue("auto")).toBeNull();
+    expect(numericValue("")).toBeNull();
+  });
+
+  it("still normalises durations to milliseconds, unaffected by the px change", () => {
+    expect(numericValue("duration/200ms")).toBe(200);
+    expect(numericValue("duration/0.2s")).toBe(200);
+  });
+});
+
+describe("deriveScale — rem-authored spacing axis", () => {
+  it("derives a px scale from rem raw values", () => {
+    const g = graphWith([
+      { id: "space.xs", axis: "spacing", rawValue: "0.25rem", source: "dtcg" },
+      { id: "space.sm", axis: "spacing", rawValue: "0.5rem", source: "dtcg" },
+      { id: "space.md", axis: "spacing", rawValue: "1rem", source: "dtcg" },
+    ]);
+    expect(deriveScale(g, "spacing")).toEqual([4, 8, 16]);
   });
 });
 
@@ -157,11 +192,11 @@ describe("stepDistance", () => {
 });
 
 describe("numericValue — unit allow-list (rejects relative and malformed values)", () => {
-  it("accepts unitless, px, rem and em", () => {
+  it("accepts unitless, px, rem and em — rem/em normalised to px at a 16px root", () => {
     expect(numericValue("16")).toBe(16);
     expect(numericValue("4px")).toBe(4);
-    expect(numericValue("1rem")).toBe(1);
-    expect(numericValue("0.5em")).toBe(0.5);
+    expect(numericValue("1rem")).toBe(16);
+    expect(numericValue("0.5em")).toBe(8);
     expect(numericValue(".5")).toBe(0.5);
     expect(numericValue("-4px")).toBe(-4);
   });

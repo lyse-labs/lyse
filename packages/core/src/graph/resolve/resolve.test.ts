@@ -143,6 +143,27 @@ describe("numeric axes", () => {
     expect(r.class).toBe("near");
     expect(r.tokenIds).toEqual(["space.1", "space.2"]);
   });
+
+  // Headline case: a scale authored in rem must match code written in px at a
+  // 16px root, or genuine drift silently under-reports as `novel` instead of
+  // `exact` (numericValue no longer discards the unit — it normalises to px).
+  it("resolves a px literal as exact against a rem-authored token", () => {
+    const remGraph = graphWith([
+      { id: "space.1", axis: "spacing", rawValue: "0.25rem", source: "dtcg" },
+    ]);
+    const r = createResolver(remGraph).resolve("spacing", "4px");
+    expect(r.class).toBe("exact");
+    expect(r.tokenIds).toEqual(["space.1"]);
+  });
+
+  it("resolves a 1rem token against a 16px literal as exact", () => {
+    const remGraph = graphWith([
+      { id: "space.4", axis: "spacing", rawValue: "1rem", source: "dtcg" },
+    ]);
+    const r = createResolver(remGraph).resolve("spacing", "16px");
+    expect(r.class).toBe("exact");
+    expect(r.tokenIds).toEqual(["space.4"]);
+  });
 });
 
 describe("motion", () => {
