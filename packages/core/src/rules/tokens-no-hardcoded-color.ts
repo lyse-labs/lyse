@@ -661,15 +661,33 @@ const classifyConfidence: NonNullable<Rule["classifyConfidence"]> = (
   if (!raw) return "low";
 
   const key = raw.toLowerCase();
-  const candidates = ctx.tokens.colors.get(key) ?? ctx.tokens.colors.get(key.replace(/^.*\[(.*)\]$/, "$1"));
-  if (!candidates || candidates.length === 0) return "low";
 
   // Token-definition files (where hex literals are EXPECTED) get medium
   // confidence so they are not auto-fixed by default. Requires ctx.repoRoot
-  // to be set; if absent, fall through to "high".
-  if (ctx.repoRoot && isTokenDefinitionFile(finding.location.file, ctx.repoRoot)) {
-    return "medium";
+  // to be set; if absent, fall through.
+  const inTokenDefFile = !!ctx.repoRoot && isTokenDefinitionFile(finding.location.file, ctx.repoRoot);
+
+  // Resolver-aware path. `ctx.tokens` is the FLAT TokenMap, which is built by
+  // `loaders/tokens.ts` and therefore does not see CSS custom properties or
+  // SCSS variables at all — those only reach the graph. Asking it "is there a
+  // token for this colour?" answers "no" for every repo whose tokens are
+  // declared as custom properties, demoting the resolver's `exact` (emitted
+  // `high`) all the way to `low` via populateConfidence's most-conservative-wins
+  // composition. The resolver answers the same question over the same index the
+  // rule itself used, so prefer it whenever the audit supplied one.
+  if (ctx.resolver) {
+    const resolution = resolveColor(ctx.resolver, key.replace(/^.*\[(.*)]$/, "$1"), key);
+    if (resolution.class === "exact") return inTokenDefFile ? "medium" : "high";
+    // Perceptually close but not identical — the replacement is a judgement
+    // call, never an automatic one.
+    if (resolution.class === "near") return "medium";
+    return "low";
   }
+
+  const candidates = ctx.tokens.colors.get(key) ?? ctx.tokens.colors.get(key.replace(/^.*\[(.*)\]$/, "$1"));
+  if (!candidates || candidates.length === 0) return "low";
+
+  if (inTokenDefFile) return "medium";
 
   return "high";
 };

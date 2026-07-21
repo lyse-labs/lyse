@@ -38,6 +38,7 @@ import { loadGeneratedPack } from "../rules/pack-loader.js";
 import { buildDesignSystemGraph } from "../graph/builder.js";
 import type { DesignSystemGraph } from "../graph/types.js";
 import { createResolver } from "../graph/resolve/index.js";
+import type { Resolver } from "../graph/resolve/types.js";
 import { runRules } from "../rule-runner.js";
 import { scoreAudit, resolveScoreModel } from "../scorer.js";
 import { groupFindings, computeProjection, MIGRATION_SCALE_FILE_COUNT_DEFAULT } from "../report/fix-groups.js";
@@ -89,6 +90,13 @@ export interface AuditPipelineResult {
   fileCount: number;
   /** The reified Design System Graph (P1). */
   graph: DesignSystemGraph;
+  /**
+   * The four-class value resolver the rules ran against, built once per audit.
+   * Exposed so `buildClassifyContext` can hand the SAME instance to the
+   * confidence hooks — rebuilding one there would both duplicate work and risk
+   * the hooks disagreeing with the verdicts the rules already emitted.
+   */
+  resolver: Resolver;
 }
 
 function collectTokenCss(parsed: ParsedFiles): string {
@@ -737,5 +745,5 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   };
 
   maybePrintRefreshHint(absoluteRoot);
-  return { result, tokens, config, componentInventory: derivedInventory, fileCount: files.length, graph };
+  return { result, tokens, config, componentInventory: derivedInventory, fileCount: files.length, graph, resolver };
 }

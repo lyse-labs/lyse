@@ -262,6 +262,21 @@ const classifyConfidence: NonNullable<Rule["classifyConfidence"]> = (
   const isNegative = /^-\d/.test(raw) || (finding.context !== undefined && /-\d+px/.test(finding.context));
   if (isNegative) return "medium";
 
+  // Resolver-aware path — see the identical note in
+  // tokens-no-hardcoded-color.ts. The flat TokenMap cannot see a spacing scale
+  // declared as CSS custom properties, so the lookup below answers "no token"
+  // for that whole class of repo and demotes every `near` from `medium` to
+  // `low`. The resolver is the same index the rule's own verdict came from, so
+  // this hook agrees with the emission instead of fighting it: on this axis the
+  // hook contributes only the negative-value demotion above.
+  if (ctx.resolver) {
+    const resolution = ctx.resolver.resolve("spacing", raw);
+    if (resolution.class === "exact") return "high";
+    // One scale step away — a real candidate exists but is not the value.
+    if (resolution.class === "near") return "medium";
+    return "low";
+  }
+
   const numMatch = raw.match(/^(\d+(\.\d+)?)(px|rem|em)$/);
   if (!numMatch) return "low";
 

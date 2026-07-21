@@ -559,6 +559,19 @@ export interface ClassifyContext {
    * degrade gracefully when it is absent.
    */
   repoRoot?: string;
+  /**
+   * The SAME four-class resolver the rules ran against (`RuleContext.resolver`),
+   * built once per audit. `tokens` above is the FLAT TokenMap from
+   * `loaders/tokens.ts`, which does not see CSS custom properties or SCSS
+   * variables at all — those reach only the graph. A hook that answers "is
+   * there a token for this value?" from `tokens` alone therefore reports "no"
+   * on a whole class of repo and demotes a genuine resolver `exact` to `low`.
+   * Hooks that ask that question must prefer this when it is present.
+   *
+   * Optional: absent on the MCP / single-file / codemod paths, which have no
+   * resolver either, and the hook then keeps its pre-resolver behaviour.
+   */
+  resolver?: import("./graph/resolve/types.js").Resolver;
 }
 
 export interface CodemodContext extends ClassifyContext {

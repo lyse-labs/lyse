@@ -28,12 +28,14 @@ export function buildClassifyContext(
   tokens: TokenMap | null | undefined,
   config: LyseConfig,
   repoRoot?: string,
+  resolver?: ClassifyContext["resolver"],
 ): ClassifyContext {
   return {
     tokens: tokens ?? emptyTokenMap(),
     components: new Set(findings.filter((f) => f.axis === "components").map((f) => f.ruleId)),
     config,
     ...(repoRoot !== undefined ? { repoRoot } : {}),
+    ...(resolver !== undefined ? { resolver } : {}),
   };
 }
 
