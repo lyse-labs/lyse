@@ -88,6 +88,16 @@ function borderWidthFixGroup(ctx: RuleContext, raw: string): FixGroup | undefine
   return makeFixGroup(RULE_ID, raw, candidates);
 }
 
+/**
+ * Fixed remediation hint, emitted on BOTH paths — see the identical constant in
+ * `tokens-no-hardcoded-shadow.ts`. On the `near` sub-path the resolver's own
+ * candidate token is strictly more specific and supersedes it; a `novel` has no
+ * candidate to name, so it keeps the hint the legacy path always emitted rather
+ * than saying nothing at all. `lyse handoff` reads `suggestion` verbatim.
+ */
+const STATIC_SUGGESTION =
+  "reference a border-width token (e.g. `--border-width-thick`) instead of a raw length";
+
 interface BorderWidthVerdict {
   severity: "warning" | "info";
   /**
@@ -120,7 +130,8 @@ const VERDICT_BY_CLASS: Record<
  * `undefined` when nothing should be emitted. Mirrors
  * tokens-no-hardcoded-spacing.ts's `spacingVerdict` — see that file's
  * docstring for the full rationale (legacy vs. resolver path, why `near`
- * carries a candidate but `novel` never does, why `exact`/`unresolved` skip).
+ * names a candidate token while `novel` falls back to the static hint, why
+ * `exact`/`unresolved` skip).
  */
 function borderWidthVerdict(ctx: RuleContext, raw: string): BorderWidthVerdict | undefined {
   if (!ctx.resolver) {
@@ -128,7 +139,7 @@ function borderWidthVerdict(ctx: RuleContext, raw: string): BorderWidthVerdict |
     const fixGroup = borderWidthFixGroup(ctx, raw);
     return {
       severity: "warning",
-      suggestion: "reference a border-width token (e.g. `--border-width-thick`) instead of a raw length",
+      suggestion: STATIC_SUGGESTION,
       ...(fixGroup !== undefined && { fixGroup }),
     };
   }
@@ -141,11 +152,11 @@ function borderWidthVerdict(ctx: RuleContext, raw: string): BorderWidthVerdict |
   const suggestion =
     resolution.class === "near" && resolution.tokenIds[0] !== undefined
       ? `probably \`${resolution.tokenIds[0]}\` — verify before replacing`
-      : undefined;
+      : STATIC_SUGGESTION;
   return {
     severity,
     confidence,
-    ...(suggestion !== undefined && { suggestion }),
+    suggestion,
     ...(fixGroup !== undefined && { fixGroup }),
   };
 }

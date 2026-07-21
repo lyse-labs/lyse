@@ -192,3 +192,20 @@ describe("derived scales", () => {
     expect(res.findings[0]?.severity).toBe("info");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Regression — a `novel` verdict must keep the static remediation hint the
+// pre-migration rule always emitted (see reporters/terminal.ts:42).
+// ---------------------------------------------------------------------------
+describe("novel keeps the static suggestion", () => {
+  it("emits the z-index hint on a far-off value", async () => {
+    const res = await runRuleWithGraph(
+      ".x { z-index: 5000000; }",
+      [{ id: "zIndex.modal", axis: "zIndex", rawValue: "100", source: "dtcg" }],
+    );
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.suggestion).toBe(
+      "define a z-index scale (e.g. `--z-modal`, `--z-popover`) and reference it instead of a raw value",
+    );
+  });
+});

@@ -165,3 +165,21 @@ describe("derived scales", () => {
     expect(res.findings[0]?.severity).toBe("info");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Regression — a `novel` verdict must keep the static remediation hint the
+// pre-migration rule always emitted (reporters/terminal.ts, html.ts and
+// sarif.ts all render `suggestion`, so dropping it is user-visible).
+// ---------------------------------------------------------------------------
+describe("novel keeps the static suggestion", () => {
+  it("emits the radius hint on a far-off value", async () => {
+    const res = await runRuleWithGraph(
+      ".x{border-radius:997px}",
+      [{ id: "radii.sm", axis: "radii", rawValue: "3", source: "dtcg" }],
+    );
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.suggestion).toBe(
+      "reference a radius token (e.g. `--radius-md`) instead of a raw length",
+    );
+  });
+});

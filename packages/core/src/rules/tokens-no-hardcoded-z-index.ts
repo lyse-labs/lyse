@@ -77,6 +77,16 @@ function zIndexFixGroup(ctx: RuleContext, strValue: string): FixGroup | undefine
   return makeFixGroup(RULE_ID, strValue, ctx.tokens.zIndex.get(strValue));
 }
 
+/**
+ * Fixed remediation hint, emitted on BOTH paths — see the identical constant in
+ * `tokens-no-hardcoded-shadow.ts`. On the `near` sub-path the resolver's own
+ * candidate token is strictly more specific and supersedes it; a `novel` has no
+ * candidate to name, so it keeps the hint the legacy path always emitted rather
+ * than saying nothing at all. `lyse handoff` reads `suggestion` verbatim.
+ */
+const STATIC_SUGGESTION =
+  "define a z-index scale (e.g. `--z-modal`, `--z-popover`) and reference it instead of a raw value";
+
 interface ZIndexVerdict {
   severity: "warning" | "info";
   /**
@@ -108,8 +118,8 @@ const VERDICT_BY_CLASS: Record<
  * Builds the finding fields for one detected z-index literal, or `undefined`
  * when nothing should be emitted. Mirrors tokens-no-hardcoded-spacing.ts's
  * `spacingVerdict` — see that file's docstring for the full rationale (legacy
- * vs. resolver path, why `near` carries a candidate but `novel` never does,
- * why `exact`/`unresolved` skip).
+ * vs. resolver path, why `near` names a candidate token while `novel` falls
+ * back to the static hint, why `exact`/`unresolved` skip).
  */
 function zIndexVerdict(ctx: RuleContext, strValue: string): ZIndexVerdict | undefined {
   if (!ctx.resolver) {
@@ -118,7 +128,7 @@ function zIndexVerdict(ctx: RuleContext, strValue: string): ZIndexVerdict | unde
     const fixGroup = zIndexFixGroup(ctx, strValue);
     return {
       severity: "warning",
-      suggestion: "define a z-index scale (e.g. `--z-modal`, `--z-popover`) and reference it instead of a raw value",
+      suggestion: STATIC_SUGGESTION,
       ...(fixGroup !== undefined && { fixGroup }),
     };
   }
@@ -131,11 +141,11 @@ function zIndexVerdict(ctx: RuleContext, strValue: string): ZIndexVerdict | unde
   const suggestion =
     resolution.class === "near" && resolution.tokenIds[0] !== undefined
       ? `probably \`${resolution.tokenIds[0]}\` — verify before replacing`
-      : undefined;
+      : STATIC_SUGGESTION;
   return {
     severity,
     confidence,
-    ...(suggestion !== undefined && { suggestion }),
+    suggestion,
     ...(fixGroup !== undefined && { fixGroup }),
   };
 }

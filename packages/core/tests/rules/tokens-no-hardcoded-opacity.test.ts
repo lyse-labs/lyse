@@ -168,3 +168,20 @@ describe("derived scales", () => {
     expect(res.findings[0]?.severity).toBe("info");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Regression — a `novel` verdict must keep the static remediation hint the
+// pre-migration rule always emitted (see reporters/terminal.ts:42).
+// ---------------------------------------------------------------------------
+describe("novel keeps the static suggestion", () => {
+  it("emits the opacity hint on a far-off value", async () => {
+    const res = await runRuleWithGraph(
+      ".x { opacity: 0.99; }",
+      [{ id: "opacity.md", axis: "opacity", rawValue: "0.3", source: "dtcg" }],
+    );
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.suggestion).toBe(
+      "reference an opacity token (e.g. `--opacity-disabled`) instead of a raw value",
+    );
+  });
+});

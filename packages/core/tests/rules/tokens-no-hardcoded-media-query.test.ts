@@ -217,3 +217,20 @@ describe("derived scales", () => {
     expect(res.findings[0]?.severity).toBe("info");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Regression — a `novel` verdict must keep the static remediation hint the
+// pre-migration rule always emitted (see reporters/terminal.ts:42).
+// ---------------------------------------------------------------------------
+describe("novel keeps the static suggestion", () => {
+  it("emits the breakpoint hint on a far-off value", async () => {
+    const res = await runRuleWithGraph(
+      "@media (min-width: 5000px) { .g { color: red; } }",
+      [{ id: "bp.md", axis: "breakpoints", rawValue: "768px", source: "dtcg" }],
+    );
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.suggestion).toBe(
+      "reference a tokenized breakpoint scale (SCSS `$breakpoint-*`, a custom property, or a JS `breakpoints` map) instead of a raw literal",
+    );
+  });
+});

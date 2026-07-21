@@ -161,3 +161,20 @@ describe("derived scales", () => {
     expect(res.findings[0]?.severity).toBe("info");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Regression — a `novel` verdict must keep the static remediation hint the
+// pre-migration rule always emitted (see reporters/terminal.ts:42).
+// ---------------------------------------------------------------------------
+describe("novel keeps the static suggestion", () => {
+  it("emits the border-width hint on a far-off value", async () => {
+    const res = await runRuleWithGraph(
+      ".x{border-width:413px}",
+      [{ id: "borderWidth.md", axis: "borderWidth", rawValue: "5", source: "dtcg" }],
+    );
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.suggestion).toBe(
+      "reference a border-width token (e.g. `--border-width-thick`) instead of a raw length",
+    );
+  });
+});
