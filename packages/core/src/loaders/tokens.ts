@@ -3,6 +3,7 @@ import { join } from "node:path";
 import fg from "fast-glob";
 import { transform } from "lightningcss";
 import type { TokenMap } from "../types.js";
+import { dimensionAxisForPath, numberAxisForPath } from "../tokens/axis-heuristics.js";
 
 function pushToken(map: Map<string, string[]>, key: string, value: string) {
   const list = map.get(key) ?? [];
@@ -390,16 +391,24 @@ export async function fromDtcg(root: string): Promise<TokenMap | null> {
               pushToken(localColors, value, tokenPath);
               break;
             case "dimension":
-              // Route dimension to the right map based on path heuristics
-              if (/radius/i.test(tokenPath)) {
-                pushToken(localRadii, value.replace(/px$/, "") + (value.endsWith("px") ? "px" : ""), tokenPath);
-              } else if (/border.?width/i.test(tokenPath)) {
-                pushToken(localBorderWidth, value, tokenPath);
-              } else if (/breakpoint|screen/i.test(tokenPath)) {
-                pushToken(localBreakpoints, value, tokenPath);
-              } else {
-                // Default dimension → spacing (existing behavior)
-                pushToken(localSpacing, value.replace(/px$/, ""), tokenPath);
+              // Route dimension to the right map. The path heuristics are
+              // shared verbatim with graph/extract/tokens.ts#axisFor — see
+              // tokens/axis-heuristics.ts. Only the per-axis VALUE handling
+              // below is loader-specific.
+              switch (dimensionAxisForPath(tokenPath)) {
+                case "radii":
+                  pushToken(localRadii, value.replace(/px$/, "") + (value.endsWith("px") ? "px" : ""), tokenPath);
+                  break;
+                case "borderWidth":
+                  pushToken(localBorderWidth, value, tokenPath);
+                  break;
+                case "breakpoints":
+                  pushToken(localBreakpoints, value, tokenPath);
+                  break;
+                case "spacing":
+                  // Default dimension → spacing (existing behavior)
+                  pushToken(localSpacing, value.replace(/px$/, ""), tokenPath);
+                  break;
               }
               break;
             case "shadow": {
@@ -437,14 +446,23 @@ export async function fromDtcg(root: string): Promise<TokenMap | null> {
               break;
             }
             case "number": {
-              // DTCG $type "number" is used for z-index and opacity in some token files
-              // Route based on path heuristics
-              if (/z.?index/i.test(tokenPath)) {
-                pushToken(localZIndex, value, tokenPath);
-              } else if (/opacity/i.test(tokenPath)) {
-                pushToken(localOpacity, value, tokenPath);
+              // DTCG $type "number" is used for z-index and opacity in some
+              // token files. Route on the shared path heuristics
+              // (tokens/axis-heuristics.ts). `allowZPrefix: false` preserves
+              // this loader's exact pre-existing behaviour: a bare `z/…` path
+              // is a CSS-custom-property artefact (`--z-modal` split on `-`),
+              // which only the graph produces, so this path has never matched
+              // it. Anything else is skipped rather than guessed at.
+              switch (numberAxisForPath(tokenPath, { allowZPrefix: false })) {
+                case "zIndex":
+                  pushToken(localZIndex, value, tokenPath);
+                  break;
+                case "opacity":
+                  pushToken(localOpacity, value, tokenPath);
+                  break;
+                case undefined:
+                  break;
               }
-              // Other numeric types are skipped; add cases as needed in v0.2
               break;
             }
             // NOTE: $type values not listed here (e.g., "gradient", "lineHeight") are skipped.

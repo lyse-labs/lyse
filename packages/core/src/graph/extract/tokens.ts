@@ -3,6 +3,7 @@ import {
 } from "../../loaders/tokens.js";
 import { normalizeToDtcg } from "../../tokens/normalizer.js";
 import { isDtcgToken } from "../../tokens/dtcg-model.js";
+import { dimensionAxisForPath, numberAxisForPath } from "../../tokens/axis-heuristics.js";
 import type { DtcgDocument, DtcgToken, DtcgType } from "../../tokens/dtcg-model.js";
 import type { TokenMap, ParsedFiles } from "../../types.js";
 import type { TokenNode, TokenConflict, TokenSource, TokenAxis } from "../types.js";
@@ -78,23 +79,12 @@ export function detectTokenConflicts(nodes: TokenNode[]): TokenConflict[] {
 }
 
 // WHY: `dimension` and `number` are each shared by several axes, so the $type
-// alone cannot name one — the token's own PATH has to break the tie. These are
-// the same heuristics loaders/tokens.ts#fromDtcg applies to the identical job,
-// kept deliberately in lockstep with it: the two must agree or a token means a
-// different axis depending on which file format declared it.
-//
-// The one deliberate addition is `^z/`. A css custom property is split on `-`
-// into path segments (tokens/normalizer.ts#normalizeCssVars), so the idiomatic
-// `--z-modal` — the same prefix Tailwind v4 uses for z-index — becomes the path
-// `z/modal`, which `z.?index` does not match. The trailing `/` anchor keeps it
-// from swallowing unrelated `z`-initial names like `zoom/level`.
-const RADIUS_PATH = /radius/i;
-const BORDER_WIDTH_PATH = /border.?width/i;
-const BREAKPOINT_PATH = /breakpoint|screen/i;
-const Z_INDEX_PATH = /z.?index/i;
-const Z_PREFIX_PATH = /^z(\/|$)/i;
-const OPACITY_PATH = /opacity/i;
-
+// alone cannot name one — the token's own PATH has to break the tie. The path
+// heuristics live in `tokens/axis-heuristics.ts`, shared verbatim with
+// `loaders/tokens.ts#fromDtcg`, which does the identical job for the flat
+// TokenMap: the two must agree or a token means a different axis depending on
+// which file format declared it. `allowZPrefix` is the one deliberate
+// difference and is documented there.
 export function axisFor(type: DtcgType, tokenPath: string): TokenAxis | undefined {
   switch (type) {
     case "color":
@@ -103,14 +93,9 @@ export function axisFor(type: DtcgType, tokenPath: string): TokenAxis | undefine
     case "cubicBezier":
       return "motion";
     case "dimension":
-      if (RADIUS_PATH.test(tokenPath)) return "radii";
-      if (BORDER_WIDTH_PATH.test(tokenPath)) return "borderWidth";
-      if (BREAKPOINT_PATH.test(tokenPath)) return "breakpoints";
-      return "spacing";
+      return dimensionAxisForPath(tokenPath);
     case "number":
-      if (Z_INDEX_PATH.test(tokenPath) || Z_PREFIX_PATH.test(tokenPath)) return "zIndex";
-      if (OPACITY_PATH.test(tokenPath)) return "opacity";
-      return undefined;
+      return numberAxisForPath(tokenPath, { allowZPrefix: true });
     default:
       return undefined;
   }
