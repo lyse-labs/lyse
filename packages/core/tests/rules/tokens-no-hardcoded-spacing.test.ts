@@ -1,8 +1,33 @@
 import { describe, it, expect } from "vitest";
 import { rule, countCompliantSpacingUses } from "../../src/rules/tokens-no-hardcoded-spacing.js";
 import { isSchemaOrDataFile, isLowSignalValueFile, isInExampleOrSchemaValuePosition, isNotSpacingPropertyContext } from "../../src/rules/_skip-context.js";
+import { createResolver } from "../../src/graph/resolve/index.js";
 import type { RuleContext, ParsedFiles, TokenMap } from "../../src/types.js";
-import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
+import type { DesignSystemGraph, ZoneKind, TokenNode } from "../../src/graph/types.js";
+
+async function runRuleWithGraph(source: string, tokens: TokenNode[]) {
+  const graph: DesignSystemGraph = {
+    schemaVersion: 1,
+    tokens,
+    components: [],
+    stories: [],
+    usage: [],
+    zones: { byFile: { "src/a.ts": "app" } },
+    extraction: { entries: [], conflicts: [] },
+  };
+  const ctx = {
+    repoRoot: "/repo",
+    tokens: null,
+    componentsModule: null,
+    componentInventory: [],
+    storyIndex: null,
+    excludePaths: [],
+    graph,
+    resolver: createResolver(graph),
+  } as unknown as RuleContext;
+  const parsed = { css: [], cssInJs: [], ts: [{ path: "src/a.ts", source, skipped: false }] } as unknown as ParsedFiles;
+  return rule.evaluate(ctx, parsed);
+}
 
 const tokens: TokenMap = {
   colors: new Map(),
@@ -903,6 +928,41 @@ describe("graph-aware zone gating (P2 migration)", () => {
     const files: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source: ".x{padding:13px}", root: null }], cssInJs: [] };
     const graph = graphWith({ "a/Real.css": "app" }, ["13"]);
     const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 6 — derived scales (the Carbon fix)
+// ---------------------------------------------------------------------------
+describe("derived scales (the Carbon case)", () => {
+  it("does not flag a value that is on the repo's own scale but off Tailwind's", async () => {
+    // 17 is not a Tailwind spacing step; here the repo defines it as a token.
+    const res = await runRuleWithGraph(
+      `const s = { padding: "17px" };`,
+      [{ id: "spacing.md", axis: "spacing", rawValue: "17", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("still flags a value that is off the repo's own scale", async () => {
+    const res = await runRuleWithGraph(
+      `const s = { padding: "413px" };`,
+      [{ id: "spacing.md", axis: "spacing", rawValue: "17", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+  });
+
+  it("falls back to the Tailwind default scale when the repo defines no spacing tokens", async () => {
+    const res = await runRuleWithGraph(`const s = { padding: "16px" };`, []);
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("makes padding: 4px compliant when the repo's own token is 0.25rem (16px root)", async () => {
+    const res = await runRuleWithGraph(
+      `const s = { padding: "4px" };`,
+      [{ id: "spacing.xs", axis: "spacing", rawValue: "0.25rem", source: "dtcg" }],
+    );
     expect(res.findings).toHaveLength(0);
   });
 });

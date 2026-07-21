@@ -8,11 +8,23 @@ export interface HardcodedValueSpec {
   cleanValue: string;
   literalValue: string;
   altLiteralValue: string;
+  /**
+   * Optional real token-definition CSS, included in every fixture this spec
+   * generates. Axes migrated onto the four-class resolver (see
+   * tokens-no-hardcoded-spacing.ts) can only ever classify `exact`/`near` by
+   * anchoring on a real token id — with none present, every mutation
+   * resolves `novel` (info), which `ruleFlagged` (error/warning only) cannot
+   * register as a violation. `isCssCustomPropertyDeclaration` already
+   * guard-suppresses the declaration itself, so this file never produces a
+   * finding of its own.
+   */
+  tokenSource?: string;
 }
 
 export function makeHardcodedValueAdapter(spec: HardcodedValueSpec): OracleAdapter {
   const css = (value: string): FixtureFiles => ({
     "package.json": PKG,
+    ...(spec.tokenSource !== undefined && { "src/tokens.css": spec.tokenSource }),
     "src/x.css": `.a { ${spec.property}: ${value}; }`,
   });
   return {
@@ -35,7 +47,20 @@ export function makeHardcodedValueAdapter(spec: HardcodedValueSpec): OracleAdapt
 }
 
 export const hardcodedValueAdapters: OracleAdapter[] = [
-  makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-spacing", property: "margin", cleanValue: "var(--space-md)", literalValue: "16px", altLiteralValue: "1rem" }),
+  // tokens/no-hardcoded-spacing is resolver-migrated (Task 6, the Carbon fix):
+  // `exact` (on the repo's own scale) is COMPLIANT, not drift, so 16px/1rem
+  // must resolve `near` against a real-but-different scale — not `exact`
+  // (would silently pass) and not `novel` from zero tokens (would be info,
+  // invisible to this error/warning-only oracle). --space-sm/--space-lg (8px,
+  // 32px) put 16 one step off a real token without landing on it.
+  makeHardcodedValueAdapter({
+    ruleId: "tokens/no-hardcoded-spacing",
+    property: "margin",
+    cleanValue: "var(--space-md)",
+    literalValue: "16px",
+    altLiteralValue: "1rem",
+    tokenSource: ":root { --space-sm: 8px; --space-lg: 32px; }",
+  }),
   makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-border-radius", property: "border-radius", cleanValue: "var(--radius-md)", literalValue: "8px", altLiteralValue: "0.5rem" }),
   makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-z-index", property: "z-index", cleanValue: "var(--z-modal)", literalValue: "100", altLiteralValue: "999" }),
   makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-opacity", property: "opacity", cleanValue: "var(--opacity-muted)", literalValue: "0.5", altLiteralValue: ".5" }),
