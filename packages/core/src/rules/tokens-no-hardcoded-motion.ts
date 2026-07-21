@@ -111,6 +111,14 @@ function motionScaleSets(tokens: TokenMap | null): { durations: Set<string>; eas
   return { durations, easings };
 }
 
+/**
+ * Fixed remediation hint, emitted on BOTH paths — see the identical constant in
+ * `tokens-no-hardcoded-shadow.ts`. On the `near` duration sub-path the
+ * resolver's own candidate token is strictly more specific and supersedes it.
+ */
+const STATIC_SUGGESTION =
+  "reference a motion token (e.g. `--duration-fast`, `--easing-standard`) instead of a raw value";
+
 interface MotionVerdict {
   severity: "warning" | "info";
   /**
@@ -176,7 +184,7 @@ function motionVerdict(
     const fixGroup = motionFixGroup(ctx, hit);
     return {
       severity: "warning",
-      suggestion: "reference a motion token (e.g. `--duration-fast`, `--easing-standard`) instead of a raw value",
+      suggestion: STATIC_SUGGESTION,
       ...(fixGroup !== undefined && { fixGroup }),
     };
   }
@@ -195,20 +203,24 @@ function motionVerdict(
     const fixGroup = makeFixGroup(RULE_ID, hit.raw, []);
     return {
       severity: "warning",
+      suggestion: STATIC_SUGGESTION,
       ...(fixGroup !== undefined && { fixGroup }),
     };
   }
 
   const { severity, confidence } = DURATION_VERDICT_BY_CLASS[resolution.class];
   const fixGroup = makeFixGroup(RULE_ID, hit.raw, []);
+  // A `near` names the actual candidate token; that is strictly more useful
+  // than the generic hint, so it supersedes it. A `novel` has no candidate to
+  // name and falls back to the hint the legacy path always emitted.
   const suggestion =
     resolution.class === "near" && resolution.tokenIds[0] !== undefined
       ? `probably \`${resolution.tokenIds[0]}\` — verify before replacing`
-      : undefined;
+      : STATIC_SUGGESTION;
   return {
     severity,
     confidence,
-    ...(suggestion !== undefined && { suggestion }),
+    suggestion,
     ...(fixGroup !== undefined && { fixGroup }),
   };
 }

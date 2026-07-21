@@ -70,6 +70,15 @@ function shadowFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {
   return makeFixGroup(RULE_ID, raw, candidates);
 }
 
+/**
+ * Fixed remediation hint, emitted on BOTH paths. It carries no resolver-derived
+ * information — a composite axis has no distance metric and therefore no
+ * candidate token to name — so there is no reason for the resolver path to say
+ * less than the legacy path did. `lyse handoff` reads `suggestion` verbatim.
+ */
+const STATIC_SUGGESTION =
+  "reference a shadow token (e.g. `--shadow-sm`, `--elevation-2`) instead of a raw box-shadow";
+
 interface ShadowVerdict {
   severity: "warning";
   suggestion?: string;
@@ -109,7 +118,7 @@ function shadowVerdict(ctx: RuleContext, raw: string): ShadowVerdict | undefined
     const fixGroup = shadowFixGroup(ctx, raw);
     return {
       severity: "warning",
-      suggestion: "reference a shadow token (e.g. `--shadow-sm`, `--elevation-2`) instead of a raw box-shadow",
+      suggestion: STATIC_SUGGESTION,
       ...(fixGroup !== undefined && { fixGroup }),
     };
   }
@@ -119,6 +128,7 @@ function shadowVerdict(ctx: RuleContext, raw: string): ShadowVerdict | undefined
   const fixGroup = makeFixGroup(RULE_ID, raw, []);
   return {
     severity: "warning",
+    suggestion: STATIC_SUGGESTION,
     ...(fixGroup !== undefined && { fixGroup }),
   };
 }

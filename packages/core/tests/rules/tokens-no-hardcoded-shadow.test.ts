@@ -195,3 +195,19 @@ describe("composite resolution", () => {
     expect(res.findings).toHaveLength(0);
   });
 });
+
+// Task 9 item 3 — the resolver path dropped the static suggestion the legacy
+// path always emitted. The text is a fixed "reference a shadow token" hint; it
+// carries no resolver-derived information, so there is no reason for the two
+// paths to differ, and `lyse handoff` reads `suggestion` verbatim.
+describe("suggestion parity between the legacy and resolver paths", () => {
+  it("emits the same static hint on the resolver path as the legacy path", async () => {
+    const res = await runRuleWithGraph(
+      ".c { box-shadow: 0 9px 30px rgba(0,0,0,.4); }",
+      [{ id: "shadow.sm", axis: "shadows", rawValue: "0 1px 2px rgba(0,0,0,.1)", source: "dtcg" }],
+    );
+    expect(res.findings[0]?.suggestion).toBe(
+      "reference a shadow token (e.g. `--shadow-sm`, `--elevation-2`) instead of a raw box-shadow",
+    );
+  });
+});

@@ -109,6 +109,14 @@ function typographyFixGroup(ctx: RuleContext, hit: TypoHit): FixGroup | undefine
   return makeFixGroup(RULE_ID, hit.scaleKey, candidates);
 }
 
+/**
+ * Fixed remediation hint, emitted on BOTH paths — see the identical constant in
+ * `tokens-no-hardcoded-shadow.ts`. It carries no resolver-derived information,
+ * so the resolver path has no reason to say less than the legacy path did.
+ */
+const STATIC_SUGGESTION =
+  "reference a typography token (e.g. `--font-size-md`, `--font-weight-semibold`) instead of a raw value";
+
 interface TypographyVerdict {
   severity: "warning";
   suggestion?: string;
@@ -146,7 +154,7 @@ function typographyVerdict(ctx: RuleContext, hit: TypoHit): TypographyVerdict | 
     const fixGroup = typographyFixGroup(ctx, hit);
     return {
       severity: "warning",
-      suggestion: "reference a typography token (e.g. `--font-size-md`, `--font-weight-semibold`) instead of a raw value",
+      suggestion: STATIC_SUGGESTION,
       ...(fixGroup !== undefined && { fixGroup }),
     };
   }
@@ -156,6 +164,7 @@ function typographyVerdict(ctx: RuleContext, hit: TypoHit): TypographyVerdict | 
   const fixGroup = makeFixGroup(RULE_ID, hit.scaleKey, []);
   return {
     severity: "warning",
+    suggestion: STATIC_SUGGESTION,
     ...(fixGroup !== undefined && { fixGroup }),
   };
 }

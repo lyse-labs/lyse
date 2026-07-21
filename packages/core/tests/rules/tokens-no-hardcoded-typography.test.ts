@@ -197,3 +197,16 @@ describe("composite resolution", () => {
     expect(res.findings.every((f) => f.confidence === undefined)).toBe(true);
   });
 });
+
+// Task 9 item 3 — see the identical block in tokens-no-hardcoded-shadow.test.ts.
+describe("suggestion parity between the legacy and resolver paths", () => {
+  it("emits the same static hint on the resolver path as the legacy path", async () => {
+    const res = await runRuleWithGraph(
+      ".c { font-size: 13px; }",
+      [{ id: "font.md", axis: "typography", rawValue: "16px", source: "dtcg" }],
+    );
+    expect(res.findings[0]?.suggestion).toBe(
+      "reference a typography token (e.g. `--font-size-md`, `--font-weight-semibold`) instead of a raw value",
+    );
+  });
+});

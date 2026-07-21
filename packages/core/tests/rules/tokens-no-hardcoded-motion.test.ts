@@ -232,3 +232,33 @@ describe("easing sub-path (composite — near is unreachable)", () => {
     expect(res.findings.every((f) => f.confidence !== "medium")).toBe(true);
   });
 });
+
+// Task 9 item 3 — see the identical block in tokens-no-hardcoded-shadow.test.ts.
+// Durations additionally have a resolver-derived candidate on `near`; that one
+// is strictly more specific, so it must win over the static hint.
+describe("suggestion parity between the legacy and resolver paths", () => {
+  it("emits the static hint for a novel easing curve", async () => {
+    const res = await runRuleWithGraph(
+      ".x { transition-timing-function: cubic-bezier(0.1, 0.7, 1, 0.1); }",
+      [{ id: "motion.standard", axis: "motion", rawValue: "easing/cubic-bezier(0.4, 0, 0.2, 1)", source: "dtcg" }],
+    );
+    expect(res.findings[0]?.suggestion).toBe(
+      "reference a motion token (e.g. `--duration-fast`, `--easing-standard`) instead of a raw value",
+    );
+  });
+
+  it("emits the static hint for a novel duration", async () => {
+    const res = await runRuleWithGraph(".x { transition-duration: 5000ms; }", []);
+    expect(res.findings[0]?.suggestion).toBe(
+      "reference a motion token (e.g. `--duration-fast`, `--easing-standard`) instead of a raw value",
+    );
+  });
+
+  it("keeps the resolver's candidate token on `near`, not the static hint", async () => {
+    const res = await runRuleWithGraph(
+      ".x { transition-duration: 210ms; }",
+      [{ id: "motion.fast", axis: "motion", rawValue: "duration/200ms", source: "dtcg" }],
+    );
+    expect(res.findings[0]?.suggestion).toBe("probably `motion.fast` — verify before replacing");
+  });
+});
