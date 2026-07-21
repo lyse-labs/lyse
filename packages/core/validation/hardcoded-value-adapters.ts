@@ -18,14 +18,35 @@ export interface HardcodedValueSpec {
    * (deliberately different) scale is what makes the literal land off-scale.
    * `isCssCustomPropertyDeclaration` already guard-suppresses the declaration
    * itself, so this file never produces a finding of its own.
+   *
+   * Only `spacing` can use this: a plain `:root { --custom-prop: … }`
+   * declaration goes through the graph's CSS-custom-property extraction path
+   * (graph/extract/tokens.ts#dtcgDocumentToNodes), which derives the axis
+   * SOLELY from the DTCG `$type` (`DTCG_TYPE_TO_AXIS`) — every `dimension`
+   * collapses onto `spacing` regardless of property name, and `number`
+   * (z-index/opacity) isn't mapped at all, so the token is dropped. That
+   * collapse happens to be a no-op for `spacing` (dimension's own default
+   * target), which is the only reason this mechanism ever worked. For every
+   * other numeric axis use `tokensJson` instead.
    */
   tokenSource?: string;
+  /**
+   * DTCG tokens.json content for axes where `tokenSource` (see above) cannot
+   * reach the right axis. Routes through loaders/tokens.ts#fromDtcg instead,
+   * which infers the axis from a per-axis PATH heuristic (`/radius/i`,
+   * `/border.?width/i`, `/breakpoint|screen/i`, `/z.?index/i`, `/opacity/i`)
+   * rather than collapsing on `$type` — verified empirically (see Task 7's
+   * report) to land radii/borderWidth/breakpoints/zIndex/opacity tokens on
+   * their own axis, not `spacing`.
+   */
+  tokensJson?: Record<string, unknown>;
 }
 
 export function makeHardcodedValueAdapter(spec: HardcodedValueSpec): OracleAdapter {
   const css = (value: string): FixtureFiles => ({
     "package.json": PKG,
     ...(spec.tokenSource !== undefined && { "src/tokens.css": spec.tokenSource }),
+    ...(spec.tokensJson !== undefined && { "src/tokens.tokens.json": JSON.stringify(spec.tokensJson) }),
     "src/x.css": `.a { ${spec.property}: ${value}; }`,
   });
   return {
@@ -63,10 +84,45 @@ export const hardcodedValueAdapters: OracleAdapter[] = [
     altLiteralValue: "1rem",
     tokenSource: ":root { --space-sm: 8px; --space-lg: 32px; }",
   }),
-  makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-border-radius", property: "border-radius", cleanValue: "var(--radius-md)", literalValue: "8px", altLiteralValue: "0.5rem" }),
-  makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-z-index", property: "z-index", cleanValue: "var(--z-modal)", literalValue: "100", altLiteralValue: "999" }),
-  makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-opacity", property: "opacity", cleanValue: "var(--opacity-muted)", literalValue: "0.5", altLiteralValue: ".5" }),
-  makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-border-width", property: "border-width", cleanValue: "var(--border-md)", literalValue: "2px", altLiteralValue: "0.125rem" }),
+  // radii/z-index/opacity/border-width are also resolver-migrated (Task 7),
+  // and equally need a real (different) scale so mutations land `near`
+  // (warning) rather than `exact` (compliant, empty scale) or `novel` at
+  // `info` severity (this oracle only counts error/warning as a flag — see
+  // validation/audit-probe.ts#ruleFlagged). `tokensJson`, not `tokenSource`:
+  // see HardcodedValueSpec's doc above for why a plain CSS custom property
+  // can't reach these axes.
+  makeHardcodedValueAdapter({
+    ruleId: "tokens/no-hardcoded-border-radius",
+    property: "border-radius",
+    cleanValue: "var(--radius-md)",
+    literalValue: "8px",
+    altLiteralValue: "0.5rem",
+    tokensJson: { radius: { sm: { $value: "4px", $type: "dimension" }, lg: { $value: "16px", $type: "dimension" } } },
+  }),
+  makeHardcodedValueAdapter({
+    ruleId: "tokens/no-hardcoded-z-index",
+    property: "z-index",
+    cleanValue: "var(--z-modal)",
+    literalValue: "100",
+    altLiteralValue: "999",
+    tokensJson: { zIndex: { dropdown: { $value: "10", $type: "number" }, modal: { $value: "1000", $type: "number" } } },
+  }),
+  makeHardcodedValueAdapter({
+    ruleId: "tokens/no-hardcoded-opacity",
+    property: "opacity",
+    cleanValue: "var(--opacity-muted)",
+    literalValue: "0.5",
+    altLiteralValue: ".5",
+    tokensJson: { opacity: { muted: { $value: "0.4", $type: "number" }, hover: { $value: "0.9", $type: "number" } } },
+  }),
+  makeHardcodedValueAdapter({
+    ruleId: "tokens/no-hardcoded-border-width",
+    property: "border-width",
+    cleanValue: "var(--border-md)",
+    literalValue: "2px",
+    altLiteralValue: "0.125rem",
+    tokensJson: { "border-width": { thin: { $value: "1px", $type: "dimension" }, thick: { $value: "4px", $type: "dimension" } } },
+  }),
   makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-typography", property: "font-size", cleanValue: "var(--font-size-md)", literalValue: "16px", altLiteralValue: "1rem" }),
   makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-motion", property: "transition", cleanValue: "color var(--duration-fast) var(--ease-standard)", literalValue: "color 200ms ease", altLiteralValue: "color 0.2s ease" }),
   makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-gradient", property: "background", cleanValue: "var(--gradient-brand)", literalValue: "linear-gradient(to right, #ff6b6b, #ffa500)", altLiteralValue: "radial-gradient(circle, #ff0000, #0000ff)" }),
