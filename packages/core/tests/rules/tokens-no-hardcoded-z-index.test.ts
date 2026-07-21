@@ -3,8 +3,9 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { rule, _internal } from "../../src/rules/tokens-no-hardcoded-z-index.js";
+import { createResolver } from "../../src/graph/resolve/index.js";
 import type { RuleContext, ParsedFiles, TokenMap, ExtractedCssInJsBlock } from "../../src/types.js";
-import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
+import type { DesignSystemGraph, ZoneKind, TokenNode } from "../../src/graph/types.js";
 
 function makeCtx(repoRoot: string, tokens: TokenMap | null = null): RuleContext {
   return { repoRoot, tokens, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [] };
@@ -122,5 +123,72 @@ describe("graph-aware zone gating (P2 migration)", () => {
     const graph = graphWith({ "a/Real.css": "app" }, ["9999"]);
     const res = await rule.evaluate(ctxWith(graph), files);
     expect(res.findings).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 7 — resolver-driven verdicts (mirrors Task 6's spacing migration)
+// ---------------------------------------------------------------------------
+async function runRuleWithGraph(source: string, tokens: TokenNode[]) {
+  const graph: DesignSystemGraph = {
+    schemaVersion: 1,
+    tokens,
+    components: [],
+    stories: [],
+    usage: [],
+    zones: { byFile: { "a/Real.css": "app" } },
+    extraction: { entries: [], conflicts: [] },
+  };
+  const ctx = {
+    repoRoot: "/repo",
+    tokens: null,
+    componentsModule: null,
+    componentInventory: [],
+    storyIndex: null,
+    excludePaths: [],
+    graph,
+    resolver: createResolver(graph),
+  } as unknown as RuleContext;
+  const parsed: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source }], cssInJs: [] };
+  return rule.evaluate(ctx, parsed);
+}
+
+describe("derived scales", () => {
+  it("does not flag a z-index on the repo's own scale", async () => {
+    const res = await runRuleWithGraph(
+      ".modal { z-index: 100; }",
+      [{ id: "zIndex.modal", axis: "zIndex", rawValue: "100", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("degrades a far-off z-index to info/low", async () => {
+    const res = await runRuleWithGraph(
+      ".x { z-index: 5000000; }",
+      [{ id: "zIndex.modal", axis: "zIndex", rawValue: "100", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.confidence).toBe("low");
+  });
+
+  it("flags a one-step-off z-index as warning and names its candidate token", async () => {
+    const res = await runRuleWithGraph(
+      ".x { z-index: 100; }",
+      [
+        { id: "zIndex.dropdown", axis: "zIndex", rawValue: "10", source: "dtcg" },
+        { id: "zIndex.modal", axis: "zIndex", rawValue: "1000", source: "dtcg" },
+      ],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings[0]?.confidence).toBe("medium");
+    expect(res.findings[0]?.suggestion).toBe("probably `zIndex.dropdown` — verify before replacing");
+  });
+
+  it("degrades to info on a zero-token graph — no default z-index scale (behaviour change vs. pre-migration warning)", async () => {
+    const res = await runRuleWithGraph(".x { z-index: 5000000; }", []);
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("info");
   });
 });
