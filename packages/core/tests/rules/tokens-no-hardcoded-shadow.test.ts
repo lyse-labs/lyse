@@ -3,8 +3,9 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { rule, _internal } from "../../src/rules/tokens-no-hardcoded-shadow.js";
+import { createResolver } from "../../src/graph/resolve/index.js";
 import type { RuleContext, ParsedFiles, TokenMap, ExtractedCssInJsBlock } from "../../src/types.js";
-import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
+import type { DesignSystemGraph, ZoneKind, TokenNode } from "../../src/graph/types.js";
 
 function makeCtx(repoRoot: string, tokens: TokenMap | null = null): RuleContext {
   return { repoRoot, tokens, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [] };
@@ -112,6 +113,75 @@ describe("graph-aware zone gating (P2 migration)", () => {
     // internal whitespace is preserved, unlike the rule's whitespace-stripped hit key.
     const graph = graphWith({ "a/Real.css": "app" }, ["0 1px 3px rgba(0,0,0,0.1)"]);
     const res = await rule.evaluate(ctxWith(graph), files);
+    expect(res.findings).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 8 — resolver-driven verdicts (mirrors Task 7's z-index/spacing pattern,
+// with the composite-axis inversion: `exact` is compliant, `near` never occurs).
+// ---------------------------------------------------------------------------
+async function runRuleWithGraph(source: string, tokens: TokenNode[]) {
+  const graph: DesignSystemGraph = {
+    schemaVersion: 1,
+    tokens,
+    components: [],
+    stories: [],
+    usage: [],
+    zones: { byFile: { "a/Real.css": "app" } },
+    extraction: { entries: [], conflicts: [] },
+  };
+  const ctx = {
+    repoRoot: "/repo",
+    tokens: null,
+    componentsModule: null,
+    componentInventory: [],
+    storyIndex: null,
+    excludePaths: [],
+    graph,
+    resolver: createResolver(graph),
+  } as unknown as RuleContext;
+  const parsed: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source }], cssInJs: [] };
+  return rule.evaluate(ctx, parsed);
+}
+
+describe("composite resolution", () => {
+  it("does not flag a shadow that exactly matches a token", async () => {
+    const res = await runRuleWithGraph(
+      ".c { box-shadow: 0 1px 2px rgba(0,0,0,.1); }",
+      [{ id: "shadow.sm", axis: "shadows", rawValue: "0 1px 2px rgba(0,0,0,.1)", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("degrades a non-matching shadow to info/low and never to medium", async () => {
+    const res = await runRuleWithGraph(
+      ".c { box-shadow: 0 9px 30px rgba(0,0,0,.4); }",
+      [{ id: "shadow.sm", axis: "shadows", rawValue: "0 1px 2px rgba(0,0,0,.1)", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.confidence).toBe("low");
+  });
+
+  it("never emits a medium-confidence finding for a near-identical shadow — `near` is unreachable on this axis", async () => {
+    const res = await runRuleWithGraph(
+      ".c { box-shadow: 0 1px 3px rgba(0,0,0,.1); }",
+      [{ id: "shadow.sm", axis: "shadows", rawValue: "0 1px 2px rgba(0,0,0,.1)", source: "dtcg" }],
+    );
+    expect(res.findings.every((f) => f.confidence !== "medium")).toBe(true);
+  });
+
+  it("abstains (no finding) on an opaque literal the resolver cannot judge", async () => {
+    // `none`/`unset`/`inherit`/`var()` are already filtered by `extractShadows`
+    // before the resolver is ever consulted (non-negotiable #1). `auto` is not
+    // in that upstream filter but IS one of the resolver's own opaque keywords
+    // (graph/resolve/index.ts#OPAQUE_KEYWORDS) — a value that only the resolver
+    // catches, proving `unresolved` is reachable through this rule too.
+    const res = await runRuleWithGraph(
+      ".c { box-shadow: auto; }",
+      [{ id: "shadow.sm", axis: "shadows", rawValue: "0 1px 2px rgba(0,0,0,.1)", source: "dtcg" }],
+    );
     expect(res.findings).toHaveLength(0);
   });
 });

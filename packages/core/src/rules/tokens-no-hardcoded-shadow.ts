@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap, FixGroup } from "../types.js";
+import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap, FixGroup, Confidence } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 import { makeFixGroup } from "./_fix-group.js";
@@ -70,6 +70,57 @@ function shadowFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {
   return makeFixGroup(RULE_ID, raw, candidates);
 }
 
+interface ShadowVerdict {
+  severity: "warning" | "info";
+  /**
+   * Left unset on the legacy (no-resolver) path so `populateConfidence`'s
+   * `classifyConfidence` hook still governs it, exactly as before the migration.
+   */
+  confidence?: Confidence;
+  suggestion?: string;
+  fixGroup?: FixGroup;
+}
+
+/**
+ * Builds the finding fields for one detected box-shadow literal, or
+ * `undefined` when nothing should be emitted.
+ *
+ * Legacy path (no `ctx.resolver`): byte-identical to the pre-resolver rule —
+ * always `warning`, the static suggestion text, fixGroup from the flat
+ * whitespace-insensitive scale lookup.
+ *
+ * Resolver path: a shadow is a tuple (offsets, blur, spread, colour) with no
+ * defensible single-scalar distance, so `classifyComposite` (see
+ * graph/resolve/index.ts) never returns `near` for this axis — only `exact`
+ * (whitespace/case-insensitive string match, compliant, skip), `novel` (a
+ * real value with no known token: report it, don't claim it's drift), and
+ * `unresolved` (opaque literal — `var()`, `none`/`inherit`/…, already
+ * filtered out upstream by `extractShadows`, but the resolver also abstains
+ * on its own normalized-empty case). `near` is therefore not modeled here at
+ * all: there is no branch to write, so there is nothing that could silently
+ * become dead code.
+ */
+function shadowVerdict(ctx: RuleContext, raw: string): ShadowVerdict | undefined {
+  if (!ctx.resolver) {
+    if (shadowOnScale(ctx, norm(raw))) return undefined;
+    const fixGroup = shadowFixGroup(ctx, raw);
+    return {
+      severity: "warning",
+      suggestion: "reference a shadow token (e.g. `--shadow-sm`, `--elevation-2`) instead of a raw box-shadow",
+      ...(fixGroup !== undefined && { fixGroup }),
+    };
+  }
+
+  const resolution = ctx.resolver.resolve("shadows", raw);
+  if (resolution.class !== "novel") return undefined;
+  const fixGroup = makeFixGroup(RULE_ID, raw, []);
+  return {
+    severity: "info",
+    confidence: "low",
+    ...(fixGroup !== undefined && { fixGroup }),
+  };
+}
+
 function shadowScaleSet(tokens: TokenMap | null): Set<string> {
   const set = new Set<string>();
   const scale = tokens?.shadows;
@@ -113,16 +164,17 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
     if (ctx.graph && !isScored(ctx.graph, path)) continue;
     for (const hit of extractShadows(source)) {
       opportunities++;
-      if (shadowOnScale(ctx, norm(hit.raw))) continue;
-      const fixGroup = shadowFixGroup(ctx, hit.raw);
+      const verdict = shadowVerdict(ctx, hit.raw);
+      if (!verdict) continue;
       findings.push({
         ruleId: RULE_ID,
         axis: "tokens",
-        severity: "warning",
+        severity: verdict.severity,
+        ...(verdict.confidence !== undefined && { confidence: verdict.confidence }),
         location: { file: path, line: lineFromIndex(source, hit.index), column: 1 },
         message: `Hardcoded box-shadow \`${hit.raw}\` — elevation should come from a shadow token scale`,
-        suggestion: "reference a shadow token (e.g. `--shadow-sm`, `--elevation-2`) instead of a raw box-shadow",
-        ...(fixGroup !== undefined && { fixGroup }),
+        ...(verdict.suggestion !== undefined && { suggestion: verdict.suggestion }),
+        ...(verdict.fixGroup !== undefined && { fixGroup: verdict.fixGroup }),
       });
     }
   }

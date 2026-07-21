@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ruleFlagged } from "../../validation/audit-probe.js";
+import { ruleFlagged, ruleReported } from "../../validation/audit-probe.js";
 import { shadowAdapter } from "../../validation/adapters/tokens-no-hardcoded-shadow.js";
 
 const PKG = JSON.stringify({ name: "fx", version: "1.0.0" });
@@ -35,10 +35,20 @@ describe("shadow rule ignores all adapter false-friends", () => {
 });
 
 describe("shadow rule still detects real violations", () => {
+  // Task 8: tokens/no-hardcoded-shadow is migrated onto the four-class
+  // resolver. Shadows are a pure composite axis (a box-shadow tuple has no
+  // defensible single-scalar distance), so `near` is unreachable and a real,
+  // unmatched literal resolves `novel` — reported at `info`, not `warning`,
+  // regardless of what token scale the fixture declares (see
+  // tokens-no-hardcoded-shadow.ts's `shadowVerdict` docstring). `ruleFlagged`
+  // only counts error/warning, so it can no longer see this; `ruleReported`
+  // checks for the finding at any severity, which is what "still detects" now
+  // means for this axis — the rule stays honest (not silent), just less
+  // confident when it has no scale to compare against.
   for (const mutation of shadowAdapter.mutations) {
     it(`flags mutation: ${mutation.name}`, async () => {
       const files = mutation.apply(shadowAdapter.cleanFixture());
-      expect(await ruleFlagged(files, "tokens/no-hardcoded-shadow")).toBe(true);
+      expect(await ruleReported(files, "tokens/no-hardcoded-shadow")).toBe(true);
     });
   }
 });
