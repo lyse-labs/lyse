@@ -34,11 +34,17 @@ export interface HardcodedValueSpec {
   tokenSource?: string;
   /**
    * DTCG tokens.json content, routed through loaders/tokens.ts#fromDtcg. Its
-   * axis heuristics (`/radius/i`, `/border.?width/i`, `/breakpoint|screen/i`,
-   * `/z.?index/i`, `/opacity/i`) are the same ones `tokenSource` now gets, so
-   * this is an alternative spelling rather than the only way to reach a
-   * non-spacing axis — use it when a fixture should exercise the DTCG loader
-   * specifically.
+   * axis heuristics are literally the same code `tokenSource` goes through —
+   * both call `tokens/axis-heuristics.ts` — so since the custom-property
+   * routing fix this is an alternative spelling rather than the only way to
+   * reach a non-spacing axis.
+   *
+   * KEPT DELIBERATELY, not left over. The two spellings exercise two different
+   * loaders, and the engine gate is the only place either is exercised
+   * end-to-end: the spacing adapter's `tokenSource` covers the
+   * CSS-custom-property path (`graph/extract/tokens.ts#dtcgDocumentToNodes`)
+   * and these four cover `fromDtcg`. Rewriting them all to `tokenSource` would
+   * shrink that to one loader and gain nothing.
    */
   tokensJson?: Record<string, unknown>;
 }

@@ -1,6 +1,6 @@
 # `tokens/no-hardcoded-z-index`
 
-> **Axis:** Tokens · **Severity:** warning · **Auto-fixable:** no · **Status:** stable (scored)
+> **Axis:** Tokens · **Severity:** warning (`near`) / info (`novel`) · **Auto-fixable:** no · **Status:** stable (scored)
 
 Flags hardcoded `z-index` values that don't come from a z-index token scale.
 
@@ -17,7 +17,24 @@ Scans CSS and CSS-in-JS for `z-index: <integer>` declarations.
 - **Trivial local values** `-1`, `0`, `1` are never flagged (legitimate local stacking contexts).
 - **Tokenized references** (`z-index: var(--z-modal)`) are not flagged.
 - When a z-index **token scale** is loaded (`ctx.tokens.zIndex`), values **on the scale** are compliant; **off-scale** values are flagged.
-- With no scale loaded, any non-trivial hardcoded value is flagged (the system has no shared ordering).
+- With no scale loaded, any non-trivial hardcoded value is still reported — the system has no shared ordering — but at `info`, see below.
+
+## How the value is resolved
+
+On a full `lyse audit`, every z-index literal is resolved against the repo's own z-index scale, derived from the Design System Graph (Tailwind config, `*.tokens.json`, CSS custom properties, SCSS variables). The resolution places the value in exactly one of four classes:
+
+| Class | Meaning | What this rule emits |
+|---|---|---|
+| `exact` | The value is on the repo's own z-index scale | nothing — this is compliant usage, not drift |
+| `near` | One scale step away from a token | **warning**, confidence medium; the candidate token is named in the suggestion |
+| `novel` | A real value that resembles no token on this axis | **info**, confidence low |
+| `unresolved` | Not judgeable statically (`var(--x)`, a SCSS `$var`, a CSS-wide keyword) | nothing — counted in the audit's `meta.abstentions` |
+
+Z-index is a unitless axis, so the 16px-root length normalization that applies to the length-valued axes (spacing, radii, border widths, breakpoints) is not involved here.
+
+**There is no fallback scale on this axis.** A repo with no z-index tokens at all resolves every z-index literal `novel`, so it gets `info` rather than `warning`. That is a real behaviour change: before the migration those same literals were reported as warnings.
+
+The resolver only exists on a full `lyse audit`. Single-file surfaces — MCP `audit_file`, IDE contexts, codemod contexts — have no repo-wide scale and keep the pre-migration behaviour: an exact-match token lookup and an unconditional `warning`.
 
 ## Bad
 

@@ -3,7 +3,7 @@
   "axes": [
     {
       "axis": "tokens",
-      "findings": 119,
+      "findings": 116,
       "opportunities": 2392,
       "score": 95
     },
@@ -39,14 +39,15 @@
     }
   ],
   "finalScore": 90,
-  "findingsCount": 335,
-  "findingsDigest": "931c830e70d38ad7517a59191648b1f9d03641553b80720011231ef47b5109fe",
+  "findingsCount": 332,
+  "findingsDigest": "ad9c7f4dbf25e6d5bff46996501bd8719824a6d23121cc32ed503bb98ed981f0",
   "grade": {
     "autoFailed": false,
     "grade": "A",
     "reasons": []
   },
   "meta": {
+    "abstentions": 5,
     "coverage": {
       "configPath": null,
       "scannedFiles": 1170
@@ -74,7 +75,7 @@
         },
         {
           "evidence": {
-            "tokenNodes": 75,
+            "tokenNodes": 78,
             "tokenSources": 1
           },
           "extractor": "tokens",

@@ -1,6 +1,6 @@
 # `tokens/no-hardcoded-color`
 
-> **Axis:** Tokens · **Severity:** warning · **Auto-fixable:** yes · **Version:** v1
+> **Axis:** Tokens · **Severity:** warning (`exact`/`near`) / info (`novel`) · **Auto-fixable:** yes · **Version:** v1
 
 Flags color literals (hex, `rgb()`, `rgba()`, `hsl()`, `hsla()`) used in UI code where a design token should be used instead.
 
@@ -16,6 +16,23 @@ A healthy design system surfaces color decisions as named tokens. Once tokens ex
 - CSS files (`.css`, `.scss`, `.module.css`): `color: #ff0000;`, `background: rgb(255, 0, 0);`.
 - styled-components / Emotion template literals: `` styled.div`color: #ff0000;` ``.
 - Tailwind arbitrary values: `text-[#ff0000]`.
+
+## How the value is resolved
+
+On a full `lyse audit`, every colour literal is resolved against the repo's own colour tokens, derived from the Design System Graph (Tailwind config, `*.tokens.json`, CSS custom properties, SCSS variables). Both sides are parsed into OKLab, so `#3B82F6`, `rgb(59, 130, 246)` and a `#3b82f6` token are the same colour. The comparison places the literal in exactly one of four classes:
+
+| Class | Meaning | What this rule emits |
+|---|---|---|
+| `exact` | Perceptually identical to a token (ΔEOK = 0) — the literal **is** the token, written out by hand | **warning**, confidence high, plus a single safe auto-fix: the candidate token is named in `fixGroup.to` |
+| `near` | Within the perceptual tolerance (ΔEOK ≤ 0.02) but not identical | **warning**, confidence medium; the candidate token is named in the suggestion but never auto-applied |
+| `novel` | A real colour that resembles no token on this axis | **info**, confidence low — the colour is reported, but Lyse does not claim it is drift |
+| `unresolved` | The parser did not understand the syntax | collapses to `novel` on this axis |
+
+The `unresolved` → `novel` collapse is specific to colours. Every genuinely opaque case — `var()` references, `currentColor` and the other allowlist keywords, non-literal function arguments, custom-property declarations in token-def scopes — is already filtered out before the resolver is consulted, so an `unresolved` here can only mean "the parser has yet to learn this syntax". Silencing it would drop real drift. On the numeric and composite axes, abstention is legitimate and `unresolved` keeps meaning "emit nothing" (counted in the audit's `meta.abstentions`).
+
+The colour parser understands `#rgb` / `#rgba` / `#rrggbb` / `#rrggbbaa`, named colours, `rgb()` / `hsl()` in both CSS Color Level 3 comma-separated form and CSS Color Level 4 space-separated form (`rgb(R G B)`, `hsl(H S% L%)` — the canonical shadcn/ui and Tailwind v4 theme form), and `oklch()` / `oklab()`.
+
+The resolver only exists on a full `lyse audit`. Single-file surfaces — MCP `audit_file`, IDE contexts, codemod contexts — have no repo-wide scale and keep the pre-migration behaviour: an exact-match token lookup and an unconditional `warning`.
 
 ## Bad
 
@@ -59,11 +76,9 @@ function Banner() {
 
 ## Auto-fix
 
-The codemod replaces hex / rgb / hsl literals with the closest matching token from your `tokens` module.
+An auto-fix is only ever proposed for an `exact` resolution — the one case where the replacement is safe, because the literal and the token are the same colour. `near` and `novel` findings still carry a `fixGroup` (so the drift class is grouped and countable), but never a replacement to apply: a `near` names its candidate token in the suggestion for a human or an agent to confirm, and a `novel` has no candidate to name.
 
 Run via the MCP server: `suggest_fix(path, "tokens/no-hardcoded-color", line)` returns a unified diff you can apply.
-
-The codemod is conservative: if no token matches within a small color distance, it leaves the literal in place and emits a warning instead of a fix.
 
 ## Allowlist
 
@@ -87,8 +102,9 @@ For a whole file:
 rules:
   tokens/no-hardcoded-color:
     severity: warning
-    tolerance: 5      # color-distance threshold for token matching (default 5)
 ```
+
+The perceptual tolerance that separates `near` from `novel` (ΔEOK ≤ 0.02) is a fixed resolver constant, not a per-rule option.
 
 ## What does NOT trigger this rule
 

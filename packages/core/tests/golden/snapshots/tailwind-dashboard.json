@@ -3,9 +3,9 @@
   "axes": [
     {
       "axis": "tokens",
-      "findings": 40,
+      "findings": 20,
       "opportunities": 2018,
-      "score": 98
+      "score": 99
     },
     {
       "axis": "a11y",
@@ -39,14 +39,15 @@
     }
   ],
   "finalScore": 80,
-  "findingsCount": 175,
-  "findingsDigest": "c03bac1e1757d7c3b8774a836ff16004b734f715fc967b90c00218b95f1a6924",
+  "findingsCount": 155,
+  "findingsDigest": "f2fa4a9139afc612d0ded75893ad4bd9fe1259fd3f38681b0fd0595ee88fc5dd",
   "grade": {
     "autoFailed": false,
     "grade": "A",
     "reasons": []
   },
   "meta": {
+    "abstentions": 3,
     "coverage": {
       "configPath": null,
       "scannedFiles": 49

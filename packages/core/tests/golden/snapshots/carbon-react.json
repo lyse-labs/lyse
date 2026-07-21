@@ -40,13 +40,14 @@
   ],
   "finalScore": 83,
   "findingsCount": 234,
-  "findingsDigest": "539bb78fff51753250f0f1d785b714fc7593cee07ae467b029c1174351a15c93",
+  "findingsDigest": "adfe677a53e8b4947b79b650120c7963d73494e8ea0eb4cef83f345840209455",
   "grade": {
     "autoFailed": false,
     "grade": "A",
     "reasons": []
   },
   "meta": {
+    "abstentions": 0,
     "coverage": {
       "configPath": null,
       "scannedFiles": 980

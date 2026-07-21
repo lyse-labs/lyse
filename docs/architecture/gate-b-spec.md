@@ -72,6 +72,29 @@ Neither gate claims 100% real-world precision. Rules that are judgment-scope (e.
 `drift/*`) remain report-only and are excluded from Gate A scoring. Gate B complements
 Gate A by providing empirical grounding on real code.
 
+### What Gate A cannot see — the `info` blind spot
+
+`validation/audit-probe.ts#ruleFlagged` counts only `error` and `warning` findings
+as a flag. Since the four-class resolver migration, the `novel` class on the seven
+**numeric** token axes (spacing, radii, border-width, opacity, z-index, breakpoints,
+motion durations) emits `info` — a deliberate degradation: a value unlike any token
+is reported, but Lyse does not claim it is drift.
+
+A mutation that lands `novel` is therefore invisible to the oracle, and reads as a
+false negative even when the rule behaved correctly. Two consequences:
+
+- Every construction adapter for those axes gives its fixture a **real token scale**,
+  so the mutation lands `near` (warning) rather than `novel`. Without that, `J` drops
+  to 0 for reasons that have nothing to do with the rule.
+- **A `J=1` on one of those rules proves near-scale drift detection with no false
+  positives on the set. It does not prove the far-from-scale (`novel`) branch.** That
+  branch is covered by unit tests in `packages/core/tests/rules/` instead, and is
+  outside the gate's guarantee.
+
+Closing it means teaching `evaluateAdapter` an expected severity (or giving the probe
+an opt-in for `info`), not widening the predicate — widening it unconditionally would
+make every advisory finding across all 66 rules count as a violation. Not yet done.
+
 ## Status
 
 Gate B is **implemented** in `lyse-labs/lyse-internal`: a pure `gateBVerdict()` + a

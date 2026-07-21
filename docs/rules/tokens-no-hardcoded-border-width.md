@@ -1,6 +1,6 @@
 # `tokens/no-hardcoded-border-width`
 
-> **Axis:** Tokens · **Severity:** warning · **Auto-fixable:** no · **Status:** stable (scored)
+> **Axis:** Tokens · **Severity:** warning (`near`) / info (`novel`) · **Auto-fixable:** no · **Status:** stable (scored)
 
 Flags hardcoded border-width lengths that don't come from a border-width token scale.
 
@@ -11,6 +11,23 @@ Border thicknesses beyond the default hairline (`2px`, `3px`, `0.5px`) should be
 ## How
 
 Scans CSS / CSS-in-JS for the `border-width` / `border-<side>-width` longhands **and** the first length inside a `border` / `border-<side>` shorthand. Exempt: `0`, the ubiquitous `1px` hairline, and tokenized references (`var(--border-width-*)`). When a border-width scale is loaded (`ctx.tokens.borderWidth`), on-scale values are compliant; off-scale values are flagged.
+
+## How the value is resolved
+
+On a full `lyse audit`, every border-width literal is resolved against the repo's own border-width scale, derived from the Design System Graph (Tailwind config, `*.tokens.json`, CSS custom properties, SCSS variables). The resolution places the value in exactly one of four classes:
+
+| Class | Meaning | What this rule emits |
+|---|---|---|
+| `exact` | The value is on the repo's own border-width scale | nothing — this is compliant usage, not drift |
+| `near` | One scale step away from a token | **warning**, confidence medium; the candidate token is named in the suggestion |
+| `novel` | A real value that resembles no token on this axis | **info**, confidence low |
+| `unresolved` | Not judgeable statically (`var(--x)`, a SCSS `$var`, a CSS-wide keyword) | nothing — counted in the audit's `meta.abstentions` |
+
+Lengths normalize to px assuming a **16px root** (`rem` / `em` × 16), so a literal written in px compares correctly against a scale authored in rem and vice versa. A repo that overrides the root font size sees advisory `near` / `novel`, never a false `exact`.
+
+**There is no fallback scale on this axis.** A repo with no border-width tokens at all resolves every border-width literal `novel`, so it gets `info` rather than `warning`. That is a real behaviour change: before the migration those same literals were reported as warnings.
+
+The resolver only exists on a full `lyse audit`. Single-file surfaces — MCP `audit_file`, IDE contexts, codemod contexts — have no repo-wide scale and keep the pre-migration behaviour: an exact-match token lookup and an unconditional `warning`.
 
 ## Bad
 

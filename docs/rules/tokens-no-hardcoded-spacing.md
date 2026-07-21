@@ -1,6 +1,6 @@
 # `tokens/no-hardcoded-spacing`
 
-> **Axis:** Tokens · **Severity:** warning · **Auto-fixable:** yes · **Version:** v1
+> **Axis:** Tokens · **Severity:** warning (`near`) / info (`novel`) · **Auto-fixable:** yes · **Version:** v1
 
 Flags raw pixel values used for spacing (padding, margin, gap, width, height in small contexts) where a spacing token should be used.
 
@@ -16,6 +16,25 @@ The result over time: dozens of slightly-off paddings, none aligned to the syste
 - CSS / SCSS files: `padding: 14px;`, `margin: 7px 11px;`.
 - styled-components / Emotion: `` styled.div`padding: 14px;` ``.
 - Tailwind arbitrary values: `p-[14px]`, `mt-[7px]`.
+
+## How the value is resolved
+
+On a full `lyse audit`, every spacing literal is resolved against the repo's own spacing scale, derived from the Design System Graph (Tailwind config, `*.tokens.json`, CSS custom properties, SCSS variables). The resolution places the value in exactly one of four classes:
+
+| Class | Meaning | What this rule emits |
+|---|---|---|
+| `exact` | The value is on the repo's own scale | nothing — this is compliant usage, not drift |
+| `near` | One scale step away from a token | **warning**, confidence medium; the candidate token is named in the suggestion |
+| `novel` | A real value that resembles no token on this axis | **info**, confidence low |
+| `unresolved` | Not judgeable statically (`var(--x)`, a SCSS `$var`, a CSS-wide keyword) | nothing — counted in the audit's `meta.abstentions` |
+
+Note that `exact` here means the opposite of what it means on the colour axis: a spacing value identical to a token is a value *on the scale*, so it is silence, not a finding.
+
+Lengths normalize to px assuming a **16px root** (`rem` / `em` × 16), so a literal written in px compares correctly against a scale authored in rem and vice versa. A repo that overrides the root font size sees advisory `near` / `novel`, never a false `exact`.
+
+**Fallback scale.** Spacing is the only axis with a built-in fallback. A repo with no spacing tokens at all falls back to the default 34-step Tailwind px scale, so those 34 steps resolve `exact` and stay silent. Before the migration, such a repo had every spacing literal flagged. On the fallback scale `exact` and `near` carry no candidate token — the scale knows the answer but no token anchors it — so no suggestion is offered.
+
+The resolver only exists on a full `lyse audit`. Single-file surfaces — MCP `audit_file`, IDE contexts, codemod contexts — have no repo-wide scale (and no fallback) and keep the pre-migration behaviour: an exact-match token lookup and an unconditional `warning`.
 
 ## Bad
 
@@ -54,9 +73,9 @@ Or in CSS using CSS variables:
 
 ## Auto-fix
 
-The codemod replaces the pixel value with the closest matching spacing token. Tolerance is configurable.
+The codemod (`suggest_fix` via the MCP server) replaces the pixel value only when it maps to exactly one token by exact value match — there is no snapping to a nearby token and no distance tolerance. If your scale is `{ xs: 4, sm: 8, md: 16, lg: 24, xl: 32 }`, then `padding: "16px"` is rewritten to the `md` token, `padding: "14px"` is not rewritten (no token has that value), and a value that maps to several tokens is returned as alternatives for a human to pick.
 
-If your scale is `{ xs: 4, sm: 8, md: 16, lg: 24, xl: 32 }`, then `padding: "14px"` snaps to `padding: spacing.md` (within tolerance), and `padding: "100px"` is left as a warning (out of tolerance, requires human decision).
+On the audit path, a `near` finding names its candidate token in the suggestion, but never carries a replacement to apply: only an on-scale (`exact`) match is a safe automatic rewrite, and those are not emitted as findings.
 
 ## Allowlist
 
@@ -90,8 +109,9 @@ const hairlineOffset = "1px";  // pixel-perfect alignment with image
 rules:
   tokens/no-hardcoded-spacing:
     severity: warning
-    tolerance: 2      # px distance for token snap (default 2)
 ```
+
+The `near` band is one step of the repo's own scale, a fixed resolver constant — there is no per-rule distance option.
 
 ## Related rules
 
