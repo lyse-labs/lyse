@@ -9,7 +9,7 @@ import { getTsMorphProject } from "../parsers/ts-morph-project.js";
 import { makeFixGroup } from "./_fix-group.js";
 import { classifyColorRole } from "./_color-ast-role.js";
 import { isScored, reverseLookup } from "../graph/query.js";
-import type { Resolution } from "../graph/resolve/types.js";
+import type { Resolution, ResolveClass, Resolver } from "../graph/resolve/types.js";
 
 // Allow one level of nested parens so hsl(var(--token)) is captured whole.
 // Pattern: (?:[^)(]|\([^)]*\))* matches any mix of non-paren chars and
@@ -322,34 +322,37 @@ function locationFromIndex(source: string, index: number): { line: number; colum
   return { line, column };
 }
 
+/** Strictly-better-answer ordering. A retry may only move UP this ladder. */
+const RESOLUTION_RANK: Record<ResolveClass, number> = {
+  unresolved: 0,
+  novel: 1,
+  near: 2,
+  exact: 3,
+};
+
 /**
- * Resolves a color literal to its four-class verdict. When `ctx.resolver` is
- * present (built once per audit from `ctx.graph`), it owns normalization on
- * both sides — this only strips the Tailwind arbitrary-value bracket first
- * (`bg-[#fff]` → `#fff`) since the resolver has no notion of Tailwind syntax.
- * A `novel` verdict on the bracket-stripped key is retried against the raw
- * (lowercased, un-stripped) value in case the resolver's own normalization
- * handles it differently — mirrors the legacy double-lookup below.
- *
- * When `ctx.resolver` is absent (MCP paths, single-file rule contexts), this
- * falls back to the pre-resolver behaviour: `ctx.graph` reverse-lookup, or
- * the flat `ctx.tokens` map, collapsed onto the two-class legacy shape
- * (`exact` when a candidate is found, `novel` otherwise — `near` and
- * `unresolved` require the resolver's normalized comparisons and are
- * unreachable here, matching the old exact-match-only semantics).
+ * Resolves a color literal to its four-class verdict. The resolver owns
+ * normalization on both sides; this only strips the Tailwind arbitrary-value
+ * bracket first (`bg-[#fff]` → `#fff`) since the resolver has no notion of
+ * Tailwind syntax. A `novel` verdict on the bracket-stripped key is retried
+ * against the raw (lowercased, un-stripped) value in case the resolver's own
+ * normalization handles it differently — mirroring the legacy double-lookup,
+ * which could only ever ADD candidates. The retry is therefore kept ONLY when
+ * it ranks strictly higher: `resolve("colors", "bg-[#ff00aa]")` returns
+ * `unresolved` (no color parser understands Tailwind syntax), and letting that
+ * overwrite the `novel` answer silently deleted the finding.
  */
-function resolveColor(ctx: RuleContext, key: string, rawLower: string): Resolution {
-  if (ctx.resolver) {
-    const direct = ctx.resolver.resolve("colors", key);
-    if (direct.class !== "novel") return direct;
-    return ctx.resolver.resolve("colors", rawLower);
-  }
-  const legacy = ctx.graph
-    ? reverseLookup(ctx.graph, "colors", key)
-    : (ctx.tokens?.colors.get(key) ?? ctx.tokens?.colors.get(rawLower) ?? []);
-  return legacy.length > 0
-    ? { class: "exact", tokenIds: legacy }
-    : { class: "novel", tokenIds: [] };
+function resolveColor(resolver: Resolver, key: string, rawLower: string): Resolution {
+  const direct = resolver.resolve("colors", key);
+  if (direct.class !== "novel") return direct;
+  const retry = resolver.resolve("colors", rawLower);
+  return RESOLUTION_RANK[retry.class] > RESOLUTION_RANK[direct.class] ? retry : direct;
+}
+
+/** The pre-resolver exact-match lookup, kept verbatim for legacy contexts. */
+function legacyCandidates(ctx: RuleContext, key: string, rawLower: string): string[] {
+  if (ctx.graph) return reverseLookup(ctx.graph, "colors", key);
+  return ctx.tokens?.colors.get(key) ?? ctx.tokens?.colors.get(rawLower) ?? [];
 }
 
 /** Human-readable candidate hint — unchanged wording from the pre-resolver rule. */
@@ -361,17 +364,32 @@ function candidateSuggestion(tokenIds: readonly string[]): string | undefined {
 
 interface ColorVerdict {
   severity: "warning" | "info";
-  confidence: Confidence;
+  /**
+   * Left unset on the legacy (no-resolver) path so `populateConfidence`'s
+   * `classifyConfidence` hook still governs it, exactly as before the migration.
+   */
+  confidence?: Confidence;
   suggestion?: string;
   fixGroup?: FixGroup;
 }
 
+/** The class→finding mapping. Verbatim-copyable by the other axis rules. */
+const VERDICT_BY_CLASS: Record<
+  Exclude<ResolveClass, "unresolved">,
+  { severity: "warning" | "info"; confidence: Confidence }
+> = {
+  // Single safe auto-fix: `fixGroup.to` is set from the one candidate.
+  exact: { severity: "warning", confidence: "high" },
+  // Perceptually close but not identical — never auto-apply.
+  near: { severity: "warning", confidence: "medium" },
+  // A real value with no known token: report it, do not claim it is drift.
+  novel: { severity: "info", confidence: "low" },
+};
+
 /**
- * The class→finding mapping (copied verbatim by the other axis rules):
- *   exact      → warning / high   / fixGroup.to set (single safe auto-fix)
- *   near       → warning / medium / fixGroup.to never set (no auto-apply)
- *   novel      → info    / low    / fixGroup.to never set (no known candidate)
- *   unresolved → not a finding — caller must skip emission entirely
+ * Builds the finding fields for one detected color literal.
+ * Returns `undefined` when nothing should be emitted — the shape the other
+ * axis rules copy, where `unresolved` means "I cannot judge this, stay quiet".
  */
 function colorVerdict(ctx: RuleContext, raw: string): ColorVerdict | undefined {
   // Extract the hex from a Tailwind arbitrary value like bg-[#fff]. `from`/`key`
@@ -379,35 +397,58 @@ function colorVerdict(ctx: RuleContext, raw: string): ColorVerdict | undefined {
   // one drift-class — this is why `fixGroup.from` can differ from the raw
   // finding `message`.
   const key = raw.replace(/^.*\[(.*)]$/, "$1").toLowerCase();
-  const resolution = resolveColor(ctx, key, raw.toLowerCase());
-  if (resolution.class === "unresolved") return undefined;
+  const rawLower = raw.toLowerCase();
 
-  if (resolution.class === "near") {
-    const nearestId = resolution.tokenIds[0];
-    const fixGroup = makeFixGroup("tokens/no-hardcoded-color", key, []);
+  // Legacy path (no ctx.resolver — MCP `audit_file`, single-file rule contexts,
+  // codemod contexts). Byte-identical to the pre-resolver rule: always
+  // `warning`, no emit-time `confidence` (so `populateConfidence`'s
+  // classifyConfidence hook still governs it), suggestion + fixGroup from the
+  // flat exact-match lookup. Only resolver-backed runs get four-class verdicts.
+  if (!ctx.resolver) {
+    const candidates = legacyCandidates(ctx, key, rawLower);
+    const suggestion = candidateSuggestion(candidates);
+    const legacyFixGroup = makeFixGroup("tokens/no-hardcoded-color", key, candidates);
     return {
       severity: "warning",
-      confidence: "medium",
-      ...(nearestId !== undefined && { suggestion: `probably \`${nearestId}\` — verify before replacing` }),
-      ...(fixGroup !== undefined && { fixGroup }),
+      ...(suggestion !== undefined && { suggestion }),
+      ...(legacyFixGroup !== undefined && { fixGroup: legacyFixGroup }),
     };
   }
 
-  if (resolution.class === "novel") {
-    const fixGroup = makeFixGroup("tokens/no-hardcoded-color", key, []);
-    return {
-      severity: "info",
-      confidence: "low",
-      ...(fixGroup !== undefined && { fixGroup }),
-    };
-  }
+  const resolution = resolveColor(ctx.resolver, key, rawLower);
+  // `fixGroup.to` may only be proposed when there is exactly one SAFE
+  // replacement — i.e. an `exact` resolver match. `near` and `novel` still
+  // group the drift class, but never auto-apply.
+  const fixGroup = makeFixGroup(
+    "tokens/no-hardcoded-color",
+    key,
+    resolution.class === "exact" ? resolution.tokenIds : [],
+  );
 
-  // exact
-  const suggestion = candidateSuggestion(resolution.tokenIds);
-  const fixGroup = makeFixGroup("tokens/no-hardcoded-color", key, resolution.tokenIds);
+  // AXIS-SPECIFIC — DO NOT COPY THIS COLLAPSE TO OTHER AXES.
+  // On the colours axis an `unresolved` can only ever mean "parseColor does not
+  // understand this syntax": every genuinely opaque case (var() references,
+  // currentColor and the other allowlist keywords, non-literal function
+  // arguments, custom-property declarations) is already skipped upstream in
+  // `detectInText`, before the resolver is consulted. Silencing here would
+  // therefore drop real drift on any syntax the parser has yet to learn — which
+  // is exactly how CSS Color Level 4 `rgb(R G B)` / `hsl(H S% L%)` went silent.
+  // On the numeric and composite axes abstention IS legitimate, and there
+  // `unresolved` must keep meaning "emit nothing".
+  const cls: Exclude<ResolveClass, "unresolved"> =
+    resolution.class === "unresolved" ? "novel" : resolution.class;
+  const { severity, confidence } = VERDICT_BY_CLASS[cls];
+
+  const suggestion =
+    cls === "exact"
+      ? candidateSuggestion(resolution.tokenIds)
+      : cls === "near" && resolution.tokenIds[0] !== undefined
+        ? `probably \`${resolution.tokenIds[0]}\` — verify before replacing`
+        : undefined;
+
   return {
-    severity: "warning",
-    confidence: "high",
+    severity,
+    confidence,
     ...(suggestion !== undefined && { suggestion }),
     ...(fixGroup !== undefined && { fixGroup }),
   };
@@ -440,7 +481,7 @@ const evaluate = async (
         ruleId: "tokens/no-hardcoded-color",
         axis: "tokens",
         severity: verdict.severity,
-        confidence: verdict.confidence,
+        ...(verdict.confidence !== undefined && { confidence: verdict.confidence }),
         location: { file: f.path, line: loc.line, column: loc.column },
         message: `Hardcoded color value: ${h.match}`,
         ...(verdict.suggestion !== undefined && { suggestion: verdict.suggestion }),
@@ -469,7 +510,7 @@ const evaluate = async (
         ruleId: "tokens/no-hardcoded-color",
         axis: "tokens",
         severity: verdict.severity,
-        confidence: verdict.confidence,
+        ...(verdict.confidence !== undefined && { confidence: verdict.confidence }),
         location: { file: c.path, line: loc.line, column: loc.column },
         message: `Hardcoded color value: ${h.match}`,
         ...(verdict.suggestion !== undefined && { suggestion: verdict.suggestion }),
@@ -496,7 +537,7 @@ const evaluate = async (
         ruleId: "tokens/no-hardcoded-color",
         axis: "tokens",
         severity: verdict.severity,
-        confidence: verdict.confidence,
+        ...(verdict.confidence !== undefined && { confidence: verdict.confidence }),
         location: { file: b.path, line: b.line, column: 1 },
         message: `Hardcoded color value in styled-components: ${h.match}`,
         ...(verdict.suggestion !== undefined && { suggestion: verdict.suggestion }),

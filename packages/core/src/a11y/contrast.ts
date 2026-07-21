@@ -90,8 +90,48 @@ function parseOkFunction(s: string): Color | null {
 }
 
 /**
+ * Split the argument list of an `rgb()` / `hsl()` function into components.
+ *
+ * Two syntaxes are accepted:
+ *   - CSS Color Level 3, comma-separated: `rgb(R, G, B)` / `rgb(R, G, B, A)`.
+ *     Returned verbatim (split on `,`, trimmed) — byte-identical to the
+ *     historical behaviour, including how it mishandles a `%` alpha.
+ *   - CSS Color Level 4, space-separated: `rgb(R G B)` / `rgb(R G B / A)`.
+ *     Normalised onto the same positional shape so the callers below need no
+ *     second code path. This is the form Tailwind v4 and shadcn/ui themes
+ *     emit, so refusing it makes the parser blind to most modern themes.
+ *
+ * Returns null when the list is neither (e.g. more than one `/`, an empty
+ * alpha slot). `alphaIsLevel4` tells the caller whether a `%` alpha is legal.
+ */
+function splitColorArgs(inner: string): { parts: string[]; alphaIsLevel4: boolean } | null {
+  if (inner.includes(",")) {
+    return { parts: inner.split(",").map((p) => p.trim()), alphaIsLevel4: false };
+  }
+  const slashParts = inner.split("/");
+  if (slashParts.length > 2) return null;
+  const head = slashParts[0]!.trim().split(/\s+/).filter((p) => p.length > 0);
+  if (slashParts.length === 1) return { parts: head, alphaIsLevel4: true };
+  const alpha = slashParts[1]!.trim();
+  if (alpha === "" || /\s/.test(alpha)) return null;
+  return { parts: [...head, alpha], alphaIsLevel4: true };
+}
+
+/**
+ * Parse the alpha component. A bare number is legal in both CSS levels; a
+ * percentage (`50%` → 0.5) is Level 4 syntax only.
+ */
+function parseAlpha(raw: string, alphaIsLevel4: boolean): number {
+  if (alphaIsLevel4 && raw.endsWith("%")) {
+    return parseFloat(raw.slice(0, -1)) / 100;
+  }
+  return parseFloat(raw);
+}
+
+/**
  * Parse a color string into RGBA components.
- * Handles: #rgb, #rgba, #rrggbb, #rrggbbaa, rgb(), rgba(), hsl(), hsla(), and named colors.
+ * Handles: #rgb, #rgba, #rrggbb, #rrggbbaa, rgb(), rgba(), hsl(), hsla()
+ * (both comma-separated and CSS Color Level 4 space-separated), and named colors.
  * Returns null if unparseable.
  */
 export function parseColor(s: string): Color | null {
@@ -164,7 +204,9 @@ export function parseColor(s: string): Color | null {
   // rgb() / rgba()
   const rgbMatch = s.match(/^\s*rgba?\s*\(\s*([^)]+)\s*\)\s*$/);
   if (rgbMatch) {
-    const parts = rgbMatch[1]!.split(",").map((p) => p.trim());
+    const split = splitColorArgs(rgbMatch[1]!);
+    if (!split) return null;
+    const { parts, alphaIsLevel4 } = split;
     if (parts.length < 3 || parts.length > 4) return null;
 
     const p0 = parts[0];
@@ -176,7 +218,7 @@ export function parseColor(s: string): Color | null {
     const r = parseFloat(p0);
     const g = parseFloat(p1);
     const b = parseFloat(p2);
-    const a = parts.length === 4 && p3 ? parseFloat(p3) : 1;
+    const a = parts.length === 4 && p3 ? parseAlpha(p3, alphaIsLevel4) : 1;
 
     if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b) || Number.isNaN(a)) return null;
     if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255 || a < 0 || a > 1) return null;
@@ -187,7 +229,9 @@ export function parseColor(s: string): Color | null {
   // hsl() / hsla()
   const hslMatch = s.match(/^\s*hsla?\s*\(\s*([^)]+)\s*\)\s*$/);
   if (hslMatch) {
-    const parts = hslMatch[1]!.split(",").map((p) => p.trim());
+    const split = splitColorArgs(hslMatch[1]!);
+    if (!split) return null;
+    const { parts, alphaIsLevel4 } = split;
     if (parts.length < 3 || parts.length > 4) return null;
 
     const p0 = parts[0];
@@ -199,7 +243,7 @@ export function parseColor(s: string): Color | null {
     const h = parseFloat(p0);
     const s_str = p1.replace(/%/, "");
     const l_str = p2.replace(/%/, "");
-    const a = parts.length === 4 && p3 ? parseFloat(p3) : 1;
+    const a = parts.length === 4 && p3 ? parseAlpha(p3, alphaIsLevel4) : 1;
 
     const s = parseFloat(s_str);
     const l = parseFloat(l_str);

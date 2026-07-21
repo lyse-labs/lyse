@@ -9,14 +9,11 @@ function clean(): FixtureFiles {
     // mutation's literal has a candidate to resolve against — without this,
     // every mutation would resolve `novel` (no known match) regardless of
     // which color it injects, understating recall on the four-class resolver.
-    // `--color-accent` covers the css-hsl mutation separately: hsl(217, 83%,
-    // 53%) is ~0.031 ΔEOK from #2563eb — just outside the 0.02 `near`
-    // threshold — so it needs its own token to resolve `exact` rather than
-    // `novel`. Deliberately NOT named `--color-fg-*` (a prefix of
-    // `--color-fg`): the css-vars normalizer (src/tokens/normalizer.ts
-    // `setAt`/`ensureGroup`) silently drops a shallower custom property when
-    // a longer one nests under its name as a path segment.
-    "src/theme.css": ":root { --color-fg: #2563eb; --color-accent: hsl(217, 83%, 53%); --color-bg: #ffffff; }",
+    // Exactly the two tokens `src/Box.css` below actually references: a token
+    // that exists only to make one mutation resolve would be tuning the fixture
+    // to the oracle, not modelling a repo. Every mutation therefore injects a
+    // color that is genuinely in this palette.
+    "src/theme.css": ":root { --color-fg: #2563eb; --color-bg: #ffffff; }",
     "src/Box.css": ".box { color: var(--color-fg); background: var(--color-bg); }",
     "src/Btn.tsx": 'export const Btn = () => <button className="text-fg" />;',
   };
@@ -318,17 +315,35 @@ export const colorAdapter: OracleAdapter = {
   ruleId: "tokens/no-hardcoded-color",
   oracleKind: "construction",
   cleanFixture: clean,
+  // Every mutation injects a color that IS in the fixture's palette, because
+  // the oracle probe (`ruleFlagged`) counts error/warning only. Under the
+  // four-class resolver an off-palette literal resolves `novel` → `info`,
+  // which is by design NOT a violation ("I see this value, I don't think it is
+  // drift"), so it cannot serve as a positive observation here. The `novel`
+  // path and the C1 Tailwind-retry regression are covered instead by
+  // `tests/rules/tokens-no-hardcoded-color.test.ts`, which asserts on the
+  // emitted finding rather than on flag/no-flag.
   mutations: [
     { name: "css-hex", apply: (f) => ({ ...f, "src/Box.css": ".box { color: #2563eb; }" }) },
     { name: "css-rgb", apply: (f) => ({ ...f, "src/Box.css": ".box { color: rgb(37, 99, 235); }" }) },
-    { name: "css-hsl", apply: (f) => ({ ...f, "src/Box.css": ".box { color: hsl(217, 83%, 53%); }" }) },
-    { name: "tailwind-arbitrary", apply: (f) => ({ ...f, "src/Btn.tsx": 'export const Btn = () => <button className="bg-[#ffffff]" />;' }) },
+    // The TRUE hsl of #2563eb (rgb 37 99 235). The previous hsl(217, …) was a
+    // different color that only resolved because the palette carried a token
+    // planted for it.
+    { name: "css-hsl", apply: (f) => ({ ...f, "src/Box.css": ".box { color: hsl(221, 83%, 53%); }" }) },
+    // CSS Color Level 4 space-separated syntax — the form Tailwind v4 and
+    // shadcn/ui themes emit. Silently unparseable before this was covered.
+    { name: "css-rgb-level4", apply: (f) => ({ ...f, "src/Box.css": ".box { color: rgb(37 99 235); }" }) },
+    { name: "css-hsl-level4", apply: (f) => ({ ...f, "src/Box.css": ".box { color: hsl(221 83% 53%); }" }) },
+    { name: "css-rgb-level4-alpha", apply: (f) => ({ ...f, "src/Box.css": ".box { color: rgb(37 99 235 / 100%); }" }) },
+    // Shorthand hex inside a Tailwind arbitrary value: exercises the
+    // bracket-strip + shorthand normalization on the way to the resolver.
+    { name: "tailwind-arbitrary", apply: (f) => ({ ...f, "src/Btn.tsx": 'export const Btn = () => <button className="bg-[#fff]" />;' }) },
   ],
-  // Each pair inlines a `:root { --color-a: #ffffff; }` token definition (the
+  // Each pair inlines a `:root { --color-a: …; }` token definition (the
   // custom-property declaration itself is guard-suppressed, never a finding)
-  // so both sides resolve `exact` against a real candidate — otherwise both
-  // would resolve `novel` (no known token), still consistent with each other
-  // but never matching `expectViolation: true` under the four-class resolver.
+  // so both sides resolve against a real candidate — otherwise both would
+  // resolve `novel` (no known token), still consistent with each other but
+  // never matching `expectViolation: true` under the four-class resolver.
   metamorphic: [
     {
       name: "hex-eq-rgb",
@@ -340,6 +355,21 @@ export const colorAdapter: OracleAdapter = {
       name: "shorthand-eq-longhand-hex",
       a: { "package.json": PKG, "src/m.css": ":root { --color-a: #ffffff; } .a { color: #fff; }" },
       b: { "package.json": PKG, "src/m.css": ":root { --color-a: #ffffff; } .a { color: #ffffff; }" },
+      expectViolation: true,
+    },
+    // Level 3 and Level 4 spellings of the same color must be judged the same.
+    // This is the pair that discriminates: before the parser learned Level 4,
+    // side `b` went completely silent while side `a` flagged.
+    {
+      name: "comma-eq-space-separated-rgb",
+      a: { "package.json": PKG, "src/m.css": ":root { --color-a: #2563eb; } .a { color: rgb(37, 99, 235); }" },
+      b: { "package.json": PKG, "src/m.css": ":root { --color-a: #2563eb; } .a { color: rgb(37 99 235); }" },
+      expectViolation: true,
+    },
+    {
+      name: "comma-eq-space-separated-hsl",
+      a: { "package.json": PKG, "src/m.css": ":root { --color-a: #2563eb; } .a { color: hsl(221, 83%, 53%); }" },
+      b: { "package.json": PKG, "src/m.css": ":root { --color-a: #2563eb; } .a { color: hsl(221 83% 53%); }" },
       expectViolation: true,
     },
   ],

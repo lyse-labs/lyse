@@ -431,7 +431,9 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
 
   // Built once per audit — never per rule, never per file (perf CI job depends
   // on this). MCP and single-file rule paths construct their own RuleContext
-  // and do not get a resolver; they keep legacy exact-match behaviour.
+  // and do not get a resolver: they keep the pre-resolver exact-match lookup and
+  // its unconditional `warning` severity, so an IDE surface never sees a finding
+  // silently downgraded by context it never had.
   const resolver = createResolver(graph);
 
   const ctx: RuleContext = {
