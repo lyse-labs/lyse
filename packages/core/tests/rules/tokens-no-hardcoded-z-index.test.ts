@@ -209,3 +209,29 @@ describe("novel keeps the static suggestion", () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// Regression — with a single z-index token the rule must not claim a candidate.
+// ---------------------------------------------------------------------------
+describe("single-token scale does not manufacture a candidate", () => {
+  it("reports info/low with the static hint, not `probably zIndex.modal`", async () => {
+    const res = await runRuleWithGraph(
+      ".x { z-index: 33; }",
+      [{ id: "zIndex.modal", axis: "zIndex", rawValue: "700", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.confidence).toBe("low");
+    expect(res.findings[0]?.suggestion).toBe(
+      "define a z-index scale (e.g. `--z-modal`, `--z-popover`) and reference it instead of a raw value",
+    );
+  });
+
+  it("still treats the token's own value as on-scale (no finding)", async () => {
+    const res = await runRuleWithGraph(
+      ".x { z-index: 700; }",
+      [{ id: "zIndex.modal", axis: "zIndex", rawValue: "700", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(0);
+  });
+});

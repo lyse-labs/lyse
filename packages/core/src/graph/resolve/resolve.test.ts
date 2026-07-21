@@ -388,3 +388,44 @@ describe("invariants", () => {
     expect(createResolver(g).resolve("colors", "#000000").tokenIds).toEqual(["a.alpha", "z.beta"]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Regression — a single-token numeric axis has no observable step unit, so it
+// must never manufacture a `near` candidate. Before this fix, `zIndex.modal =
+// 700` made `z-index: 33` resolve `near` with distance 1, which the rule then
+// reported as warning/medium with "probably `zIndex.modal` — verify before
+// replacing": more confidence than the merge-base AND a wrong candidate.
+// ---------------------------------------------------------------------------
+describe("single-token numeric scales cannot produce near", () => {
+  const oneZ = graphWith([{ id: "zIndex.modal", axis: "zIndex", rawValue: "700", source: "dtcg" }]);
+  const oneOpacity = graphWith([
+    { id: "opacity.disabled", axis: "opacity", rawValue: "0.4", source: "dtcg" },
+  ]);
+
+  it("resolves a far-from-the-token value as novel, with no candidate", () => {
+    const r = createResolver(oneZ).resolve("zIndex", "33");
+    expect(r.class).toBe("novel");
+    expect(r.tokenIds).toEqual([]);
+  });
+
+  it("still resolves an exact hit on a single-token scale as exact", () => {
+    const r = createResolver(oneZ).resolve("zIndex", "700");
+    expect(r.class).toBe("exact");
+    expect(r.tokenIds).toEqual(["zIndex.modal"]);
+  });
+
+  it("applies to every numeric axis, not just zIndex", () => {
+    expect(createResolver(oneOpacity).resolve("opacity", "0.02").class).toBe("novel");
+    expect(createResolver(oneOpacity).resolve("opacity", "0.4").class).toBe("exact");
+  });
+
+  it("leaves two-token scales measurable — near is still reachable", () => {
+    const twoZ = graphWith([
+      { id: "zIndex.modal", axis: "zIndex", rawValue: "700", source: "dtcg" },
+      { id: "zIndex.toast", axis: "zIndex", rawValue: "800", source: "dtcg" },
+    ]);
+    const r = createResolver(twoZ).resolve("zIndex", "730");
+    expect(r.class).toBe("near");
+    expect(r.tokenIds).toEqual(["zIndex.modal"]);
+  });
+});

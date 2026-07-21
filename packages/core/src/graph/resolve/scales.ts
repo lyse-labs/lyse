@@ -99,11 +99,15 @@ export function deriveScale(graph: DesignSystemGraph, axis: TokenAxis): number[]
   return deriveScaleInfo(graph, axis).scale;
 }
 
-// PRECONDITION: `scale` must be sorted ascending (as deriveScale returns it) —
-// neighbour lookups by index assume that order.
+/**
+ * Distance from `value` to the scale, expressed in scale positions (0 = the
+ * value IS on the scale). `Number.POSITIVE_INFINITY` means "no answer" — the
+ * caller must not read it as a large-but-real distance.
+ *
+ * PRECONDITION: `scale` must be sorted ascending (as deriveScale returns it) —
+ * neighbour lookups by index assume that order.
+ */
 export function stepDistance(scale: readonly number[], value: number): number {
-  if (scale.length === 0) return Number.POSITIVE_INFINITY;
-
   let nearestIndex = 0;
   let nearestDelta = Number.POSITIVE_INFINITY;
   for (let i = 0; i < scale.length; i++) {
@@ -117,11 +121,23 @@ export function stepDistance(scale: readonly number[], value: number): number {
   }
   if (nearestDelta === 0) return 0;
 
+  // Fewer than two entries: the axis has NO observable step unit, so there is
+  // no honest way to say how far off the scale a value is. An earlier version
+  // used the single entry's own magnitude as the gap unit, which put every
+  // value in (0, 2×entry) exactly one step away — a repo whose only z-index
+  // token is `700` got "probably `zIndex/modal` — verify before replacing"
+  // (warning/medium) for `z-index: 33`. That is a confident, wrong claim.
+  // Returning Infinity keeps such values in the advisory `novel` class; an
+  // exact hit still returns 0 above, so a one-token scale can still resolve
+  // `exact`.
+  if (scale.length < 2) return Number.POSITIVE_INFINITY;
+
   const nearest = scale[nearestIndex];
   if (nearest === undefined) return Number.POSITIVE_INFINITY;
 
   // Express the gap in scale positions: how many adjacent-entry gaps of the
   // local scale granularity fit inside the distance to the nearest entry.
+  // With two or more entries at least one neighbour always exists.
   const lower = scale[nearestIndex - 1];
   const upper = scale[nearestIndex + 1];
   let localGap: number;
@@ -129,14 +145,8 @@ export function stepDistance(scale: readonly number[], value: number): number {
     localGap = Math.abs(upper - nearest);
   } else if (value < nearest && lower !== undefined) {
     localGap = Math.abs(nearest - lower);
-  } else if (upper !== undefined || lower !== undefined) {
-    localGap = Math.abs((upper ?? lower ?? nearest) - nearest);
   } else {
-    // Single-entry scale: no adjacent gap to measure against. Fall back to
-    // the entry's own magnitude as the gap unit so the distance still grows
-    // with |value - nearest| instead of pinning at 1; guard against 0 (which
-    // would otherwise divide by zero / never grow).
-    localGap = Math.abs(nearest) || 1;
+    localGap = Math.abs((upper ?? lower ?? nearest) - nearest);
   }
 
   if (!Number.isFinite(localGap) || localGap === 0) return 1;

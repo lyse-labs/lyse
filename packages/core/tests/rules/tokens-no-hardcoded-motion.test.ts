@@ -194,12 +194,27 @@ describe("duration sub-path (numeric — near IS reachable)", () => {
   it("flags a one-step-off duration as warning/medium and names its candidate token", async () => {
     const res = await runRuleWithGraph(
       ".x { transition-duration: 210ms; }",
-      [{ id: "motion.fast", axis: "motion", rawValue: "duration/200ms", source: "dtcg" }],
+      [
+        { id: "motion.fast", axis: "motion", rawValue: "duration/200ms", source: "dtcg" },
+        { id: "motion.slow", axis: "motion", rawValue: "duration/400ms", source: "dtcg" },
+      ],
     );
     expect(res.findings).toHaveLength(1);
     expect(res.findings[0]?.severity).toBe("warning");
     expect(res.findings[0]?.confidence).toBe("medium");
     expect(res.findings[0]?.suggestion).toBe("probably `motion.fast` — verify before replacing");
+  });
+
+  // A one-token duration axis has no adjacent gap, so it has no step unit and
+  // `near` is not a claim the data supports — see graph/resolve/scales.ts.
+  it("stays novel/info when the axis has a single duration token", async () => {
+    const res = await runRuleWithGraph(
+      ".x { transition-duration: 210ms; }",
+      [{ id: "motion.fast", axis: "motion", rawValue: "duration/200ms", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.confidence).toBe("low");
   });
 });
 
@@ -257,7 +272,10 @@ describe("suggestion parity between the legacy and resolver paths", () => {
   it("keeps the resolver's candidate token on `near`, not the static hint", async () => {
     const res = await runRuleWithGraph(
       ".x { transition-duration: 210ms; }",
-      [{ id: "motion.fast", axis: "motion", rawValue: "duration/200ms", source: "dtcg" }],
+      [
+        { id: "motion.fast", axis: "motion", rawValue: "duration/200ms", source: "dtcg" },
+        { id: "motion.slow", axis: "motion", rawValue: "duration/400ms", source: "dtcg" },
+      ],
     );
     expect(res.findings[0]?.suggestion).toBe("probably `motion.fast` — verify before replacing");
   });

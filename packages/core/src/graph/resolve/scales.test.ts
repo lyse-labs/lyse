@@ -193,26 +193,37 @@ describe("stepDistance", () => {
     expect(stepDistance([], 8)).toBe(Number.POSITIVE_INFINITY);
   });
 
-  describe("single-entry scale", () => {
+  // A scale with a single entry has no adjacent gap, so it has no step unit —
+  // any "N steps away" it reported would be manufactured. Only the exact hit is
+  // knowable; everything else is Infinity, which classifyNumeric reads as
+  // `novel` rather than a confident `near`.
+  describe("single-entry scale has no step unit", () => {
     it("returns 0 for the on-scale value", () => {
       expect(stepDistance([5], 5)).toBe(0);
     });
 
-    it("returns a small distance for a value close to the entry", () => {
-      const d = stepDistance([5], 6);
-      expect(d).toBeGreaterThan(0);
-      expect(d).toBeLessThan(stepDistance([5], 100000));
+    it("returns Infinity for a value close to the entry", () => {
+      expect(stepDistance([5], 6)).toBe(Number.POSITIVE_INFINITY);
     });
 
-    it("grows for a value far from the entry", () => {
-      expect(stepDistance([5], 100000)).toBeGreaterThan(1);
+    it("returns Infinity for a value far from the entry", () => {
+      expect(stepDistance([5], 100000)).toBe(Number.POSITIVE_INFINITY);
     });
 
-    it("does not divide by zero or return Infinity when the entry is 0", () => {
-      const d = stepDistance([0], 100);
-      expect(Number.isFinite(d)).toBe(true);
-      expect(d).toBeGreaterThan(0);
+    it("returns Infinity when the entry is 0 (no divide-by-zero path left)", () => {
+      expect(stepDistance([0], 100)).toBe(Number.POSITIVE_INFINITY);
     });
+
+    it("never puts a value inside (0, 2×entry) one step away", () => {
+      // The exact regression: `zIndex.modal = 700` made `z-index: 33` `near`.
+      expect(stepDistance([700], 33)).toBe(Number.POSITIVE_INFINITY);
+      expect(stepDistance([0.4], 0.02)).toBe(Number.POSITIVE_INFINITY);
+    });
+  });
+
+  it("keeps two-entry scales measurable (the boundary case)", () => {
+    expect(stepDistance([700, 800], 730)).toBe(1);
+    expect(stepDistance([700, 800], 700)).toBe(0);
   });
 });
 
