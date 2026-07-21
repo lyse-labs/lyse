@@ -124,7 +124,41 @@ export const hardcodedValueAdapters: OracleAdapter[] = [
     altLiteralValue: "0.125rem",
     tokensJson: { "border-width": { thin: { $value: "1px", $type: "dimension" }, thick: { $value: "4px", $type: "dimension" } } },
   }),
+  // tokens/no-hardcoded-typography is resolver-migrated (Task 8), but UNLIKE
+  // spacing/radii/z-index/opacity/border-width, it is a pure COMPOSITE axis
+  // (graph/resolve/index.ts#classifyComposite): a font-size literal is either
+  // an exact string match (compliant) or `novel` — there is no defensible
+  // distance between "13px" and "14px" the way there is between two numbers
+  // on one scale, so `near` never happens here, no matter what token scale
+  // this fixture declares. `novel` is reported at `info` (a real value with
+  // no known token — see tokens-no-hardcoded-typography.ts's
+  // `typographyVerdict`), which `ruleFlagged` cannot see (error/warning
+  // only — see validation/audit-probe.ts). This adapter's mutations are
+  // therefore now permanently invisible to `ruleFlagged`-based scoring
+  // (J=0) — a structural consequence of the migration for a
+  // `contributesToScore: true` rule (src/reliability/catalogue/sub-axes.ts),
+  // not a fixable fixture-configuration problem. Flagged in the Task 8
+  // report rather than worked around here.
   makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-typography", property: "font-size", cleanValue: "var(--font-size-md)", literalValue: "16px", altLiteralValue: "1rem" }),
-  makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-motion", property: "transition", cleanValue: "color var(--duration-fast) var(--ease-standard)", literalValue: "color 200ms ease", altLiteralValue: "color 0.2s ease" }),
+  // tokens/no-hardcoded-motion is resolver-migrated (Task 8) and SPLIT: a
+  // duration literal (`200ms` / `0.2s`) is parsed to milliseconds and takes
+  // the same NUMERIC path as spacing/z-index/opacity (`near` reachable), an
+  // easing curve takes the composite path (`near` unreachable, like
+  // typography). This adapter only mutates the duration half, so — exactly
+  // like the Task 7 numeric axes above — it needs a real, DIFFERENT duration
+  // scale or the empty-scale case resolves `novel` (info, invisible to
+  // `ruleFlagged`) instead of `near` (warning). A plain CSS custom property
+  // now reaches the motion axis (commit 90d3b90: custom properties route by
+  // DTCG $type, and `150ms`/`400ms` are inferred `$type: "duration"` by value
+  // shape — see tokens/normalizer.ts), so `tokenSource` works here, unlike
+  // typography/shadows.
+  makeHardcodedValueAdapter({
+    ruleId: "tokens/no-hardcoded-motion",
+    property: "transition",
+    cleanValue: "color var(--duration-fast) var(--ease-standard)",
+    literalValue: "color 200ms ease",
+    altLiteralValue: "color 0.2s ease",
+    tokenSource: ":root { --duration-fast: 150ms; --duration-slow: 400ms; }",
+  }),
   makeHardcodedValueAdapter({ ruleId: "tokens/no-hardcoded-gradient", property: "background", cleanValue: "var(--gradient-brand)", literalValue: "linear-gradient(to right, #ff6b6b, #ffa500)", altLiteralValue: "radial-gradient(circle, #ff0000, #0000ff)" }),
 ];
