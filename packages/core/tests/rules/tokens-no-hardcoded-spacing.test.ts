@@ -966,3 +966,120 @@ describe("derived scales (the Carbon case)", () => {
     expect(res.findings).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Task 6 review — the fallback-scale policy belongs to the resolver
+// ---------------------------------------------------------------------------
+describe("fallback spacing scale", () => {
+  const NO_TOKENS: TokenNode[] = [];
+  // A real spacing token that carries no numeric value. `deriveScale` skips it,
+  // so the axis is still on the fallback scale — but "the axis has a token" is
+  // true, which is how a rule-level guard on that condition went wrong.
+  const ONLY_NON_NUMERIC: TokenNode[] = [
+    { id: "spacing.auto", axis: "spacing", rawValue: "auto", source: "dtcg" },
+  ];
+
+  it("stays silent on a fallback-scale value when the repo has no spacing tokens", async () => {
+    const res = await runRuleWithGraph(`const s = { padding: "16px" };`, NO_TOKENS);
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("still flags a value one step off the fallback scale", async () => {
+    const res = await runRuleWithGraph(`const s = { padding: "17px" };`, NO_TOKENS);
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+    // Nothing anchors the fallback scale, so there is no token to suggest.
+    expect(res.findings[0]?.suggestion).toBeUndefined();
+  });
+
+  it("behaves identically when the axis's only token is non-numeric", async () => {
+    for (const source of [
+      `const s = { padding: "16px" };`,
+      `const s = { padding: "17px" };`,
+      `const s = { padding: "1000px" };`,
+    ]) {
+      const empty = await runRuleWithGraph(source, NO_TOKENS);
+      const nonNumeric = await runRuleWithGraph(source, ONLY_NON_NUMERIC);
+      expect(nonNumeric.findings).toEqual(empty.findings);
+    }
+  });
+});
+
+describe("near findings carry their candidate token", () => {
+  it("names the nearest token in the suggestion, as the colour rule does", async () => {
+    const res = await runRuleWithGraph(
+      `const s = { padding: "18px" };`,
+      [
+        { id: "spacing.md", axis: "spacing", rawValue: "16", source: "dtcg" },
+        { id: "spacing.lg", axis: "spacing", rawValue: "32", source: "dtcg" },
+      ],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings[0]?.suggestion).toBe("probably `spacing.md` — verify before replacing");
+  });
+
+  it("emits no suggestion for a novel value", async () => {
+    const res = await runRuleWithGraph(
+      `const s = { padding: "413px" };`,
+      [{ id: "spacing.md", axis: "spacing", rawValue: "16", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.suggestion).toBeUndefined();
+  });
+});
+
+describe("resolver is consulted only for values that would be reported", () => {
+  async function runWithSpy(source: string): Promise<string[]> {
+    const graph: DesignSystemGraph = {
+      schemaVersion: 1,
+      tokens: [{ id: "spacing.md", axis: "spacing", rawValue: "16", source: "dtcg" }],
+      components: [],
+      stories: [],
+      usage: [],
+      zones: { byFile: { "src/a.css": "app" } },
+      extraction: { entries: [], conflicts: [] },
+    };
+    const inner = createResolver(graph);
+    const seen: string[] = [];
+    const ctx = {
+      repoRoot: "/repo",
+      tokens: null,
+      componentsModule: null,
+      componentInventory: [],
+      storyIndex: null,
+      excludePaths: [],
+      graph,
+      resolver: {
+        resolve: (axis: string, rawValue: string) => {
+          seen.push(rawValue);
+          return inner.resolve(axis as "spacing", rawValue);
+        },
+        abstentions: () => inner.abstentions(),
+      },
+    } as unknown as RuleContext;
+    const parsed = { ts: [], cssInJs: [], css: [{ path: "src/a.css", source, root: null }] } as unknown as ParsedFiles;
+    await rule.evaluate(ctx, parsed);
+    return seen;
+  }
+
+  // Guard-suppressed values must never reach resolve(): an `unresolved` verdict
+  // is counted by resolver.abstentions(), and feeding it values the rule was
+  // never going to report inflates the metric for honest silence.
+  it("does not resolve a value inside a comment", async () => {
+    expect(await runWithSpy(`/* padding: 13px; */\n.x { color: red; }`)).toEqual([]);
+  });
+
+  it("does not resolve a value inside a media query", async () => {
+    expect(await runWithSpy(`@media (min-width: 769px) { .x { color: red; } }`)).toEqual([]);
+  });
+
+  it("does not resolve a custom-property declaration value", async () => {
+    expect(await runWithSpy(`:root { --gap: 13px; }`)).toEqual([]);
+  });
+
+  it("still resolves a value that survives every guard", async () => {
+    expect(await runWithSpy(`.x { padding: 13px; }`)).toEqual(["13px"]);
+  });
+});

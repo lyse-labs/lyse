@@ -1,7 +1,7 @@
 import type { DesignSystemGraph, TokenAxis, TokenNode } from "../types.js";
 import type { Resolution, Resolver, ResolverConfig } from "./types.js";
 import { srgbToOklab, deltaEOk, type Oklab } from "./oklab.js";
-import { deriveScale, stepDistance, numericValue, NUMERIC_AXES } from "./scales.js";
+import { deriveScaleInfo, stepDistance, numericValue, NUMERIC_AXES, type DerivedScale } from "./scales.js";
 import { parseColor } from "../../a11y/contrast.js";
 
 export type { Resolution, Resolver, ResolverConfig, ResolveClass } from "./types.js";
@@ -99,11 +99,11 @@ export function createResolver(
     colorEntries.push({ id: t.id, lab: srgbToOklab(parsed), alpha: parsed.a });
   }
 
-  const scaleCache = new Map<TokenAxis, number[]>();
-  const scaleFor = (axis: TokenAxis): number[] => {
+  const scaleCache = new Map<TokenAxis, DerivedScale>();
+  const scaleFor = (axis: TokenAxis): DerivedScale => {
     let s = scaleCache.get(axis);
     if (!s) {
-      s = deriveScale(graph, axis);
+      s = deriveScaleInfo(graph, axis);
       scaleCache.set(axis, s);
     }
     return s;
@@ -162,8 +162,17 @@ export function createResolver(
       return { class: "exact", tokenIds: sortIds(bestIds) };
     }
 
-    const steps = stepDistance(scaleFor(axis), value);
-    if (steps <= cfg.dimensionNearSteps && bestIds.length > 0) {
+    // On a fallback scale `bestIds` is empty BY CONSTRUCTION — `isFallback`
+    // means no token on the axis yielded a numeric value, which is the same
+    // condition that fills `bestIds`. The scale still knows the answer, so
+    // report it with no token ids instead of discarding it as `novel`:
+    // otherwise a repo with no spacing scale of its own gets `novel` for every
+    // literal, including the ordinary Tailwind-default values the fallback
+    // exists to recognise.
+    const { scale, isFallback } = scaleFor(axis);
+    const steps = stepDistance(scale, value);
+    if (steps === 0 && isFallback) return { class: "exact", tokenIds: [] };
+    if (steps <= cfg.dimensionNearSteps && (bestIds.length > 0 || isFallback)) {
       return { class: "near", tokenIds: sortIds(bestIds), distance: steps };
     }
     return novel();

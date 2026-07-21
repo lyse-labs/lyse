@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deriveScale, stepDistance, numericValue, DEFAULT_SPACING_SCALE } from "./scales.js";
+import { deriveScale, deriveScaleInfo, stepDistance, numericValue, DEFAULT_SPACING_SCALE } from "./scales.js";
 import type { DesignSystemGraph, TokenNode } from "../types.js";
 
 function graphWith(tokens: TokenNode[]): DesignSystemGraph {
@@ -26,6 +26,31 @@ describe("deriveScale", () => {
   it("falls back to defaults only when the axis has zero tokens", () => {
     const g = graphWith([{ id: "c.brand", axis: "colors", rawValue: "#fff", source: "dtcg" }]);
     expect(deriveScale(g, "spacing")).toEqual([...DEFAULT_SPACING_SCALE]);
+  });
+
+  // `isFallback` is the ONLY correct spelling of "this axis has no scale of its
+  // own": a token whose value is non-numeric counts for "the axis has tokens"
+  // but not for "the axis has a scale", and consumers that re-derived the
+  // condition got that divergence wrong.
+  it("reports isFallback for an axis whose only token is non-numeric", () => {
+    const g = graphWith([
+      { id: "space.auto", axis: "spacing", rawValue: "auto", source: "dtcg" },
+    ]);
+    const info = deriveScaleInfo(g, "spacing");
+    expect(info.isFallback).toBe(true);
+    expect(info.scale).toEqual([...DEFAULT_SPACING_SCALE]);
+  });
+
+  it("does not report isFallback once one token yields a numeric value", () => {
+    const g = graphWith([
+      { id: "space.auto", axis: "spacing", rawValue: "auto", source: "dtcg" },
+      { id: "space.sm", axis: "spacing", rawValue: "4", source: "dtcg" },
+    ]);
+    expect(deriveScaleInfo(g, "spacing")).toEqual({ scale: [4], isFallback: false });
+  });
+
+  it("reports isFallback for an axis with no default scale at all", () => {
+    expect(deriveScaleInfo(graphWith([]), "radii")).toEqual({ scale: [], isFallback: true });
   });
 
   it("ignores non-numeric raw values on numeric axes", () => {

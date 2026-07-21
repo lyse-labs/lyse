@@ -166,6 +166,52 @@ describe("numeric axes", () => {
   });
 });
 
+// The resolver used to gate BOTH `exact` and `near` on having a token id to
+// name (`bestIds.length > 0`), so on a graph with no numeric token for the axis
+// it computed the right answer from the fallback scale and then threw it away,
+// returning `novel` for every value. Consumers had to re-derive the fallback
+// policy outside this module to compensate — which is exactly the knowledge
+// that must live here.
+describe("numeric axes — fallback scale, no token to anchor on", () => {
+  const NO_TOKENS = graphWith([]);
+  // `auto` is a real spacing token that yields no numeric value. `deriveScale`
+  // ignores it (so the axis is still on the fallback scale) while a naive
+  // "does the axis have any token?" test counts it — the divergence that made
+  // an outside-the-resolver guard wrong.
+  const ONLY_NON_NUMERIC = graphWith([
+    { id: "space.auto", axis: "spacing", rawValue: "auto", source: "dtcg" },
+  ]);
+
+  it("resolves a value on the fallback spacing scale as exact with no token ids", () => {
+    expect(createResolver(NO_TOKENS).resolve("spacing", "16px")).toEqual({
+      class: "exact",
+      tokenIds: [],
+    });
+  });
+
+  it("resolves a one-step-off value on the fallback scale as near with no token ids", () => {
+    const r = createResolver(NO_TOKENS).resolve("spacing", "17px");
+    expect(r.class).toBe("near");
+    expect(r.tokenIds).toEqual([]);
+  });
+
+  it("still resolves a far-off value on the fallback scale as novel", () => {
+    expect(createResolver(NO_TOKENS).resolve("spacing", "1000px").class).toBe("novel");
+  });
+
+  it("treats an axis whose only token is non-numeric exactly like an empty axis", () => {
+    const empty = createResolver(NO_TOKENS);
+    const nonNumeric = createResolver(ONLY_NON_NUMERIC);
+    for (const value of ["16px", "17px", "1000px", "1rem"]) {
+      expect(nonNumeric.resolve("spacing", value)).toEqual(empty.resolve("spacing", value));
+    }
+  });
+
+  it("does not invent a fallback for an axis that has none", () => {
+    expect(createResolver(NO_TOKENS).resolve("radii", "4px").class).toBe("novel");
+  });
+});
+
 describe("motion", () => {
   const g = graphWith([
     { id: "motion.fast", axis: "motion", rawValue: "duration/200ms", source: "dtcg" },

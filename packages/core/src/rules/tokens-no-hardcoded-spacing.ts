@@ -7,7 +7,6 @@ import { createLyseRule } from "./_rule-module.js";
 import { makeFixGroup } from "./_fix-group.js";
 import { isScored, onScale, reverseLookup } from "../graph/query.js";
 import type { ResolveClass } from "../graph/resolve/types.js";
-import { numericValue, DEFAULT_SPACING_SCALE } from "../graph/resolve/scales.js";
 
 const PX_REM_EM = /\b(\d+(\.\d+)?)(px|rem|em)\b/g;
 // Only `0` and `100` are unconditionally allowed. `1` (i.e. 1px) is only
@@ -114,27 +113,6 @@ const VERDICT_BY_CLASS: Record<
 };
 
 /**
- * The resolver can only ever return `exact`/`near` by anchoring on a real
- * token id (see `classifyNumeric` in graph/resolve/index.ts — its distance
- * scan iterates the axis's actual tokens, and `deriveScale`'s Tailwind
- * fallback only feeds the `near` distance metric, gated on a token existing
- * to attach). A repo with ZERO spacing tokens therefore gets `novel` for
- * EVERY literal, including perfectly ordinary Tailwind-shaped values like
- * `16px` — there is no token id for the resolver to report, on-scale or not.
- * This mirrors `deriveScale`'s own fallback intent as a plain membership
- * check so a project that simply hasn't authored a spacing scale isn't
- * flooded with false positives on default-Tailwind values.
- */
-function hasSpacingTokens(ctx: RuleContext): boolean {
-  return ctx.graph?.tokens.some((t) => t.axis === "spacing") ?? false;
-}
-
-function isOnDefaultSpacingScale(raw: string): boolean {
-  const n = numericValue(raw);
-  return n !== null && DEFAULT_SPACING_SCALE.includes(n);
-}
-
-/**
  * Builds the finding fields for one detected spacing literal, or `undefined`
  * when nothing should be emitted.
  *
@@ -149,9 +127,14 @@ function isOnDefaultSpacingScale(raw: string): boolean {
  * a 16px root, so a literal written in rem compares correctly against a
  * scale derived from px tokens (and vice versa). `exact` means on-scale →
  * skip (this rule's inverse of the colour rule's `exact`, see the module
- * docstring above `VERDICT_BY_CLASS`). `near`/`novel` get a fixGroup with NO
- * candidates — an auto-fix is only ever safe for an `exact` match, and those
- * are never emitted as findings on this axis.
+ * docstring above `VERDICT_BY_CLASS`); that single skip also covers the
+ * fallback-scale case, where the resolver answers `exact` with no token ids
+ * because the axis has no numeric token to anchor on. `near`/`novel` get a
+ * fixGroup with NO candidates — an auto-fix is only ever safe for an `exact`
+ * match, and those are never emitted as findings on this axis — but a `near`
+ * DOES carry its candidate token in the suggestion, exactly as the colour
+ * rule does. On the fallback scale `tokenIds` is empty and there is genuinely
+ * nothing to suggest, so no suggestion is emitted.
  */
 function spacingVerdict(ctx: RuleContext, raw: string, num: string): SpacingVerdict | undefined {
   if (!ctx.resolver) {
@@ -168,13 +151,17 @@ function spacingVerdict(ctx: RuleContext, raw: string, num: string): SpacingVerd
 
   const resolution = ctx.resolver.resolve("spacing", raw);
   if (resolution.class === "exact" || resolution.class === "unresolved") return undefined;
-  if (resolution.class === "novel" && !hasSpacingTokens(ctx) && isOnDefaultSpacingScale(raw)) return undefined;
 
   const { severity, confidence } = VERDICT_BY_CLASS[resolution.class];
   const fixGroup = makeFixGroup("tokens/no-hardcoded-spacing", raw, []);
+  const suggestion =
+    resolution.class === "near" && resolution.tokenIds[0] !== undefined
+      ? `probably \`${resolution.tokenIds[0]}\` — verify before replacing`
+      : undefined;
   return {
     severity,
     confidence,
+    ...(suggestion !== undefined && { suggestion }),
     ...(fixGroup !== undefined && { fixGroup }),
   };
 }
@@ -197,8 +184,13 @@ const evaluate = async (
       // Zero is zero regardless of unit (0, 0px, 0rem, 0em, 0.0rem) — never drift.
       if (parseFloat(num) === 0) continue;
       if (unit === "px" && ALLOW_PX_VALUES.has(num)) continue;
-      const verdict = spacingVerdict(ctx, raw, num);
-      if (!verdict) continue;
+      // The syntactic guards run BEFORE the resolver is consulted: they are
+      // cheap, and a value they suppress must never reach `resolve()`. An
+      // `unresolved` verdict is counted by `resolver.abstentions()`, the metric
+      // for honest silence — feeding it values that sit inside comments,
+      // `@media` blocks or `<pre>` would inflate it with things the rule was
+      // never going to report. None of these guards reads the verdict, so the
+      // set of emitted findings is unchanged by the ordering.
       // Skip px/rem/em values inside JSX attributes that carry media-query
       // breakpoints (sizes, srcSet, media). These are responsive image
       // markup — not spacing tokens. NOTE: sizes={"..."} (JSX expression
@@ -217,6 +209,8 @@ const evaluate = async (
       // spacing Tailwind arbitrary-value prefix. This suppresses font-size,
       // line-height, border-radius, width, height, transform, @media, etc.
       if (isNotSpacingPropertyContext(source, m.index)) continue;
+      const verdict = spacingVerdict(ctx, raw, num);
+      if (!verdict) continue;
       const loc = blockLine > 0 ? { line: blockLine, column: 1 } : locationFromIndex(source, m.index);
       findings.push({
         ruleId: "tokens/no-hardcoded-spacing",

@@ -64,7 +64,22 @@ export function numericValue(rawValue: string): number | null {
   return n; // px suffix or unitless — already px.
 }
 
-export function deriveScale(graph: DesignSystemGraph, axis: TokenAxis): number[] {
+export interface DerivedScale {
+  scale: number[];
+  /**
+   * True when NO token on the axis yielded a numeric value, so `scale` is the
+   * built-in default (or empty for an axis that has none). Callers need this to
+   * tell "on the scale, anchored by a token" from "on the scale, but no token
+   * anchors it" — the fallback scale still knows the answer, it just has no
+   * token id to name. This flag is the single source of truth for that
+   * condition: deriving it independently (e.g. "does the axis have any token")
+   * diverges here, because a token whose value is non-numeric (`auto`) counts
+   * for that test but not for this one.
+   */
+  isFallback: boolean;
+}
+
+export function deriveScaleInfo(graph: DesignSystemGraph, axis: TokenAxis): DerivedScale {
   const own: number[] = [];
   for (const t of graph.tokens) {
     if (t.axis !== axis) continue;
@@ -72,9 +87,16 @@ export function deriveScale(graph: DesignSystemGraph, axis: TokenAxis): number[]
     if (n !== null) own.push(n);
   }
   if (own.length > 0) {
-    return [...new Set(own)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    return {
+      scale: [...new Set(own)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
+      isFallback: false,
+    };
   }
-  return [...(DEFAULT_SCALES[axis] ?? [])];
+  return { scale: [...(DEFAULT_SCALES[axis] ?? [])], isFallback: true };
+}
+
+export function deriveScale(graph: DesignSystemGraph, axis: TokenAxis): number[] {
+  return deriveScaleInfo(graph, axis).scale;
 }
 
 // PRECONDITION: `scale` must be sorted ascending (as deriveScale returns it) —

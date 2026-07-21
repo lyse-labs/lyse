@@ -10,13 +10,14 @@ export interface HardcodedValueSpec {
   altLiteralValue: string;
   /**
    * Optional real token-definition CSS, included in every fixture this spec
-   * generates. Axes migrated onto the four-class resolver (see
-   * tokens-no-hardcoded-spacing.ts) can only ever classify `exact`/`near` by
-   * anchoring on a real token id — with none present, every mutation
-   * resolves `novel` (info), which `ruleFlagged` (error/warning only) cannot
-   * register as a violation. `isCssCustomPropertyDeclaration` already
-   * guard-suppresses the declaration itself, so this file never produces a
-   * finding of its own.
+   * generates. On an axis migrated onto the four-class resolver (see
+   * tokens-no-hardcoded-spacing.ts), a fixture with no tokens at all puts the
+   * axis on its BUILT-IN FALLBACK scale — and a mutation literal that is a
+   * member of that scale then resolves `exact`, i.e. COMPLIANT, so the rule
+   * stays silent and the oracle records a false negative. A real
+   * (deliberately different) scale is what makes the literal land off-scale.
+   * `isCssCustomPropertyDeclaration` already guard-suppresses the declaration
+   * itself, so this file never produces a finding of its own.
    */
   tokenSource?: string;
 }
@@ -48,11 +49,12 @@ export function makeHardcodedValueAdapter(spec: HardcodedValueSpec): OracleAdapt
 
 export const hardcodedValueAdapters: OracleAdapter[] = [
   // tokens/no-hardcoded-spacing is resolver-migrated (Task 6, the Carbon fix):
-  // `exact` (on the repo's own scale) is COMPLIANT, not drift, so 16px/1rem
-  // must resolve `near` against a real-but-different scale — not `exact`
-  // (would silently pass) and not `novel` from zero tokens (would be info,
-  // invisible to this error/warning-only oracle). --space-sm/--space-lg (8px,
-  // 32px) put 16 one step off a real token without landing on it.
+  // `exact` (on the scale in use) is COMPLIANT, not drift. With no tokens at
+  // all the axis falls back to the built-in Tailwind scale, of which 16 is a
+  // member — so both 16px and 1rem (= 16px) resolve `exact` and the rule emits
+  // NOTHING (measured: J=0.000, 2 missed). --space-sm/--space-lg (8px, 32px)
+  // give the fixture a real scale that 16 sits one step off, so the mutations
+  // resolve `near` → warning, which this error/warning-only oracle can see.
   makeHardcodedValueAdapter({
     ruleId: "tokens/no-hardcoded-spacing",
     property: "margin",
