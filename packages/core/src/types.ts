@@ -117,6 +117,12 @@ export interface RuleContext {
    */
   graph?: import("./graph/types.js").DesignSystemGraph;
   /**
+   * Four-class value resolver, built once per audit from `graph`. Optional for
+   * the same reason `graph` is: MCP and single-file rule paths construct their
+   * own contexts and keep the legacy exact-match behaviour.
+   */
+  resolver?: import("./graph/resolve/types.js").Resolver;
+  /**
    * Computed token readings from the opt-in render layer. Present only when
    * `lyse audit --render` ran and the browser was available; absent otherwise.
    * Rules that need rendered data (tokens/rendered-token-fidelity) return N/A
@@ -439,6 +445,13 @@ export interface AuditResult {
     extraction?: import("./graph/types.js").ExtractionReport;
     /** P0: true when this was a self-DS audit (the repo IS the design system). Additive. */
     dsSelfMode?: boolean;
+    /**
+     * Count of distinct (axis, value) pairs the value resolver could not
+     * classify (`Resolver.abstentions()`). The resolver is built once per audit
+     * and read after `runRules`, since the count only exists once resolution
+     * has happened; 0 until a rule calls `ctx.resolver.resolve()`.
+     */
+    abstentions?: number;
   };
 }
 
