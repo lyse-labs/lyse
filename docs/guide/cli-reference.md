@@ -15,6 +15,7 @@ Commands:
 | `lyse init` | Interactive setup wizard — detect framework, generate `.lyse.yaml`, wire IDE. |
 | `lyse install [path]` | One-command onboarding — install the Lyse skill into every detected coding agent + the advisory pre-commit hook. |
 | `lyse audit [path]` | Audit a repository; output a Health Score and findings. |
+| `lyse baseline write [path]` | Write `.lyse/baseline.json` — the accepted findings + scores, for `audit --scope new` to diff against. |
 | `lyse handoff [path]` | Audit, then hand the findings to your coding agent (Claude Code, Cursor, Codex) to fix. |
 | `lyse fix [path]` | Deprecated — redirects to `lyse handoff`. |
 | `lyse add ci-gate \| git-hook` | Scaffold a CI gate workflow or an advisory pre-commit hook. |
@@ -183,7 +184,7 @@ lyse audit [path] [options]
 | `--output <path>` | string | stdout | Write output to a file. |
 | `--limit <n>` | integer \| `all` | `10` | Max findings printed by the text/eslint/legacy output. Use `all` or `0` to show every finding. Ignored by `--format=json|sarif` (machine consumers always receive the full report). |
 | `--threshold <n>` | integer 0–100 | (none) | Exit code 1 if Health Score is below this value. |
-| `--scope <mode>` | `changed` \| `staged` \| `uncommitted` | (whole tree) | Limit the audit to git-changed files. `changed` = committed vs `--base` (PR review); `staged` = files in the index (pre-commit); `uncommitted` = working-tree edits + untracked (verify an agent's uncommitted fixes). |
+| `--scope <mode>` | `changed` \| `staged` \| `uncommitted` \| `new` | (whole tree) | Limit the audit. `changed` = committed vs `--base` (PR review); `staged` = files in the index (pre-commit); `uncommitted` = working-tree edits + untracked (verify an agent's uncommitted fixes); `new` = diff-first — report and gate only findings absent from the committed `.lyse/baseline.json` (see [`lyse baseline write`](#lyse-baseline-write-path)), regardless of which files changed. |
 | `--staged` | boolean | `false` | Shortcut for `--scope=staged` (audit only staged files — ideal for pre-commit hooks). |
 | `--base <ref>` | git ref | `origin/main` | Base ref for `--scope=changed`. |
 | `--verbose` | boolean | `false` | Show all findings (default: top 5 in text output). |
@@ -231,14 +232,17 @@ lyse audit --limit=50
 
 # Print every finding (no truncation)
 lyse audit --limit=all
+
+# Diff-first: gate only findings absent from the committed baseline
+lyse audit --scope new
 ```
 
 ### Exit codes
 
-- `0` — Audit completed; score met threshold (if specified).
-- `1` — Audit completed; score below threshold.
+- `0` — Audit completed; score met threshold (if specified). Under `--scope new`, no new score-contributing finding and no axis-score regression.
+- `1` — Audit completed; score below threshold. Under `--scope new`, at least one new score-contributing finding or an axis-score regression (reasons printed to stderr).
 - `2` — Audit could not run (invalid config, unreadable files, internal error).
-- `64` — Invalid arguments.
+- `64` — Invalid arguments. Under `--scope new`, also: no `.lyse/baseline.json` found (run `lyse baseline write` first) or the baseline file is malformed.
 
 ### JSON output: `meta.coverage`
 
@@ -268,6 +272,17 @@ since text is for human consumption, not snapshot diffing.
 `parseErrors[]`, `exclusions[]`, and `filesByExtension` are planned additions
 to `meta.coverage` once the scanner pipeline exposes them.
 
+### Diff-first: `--scope new`
+
+`--scope new` reports and gates only findings **absent from the committed baseline** (`.lyse/baseline.json`, written by [`lyse baseline write`](#lyse-baseline-write-path)) — every existing (accepted) finding is excluded, however many files changed. This is what `lyse add ci-gate` wires into CI: a PR fails only when it introduces new drift or regresses an axis score, never on pre-existing drift the team hasn't gotten to yet.
+
+Matching against the baseline uses a stable per-finding identity (file + rule + normalized drifted literal), not line numbers or message text, so a reformat-only commit (whitespace, import order, non-semantic diffs) produces **zero** new findings. Two categories of match:
+
+- **Content-anchored** findings (a specific literal drifted, e.g. a hardcoded colour) — only the *surplus* occurrences beyond the baselined count for that file/rule/literal are reported as new.
+- **Occurrence-only** findings (no specific literal to anchor to) — if the count for that file/rule increased at all, **every** occurrence in the current run is reported (not just the surplus), since there's no stable way to pick which ones are "new".
+
+If the Design System Graph has changed since the baseline was written (e.g. a new token source), Lyse prints an advisory `baseline may be stale` warning to stderr and suggests re-running `lyse baseline write` — the audit still runs and gates.
+
 ### Interactive menu (TTY mode)
 
 After a successful audit in an interactive terminal, Lyse shows a quick-action menu:
@@ -277,6 +292,35 @@ After a successful audit in an interactive terminal, Lyse shows a quick-action m
 ```
 
 This menu is suppressed in CI and non-TTY contexts (`CI=1`, piped output).
+
+## `lyse baseline write [path]`
+
+Audit the repo and write `.lyse/baseline.json` — the accepted set of findings, per-axis scores, and a hash of the Design System Graph. Commit this file so `lyse audit --scope new` (and the CI gate `lyse add ci-gate` installs) can diff against it and report/gate only *new* drift.
+
+```
+lyse baseline write [path]
+```
+
+`path` defaults to `.` (current directory). Also ensures `.gitignore` has `.lyse/*` plus a `!.lyse/baseline.json` negation (Git cannot re-include a file under an ignored directory, so the baseline needs the contents-form ignore + an explicit negation to stay trackable) — a no-op if those lines already exist, and skipped entirely outside a git repo.
+
+`.lyse/baseline.json` is deterministic: same repo state → byte-identical file (no timestamps), so re-running it without any real change produces no diff.
+
+### Examples
+
+```bash
+# Write (or refresh) the baseline
+lyse baseline write
+
+# Commit it, then gate only new findings
+git add .lyse/baseline.json .gitignore
+git commit -m "chore: baseline Lyse findings"
+lyse audit --scope new
+```
+
+### Exit codes
+
+- `0` — Baseline written.
+- `2` — Could not run (invalid config, unreadable files, internal error) — same as `lyse audit`.
 
 ## `lyse install [path]`
 
@@ -295,11 +339,11 @@ Scaffold a Lyse integration into your repo.
 
 ### `lyse add ci-gate [path]`
 
-Writes a GitHub Actions workflow (`.github/workflows/lyse.yml` + `.github/scripts/lyse-gate.mjs`) that audits every PR, posts a score-regression comment, and includes an advisory step surfacing the new drift on the PR's changed files (`--scope changed`).
+Writes a single GitHub Actions workflow (`.github/workflows/lyse.yml`) that runs `lyse audit --scope new` on every PR and push to `main`. The step self-gates via exit code against the committed `.lyse/baseline.json` — no separate script, no re-auditing both `main` and the PR branch to diff scores. After installing, run `lyse baseline write` and commit `.lyse/baseline.json` (and the workflow) before opening a PR.
 
 | Flag | Type | Default | Description |
 |---|---|---|---|
-| `--threshold <n>` | integer | `0` | Max allowed score drop before the gate fails. |
+| `--threshold <n>` | integer | `0` | No-op — kept for back-compat with older invocations. The diff-first gate has no score-drop threshold; it fails on any new score-contributing finding or axis regression against the baseline. |
 | `--lyse-version <v>` | string | running CLI version | Pin the Lyse version the workflow uses. |
 | `--force` | boolean | `false` | Overwrite existing files. |
 
@@ -525,4 +569,4 @@ See [`packages/core/README.md`](../../packages/core/README.md) for the full libr
 - styled-components / Emotion / Stitches: partial support; CSS-in-JS via template literals is parsed with Babel. vanilla-extract object styles (`style`, `styleVariants`, `globalStyle`, `recipe` from `@vanilla-extract/css`) are also extracted — the declaration object is serialized to CSS so the same hardcoded-value detectors run over `*.css.ts` files.
 - **Tailwind utility classes** (e.g. `bg-blue-500`, `p-4`) are recognized as compliant token references when they reference the project's `tailwind.config` scale. Arbitrary values (e.g. `bg-[#1e293b]`) remain flagged as drift since they bypass the configured scale.
 - **Token sources discovered:** Tailwind (v3 config + v4 `@theme`), DTCG (`*.tokens.json` with `$value`/`$type`), **Style Dictionary** (`{ "value", "type" }`), **Tokens Studio** (`$metadata`/`$themes` + TS type names), and **Figma Variables** (via their committed DTCG / Tokens-Studio export). The first source with a non-empty token map wins.
-- `lyse audit --format=html` emits a self-contained HTML report (inline CSS, no external requests) — a shareable, screenshot-able snapshot of the score, axes, and findings. This is a **local file you open yourself** (like the JSON/SARIF outputs) — Lyse does not ship a hosted dashboard or web UI before v1.0. For machine/CI integration, `lyse audit --format=sarif` emits a SARIF 2.1.0 file you can wire into any SARIF-aware viewer (e.g. by uploading it to GitHub's Security tab via `github/codeql-action/upload-sarif`). Each result carries a stable `partialFingerprints.primaryLocationLineHash/v1` so GitHub deduplicates findings across runs instead of re-creating them; each rule definition carries its measured `properties.precision` when calibrated; and findings dismissed by an inline `lyse-disable` directive are still emitted with an in-source `suppressions[]` entry (kept for trend data rather than dropped).
+- `lyse audit --format=html` emits a self-contained HTML report (inline CSS, no external requests) — a shareable, screenshot-able snapshot of the score, axes, and findings. This is a **local file you open yourself** (like the JSON/SARIF outputs) — Lyse does not ship a hosted dashboard or web UI before v1.0. For machine/CI integration, `lyse audit --format=sarif` emits a SARIF 2.1.0 file you can wire into any SARIF-aware viewer (e.g. by uploading it to GitHub's Security tab via `github/codeql-action/upload-sarif`). Each result carries a stable `partialFingerprints.lyseFindingId/v1` — derived from the file, rule, and normalized drifted literal (not line number or message text), so it survives reformatting and reflows — so GitHub deduplicates findings across runs instead of re-creating them; each rule definition carries its measured `properties.precision` when calibrated; and findings dismissed by an inline `lyse-disable` directive are still emitted with an in-source `suppressions[]` entry (kept for trend data rather than dropped).
