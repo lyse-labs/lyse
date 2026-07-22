@@ -41,6 +41,8 @@
     "p1-reify-dsg",
     "p2-zone-aware-rules",
     "p3-scoring-v3",
+    "p5a-class-aware-measurement",
+    "p5a-precision-ledger-real-run",
     "render-lane-axe-require",
     "rendered-token-fidelity-render",
     "runtime-axe-storybook",
