@@ -96,7 +96,7 @@ export function buildReport(perRule: RuleMeasurement[]): { md: string; json: Rul
   return { md: lines.join("\n"), json };
 }
 
-function renderBucketLine(b: LedgerBucket): string {
+export function renderBucketLine(b: LedgerBucket): string {
   const label = `${b.class} · ${b.zone}`;
   if (b.precision === null || b.n === 0) {
     return `- ${label}: not measured`;
