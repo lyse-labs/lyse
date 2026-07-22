@@ -39,7 +39,7 @@ import { runInstall } from "./commands/install.js";
 import { syncPendingEmail } from "./commands/email-prompt.js";
 import { runMcpSetup } from "./commands/mcp-setup.js";
 import { appendAuditEvent, appendCommandInvokedEvent } from "./history/ndjson-store.js";
-import { ensureGitignoreEntry } from "./util/gitignore.js";
+import { ensureLyseGitignore } from "./util/lyse-gitignore.js";
 import { withSpinner } from "./util/with-spinner.js";
 import { showActionMenu } from "./menu/action-menu.js";
 import { buildClassifyContext, populateConfidence } from "./codemods/safety.js";
@@ -452,7 +452,7 @@ const auditCommand = defineCommand({
     }
 
     // Ensure .lyse/ is in .gitignore before writing history (idempotent guard against untracked-dirty)
-    await ensureGitignoreEntry(repoRoot, ".lyse/");
+    await ensureLyseGitignore(repoRoot);
 
     // Append audit event to history (for delta display)
     const tokensScore = result.axes.find((a) => a.axis === "tokens")?.score;
