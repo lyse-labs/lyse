@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Class-aware precision ledger — real measurement (P5a).** `packages/core/rules-precision.json` is now generated from a real corpus (lyse-bench tier1 web-apps at pinned SHAs: cal.com, documenso, plane, vercel/commerce) rather than the illustrative fixture, and the ten `tokens/no-hardcoded-*` docs gain an auto-generated per-class Reliability section. The deterministic `exact` bucket — the only gate-eligible class — does **not** clear the 0.90 gate: `tokens/no-hardcoded-color` exact/app is N=84 (enough data) at 50.0% precision (Wilson lower bound 0.395), every false positive a trivial `#fff`/`#000` matching a white/black token; the nine numeric axes never emit an exact finding (on-scale = compliant, empty by design). Real drift is overwhelmingly `near` (1031 spacing) and `novel` (290 colour). New `measure:ledger` and `docs:reliability:rules` scripts. Measurement only — no score change.
+
 - **Diff-first engine (P4).** `lyse baseline write` records the accepted findings + adoption scores + graph hash to a committed `.lyse/baseline.json`; `lyse audit --scope new` reports and gates only findings absent from that baseline (stable, reformat-proof finding identity). A reformat-only commit produces zero new findings.
 - The CI gate (`lyse add ci-gate`) now runs `lyse audit --scope new` and self-gates via exit code.
 
