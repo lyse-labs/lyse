@@ -1,5 +1,15 @@
 # @lyse-labs/lyse
 
+## 0.2.0-alpha.6
+
+### Minor Changes
+
+- c4a88a4: Diff-first engine (P4): `lyse baseline write` + `lyse audit --scope new`. Recurring
+  audits report/gate only findings absent from a committed `.lyse/baseline.json`.
+  Reformat-only commits produce zero new findings. CI gate simplified to a single
+  self-gating `audit --scope new` step; SARIF fingerprints are now reformat-proof.
+- 0002d78: feat: token rules resolve values against the repo's own derived scales (exact / near / novel / unresolved) instead of a hardcoded default list; audit numbers change on real repos and scores are not comparable across this change. The colour-parser upgrade that ships with it also widens `a11y/contrast-tokens`, so repos using space-separated `rgb()`/`hsl()` or `oklch()`/`oklab()` may see new a11y findings.
+
 ## 0.2.0-alpha.5
 
 ### Minor Changes
