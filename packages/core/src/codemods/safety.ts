@@ -28,13 +28,25 @@ export function buildClassifyContext(
   tokens: TokenMap | null | undefined,
   config: LyseConfig,
   repoRoot?: string,
+  resolver?: ClassifyContext["resolver"],
 ): ClassifyContext {
   return {
     tokens: tokens ?? emptyTokenMap(),
     components: new Set(findings.filter((f) => f.axis === "components").map((f) => f.ruleId)),
     config,
     ...(repoRoot !== undefined ? { repoRoot } : {}),
+    ...(resolver !== undefined ? { resolver } : {}),
   };
+}
+
+/**
+ * The owning rule's own verdict, or `undefined` when the rule has no
+ * `classifyConfidence` hook — i.e. when it has no opinion at all. That is a
+ * different signal from a hook that deliberately answered "low", and the two
+ * must not be conflated: see `populateConfidence`.
+ */
+function hookConfidence(finding: Finding, ctx: ClassifyContext): Confidence | undefined {
+  return ruleRegistry.get(finding.ruleId)?.classifyConfidence?.(finding, ctx);
 }
 
 /**
@@ -45,21 +57,37 @@ export function buildClassifyContext(
  * This function is a thin dispatch layer, not a policy layer.
  */
 export function classifyConfidence(finding: Finding, ctx: ClassifyContext): Confidence {
-  const rule = ruleRegistry.get(finding.ruleId);
-  if (!rule?.classifyConfidence) {
-    return "low";
-  }
-  return rule.classifyConfidence(finding, ctx);
+  return hookConfidence(finding, ctx) ?? "low";
+}
+
+/** Confidence ladder, least → most confident. */
+const CONFIDENCE_ORDER: Record<Confidence, number> = { low: 0, medium: 1, high: 2 };
+
+/** Most-conservative-wins: the lower rung of the ladder. */
+function leastConfident(a: Confidence, b: Confidence): Confidence {
+  return CONFIDENCE_ORDER[a] <= CONFIDENCE_ORDER[b] ? a : b;
 }
 
 /**
- * Populate `Finding.confidence` on every finding in an AuditResult by running
- * each through the owning rule's `classifyConfidence`. The audit pipeline emits
- * findings without a confidence field (rules don't know their own classification
- * at emit time — the context needed for classification is repo-wide, not
- * rule-local). Downstream CLI consumers (score gauge, ESLint-style tag,
- * post-audit menu) all read `finding.confidence`, so this helper closes the
- * gap once per run instead of having every consumer recompute it.
+ * Populate `Finding.confidence` on every finding in an AuditResult. Downstream
+ * CLI consumers (score gauge, ESLint-style tag, post-audit menu) all read
+ * `finding.confidence`.
+ *
+ * PRECEDENCE — two independent signals, composed most-conservative-wins:
+ *   1. The confidence the rule set at emit time (resolver-driven rules; see
+ *      tokens/no-hardcoded-color). The resolver IS repo-wide context available
+ *      at emit time, so those rules already know their drift class.
+ *   2. The owning rule's `classifyConfidence` hook — the rule's own
+ *      false-positive suppression (AST role, alpha channel, token-definition
+ *      file), which repo-wide context alone cannot see.
+ *
+ * The hook may only DEMOTE the emission value, never promote it: a rule that
+ * says "this is a functional-role color, grade it low" must still win over a
+ * resolver that found an exact token match. When a finding carries NO emission
+ * value, the hook's verdict is used verbatim — unchanged behaviour for every
+ * rule that does not set one. When the owning rule has no hook at all, the
+ * emission value stands: the dispatcher's "low" safe-default is the absence of
+ * an opinion, not a demotion.
  *
  * Returns a NEW result with new finding objects (no in-place mutation) so
  * cached or reused references stay untouched.
@@ -67,9 +95,11 @@ export function classifyConfidence(finding: Finding, ctx: ClassifyContext): Conf
 export function populateConfidence(result: AuditResult, ctx: ClassifyContext): AuditResult {
   return {
     ...result,
-    findings: result.findings.map((f) => ({
-      ...f,
-      confidence: classifyConfidence(f, ctx),
-    })),
+    findings: result.findings.map((f) => {
+      const hook = hookConfidence(f, ctx);
+      const emitted = f.confidence;
+      if (emitted === undefined) return { ...f, confidence: hook ?? "low" };
+      return { ...f, confidence: hook === undefined ? emitted : leastConfident(emitted, hook) };
+    }),
   };
 }

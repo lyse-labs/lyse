@@ -3,8 +3,9 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { rule, _internal } from "../../src/rules/tokens-no-hardcoded-shadow.js";
+import { createResolver } from "../../src/graph/resolve/index.js";
 import type { RuleContext, ParsedFiles, TokenMap, ExtractedCssInJsBlock } from "../../src/types.js";
-import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
+import type { DesignSystemGraph, ZoneKind, TokenNode } from "../../src/graph/types.js";
 
 function makeCtx(repoRoot: string, tokens: TokenMap | null = null): RuleContext {
   return { repoRoot, tokens, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [] };
@@ -113,5 +114,100 @@ describe("graph-aware zone gating (P2 migration)", () => {
     const graph = graphWith({ "a/Real.css": "app" }, ["0 1px 3px rgba(0,0,0,0.1)"]);
     const res = await rule.evaluate(ctxWith(graph), files);
     expect(res.findings).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 8 — resolver-driven verdicts (mirrors Task 7's z-index/spacing pattern,
+// with the composite-axis inversion: `exact` is compliant, `near` never occurs).
+// ---------------------------------------------------------------------------
+async function runRuleWithGraph(source: string, tokens: TokenNode[]) {
+  const graph: DesignSystemGraph = {
+    schemaVersion: 1,
+    tokens,
+    components: [],
+    stories: [],
+    usage: [],
+    zones: { byFile: { "a/Real.css": "app" } },
+    extraction: { entries: [], conflicts: [] },
+  };
+  const ctx = {
+    repoRoot: "/repo",
+    tokens: null,
+    componentsModule: null,
+    componentInventory: [],
+    storyIndex: null,
+    excludePaths: [],
+    graph,
+    resolver: createResolver(graph),
+  } as unknown as RuleContext;
+  const parsed: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source }], cssInJs: [] };
+  return rule.evaluate(ctx, parsed);
+}
+
+describe("composite resolution", () => {
+  it("does not flag a shadow that exactly matches a token", async () => {
+    const res = await runRuleWithGraph(
+      ".c { box-shadow: 0 1px 2px rgba(0,0,0,.1); }",
+      [{ id: "shadow.sm", axis: "shadows", rawValue: "0 1px 2px rgba(0,0,0,.1)", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("reports a non-matching shadow as a warning and sets no emit-time confidence", async () => {
+    const res = await runRuleWithGraph(
+      ".c { box-shadow: 0 9px 30px rgba(0,0,0,.4); }",
+      [{ id: "shadow.sm", axis: "shadows", rawValue: "0 1px 2px rgba(0,0,0,.1)", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings[0]?.confidence).toBeUndefined();
+  });
+
+  it("reports a near-identical shadow as a warning too — `near` is unreachable, so `novel` must carry it", async () => {
+    const res = await runRuleWithGraph(
+      ".c { box-shadow: 0 1px 3px rgba(0,0,0,.1); }",
+      [{ id: "shadow.sm", axis: "shadows", rawValue: "0 1px 2px rgba(0,0,0,.1)", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings.every((f) => f.confidence === undefined)).toBe(true);
+  });
+
+  it("resolves `exact` through the resolver's normalization, not raw string equality", async () => {
+    const res = await runRuleWithGraph(
+      ".c { box-shadow: 0   1PX  2px   RGBA(0,0,0,.1); }",
+      [{ id: "shadow.sm", axis: "shadows", rawValue: "0 1px 2px rgba(0,0,0,.1)", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("abstains (no finding) on an opaque literal the resolver cannot judge", async () => {
+    // `none`/`unset`/`inherit`/`var()` are already filtered by `extractShadows`
+    // before the resolver is ever consulted (non-negotiable #1). `auto` is not
+    // in that upstream filter but IS one of the resolver's own opaque keywords
+    // (graph/resolve/index.ts#OPAQUE_KEYWORDS) — a value that only the resolver
+    // catches, proving `unresolved` is reachable through this rule too.
+    const res = await runRuleWithGraph(
+      ".c { box-shadow: auto; }",
+      [{ id: "shadow.sm", axis: "shadows", rawValue: "0 1px 2px rgba(0,0,0,.1)", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(0);
+  });
+});
+
+// Task 9 item 3 — the resolver path dropped the static suggestion the legacy
+// path always emitted. The text is a fixed "reference a shadow token" hint; it
+// carries no resolver-derived information, so there is no reason for the two
+// paths to differ, and `lyse handoff` reads `suggestion` verbatim.
+describe("suggestion parity between the legacy and resolver paths", () => {
+  it("emits the same static hint on the resolver path as the legacy path", async () => {
+    const res = await runRuleWithGraph(
+      ".c { box-shadow: 0 9px 30px rgba(0,0,0,.4); }",
+      [{ id: "shadow.sm", axis: "shadows", rawValue: "0 1px 2px rgba(0,0,0,.1)", source: "dtcg" }],
+    );
+    expect(res.findings[0]?.suggestion).toBe(
+      "reference a shadow token (e.g. `--shadow-sm`, `--elevation-2`) instead of a raw box-shadow",
+    );
   });
 });

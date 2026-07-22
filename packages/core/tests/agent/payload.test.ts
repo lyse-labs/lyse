@@ -48,6 +48,28 @@ describe("buildHandoffPayload — drift-class grouping", () => {
     expect(out).toContain("#ff0000");
     expect(out).not.toContain("#ff0000 →"); // no token resolved → no arrow
   });
+
+  // A `near` resolution deliberately carries a fixGroup WITHOUT a `to` (never
+  // auto-apply) but WITH a candidate suggestion. The brief must surface that
+  // candidate — it is the whole point of making `near` actionable.
+  it("surfaces a `near` candidate suggestion even though its fixGroup has no `to`", () => {
+    const near: Finding[] = [
+      { ruleId: "tokens/no-hardcoded-spacing", axis: "tokens", severity: "warning",
+        location: { file: "src/A.tsx", line: 3, column: 1 }, message: "Off-scale spacing: 17px",
+        suggestion: "probably `space.4` — verify before replacing",
+        fixGroup: { key: "tokens/no-hardcoded-spacing::17px", from: "17px" } },
+    ];
+    const out = buildHandoffPayload(near, { projectName: "acme", topN: 5, maxFilesPerRule: 3 });
+    expect(out).toContain("fix: probably `space.4` — verify before replacing");
+    expect(out).not.toContain("no single token matched 17px");
+  });
+
+  // …and a `novel` resolution (fixGroup, no `to`, no suggestion) keeps the
+  // generic pick-one-yourself instruction it always had.
+  it("keeps the generic hint when there is no suggestion to show", () => {
+    const out = buildHandoffPayload(drift, { projectName: "acme", topN: 5, maxFilesPerRule: 3 });
+    expect(out).toContain("no single token matched #ff0000");
+  });
 });
 
 describe("buildHandoffPayload — migration-scale sampling instruction", () => {

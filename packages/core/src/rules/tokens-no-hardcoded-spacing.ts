@@ -6,6 +6,7 @@ import { adaptOldCodemodResult } from "./_codemod-adapter.js";
 import { createLyseRule } from "./_rule-module.js";
 import { makeFixGroup } from "./_fix-group.js";
 import { isScored, onScale, reverseLookup } from "../graph/query.js";
+import type { ResolveClass } from "../graph/resolve/types.js";
 
 const PX_REM_EM = /\b(\d+(\.\d+)?)(px|rem|em)\b/g;
 // Only `0` and `100` are unconditionally allowed. `1` (i.e. 1px) is only
@@ -64,31 +65,105 @@ function locationFromIndex(source: string, index: number): { line: number; colum
   return { line, column };
 }
 
-function isOnScale(ctx: RuleContext, value: number): boolean {
-  if (ctx.graph) return onScale(ctx.graph, "spacing", String(value));
-  if (!ctx.tokens) return false;
-  return ctx.tokens.spacing.has(String(value));
-}
-
-function spacingCandidates(ctx: RuleContext, numKey: string, raw: string): string[] {
+/** The pre-resolver exact-match lookup, kept verbatim for legacy contexts. */
+function legacyCandidates(ctx: RuleContext, numKey: string, raw: string): string[] {
   if (ctx.graph) return reverseLookup(ctx.graph, "spacing", numKey);
   if (!ctx.tokens) return [];
   return ctx.tokens.spacing.get(raw) ?? ctx.tokens.spacing.get(numKey) ?? [];
 }
 
-function suggestSpacing(ctx: RuleContext, raw: string): string | undefined {
-  const m = raw.match(/^(\d+(\.\d+)?)(px|rem|em)$/);
-  if (!m) return undefined;
-  const candidates = spacingCandidates(ctx, m[1]!, raw);
-  if (candidates.length === 0) return undefined;
-  return candidates.length === 1 ? `consider token ${candidates[0]!}` : `candidate tokens: ${candidates.join(", ")}`;
+/** The pre-resolver on-scale check, kept verbatim for legacy contexts. */
+function legacyOnScale(ctx: RuleContext, value: number): boolean {
+  if (ctx.graph) return onScale(ctx.graph, "spacing", String(value));
+  if (!ctx.tokens) return false;
+  return ctx.tokens.spacing.has(String(value));
 }
 
-function spacingFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined {
-  const m = raw.match(/^(\d+(\.\d+)?)(px|rem|em)$/);
-  if (!m) return undefined;
-  const candidates = spacingCandidates(ctx, m[1]!, raw);
-  return makeFixGroup("tokens/no-hardcoded-spacing", raw, candidates);
+/** Human-readable candidate hint — unchanged wording from the pre-resolver rule. */
+function candidateSuggestion(tokenIds: readonly string[]): string | undefined {
+  if (tokenIds.length === 0) return undefined;
+  if (tokenIds.length === 1) return `consider token ${tokenIds[0]}`;
+  return `candidate tokens: ${tokenIds.join(", ")}`;
+}
+
+interface SpacingVerdict {
+  severity: "warning" | "info";
+  /**
+   * Left unset on the legacy (no-resolver) path so `populateConfidence`'s
+   * `classifyConfidence` hook still governs it, exactly as before the migration.
+   */
+  confidence?: Confidence;
+  suggestion?: string;
+  fixGroup?: FixGroup;
+}
+
+/**
+ * The class→finding mapping for THIS axis. Unlike the colour rule, `exact`
+ * means the value IS on the repo's own scale — compliant, not drift — so it
+ * is handled as an early skip in `spacingVerdict` rather than appearing here.
+ * `unresolved` is also a skip: the resolver could not judge this value, and
+ * (unlike colours) that abstention is legitimate here, so it stays silent.
+ */
+const VERDICT_BY_CLASS: Record<
+  Extract<ResolveClass, "near" | "novel">,
+  { severity: "warning" | "info"; confidence: Confidence }
+> = {
+  near: { severity: "warning", confidence: "medium" },
+  novel: { severity: "info", confidence: "low" },
+};
+
+/**
+ * Builds the finding fields for one detected spacing literal, or `undefined`
+ * when nothing should be emitted.
+ *
+ * Legacy path (no `ctx.resolver` — MCP `audit_file`, single-file rule
+ * contexts, codemod contexts): byte-identical to the pre-resolver rule —
+ * always `warning`, no emit-time `confidence`, suggestion + fixGroup from the
+ * flat exact-match lookup. No Tailwind-default fallback here either — that
+ * matches the pre-resolver rule, which never had one.
+ *
+ * Resolver path: `raw` (the full match, WITH its px/rem/em unit) is the
+ * resolve key — the resolver's own `numericValue` normalizes rem/em to px at
+ * a 16px root, so a literal written in rem compares correctly against a
+ * scale derived from px tokens (and vice versa). `exact` means on-scale →
+ * skip (this rule's inverse of the colour rule's `exact`, see the module
+ * docstring above `VERDICT_BY_CLASS`); that single skip also covers the
+ * fallback-scale case, where the resolver answers `exact` with no token ids
+ * because the axis has no numeric token to anchor on. `near`/`novel` get a
+ * fixGroup with NO candidates — an auto-fix is only ever safe for an `exact`
+ * match, and those are never emitted as findings on this axis — but a `near`
+ * DOES carry its candidate token in the suggestion, exactly as the colour
+ * rule does. On the fallback scale `tokenIds` is empty and there is genuinely
+ * nothing to suggest, so no suggestion is emitted.
+ */
+function spacingVerdict(ctx: RuleContext, raw: string, num: string): SpacingVerdict | undefined {
+  if (!ctx.resolver) {
+    if (legacyOnScale(ctx, parseFloat(num))) return undefined;
+    const candidates = legacyCandidates(ctx, num, raw);
+    const suggestion = candidateSuggestion(candidates);
+    const fixGroup = makeFixGroup("tokens/no-hardcoded-spacing", raw, candidates);
+    return {
+      severity: "warning",
+      ...(suggestion !== undefined && { suggestion }),
+      ...(fixGroup !== undefined && { fixGroup }),
+    };
+  }
+
+  const resolution = ctx.resolver.resolve("spacing", raw);
+  if (resolution.class === "exact" || resolution.class === "unresolved") return undefined;
+
+  const { severity, confidence } = VERDICT_BY_CLASS[resolution.class];
+  const fixGroup = makeFixGroup("tokens/no-hardcoded-spacing", raw, []);
+  const suggestion =
+    resolution.class === "near" && resolution.tokenIds[0] !== undefined
+      ? `probably \`${resolution.tokenIds[0]}\` — verify before replacing`
+      : undefined;
+  return {
+    severity,
+    confidence,
+    ...(suggestion !== undefined && { suggestion }),
+    ...(fixGroup !== undefined && { fixGroup }),
+  };
 }
 
 const evaluate = async (
@@ -109,7 +184,13 @@ const evaluate = async (
       // Zero is zero regardless of unit (0, 0px, 0rem, 0em, 0.0rem) — never drift.
       if (parseFloat(num) === 0) continue;
       if (unit === "px" && ALLOW_PX_VALUES.has(num)) continue;
-      if (isOnScale(ctx, parseFloat(num))) continue;
+      // The syntactic guards run BEFORE the resolver is consulted: they are
+      // cheap, and a value they suppress must never reach `resolve()`. An
+      // `unresolved` verdict is counted by `resolver.abstentions()`, the metric
+      // for honest silence — feeding it values that sit inside comments,
+      // `@media` blocks or `<pre>` would inflate it with things the rule was
+      // never going to report. None of these guards reads the verdict, so the
+      // set of emitted findings is unchanged by the ordering.
       // Skip px/rem/em values inside JSX attributes that carry media-query
       // breakpoints (sizes, srcSet, media). These are responsive image
       // markup — not spacing tokens. NOTE: sizes={"..."} (JSX expression
@@ -128,17 +209,18 @@ const evaluate = async (
       // spacing Tailwind arbitrary-value prefix. This suppresses font-size,
       // line-height, border-radius, width, height, transform, @media, etc.
       if (isNotSpacingPropertyContext(source, m.index)) continue;
+      const verdict = spacingVerdict(ctx, raw, num);
+      if (!verdict) continue;
       const loc = blockLine > 0 ? { line: blockLine, column: 1 } : locationFromIndex(source, m.index);
-      const suggestion = suggestSpacing(ctx, raw);
-      const fixGroup = spacingFixGroup(ctx, raw);
       findings.push({
         ruleId: "tokens/no-hardcoded-spacing",
         axis: "tokens",
-        severity: "warning",
+        severity: verdict.severity,
+        ...(verdict.confidence !== undefined && { confidence: verdict.confidence }),
         location: { file: path, line: loc.line, column: loc.column },
         message: `Off-scale spacing: ${raw}`,
-        ...(suggestion !== undefined && { suggestion }),
-        ...(fixGroup !== undefined && { fixGroup }),
+        ...(verdict.suggestion !== undefined && { suggestion: verdict.suggestion }),
+        ...(verdict.fixGroup !== undefined && { fixGroup: verdict.fixGroup }),
       });
     }
   };
@@ -179,6 +261,21 @@ const classifyConfidence: NonNullable<Rule["classifyConfidence"]> = (
   // Negative spacing is unusual — may be intentional, flag for human review
   const isNegative = /^-\d/.test(raw) || (finding.context !== undefined && /-\d+px/.test(finding.context));
   if (isNegative) return "medium";
+
+  // Resolver-aware path — see the identical note in
+  // tokens-no-hardcoded-color.ts. The flat TokenMap cannot see a spacing scale
+  // declared as CSS custom properties, so the lookup below answers "no token"
+  // for that whole class of repo and demotes every `near` from `medium` to
+  // `low`. The resolver is the same index the rule's own verdict came from, so
+  // this hook agrees with the emission instead of fighting it: on this axis the
+  // hook contributes only the negative-value demotion above.
+  if (ctx.resolver) {
+    const resolution = ctx.resolver.resolve("spacing", raw);
+    if (resolution.class === "exact") return "high";
+    // One scale step away — a real candidate exists but is not the value.
+    if (resolution.class === "near") return "medium";
+    return "low";
+  }
 
   const numMatch = raw.match(/^(\d+(\.\d+)?)(px|rem|em)$/);
   if (!numMatch) return "low";

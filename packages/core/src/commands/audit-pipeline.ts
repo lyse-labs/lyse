@@ -37,6 +37,8 @@ import { ruleObjects } from "../rules/registry.js";
 import { loadGeneratedPack } from "../rules/pack-loader.js";
 import { buildDesignSystemGraph } from "../graph/builder.js";
 import type { DesignSystemGraph } from "../graph/types.js";
+import { createResolver } from "../graph/resolve/index.js";
+import type { Resolver } from "../graph/resolve/types.js";
 import { runRules } from "../rule-runner.js";
 import { scoreAudit, resolveScoreModel } from "../scorer.js";
 import { groupFindings, computeProjection, MIGRATION_SCALE_FILE_COUNT_DEFAULT } from "../report/fix-groups.js";
@@ -88,6 +90,13 @@ export interface AuditPipelineResult {
   fileCount: number;
   /** The reified Design System Graph (P1). */
   graph: DesignSystemGraph;
+  /**
+   * The four-class value resolver the rules ran against, built once per audit.
+   * Exposed so `buildClassifyContext` can hand the SAME instance to the
+   * confidence hooks — rebuilding one there would both duplicate work and risk
+   * the hooks disagreeing with the verdicts the rules already emitted.
+   */
+  resolver: Resolver;
 }
 
 function collectTokenCss(parsed: ParsedFiles): string {
@@ -428,6 +437,13 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     .map((c) => ({ name: c.name, module: c.module, usageCount: c.usageCount }));
   const derivedInventory: ComponentInventoryEntry[] = [...componentInventory, ...seededEntries];
 
+  // Built once per audit — never per rule, never per file (perf CI job depends
+  // on this). MCP and single-file rule paths construct their own RuleContext
+  // and do not get a resolver: they keep the pre-resolver exact-match lookup and
+  // its unconditional `warning` severity, so an IDE surface never sees a finding
+  // silently downgraded by context it never had.
+  const resolver = createResolver(graph);
+
   const ctx: RuleContext = {
     repoRoot: absoluteRoot,
     tokens,
@@ -437,6 +453,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     excludePaths,
     dsSelfMode,
     graph,
+    resolver,
   };
 
   // Render stage — opt-in via flags.render. Mirrors the LLM layer degrade
@@ -714,6 +731,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
       ...(projection ? { projection } : {}),
       ...(dsSelfMode ? { dsSelfMode: true } : {}),
       extraction: graph.extraction,
+      abstentions: resolver.abstentions(),
       coverage: {
         scannedFiles: files.length,
         durationMs: Date.now() - t0,
@@ -727,5 +745,5 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   };
 
   maybePrintRefreshHint(absoluteRoot);
-  return { result, tokens, config, componentInventory: derivedInventory, fileCount: files.length, graph };
+  return { result, tokens, config, componentInventory: derivedInventory, fileCount: files.length, graph, resolver };
 }

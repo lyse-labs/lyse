@@ -34,7 +34,12 @@ function scaffold(): string {
   const dir = mkdtempSync(join(tmpdir(), "lyse-rules-config-"));
   writeFileSync(join(dir, "package.json"), '{"name":"a","dependencies":{"react":"18"}}');
   mkdirSync(join(dir, "src"));
-  writeFileSync(join(dir, "src", "a.css"), ".x { color: #ff0000; padding: 13px; }");
+  // `:root` establishes a real color token matching the literal below (never
+  // flagged itself — isCssCustomPropertyDeclaration guard) so the four-class
+  // resolver classifies `#ff0000` `exact` (severity "warning"), not `novel`
+  // (severity "info") — needed for the severity-override test below, which
+  // asserts the pre-override severity is "warning".
+  writeFileSync(join(dir, "src", "a.css"), ":root { --brand: #ff0000; } .x { color: #ff0000; padding: 13px; }");
   return dir;
 }
 

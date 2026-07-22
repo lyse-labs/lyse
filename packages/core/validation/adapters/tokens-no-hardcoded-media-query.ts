@@ -2,9 +2,33 @@ import type { OracleAdapter, FixtureFiles } from "../types.js";
 
 const PKG = JSON.stringify({ name: "fx-mq", version: "1.0.0" });
 
+// tokens/no-hardcoded-media-query is resolver-migrated (Task 7): `exact` (on
+// the repo's own breakpoint scale) is compliant, not drift. With no
+// breakpoint tokens at all the axis has no built-in fallback (unlike
+// spacing — see graph/resolve/scales.ts's DEFAULT_SCALES), so an off-scale
+// literal resolves `novel`, which this rule reports at `info` severity — and
+// this oracle only counts error/warning as a flag (audit-probe.ts#ruleFlagged),
+// so an untokened fixture would read as a false negative. A real (and
+// deliberately different) breakpoint scale is what makes 768px/1024px land
+// `near` (warning) instead.
+//
+// A DTCG tokens.json is one of several fixtures that would work: it routes
+// through loaders/tokens.ts#fromDtcg's path heuristic (`/breakpoint|screen/i`).
+// A plain `:root { --breakpoint-*: … }` custom property now lands on
+// `breakpoints` too (graph/extract/tokens.ts#axisFor applies the same
+// heuristic), as does a Tailwind v4 `@theme` block. The tokens.json is kept
+// because it exercises the DTCG loader specifically.
+const BREAKPOINT_TOKENS = JSON.stringify({
+  breakpoint: {
+    sm: { $value: "320px", $type: "dimension" },
+    lg: { $value: "1280px", $type: "dimension" },
+  },
+});
+
 function clean(): FixtureFiles {
   return {
     "package.json": PKG,
+    "src/breakpoints.tokens.json": BREAKPOINT_TOKENS,
     "src/tokens.css": "@media print { .a { display: none; } }",
   };
 }
@@ -26,8 +50,16 @@ export const mediaQueryAdapter: OracleAdapter = {
   metamorphic: [
     {
       name: "two-px-literals-both-flag",
-      a: { "package.json": PKG, "src/tokens.css": "@media (min-width: 768px) { .a { display: flex; } }" },
-      b: { "package.json": PKG, "src/tokens.css": "@media (max-width: 1024px) { .a { display: block; } }" },
+      a: {
+        "package.json": PKG,
+        "src/breakpoints.tokens.json": BREAKPOINT_TOKENS,
+        "src/tokens.css": "@media (min-width: 768px) { .a { display: flex; } }",
+      },
+      b: {
+        "package.json": PKG,
+        "src/breakpoints.tokens.json": BREAKPOINT_TOKENS,
+        "src/tokens.css": "@media (max-width: 1024px) { .a { display: block; } }",
+      },
       expectViolation: true,
     },
   ],

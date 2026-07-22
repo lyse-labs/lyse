@@ -19,6 +19,25 @@ Scans CSS / CSS-in-JS for three properties and checks them against `ctx.tokens.t
 
 **`line-height` is intentionally out of scope** — unitless line-heights (`1.4`, `1.5`) are pervasive and rarely tokenized, so flagging them is noise rather than signal.
 
+## How the value is resolved
+
+On a full `lyse audit`, every typography literal is resolved against the repo's own typography tokens, derived from the Design System Graph (Tailwind config, `*.tokens.json`, CSS custom properties, SCSS variables). Typography is treated as a **composite** axis: font-size, font-weight and letter-spacing are each a single scalar, but they are not comparable to one another on one numeric line (`13px`, `650` and `0.4px` share no unit), so the comparison is normalized string equality on the prefixed scale key and the `near` band is structurally unreachable.
+
+| Class | Meaning | What this rule emits |
+|---|---|---|
+| `exact` | Normalized string match against a typography token | nothing — this is compliant usage, not drift |
+| `near` | — | structurally unreachable on a composite axis |
+| `novel` | No typography token matches | **warning** |
+| `unresolved` | Not judgeable statically (`var(--x)`, a SCSS `$var`, a CSS-wide keyword) | nothing — counted in the audit's `meta.abstentions` |
+
+`novel` emits **warning**, not `info`. The `info` downgrade is only defensible where a `near` band exists to absorb the "one step off, probably a typo" case. With no `near` band here, `novel` collapses "one step off the type scale" and "a value unrelated to anything" into a single class; grading that whole class `info` would under-report the first, which is genuine drift and exactly what the pre-migration rule reported as `warning`.
+
+Because the comparison is string equality rather than the numeric path, the 16px-root normalization that lets the length-valued axes (spacing, radii, border widths, breakpoints) compare px against rem does **not** apply here: a `font-size: 16px` literal does not match a `1rem` font-size token.
+
+Because a composite axis has no candidate token to name, the suggestion is the same fixed remediation hint on both the resolver and the legacy path.
+
+The resolver only exists on a full `lyse audit`. Single-file surfaces — MCP `audit_file`, IDE contexts, codemod contexts — have no repo-wide scale and keep the pre-migration behaviour: an exact-match token lookup and an unconditional `warning`.
+
 ## Bad
 
 ```css

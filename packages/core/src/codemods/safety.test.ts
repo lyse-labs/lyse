@@ -132,6 +132,55 @@ describe("populateConfidence", () => {
     expect(result.findings[0]?.confidence).toBeUndefined();
   });
 
+  // The emission-set confidence (resolver-driven rules) and the rule's own
+  // classifyConfidence hook are two independent signals. Neither may silently
+  // win: the emission value is the base, and the hook may only DEMOTE it.
+  it("lets the hook DEMOTE an emission-set confidence (most conservative wins)", () => {
+    // Resolver said `exact` → high; the hook finds no matching token → low.
+    const tokens = tokenMapWith({ "#000": ["color.black"] });
+    const result = makeAuditResult([{ ...colorFinding("#fff"), confidence: "high" }]);
+    const ctx = buildClassifyContext(result.findings, tokens, EMPTY_CONFIG, "/repo");
+    const populated = populateConfidence(result, ctx);
+    expect(populated.findings[0]?.confidence).toBe("low");
+  });
+
+  it("never lets the hook PROMOTE an emission-set confidence", () => {
+    // Resolver said `novel` → low; the hook would say high (exact token match).
+    const tokens = tokenMapWith({ "#fff": ["color.white"] });
+    const result = makeAuditResult([{ ...colorFinding("#fff"), confidence: "low" }]);
+    const ctx = buildClassifyContext(result.findings, tokens, EMPTY_CONFIG, "/repo");
+    const populated = populateConfidence(result, ctx);
+    expect(populated.findings[0]?.confidence).toBe("low");
+  });
+
+  it("keeps the emission-set confidence when it is already the more conservative one", () => {
+    // Resolver said `near` → medium; the hook says high. medium wins.
+    const tokens = tokenMapWith({ "#fff": ["color.white"] });
+    const result = makeAuditResult([{ ...colorFinding("#fff"), confidence: "medium" }]);
+    const ctx = buildClassifyContext(result.findings, tokens, EMPTY_CONFIG, "/repo");
+    const populated = populateConfidence(result, ctx);
+    expect(populated.findings[0]?.confidence).toBe("medium");
+  });
+
+  it("keeps the emission-set confidence verbatim when the rule has no classifyConfidence hook", () => {
+    // The dispatcher's "low" safe-default exists for findings with NO emission
+    // value. It must not be mistaken for a hook verdict and demote one.
+    const findings: Finding[] = [
+      {
+        ruleId: "unknown-rule-id",
+        axis: "a11y",
+        severity: "warning",
+        location: { file: "x.tsx", line: 1, column: 1 },
+        message: "n/a",
+        confidence: "high",
+      },
+    ];
+    const result = makeAuditResult(findings);
+    const ctx = buildClassifyContext(findings, null, EMPTY_CONFIG);
+    const populated = populateConfidence(result, ctx);
+    expect(populated.findings[0]?.confidence).toBe("high");
+  });
+
   it("preserves non-finding AuditResult fields verbatim", () => {
     const result = makeAuditResult([colorFinding("#fff")]);
     const ctx = buildClassifyContext(result.findings, null, EMPTY_CONFIG);

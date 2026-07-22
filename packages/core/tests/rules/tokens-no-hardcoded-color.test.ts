@@ -1,8 +1,33 @@
 import { describe, it, expect } from "vitest";
 import { rule, detectInText, countCompliantColorUses } from "../../src/rules/tokens-no-hardcoded-color.js";
 import { isSchemaOrDataFile, isLowSignalValueFile, isInExampleOrSchemaValuePosition, isColorTokenDefFile } from "../../src/rules/_skip-context.js";
+import { createResolver } from "../../src/graph/resolve/index.js";
 import type { RuleContext, ParsedFiles, TokenMap } from "../../src/types.js";
-import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
+import type { DesignSystemGraph, ZoneKind, TokenNode } from "../../src/graph/types.js";
+
+async function runRuleWithGraph(source: string, tokens: TokenNode[]) {
+  const graph: DesignSystemGraph = {
+    schemaVersion: 1,
+    tokens,
+    components: [],
+    stories: [],
+    usage: [],
+    zones: { byFile: { "src/a.ts": "app" } },
+    extraction: { entries: [], conflicts: [] },
+  };
+  const ctx = {
+    repoRoot: "/repo",
+    tokens: null,
+    componentsModule: null,
+    componentInventory: [],
+    storyIndex: null,
+    excludePaths: [],
+    graph,
+    resolver: createResolver(graph),
+  } as unknown as RuleContext;
+  const parsed = { css: [], cssInJs: [], ts: [{ path: "src/a.ts", source, skipped: false }] } as unknown as ParsedFiles;
+  return rule.evaluate(ctx, parsed);
+}
 
 const emptyTokens: TokenMap = {
   colors: new Map([["#2563eb", ["color/action/primary"]]]),
@@ -1214,6 +1239,154 @@ describe("graph-aware zone gating (P2 migration)", () => {
     expect(res.findings).toHaveLength(1);
     expect(res.findings[0]!.suggestion).toContain("color.0");
     expect(res.findings[0]!.fixGroup).toMatchObject({ from: "#2563eb", to: "color.0" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 5 — resolver-driven verdicts (ctx.resolver present)
+// ---------------------------------------------------------------------------
+describe("resolver-driven verdicts", () => {
+  it("marks an exact token match high-confidence with a replacement", async () => {
+    const res = await runRuleWithGraph(
+      `const a = { color: "#3b82f6" };`,
+      [{ id: "color.brand", axis: "colors", rawValue: "#3b82f6", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings[0]?.confidence).toBe("high");
+    expect(res.findings[0]?.fixGroup?.to).toBe("color.brand");
+  });
+
+  it("marks a near-miss medium-confidence with no auto-replacement", async () => {
+    const res = await runRuleWithGraph(
+      `const a = { color: "#3c82f5" };`,
+      [{ id: "color.brand", axis: "colors", rawValue: "#3b82f6", source: "dtcg" }],
+    );
+    expect(res.findings[0]?.confidence).toBe("medium");
+    expect(res.findings[0]?.fixGroup?.to).toBeUndefined();
+  });
+
+  it("degrades a novel value to info/low instead of silencing it", async () => {
+    const res = await runRuleWithGraph(
+      `const a = { color: "#ff00aa" };`,
+      [{ id: "color.brand", axis: "colors", rawValue: "#3b82f6", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.confidence).toBe("low");
+  });
+
+  // C1 — the bracket-stripped key resolves `novel`, and the raw-value retry
+  // (`bg-[#ff00aa]`, which no color parser understands) must never be allowed
+  // to downgrade that to `unresolved` and drop the finding.
+  it("keeps the Tailwind arbitrary finding when the raw-value retry cannot be parsed", async () => {
+    const res = await runRuleWithGraph(
+      `const a = <div className="bg-[#ff00aa]" />;`,
+      [{ id: "color.brand", axis: "colors", rawValue: "#3b82f6", source: "dtcg" }],
+    );
+    const tw = res.findings.filter((f) => f.message.includes("bg-["));
+    expect(tw).toHaveLength(1);
+    expect(tw[0]?.severity).toBe("info");
+    expect(tw[0]?.confidence).toBe("low");
+    expect(tw[0]?.fixGroup?.from).toBe("#ff00aa");
+  });
+
+  it("keeps the Tailwind arbitrary finding at exact when the color IS a token", async () => {
+    const res = await runRuleWithGraph(
+      `const a = <div className="bg-[#3b82f6]" />;`,
+      [{ id: "color.brand", axis: "colors", rawValue: "#3b82f6", source: "dtcg" }],
+    );
+    const tw = res.findings.filter((f) => f.message.includes("bg-["));
+    expect(tw).toHaveLength(1);
+    expect(tw[0]?.severity).toBe("warning");
+    expect(tw[0]?.confidence).toBe("high");
+    expect(tw[0]?.fixGroup?.to).toBe("color.brand");
+  });
+
+  // C2(a) — CSS Color Level 4 space-separated syntax reaches the resolver.
+  it("resolves CSS Color Level 4 rgb(R G B) against a token", async () => {
+    const res = await runRuleWithGraph(
+      `const a = { color: "rgb(59 130 246)" };`,
+      [{ id: "color.brand", axis: "colors", rawValue: "#3b82f6", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings[0]?.confidence).toBe("high");
+  });
+
+  it("resolves CSS Color Level 4 hsl(H S% L%) — the shadcn/Tailwind v4 theme form", async () => {
+    const res = await runRuleWithGraph(
+      `const a = { color: "hsl(222.2 84% 4.9%)" };`,
+      [{ id: "color.bg", axis: "colors", rawValue: "hsl(222.2, 84%, 4.9%)", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings[0]?.confidence).toBe("high");
+  });
+
+  // C2(b) — on the colours axis `unresolved` may only ever mean "the parser
+  // does not understand this syntax", so it must degrade to novel, never
+  // silence. `rgb(300, 0, 0)` is out of gamut → parseColor returns null.
+  it("emits info instead of going silent when the color parser fails", async () => {
+    const res = await runRuleWithGraph(
+      `const a = { color: "rgb(300, 0, 0)" };`,
+      [{ id: "color.brand", axis: "colors", rawValue: "#3b82f6", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.confidence).toBe("low");
+  });
+
+  it("emits info instead of going silent when the graph has no color tokens at all", async () => {
+    const res = await runRuleWithGraph(`const a = { color: "#ff00aa" };`, []);
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("info");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// I1 — legacy (no ctx.resolver) contexts must be byte-identical to the
+// pre-resolver rule. MCP `audit_file` builds exactly such a context and
+// returns `severity` verbatim to the IDE.
+// ---------------------------------------------------------------------------
+describe("legacy (no-resolver) contexts are behaviour-preserving", () => {
+  async function runLegacy(source: string, tokens: TokenMap | null) {
+    const legacyCtx: RuleContext = {
+      repoRoot: "/repo",
+      tokens,
+      componentsModule: null,
+      componentInventory: [],
+      storyIndex: null,
+      excludePaths: [],
+    };
+    const parsed = { css: [{ path: "src/a.css", source, root: null }], cssInJs: [], ts: [] } as unknown as ParsedFiles;
+    return rule.evaluate(legacyCtx, parsed);
+  }
+
+  it("keeps severity=warning when no token matches", async () => {
+    const res = await runLegacy(".a { color: #ff00aa; }", emptyTokens);
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+  });
+
+  it("does not set confidence at emit time (populateConfidence still governs it)", async () => {
+    const res = await runLegacy(".a { color: #ff00aa; }", emptyTokens);
+    expect(res.findings[0]?.confidence).toBeUndefined();
+  });
+
+  it("keeps severity=warning and no confidence when a token DOES match", async () => {
+    const res = await runLegacy(".a { color: #2563eb; }", emptyTokens);
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings[0]?.confidence).toBeUndefined();
+    expect(res.findings[0]?.suggestion).toContain("color/action/primary");
+  });
+
+  it("keeps severity=warning when there is no token map at all", async () => {
+    const res = await runLegacy(".a { color: #ff00aa; }", null);
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings[0]?.confidence).toBeUndefined();
   });
 });
 

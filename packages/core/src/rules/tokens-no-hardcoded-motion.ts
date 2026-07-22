@@ -1,11 +1,12 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap, FixGroup } from "../types.js";
+import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, TokenMap, FixGroup, Confidence } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
 import { isInCommentOrUrl, isCssCustomPropertyDeclaration } from "./_skip-context.js";
 import { makeFixGroup } from "./_fix-group.js";
 import { isScored } from "../graph/query.js";
 import type { DesignSystemGraph } from "../graph/types.js";
+import type { ResolveClass } from "../graph/resolve/types.js";
 
 const RULE_ID = "tokens/no-hardcoded-motion";
 const MAX_FILE_BYTES = 1_000_000;
@@ -110,6 +111,120 @@ function motionScaleSets(tokens: TokenMap | null): { durations: Set<string>; eas
   return { durations, easings };
 }
 
+/**
+ * Fixed remediation hint, emitted on BOTH paths — see the identical constant in
+ * `tokens-no-hardcoded-shadow.ts`. On the `near` duration sub-path the
+ * resolver's own candidate token is strictly more specific and supersedes it.
+ */
+const STATIC_SUGGESTION =
+  "reference a motion token (e.g. `--duration-fast`, `--easing-standard`) instead of a raw value";
+
+interface MotionVerdict {
+  severity: "warning" | "info";
+  /**
+   * Left unset on the legacy (no-resolver) path so `populateConfidence`'s
+   * `classifyConfidence` hook still governs it, exactly as before the migration.
+   */
+  confidence?: Confidence;
+  suggestion?: string;
+  fixGroup?: FixGroup;
+}
+
+/**
+ * The class→finding mapping for `duration` hits. UNLIKE shadows and
+ * typography (and this axis's own `easing` hits — see `motionVerdict`),
+ * `near` IS reachable here: `graph/resolve/index.ts#classify` routes a
+ * duration literal (`motionDuration()` parses it to milliseconds) through
+ * `classifyNumeric`, the exact same numeric path `tokens-no-hardcoded-z-index.ts`
+ * and the other four Task-7 axes use — verified empirically (a single- or
+ * few-token duration scale puts a literal one `stepDistance` away in `near`,
+ * e.g. `210ms` against a lone `duration.fast: 200ms` token). An easing curve
+ * never reaches this map: `motionDuration()` returns `null` for it, so it
+ * falls to `classifyComposite`, which structurally cannot return `near` (see
+ * `motionVerdict`'s easing branch). This map is therefore never handed a
+ * class the resolver couldn't have produced for the hit it was built from.
+ */
+const DURATION_VERDICT_BY_CLASS: Record<
+  Extract<ResolveClass, "near" | "novel">,
+  { severity: "warning" | "info"; confidence: Confidence }
+> = {
+  near: { severity: "warning", confidence: "medium" },
+  novel: { severity: "info", confidence: "low" },
+};
+
+/**
+ * Builds the finding fields for one detected motion literal, or `undefined`
+ * when nothing should be emitted.
+ *
+ * Legacy path (no `ctx.resolver`): byte-identical to the pre-resolver rule —
+ * always `warning`, the static suggestion text, fixGroup from the flat
+ * `duration/` / `easing/`-prefixed scale lookup.
+ *
+ * Resolver path: the literal is passed AS WRITTEN (`hit.raw`, e.g. `"240ms"`
+ * or `"cubic-bezier(0.1, 0.2, 0.3, 0.4)"`) — the resolver's own
+ * `motionDuration()` decides whether it takes the numeric (duration) or
+ * composite (easing) sub-path; no manual `duration/`/`easing/` prefixing is
+ * needed or correct here (prefixing would double up on the canonical prefix
+ * the resolver already understands raw literals without). `exact` (on-scale,
+ * compliant) and `unresolved` (opaque literal, already filtered upstream by
+ * `extractMotion`'s `var()` guard) both skip either way. For `near`/`novel`,
+ * a `duration` hit gets the full numeric-axis mapping (`near` → warning/medium
+ * with a candidate suggestion, mirroring z-index); an `easing` hit can only
+ * ever be `novel` in practice (composite path, see `DURATION_VERDICT_BY_CLASS`'s
+ * docstring) so it gets the same info/low treatment without a `near` branch to
+ * write.
+ */
+function motionVerdict(
+  ctx: RuleContext,
+  hit: MotionHit,
+  scales: { durations: Set<string>; easings: Set<string> },
+): MotionVerdict | undefined {
+  if (!ctx.resolver) {
+    if (motionOnScale(ctx, hit, scales)) return undefined;
+    const fixGroup = motionFixGroup(ctx, hit);
+    return {
+      severity: "warning",
+      suggestion: STATIC_SUGGESTION,
+      ...(fixGroup !== undefined && { fixGroup }),
+    };
+  }
+
+  const resolution = ctx.resolver.resolve("motion", hit.raw);
+  if (resolution.class === "exact" || resolution.class === "unresolved") return undefined;
+
+  if (hit.kind === "easing") {
+    // Composite path — see the docstring above: structurally never `near`.
+    // With no `near` band to absorb the "one bezier parameter off" case,
+    // `novel` here means both that and "an unrelated curve", so it emits
+    // `warning` (as the pre-migration rule did) and leaves `confidence` to
+    // `populateConfidence`'s hook. Only durations, which really do reach
+    // `near`, keep the numeric `near`/`novel` split below.
+    if (resolution.class !== "novel") return undefined;
+    const fixGroup = makeFixGroup(RULE_ID, hit.raw, []);
+    return {
+      severity: "warning",
+      suggestion: STATIC_SUGGESTION,
+      ...(fixGroup !== undefined && { fixGroup }),
+    };
+  }
+
+  const { severity, confidence } = DURATION_VERDICT_BY_CLASS[resolution.class];
+  const fixGroup = makeFixGroup(RULE_ID, hit.raw, []);
+  // A `near` names the actual candidate token; that is strictly more useful
+  // than the generic hint, so it supersedes it. A `novel` has no candidate to
+  // name and falls back to the hint the legacy path always emitted.
+  const suggestion =
+    resolution.class === "near" && resolution.tokenIds[0] !== undefined
+      ? `probably \`${resolution.tokenIds[0]}\` — verify before replacing`
+      : STATIC_SUGGESTION;
+  return {
+    severity,
+    confidence,
+    suggestion,
+    ...(fixGroup !== undefined && { fixGroup }),
+  };
+}
+
 function readFileIfSmall(absPath: string): string | null {
   try {
     const stat = statSync(absPath);
@@ -147,18 +262,18 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
     if (ctx.graph && !isScored(ctx.graph, path)) continue;
     for (const hit of extractMotion(source)) {
       opportunities++;
-      const onScale = motionOnScale(ctx, hit, { durations, easings });
-      if (onScale) continue;
+      const verdict = motionVerdict(ctx, hit, { durations, easings });
+      if (!verdict) continue;
       const what = hit.kind === "duration" ? "duration" : "easing curve";
-      const fixGroup = motionFixGroup(ctx, hit);
       findings.push({
         ruleId: RULE_ID,
         axis: "tokens",
-        severity: "warning",
+        severity: verdict.severity,
+        ...(verdict.confidence !== undefined && { confidence: verdict.confidence }),
         location: { file: path, line: lineFromIndex(source, hit.index), column: 1 },
         message: `Hardcoded motion ${what} \`${hit.raw}\` — motion should come from a duration/easing token scale`,
-        suggestion: "reference a motion token (e.g. `--duration-fast`, `--easing-standard`) instead of a raw value",
-        ...(fixGroup !== undefined && { fixGroup }),
+        ...(verdict.suggestion !== undefined && { suggestion: verdict.suggestion }),
+        ...(verdict.fixGroup !== undefined && { fixGroup: verdict.fixGroup }),
       });
     }
   }

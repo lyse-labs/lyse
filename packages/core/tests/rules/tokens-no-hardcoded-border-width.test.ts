@@ -3,8 +3,9 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { rule } from "../../src/rules/tokens-no-hardcoded-border-width.js";
+import { createResolver } from "../../src/graph/resolve/index.js";
 import type { RuleContext, ParsedFiles, TokenMap, ExtractedCssInJsBlock } from "../../src/types.js";
-import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
+import type { DesignSystemGraph, ZoneKind, TokenNode } from "../../src/graph/types.js";
 
 function makeCtx(repoRoot: string, tokens: TokenMap | null = null): RuleContext {
   return { repoRoot, tokens, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [] };
@@ -91,5 +92,89 @@ describe("graph-aware zone gating (P2 migration)", () => {
     const graph = graphWith({ "a/Real.css": "app" }, ["3px"]);
     const res = await rule.evaluate(ctxWith(graph), files);
     expect(res.findings).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 7 — resolver-driven verdicts (mirrors Task 6's spacing migration)
+// ---------------------------------------------------------------------------
+async function runRuleWithGraph(source: string, tokens: TokenNode[]) {
+  const graph: DesignSystemGraph = {
+    schemaVersion: 1,
+    tokens,
+    components: [],
+    stories: [],
+    usage: [],
+    zones: { byFile: { "a/Real.css": "app" } },
+    extraction: { entries: [], conflicts: [] },
+  };
+  const ctx = {
+    repoRoot: "/repo",
+    tokens: null,
+    componentsModule: null,
+    componentInventory: [],
+    storyIndex: null,
+    excludePaths: [],
+    graph,
+    resolver: createResolver(graph),
+  } as unknown as RuleContext;
+  const parsed: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source }], cssInJs: [] };
+  return rule.evaluate(ctx, parsed);
+}
+
+describe("derived scales", () => {
+  it("does not flag a border-width on the repo's own scale", async () => {
+    const res = await runRuleWithGraph(
+      ".x{border-width:5px}",
+      [{ id: "borderWidth.md", axis: "borderWidth", rawValue: "5", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("degrades a far-off border-width to info/low", async () => {
+    const res = await runRuleWithGraph(
+      ".x{border-width:413px}",
+      [{ id: "borderWidth.md", axis: "borderWidth", rawValue: "5", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.confidence).toBe("low");
+  });
+
+  it("flags a one-step-off border-width as warning and names its candidate token", async () => {
+    const res = await runRuleWithGraph(
+      ".x{border-width:2px}",
+      [
+        { id: "borderWidth.thin", axis: "borderWidth", rawValue: "1px", source: "dtcg" },
+        { id: "borderWidth.thick", axis: "borderWidth", rawValue: "4px", source: "dtcg" },
+      ],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings[0]?.confidence).toBe("medium");
+    expect(res.findings[0]?.suggestion).toBe("probably `borderWidth.thin` — verify before replacing");
+  });
+
+  it("degrades to info on a zero-token graph — no default border-width scale (behaviour change vs. pre-migration warning)", async () => {
+    const res = await runRuleWithGraph(".x{border-width:413px}", []);
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("info");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Regression — a `novel` verdict must keep the static remediation hint the
+// pre-migration rule always emitted (see reporters/terminal.ts:42).
+// ---------------------------------------------------------------------------
+describe("novel keeps the static suggestion", () => {
+  it("emits the border-width hint on a far-off value", async () => {
+    const res = await runRuleWithGraph(
+      ".x{border-width:413px}",
+      [{ id: "borderWidth.md", axis: "borderWidth", rawValue: "5", source: "dtcg" }],
+    );
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.suggestion).toBe(
+      "reference a border-width token (e.g. `--border-width-thick`) instead of a raw length",
+    );
   });
 });

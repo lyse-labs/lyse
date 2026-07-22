@@ -1,0 +1,269 @@
+import { describe, it, expect } from "vitest";
+import { deriveScale, deriveScaleInfo, stepDistance, numericValue, DEFAULT_SPACING_SCALE } from "./scales.js";
+import type { DesignSystemGraph, TokenNode } from "../types.js";
+
+function graphWith(tokens: TokenNode[]): DesignSystemGraph {
+  return {
+    schemaVersion: 1,
+    tokens,
+    components: [],
+    stories: [],
+    usage: [],
+    zones: { byFile: {} },
+    extraction: { entries: [], conflicts: [] },
+  };
+}
+
+describe("deriveScale", () => {
+  it("uses the repo's own spacing values when it defines any", () => {
+    const g = graphWith([
+      { id: "space.md", axis: "spacing", rawValue: "17", source: "dtcg" },
+      { id: "space.sm", axis: "spacing", rawValue: "9", source: "dtcg" },
+    ]);
+    expect(deriveScale(g, "spacing")).toEqual([9, 17]);
+  });
+
+  it("falls back to defaults only when the axis has zero tokens", () => {
+    const g = graphWith([{ id: "c.brand", axis: "colors", rawValue: "#fff", source: "dtcg" }]);
+    expect(deriveScale(g, "spacing")).toEqual([...DEFAULT_SPACING_SCALE]);
+  });
+
+  // `isFallback` is the ONLY correct spelling of "this axis has no scale of its
+  // own": a token whose value is non-numeric counts for "the axis has tokens"
+  // but not for "the axis has a scale", and consumers that re-derived the
+  // condition got that divergence wrong.
+  it("reports isFallback for an axis whose only token is non-numeric", () => {
+    const g = graphWith([
+      { id: "space.auto", axis: "spacing", rawValue: "auto", source: "dtcg" },
+    ]);
+    const info = deriveScaleInfo(g, "spacing");
+    expect(info.isFallback).toBe(true);
+    expect(info.scale).toEqual([...DEFAULT_SPACING_SCALE]);
+  });
+
+  it("does not report isFallback once one token yields a numeric value", () => {
+    const g = graphWith([
+      { id: "space.auto", axis: "spacing", rawValue: "auto", source: "dtcg" },
+      { id: "space.sm", axis: "spacing", rawValue: "4", source: "dtcg" },
+    ]);
+    expect(deriveScaleInfo(g, "spacing")).toEqual({ scale: [4], isFallback: false });
+  });
+
+  it("reports isFallback for an axis with no default scale at all", () => {
+    expect(deriveScaleInfo(graphWith([]), "radii")).toEqual({ scale: [], isFallback: true });
+  });
+
+  it("ignores non-numeric raw values on numeric axes", () => {
+    const g = graphWith([
+      { id: "space.a", axis: "spacing", rawValue: "4", source: "dtcg" },
+      { id: "space.b", axis: "spacing", rawValue: "auto", source: "dtcg" },
+    ]);
+    expect(deriveScale(g, "spacing")).toEqual([4]);
+  });
+
+  it("de-duplicates and sorts ascending", () => {
+    const g = graphWith([
+      { id: "a", axis: "spacing", rawValue: "8", source: "dtcg" },
+      { id: "b", axis: "spacing", rawValue: "4", source: "tailwind-v4" },
+      { id: "c", axis: "spacing", rawValue: "8", source: "css-custom-property" },
+    ]);
+    expect(deriveScale(g, "spacing")).toEqual([4, 8]);
+  });
+
+  it("is order-independent: token array order doesn't change the result", () => {
+    const gAscending = graphWith([
+      { id: "a", axis: "spacing", rawValue: "4", source: "dtcg" },
+      { id: "b", axis: "spacing", rawValue: "8", source: "dtcg" },
+      { id: "c", axis: "spacing", rawValue: "2", source: "dtcg" },
+    ]);
+    const gShuffled = graphWith([
+      { id: "c", axis: "spacing", rawValue: "2", source: "dtcg" },
+      { id: "b", axis: "spacing", rawValue: "8", source: "dtcg" },
+      { id: "a", axis: "spacing", rawValue: "4", source: "dtcg" },
+    ]);
+    expect(deriveScale(gShuffled, "spacing")).toEqual(deriveScale(gAscending, "spacing"));
+  });
+
+  it("derives a radii scale from px-suffixed raw values instead of dropping them", () => {
+    const g = graphWith([
+      { id: "radii.sm", axis: "radii", rawValue: "4px", source: "dtcg" },
+      { id: "radii.md", axis: "radii", rawValue: "8px", source: "dtcg" },
+    ]);
+    expect(deriveScale(g, "radii")).toEqual([4, 8]);
+  });
+});
+
+describe("numericValue", () => {
+  it("extracts the number from a px-suffixed value", () => {
+    expect(numericValue("4px")).toBe(4);
+  });
+
+  it("extracts the number from a rem-suffixed value, normalised to px at a 16px root", () => {
+    expect(numericValue("1rem")).toBe(16);
+  });
+
+  it("extracts the number from a fractional rem value, normalised to px", () => {
+    expect(numericValue("0.5rem")).toBe(8);
+  });
+
+  it("extracts the number from a leading-dot decimal", () => {
+    expect(numericValue(".5")).toBe(0.5);
+  });
+
+  it("extracts the number from a bare numeric string", () => {
+    expect(numericValue("16")).toBe(16);
+  });
+
+  it("extracts and normalises a duration/ms value", () => {
+    expect(numericValue("duration/200ms")).toBe(200);
+  });
+
+  it("extracts and normalises a duration/s value to milliseconds", () => {
+    expect(numericValue("duration/0.2s")).toBe(200);
+  });
+
+  it("returns null for an easing/ value", () => {
+    expect(numericValue("easing/cubic-bezier(0,0,1,1)")).toBeNull();
+  });
+
+  it("returns null for a non-numeric keyword", () => {
+    expect(numericValue("auto")).toBeNull();
+  });
+
+  it("returns null for an empty string", () => {
+    expect(numericValue("")).toBeNull();
+  });
+});
+
+describe("numericValue — px normalization at a 16px root", () => {
+  it("normalises rem and em to px, leaves px and unitless as px", () => {
+    expect(numericValue("0.25rem")).toBe(4);
+    expect(numericValue("1rem")).toBe(16);
+    expect(numericValue("1em")).toBe(16);
+    expect(numericValue("4px")).toBe(4);
+    expect(numericValue("4")).toBe(4);
+  });
+
+  it("still rejects relative units and malformed values", () => {
+    expect(numericValue("50%")).toBeNull();
+    expect(numericValue("100vh")).toBeNull();
+    expect(numericValue("16px solid")).toBeNull();
+    expect(numericValue("1e3")).toBeNull();
+    expect(numericValue("auto")).toBeNull();
+    expect(numericValue("")).toBeNull();
+  });
+
+  it("still normalises durations to milliseconds, unaffected by the px change", () => {
+    expect(numericValue("duration/200ms")).toBe(200);
+    expect(numericValue("duration/0.2s")).toBe(200);
+  });
+});
+
+describe("deriveScale — rem-authored spacing axis", () => {
+  it("derives a px scale from rem raw values", () => {
+    const g = graphWith([
+      { id: "space.xs", axis: "spacing", rawValue: "0.25rem", source: "dtcg" },
+      { id: "space.sm", axis: "spacing", rawValue: "0.5rem", source: "dtcg" },
+      { id: "space.md", axis: "spacing", rawValue: "1rem", source: "dtcg" },
+    ]);
+    expect(deriveScale(g, "spacing")).toEqual([4, 8, 16]);
+  });
+});
+
+describe("stepDistance", () => {
+  const scale = [0, 4, 8, 16, 32];
+
+  it("returns 0 for an on-scale value", () => {
+    expect(stepDistance(scale, 8)).toBe(0);
+  });
+
+  it("returns 1 for a value between two adjacent entries", () => {
+    expect(stepDistance(scale, 6)).toBe(1);
+  });
+
+  it("returns 1 for a value just beyond the top of the scale", () => {
+    expect(stepDistance(scale, 40)).toBe(1);
+  });
+
+  it("grows for values far off the scale", () => {
+    expect(stepDistance(scale, 1000)).toBeGreaterThan(1);
+  });
+
+  it("returns Infinity for an empty scale", () => {
+    expect(stepDistance([], 8)).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  // A scale with a single entry has no adjacent gap, so it has no step unit —
+  // any "N steps away" it reported would be manufactured. Only the exact hit is
+  // knowable; everything else is Infinity, which classifyNumeric reads as
+  // `novel` rather than a confident `near`.
+  describe("single-entry scale has no step unit", () => {
+    it("returns 0 for the on-scale value", () => {
+      expect(stepDistance([5], 5)).toBe(0);
+    });
+
+    it("returns Infinity for a value close to the entry", () => {
+      expect(stepDistance([5], 6)).toBe(Number.POSITIVE_INFINITY);
+    });
+
+    it("returns Infinity for a value far from the entry", () => {
+      expect(stepDistance([5], 100000)).toBe(Number.POSITIVE_INFINITY);
+    });
+
+    it("returns Infinity when the entry is 0 (no divide-by-zero path left)", () => {
+      expect(stepDistance([0], 100)).toBe(Number.POSITIVE_INFINITY);
+    });
+
+    it("never puts a value inside (0, 2×entry) one step away", () => {
+      // The exact regression: `zIndex.modal = 700` made `z-index: 33` `near`.
+      expect(stepDistance([700], 33)).toBe(Number.POSITIVE_INFINITY);
+      expect(stepDistance([0.4], 0.02)).toBe(Number.POSITIVE_INFINITY);
+    });
+  });
+
+  it("keeps two-entry scales measurable (the boundary case)", () => {
+    expect(stepDistance([700, 800], 730)).toBe(1);
+    expect(stepDistance([700, 800], 700)).toBe(0);
+  });
+});
+
+describe("numericValue — unit allow-list (rejects relative and malformed values)", () => {
+  it("accepts unitless, px, rem and em — rem/em normalised to px at a 16px root", () => {
+    expect(numericValue("16")).toBe(16);
+    expect(numericValue("4px")).toBe(4);
+    expect(numericValue("1rem")).toBe(16);
+    expect(numericValue("0.5em")).toBe(8);
+    expect(numericValue(".5")).toBe(0.5);
+    expect(numericValue("-4px")).toBe(-4);
+  });
+
+  it("rejects relative units that would land on an absolute scale", () => {
+    // --radius-full: 50% next to --radius-sm: 4px must not derive [4, 50].
+    expect(numericValue("50%")).toBeNull();
+    expect(numericValue("100vh")).toBeNull();
+    expect(numericValue("50vw")).toBeNull();
+    expect(numericValue("2ch")).toBeNull();
+  });
+
+  it("rejects compound and malformed values instead of truncating them", () => {
+    expect(numericValue("16px solid")).toBeNull();
+    expect(numericValue("1e3")).toBeNull();
+    expect(numericValue("auto")).toBeNull();
+    expect(numericValue("")).toBeNull();
+  });
+
+  it("still normalises durations to milliseconds", () => {
+    expect(numericValue("duration/200ms")).toBe(200);
+    expect(numericValue("duration/0.2s")).toBe(200);
+    expect(numericValue("duration/2s")).toBe(2000);
+    expect(numericValue("easing/cubic-bezier(0,0,1,1)")).toBeNull();
+  });
+
+  it("does not mix a percentage radius into a pixel radii scale", () => {
+    const g = graphWith([
+      { id: "radii.sm", axis: "radii", rawValue: "4px", source: "css-custom-property" },
+      { id: "radii.full", axis: "radii", rawValue: "50%", source: "css-custom-property" },
+    ]);
+    expect(deriveScale(g, "radii")).toEqual([4]);
+  });
+});

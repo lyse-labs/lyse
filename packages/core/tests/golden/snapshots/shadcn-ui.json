@@ -3,7 +3,7 @@
   "axes": [
     {
       "axis": "tokens",
-      "findings": 97,
+      "findings": 95,
       "opportunities": 3903,
       "score": 98
     },
@@ -39,14 +39,15 @@
     }
   ],
   "finalScore": 86,
-  "findingsCount": 1834,
-  "findingsDigest": "e695938730c90da5dfe950c87e297ced2adbfc7fba204db77864d590f1d0fb94",
+  "findingsCount": 1832,
+  "findingsDigest": "ead6f43717e7538739b5dccf0b07783f768f2c34a9d3a3ccc368bc552f787f7d",
   "grade": {
     "autoFailed": false,
     "grade": "A",
     "reasons": []
   },
   "meta": {
+    "abstentions": 2,
     "coverage": {
       "configPath": null,
       "scannedFiles": 3388

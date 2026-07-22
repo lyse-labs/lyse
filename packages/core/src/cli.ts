@@ -144,6 +144,10 @@ async function runAudit(repoRoot: string, flags?: AuditFlags): Promise<AuditOutc
     pipeline.tokens,
     pipeline.config,
     repoRoot,
+    // The SAME resolver the rules ran against. Without it the token-axis hooks
+    // fall back to the flat TokenMap, which cannot see CSS custom properties or
+    // SCSS variables, and demote a genuine `exact` to `low`.
+    pipeline.resolver,
   );
   const result = populateConfidence(pipeline.result, ctx);
   return {

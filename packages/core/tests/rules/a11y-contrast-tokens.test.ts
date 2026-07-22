@@ -214,3 +214,39 @@ describe("a11y/contrast-tokens", () => {
     expect(result.findings).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Characterization — the colour-parser upgrade shipped on this branch for the
+// tokens axis (CSS Color Level 4 space-separated `rgb()`/`hsl()`, plus
+// `oklch()`/`oklab()`) also widens THIS rule: `contrastRatio` calls the same
+// `parseColor`, so pairs written in modern syntax used to be skipped
+// (unparseable → null → no finding) and are now evaluated. Disclosed in
+// CHANGELOG under [Unreleased]; pinned here so it can never regress silently
+// in either direction.
+// ---------------------------------------------------------------------------
+describe("a11y/contrast-tokens — modern colour syntax is now evaluated", () => {
+  it("flags a low-contrast pair written in space-separated rgb()", async () => {
+    const parsed = makeParsed({
+      css: [{ path: "src/a.css", source: ".low { color: rgb(200 200 200); background-color: rgb(255 255 255); }" }],
+    });
+    const result = await rule.evaluate(makeCtx(), parsed);
+    expect(result.findings.length).toBeGreaterThan(0);
+    expect(result.findings[0]!.ruleId).toBe("a11y/contrast-tokens");
+  });
+
+  it("flags a low-contrast pair written in oklch()", async () => {
+    const parsed = makeParsed({
+      css: [{ path: "src/a.css", source: ".low { color: oklch(0.85 0 0); background-color: oklch(1 0 0); }" }],
+    });
+    const result = await rule.evaluate(makeCtx(), parsed);
+    expect(result.findings.length).toBeGreaterThan(0);
+  });
+
+  it("still passes a high-contrast pair in the same modern syntax", async () => {
+    const parsed = makeParsed({
+      css: [{ path: "src/a.css", source: ".ok { color: rgb(17 17 17); background-color: rgb(255 255 255); }" }],
+    });
+    const result = await rule.evaluate(makeCtx(), parsed);
+    expect(result.findings).toHaveLength(0);
+  });
+});

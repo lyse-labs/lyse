@@ -46,6 +46,8 @@ lyse share        # copy a Markdown summary to your clipboard
 
 A Health Score (0–100) across **6 axes** — tokens, a11y, components, stories, ai-surface, ai-governance — from deterministic static rules. Each axis is an opportunity-weighted clean-adoption ratio (`scoring-v3`); axes need 30+ opportunities to count. CMMI-style maturity tier (Foundational → Autonomous) mapped from the score. No LLM, no network, fully local by default. The previous severity-weighted formula stays reachable for one minor release via `--score-model v2` — scores are not comparable across the two. Full formula and per-rule docs in [`docs/`](./docs/).
 
+Token drift is judged against **your** scale, not a built-in one: every hardcoded value is resolved against the token scales Lyse derives from your repo (Tailwind config, `*.tokens.json`, CSS custom properties, SCSS variables) and classified `exact` / `near` / `novel` / `unresolved`. A value on your own scale is not drift; a value close to a token is reported with its candidate; a value unlike anything is reported but not claimed as drift; an expression Lyse cannot judge statically is not reported at all and is counted in `meta.abstentions`.
+
 The optional **render layer** (`lyse audit --render`) runs additional checks against a pre-built Storybook (`storybook-static/` or a URL): `tokens/rendered-token-fidelity` (CSS custom property drift) and `a11y/runtime-axe` (axe-core a11y violations). Both are experimental and do not affect the Health Score.
 
 `lyse explain --score` also reports an **AI-Governance Maturity Level** (L0–L5, by presence of AI affordances — marker components, AI tokens, interaction patterns, governance docs). Deterministic by default; an optional LLM tier reads semantic affordances for the harder cases.

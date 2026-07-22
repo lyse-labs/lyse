@@ -3,8 +3,9 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { rule, _internal } from "../../src/rules/tokens-no-hardcoded-motion.js";
+import { createResolver } from "../../src/graph/resolve/index.js";
 import type { RuleContext, ParsedFiles, TokenMap, ExtractedCssInJsBlock } from "../../src/types.js";
-import type { DesignSystemGraph, ZoneKind } from "../../src/graph/types.js";
+import type { DesignSystemGraph, ZoneKind, TokenNode } from "../../src/graph/types.js";
 
 function makeCtx(repoRoot: string, tokens: TokenMap | null = null): RuleContext {
   return { repoRoot, tokens, componentsModule: null, componentInventory: [], storyIndex: null, excludePaths: [] };
@@ -140,5 +141,142 @@ describe("graph-aware zone gating (P2 migration)", () => {
     const graph = graphWith({ "a/Real.css": "app" }, ["easing/cubic-bezier(0.4, 0, 0.2, 1)"]);
     const res = await rule.evaluate(ctxWith(graph), files);
     expect(res.findings).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 8 — resolver-driven verdicts. Motion is split across two resolver
+// sub-paths (graph/resolve/index.ts#classify): a duration literal is parsed
+// to milliseconds and takes the NUMERIC path (same as z-index/spacing — `near`
+// IS reachable there), while an easing curve takes the COMPOSITE path (never
+// `near`, like shadows/typography). Both are exercised below.
+// ---------------------------------------------------------------------------
+async function runRuleWithGraph(source: string, tokens: TokenNode[]) {
+  const graph: DesignSystemGraph = {
+    schemaVersion: 1,
+    tokens,
+    components: [],
+    stories: [],
+    usage: [],
+    zones: { byFile: { "a/Real.css": "app" } },
+    extraction: { entries: [], conflicts: [] },
+  };
+  const ctx = {
+    repoRoot: "/repo",
+    tokens: null,
+    componentsModule: null,
+    componentInventory: [],
+    storyIndex: null,
+    excludePaths: [],
+    graph,
+    resolver: createResolver(graph),
+  } as unknown as RuleContext;
+  const parsed: ParsedFiles = { ts: [], css: [{ path: "a/Real.css", source }], cssInJs: [] };
+  return rule.evaluate(ctx, parsed);
+}
+
+describe("duration sub-path (numeric — near IS reachable)", () => {
+  it("does not flag a duration that exactly matches a token", async () => {
+    const res = await runRuleWithGraph(
+      ".x { transition-duration: 200ms; }",
+      [{ id: "motion.fast", axis: "motion", rawValue: "duration/200ms", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("degrades a far-off duration to info/low when there is no real scale", async () => {
+    const res = await runRuleWithGraph(".x { transition-duration: 5000ms; }", []);
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.confidence).toBe("low");
+  });
+
+  it("flags a one-step-off duration as warning/medium and names its candidate token", async () => {
+    const res = await runRuleWithGraph(
+      ".x { transition-duration: 210ms; }",
+      [
+        { id: "motion.fast", axis: "motion", rawValue: "duration/200ms", source: "dtcg" },
+        { id: "motion.slow", axis: "motion", rawValue: "duration/400ms", source: "dtcg" },
+      ],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings[0]?.confidence).toBe("medium");
+    expect(res.findings[0]?.suggestion).toBe("probably `motion.fast` — verify before replacing");
+  });
+
+  // A one-token duration axis has no adjacent gap, so it has no step unit and
+  // `near` is not a claim the data supports — see graph/resolve/scales.ts.
+  it("stays novel/info when the axis has a single duration token", async () => {
+    const res = await runRuleWithGraph(
+      ".x { transition-duration: 210ms; }",
+      [{ id: "motion.fast", axis: "motion", rawValue: "duration/200ms", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("info");
+    expect(res.findings[0]?.confidence).toBe("low");
+  });
+});
+
+describe("easing sub-path (composite — near is unreachable)", () => {
+  it("does not flag an easing curve that exactly matches a token", async () => {
+    const res = await runRuleWithGraph(
+      ".x { transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }",
+      [{ id: "motion.standard", axis: "motion", rawValue: "easing/cubic-bezier(0.4, 0, 0.2, 1)", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("reports a non-matching easing curve as a warning and sets no emit-time confidence", async () => {
+    const res = await runRuleWithGraph(
+      ".x { transition-timing-function: cubic-bezier(0.1, 0.7, 1, 0.1); }",
+      [{ id: "motion.standard", axis: "motion", rawValue: "easing/cubic-bezier(0.4, 0, 0.2, 1)", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings[0]?.confidence).toBeUndefined();
+  });
+
+  it("reports an easing curve one parameter off its token as a warning too — `near` is unreachable on this sub-path", async () => {
+    const res = await runRuleWithGraph(
+      ".x { transition-timing-function: cubic-bezier(0.4, 0, 0.2, 0.9); }",
+      [{ id: "motion.standard", axis: "motion", rawValue: "easing/cubic-bezier(0.4, 0, 0.2, 1)", source: "dtcg" }],
+    );
+    expect(res.findings).toHaveLength(1);
+    expect(res.findings[0]?.severity).toBe("warning");
+    expect(res.findings.every((f) => f.confidence !== "medium")).toBe(true);
+  });
+});
+
+// Task 9 item 3 — see the identical block in tokens-no-hardcoded-shadow.test.ts.
+// Durations additionally have a resolver-derived candidate on `near`; that one
+// is strictly more specific, so it must win over the static hint.
+describe("suggestion parity between the legacy and resolver paths", () => {
+  it("emits the static hint for a novel easing curve", async () => {
+    const res = await runRuleWithGraph(
+      ".x { transition-timing-function: cubic-bezier(0.1, 0.7, 1, 0.1); }",
+      [{ id: "motion.standard", axis: "motion", rawValue: "easing/cubic-bezier(0.4, 0, 0.2, 1)", source: "dtcg" }],
+    );
+    expect(res.findings[0]?.suggestion).toBe(
+      "reference a motion token (e.g. `--duration-fast`, `--easing-standard`) instead of a raw value",
+    );
+  });
+
+  it("emits the static hint for a novel duration", async () => {
+    const res = await runRuleWithGraph(".x { transition-duration: 5000ms; }", []);
+    expect(res.findings[0]?.suggestion).toBe(
+      "reference a motion token (e.g. `--duration-fast`, `--easing-standard`) instead of a raw value",
+    );
+  });
+
+  it("keeps the resolver's candidate token on `near`, not the static hint", async () => {
+    const res = await runRuleWithGraph(
+      ".x { transition-duration: 210ms; }",
+      [
+        { id: "motion.fast", axis: "motion", rawValue: "duration/200ms", source: "dtcg" },
+        { id: "motion.slow", axis: "motion", rawValue: "duration/400ms", source: "dtcg" },
+      ],
+    );
+    expect(res.findings[0]?.suggestion).toBe("probably `motion.fast` — verify before replacing");
   });
 });

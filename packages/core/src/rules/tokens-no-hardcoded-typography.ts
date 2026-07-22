@@ -109,6 +109,66 @@ function typographyFixGroup(ctx: RuleContext, hit: TypoHit): FixGroup | undefine
   return makeFixGroup(RULE_ID, hit.scaleKey, candidates);
 }
 
+/**
+ * Fixed remediation hint, emitted on BOTH paths — see the identical constant in
+ * `tokens-no-hardcoded-shadow.ts`. It carries no resolver-derived information,
+ * so the resolver path has no reason to say less than the legacy path did.
+ */
+const STATIC_SUGGESTION =
+  "reference a typography token (e.g. `--font-size-md`, `--font-weight-semibold`) instead of a raw value";
+
+interface TypographyVerdict {
+  severity: "warning";
+  suggestion?: string;
+  fixGroup?: FixGroup;
+}
+
+/**
+ * Builds the finding fields for one detected typography literal, or
+ * `undefined` when nothing should be emitted.
+ *
+ * Legacy path (no `ctx.resolver`): byte-identical to the pre-resolver rule —
+ * always `warning`, the static suggestion text, fixGroup from the flat
+ * `hit.scaleKey` lookup (already prefixed `weight/` / `letter-spacing/` where
+ * relevant — see `extractTypography`).
+ *
+ * Resolver path: font-size/font-weight/letter-spacing are each a single
+ * scalar, but they are NOT comparable across each other on one numeric line —
+ * `13px` and `650` and `0.4px` share no unit — so this axis is routed through
+ * `classifyComposite` (string equality on `hit.scaleKey`), exactly like
+ * shadows. It never returns `near`: only `exact` (on-scale, compliant, skip),
+ * `novel`, and `unresolved` (opaque literal, already filtered out upstream by
+ * `extractTypography`'s `var()` guard). No `near` branch is written — there is
+ * nothing to write.
+ *
+ * `novel` emits `warning`, not `info`. Without a reachable `near` band, `novel`
+ * on this axis collapses "one step off the type scale" and "a value unrelated
+ * to anything" into a single class; grading it `info` would under-report the
+ * former, which is genuine drift and what the pre-migration rule reported as
+ * `warning`. No emit-time `confidence` is set, so `populateConfidence`'s hook
+ * governs it as it did before the migration.
+ */
+function typographyVerdict(ctx: RuleContext, hit: TypoHit): TypographyVerdict | undefined {
+  if (!ctx.resolver) {
+    if (typographyOnScale(ctx, hit.scaleKey)) return undefined;
+    const fixGroup = typographyFixGroup(ctx, hit);
+    return {
+      severity: "warning",
+      suggestion: STATIC_SUGGESTION,
+      ...(fixGroup !== undefined && { fixGroup }),
+    };
+  }
+
+  const resolution = ctx.resolver.resolve("typography", hit.scaleKey);
+  if (resolution.class !== "novel") return undefined;
+  const fixGroup = makeFixGroup(RULE_ID, hit.scaleKey, []);
+  return {
+    severity: "warning",
+    suggestion: STATIC_SUGGESTION,
+    ...(fixGroup !== undefined && { fixGroup }),
+  };
+}
+
 const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalResult> => {
   const findings: Finding[] = [];
   if (ctx.repoRoot && isAllowlisted(ctx.repoRoot)) return { findings, opportunities: 0 };
@@ -121,16 +181,16 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
     if (ctx.graph && !isScored(ctx.graph, path)) continue;
     for (const hit of extractTypography(source)) {
       opportunities++;
-      if (typographyOnScale(ctx, hit.scaleKey)) continue;
-      const fixGroup = typographyFixGroup(ctx, hit);
+      const verdict = typographyVerdict(ctx, hit);
+      if (!verdict) continue;
       findings.push({
         ruleId: RULE_ID,
         axis: "tokens",
-        severity: "warning",
+        severity: verdict.severity,
         location: { file: path, line: lineFromIndex(source, hit.index), column: 1 },
         message: `Hardcoded ${hit.prop} \`${hit.raw}\` — typography should come from a type token scale`,
-        suggestion: "reference a typography token (e.g. `--font-size-md`, `--font-weight-semibold`) instead of a raw value",
-        ...(fixGroup !== undefined && { fixGroup }),
+        ...(verdict.suggestion !== undefined && { suggestion: verdict.suggestion }),
+        ...(verdict.fixGroup !== undefined && { fixGroup: verdict.fixGroup }),
       });
     }
   }

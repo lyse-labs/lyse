@@ -3,6 +3,7 @@ import {
 } from "../../loaders/tokens.js";
 import { normalizeToDtcg } from "../../tokens/normalizer.js";
 import { isDtcgToken } from "../../tokens/dtcg-model.js";
+import { dimensionAxisForPath, numberAxisForPath } from "../../tokens/axis-heuristics.js";
 import type { DtcgDocument, DtcgToken, DtcgType } from "../../tokens/dtcg-model.js";
 import type { TokenMap, ParsedFiles } from "../../types.js";
 import type { TokenNode, TokenConflict, TokenSource, TokenAxis } from "../types.js";
@@ -77,12 +78,28 @@ export function detectTokenConflicts(nodes: TokenNode[]): TokenConflict[] {
   return conflicts;
 }
 
-const DTCG_TYPE_TO_AXIS: Partial<Record<string, TokenAxis>> = {
-  color: "colors",
-  dimension: "spacing",
-  duration: "motion",
-  cubicBezier: "motion",
-};
+// WHY: `dimension` and `number` are each shared by several axes, so the $type
+// alone cannot name one — the token's own PATH has to break the tie. The path
+// heuristics live in `tokens/axis-heuristics.ts`, shared verbatim with
+// `loaders/tokens.ts#fromDtcg`, which does the identical job for the flat
+// TokenMap: the two must agree or a token means a different axis depending on
+// which file format declared it. `allowZPrefix` is the one deliberate
+// difference and is documented there.
+export function axisFor(type: DtcgType, tokenPath: string): TokenAxis | undefined {
+  switch (type) {
+    case "color":
+      return "colors";
+    case "duration":
+    case "cubicBezier":
+      return "motion";
+    case "dimension":
+      return dimensionAxisForPath(tokenPath);
+    case "number":
+      return numberAxisForPath(tokenPath, { allowZPrefix: true });
+    default:
+      return undefined;
+  }
+}
 
 const CSS_DECL_RE = /(--[^\s:{}]+)\s*:\s*([^;]+?)\s*;/g;
 const SCSS_VAR_RE = /\$([A-Za-z0-9_-]+)\s*:\s*([^;!]+?)\s*(?:!default)?\s*;/g;
@@ -120,14 +137,18 @@ export function scssVarDeclsFromContents(fileContents: Map<string, string>): Arr
   return decls;
 }
 
-// WHY: detectTokenConflicts groups nodes by raw string equality, so a DTCG-doc
+// WHY: detectTokenConflicts groups nodes by raw string equality (and
+// graph/query.ts#onScale / #reverseLookup match on it exactly), so a DTCG-doc
 // node must serialize its rawValue identically to what fromDtcg (loaders/tokens.ts)
-// produces for the same $type, or a real cross-source conflict goes undetected.
-function canonicalRawValue($type: DtcgType, $value: unknown): string {
+// produces for the same token, or a real cross-source conflict goes undetected.
+// That is an AXIS-level contract, not a $type-level one: the loaders px-strip
+// `dimension` only on `spacing`, and keep the suffix on radii / borderWidth /
+// breakpoints (fromTailwindV4 does the same).
+function canonicalRawValue(axis: TokenAxis, $type: DtcgType, $value: unknown): string {
   const value = String($value).toLowerCase().trim();
   switch ($type) {
     case "dimension":
-      return value.replace(/px$/, "");
+      return axis === "spacing" ? value.replace(/px$/, "") : value;
     case "duration":
       return `duration/${value}`;
     case "cubicBezier": {
@@ -148,9 +169,10 @@ export function dtcgDocumentToNodes(doc: DtcgDocument, source: TokenSource): Tok
     if (isDtcgToken(node)) {
       const tok = node as DtcgToken<unknown>;
       const type = tok.$type;
-      const axis = type ? DTCG_TYPE_TO_AXIS[type] : undefined;
+      const id = path.join("/");
+      const axis = type ? axisFor(type, id) : undefined;
       if (axis && type && tok.$value !== undefined) {
-        nodes.push({ id: path.join("/"), axis, rawValue: canonicalRawValue(type, tok.$value), source });
+        nodes.push({ id, axis, rawValue: canonicalRawValue(axis, type, tok.$value), source });
       }
       return;
     }

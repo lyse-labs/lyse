@@ -1,11 +1,12 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, FixGroup } from "../types.js";
+import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding, FixGroup, Confidence } from "../types.js";
 import { isInCommentOrUrl, isLowSignalValueFile, isSchemaOrDataFile } from "./_skip-context.js";
 import { isPathExcluded } from "./_exclude.js";
 import { createLyseRule } from "./_rule-module.js";
 import { makeFixGroup } from "./_fix-group.js";
 import { isScored, onScale, reverseLookup } from "../graph/query.js";
+import type { ResolveClass } from "../graph/resolve/types.js";
 
 const RULE_ID = "tokens/no-hardcoded-media-query";
 const MAX_FILE_BYTES = 1_000_000;
@@ -67,6 +68,79 @@ function mediaQueryFixGroup(ctx: RuleContext, raw: string): FixGroup | undefined
 }
 
 /**
+ * Fixed remediation hint, emitted on BOTH paths — see the identical constant in
+ * `tokens-no-hardcoded-shadow.ts`. On the `near` sub-path the resolver's own
+ * candidate token is strictly more specific and supersedes it; a `novel` has no
+ * candidate to name, so it keeps the hint the legacy path always emitted rather
+ * than saying nothing at all. `lyse handoff` reads `suggestion` verbatim.
+ */
+const STATIC_SUGGESTION =
+  "reference a tokenized breakpoint scale (SCSS `$breakpoint-*`, a custom property, or a JS `breakpoints` map) instead of a raw literal";
+
+interface MediaQueryVerdict {
+  severity: "warning" | "info";
+  /**
+   * Left unset on the legacy (no-resolver) path so `populateConfidence`'s
+   * `classifyConfidence` hook still governs it, exactly as before the migration.
+   */
+  confidence?: Confidence;
+  suggestion?: string;
+  fixGroup?: FixGroup;
+}
+
+/**
+ * The class→finding mapping for THIS axis. `exact` means the value IS on the
+ * repo's own breakpoint scale — compliant, not drift — so it is handled as
+ * an early skip below rather than appearing here. `unresolved` is also a
+ * skip: the resolver could not judge this value, and (unlike colours) that
+ * abstention is legitimate here, so it stays silent. See
+ * tokens-no-hardcoded-spacing.ts's identical mapping for the full rationale.
+ */
+const VERDICT_BY_CLASS: Record<
+  Extract<ResolveClass, "near" | "novel">,
+  { severity: "warning" | "info"; confidence: Confidence }
+> = {
+  near: { severity: "warning", confidence: "medium" },
+  novel: { severity: "info", confidence: "low" },
+};
+
+/**
+ * Builds the finding fields for one detected breakpoint literal, or
+ * `undefined` when nothing should be emitted. Mirrors
+ * tokens-no-hardcoded-spacing.ts's `spacingVerdict` — see that file's
+ * docstring for the full rationale (legacy vs. resolver path, why `near`
+ * names a candidate token while `novel` falls back to the static hint, why
+ * `exact`/`unresolved` skip).
+ */
+function mediaQueryVerdict(ctx: RuleContext, raw: string): MediaQueryVerdict | undefined {
+  if (!ctx.resolver) {
+    if (isOnScale(ctx, raw)) return undefined;
+    const fixGroup = mediaQueryFixGroup(ctx, raw);
+    return {
+      severity: "warning",
+      suggestion: STATIC_SUGGESTION,
+      ...(fixGroup !== undefined && { fixGroup }),
+    };
+  }
+
+  const resolution = ctx.resolver.resolve("breakpoints", raw);
+  if (resolution.class === "exact" || resolution.class === "unresolved") return undefined;
+
+  const { severity, confidence } = VERDICT_BY_CLASS[resolution.class];
+  const fixGroup = makeFixGroup(RULE_ID, raw, []);
+  const suggestion =
+    resolution.class === "near" && resolution.tokenIds[0] !== undefined
+      ? `probably \`${resolution.tokenIds[0]}\` — verify before replacing`
+      : STATIC_SUGGESTION;
+  return {
+    severity,
+    confidence,
+    suggestion,
+    ...(fixGroup !== undefined && { fixGroup }),
+  };
+}
+
+/**
  * Collects the absolute source offsets of every breakpoint literal that lives
  * inside a `@media` prelude. A literal value of `0` (e.g. `min-width: 0`) is a
  * reset, not a breakpoint, and is excluded.
@@ -105,18 +179,18 @@ const evaluate = async (ctx: RuleContext, files: ParsedFiles): Promise<RuleEvalR
       // it counts neither as an opportunity nor as drift.
       if (isInCommentOrUrl(source, index)) continue;
       opportunities++;
-      if (isOnScale(ctx, raw)) continue;
+      const verdict = mediaQueryVerdict(ctx, raw);
+      if (!verdict) continue;
       const loc = blockLine > 0 ? { line: blockLine, column: 1 } : locationFromIndex(source, index);
-      const fixGroup = mediaQueryFixGroup(ctx, raw);
       findings.push({
         ruleId: RULE_ID,
         axis: "tokens",
-        severity: "warning",
+        severity: verdict.severity,
+        ...(verdict.confidence !== undefined && { confidence: verdict.confidence }),
         location: { file: path, line: loc.line, column: loc.column },
         message: `Hardcoded media-query breakpoint: ${raw}`,
-        suggestion:
-          "reference a tokenized breakpoint scale (SCSS `$breakpoint-*`, a custom property, or a JS `breakpoints` map) instead of a raw literal",
-        ...(fixGroup !== undefined && { fixGroup }),
+        ...(verdict.suggestion !== undefined && { suggestion: verdict.suggestion }),
+        ...(verdict.fixGroup !== undefined && { fixGroup: verdict.fixGroup }),
       });
     }
   };
