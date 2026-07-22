@@ -1,4 +1,5 @@
 import type { MeasureKind } from "./rule-measure-kind.js";
+import type { LedgerBucket, RulePrecisionLedger } from "./bucket.js";
 
 export interface RuleMeasurement {
   ruleId: string;
@@ -93,4 +94,34 @@ export function buildReport(perRule: RuleMeasurement[]): { md: string; json: Rul
   }
 
   return { md: lines.join("\n"), json };
+}
+
+export function renderBucketLine(b: LedgerBucket): string {
+  const label = `${b.class} · ${b.zone}`;
+  if (b.precision === null || b.n === 0) {
+    return `- ${label}: not measured`;
+  }
+  const pct = (b.precision * 100).toFixed(1);
+  if (b.labelSource === "auto") {
+    const gate = b.gateEligible ? " · gate-eligible" : "";
+    return `- ${label}: measured ${pct}% · N=${b.n} · deterministic${gate}`;
+  }
+  return `- ${label}: candidate estimate ~${pct}% · N=${b.n}`;
+}
+
+export function renderLedger(ledger: RulePrecisionLedger): string {
+  if (ledger.buckets.length === 0) return "";
+  const byRule = new Map<string, LedgerBucket[]>();
+  for (const b of ledger.buckets) {
+    const list = byRule.get(b.ruleId);
+    if (list) list.push(b);
+    else byRule.set(b.ruleId, [b]);
+  }
+  const lines: string[] = ["## Per-class precision (rules-precision ledger)", ""];
+  for (const [ruleId, buckets] of byRule) {
+    lines.push(`### ${ruleId}`);
+    for (const b of buckets) lines.push(renderBucketLine(b));
+    lines.push("");
+  }
+  return lines.join("\n");
 }
