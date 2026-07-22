@@ -67,4 +67,28 @@ describe("read/write round-trip", () => {
       expect(() => readBaseline(p)).toThrow(BaselineError);
     } finally { rmSync(dir, { recursive: true, force: true }); }
   });
+  it("throws BaselineError on syntactically valid but wrong-shape json (null findings)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "lyse-bl-"));
+    try {
+      const p = join(dir, "baseline.json");
+      writeFileSync(p, JSON.stringify({ schemaVersion: 1, findings: null }));
+      expect(() => readBaseline(p)).toThrow(BaselineError);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+  it("throws BaselineError on wrong schemaVersion", () => {
+    const dir = mkdtempSync(join(tmpdir(), "lyse-bl-"));
+    try {
+      const p = join(dir, "baseline.json");
+      writeFileSync(p, JSON.stringify({ schemaVersion: 2 }));
+      expect(() => readBaseline(p)).toThrow(BaselineError);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+  it("throws BaselineError when findings is present but graphHash is missing/non-string", () => {
+    const dir = mkdtempSync(join(tmpdir(), "lyse-bl-"));
+    try {
+      const p = join(dir, "baseline.json");
+      writeFileSync(p, JSON.stringify({ schemaVersion: 1, findings: {}, scores: {} }));
+      expect(() => readBaseline(p)).toThrow(BaselineError);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
 });

@@ -51,12 +51,24 @@ export function readBaseline(path: string): Baseline {
     );
   }
   try {
-    const parsed = JSON.parse(raw) as Baseline;
-    if (parsed.schemaVersion !== 1 || typeof parsed.findings !== "object") {
-      throw new Error("shape");
-    }
+    const parsed: unknown = JSON.parse(raw);
+    if (!isValidBaselineShape(parsed)) throw new Error("shape");
     return parsed;
   } catch {
     throw new BaselineError(`Malformed baseline at ${path}. Re-run \`lyse baseline write\`.`);
   }
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function isValidBaselineShape(v: unknown): v is Baseline {
+  if (!isPlainObject(v)) return false;
+  return (
+    v["schemaVersion"] === 1 &&
+    isPlainObject(v["findings"]) &&
+    typeof v["graphHash"] === "string" &&
+    isPlainObject(v["scores"])
+  );
 }
