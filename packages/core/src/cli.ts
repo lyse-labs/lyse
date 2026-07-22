@@ -1004,11 +1004,11 @@ const addCommand = defineCommand({
     "ci-gate": defineCommand({
       meta: {
         name: "ci-gate",
-        description: "Install the Lyse score-regression CI gate (.github/workflows/lyse.yml + .github/scripts/lyse-gate.mjs)",
+        description: "Install the Lyse diff-first CI gate (.github/workflows/lyse.yml — runs `lyse audit --scope new`)",
       },
       args: {
         path: { type: "positional", required: false, default: ".", description: "repository root" },
-        threshold: { type: "string", description: "max allowed score drop before the gate fails (default 0)" },
+        threshold: { type: "string", description: "no-op in the diff-first gate (kept for back-compat)" },
         "lyse-version": { type: "string", description: "Lyse CLI version the workflow should pin (default: the running CLI version)" },
         force: { type: "boolean", default: false, description: "overwrite existing files" },
         "force-not-a-repo": {
@@ -1033,7 +1033,7 @@ const addCommand = defineCommand({
             for (const s of result.skipped) process.stdout.write(`Skipped ${s.path} — ${s.reason}\n`);
             if (result.written.length > 0) {
               process.stdout.write(
-                "\nNext: commit these files and open a PR. Lyse will audit every subsequent PR.\n",
+                "\nNext: run `lyse baseline write`, commit .lyse/baseline.json + the workflow, then open a PR.\n",
               );
             }
           }

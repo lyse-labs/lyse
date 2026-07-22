@@ -21,39 +21,31 @@ afterEach(() => {
 });
 
 describe("runAddCiGate", () => {
-  it("writes both files on a fresh repo", () => {
-    const r = runAddCiGate({ cwd: tmp });
-    expect(r.written.sort()).toEqual([
-      ".github/scripts/lyse-gate.mjs",
-      ".github/workflows/lyse.yml",
-    ].sort());
+  it("writes only the workflow file on a fresh repo", () => {
+    const r = runAddCiGate({ cwd: tmp, forceNotARepo: true });
+    expect(r.written).toEqual([".github/workflows/lyse.yml"]);
     expect(r.skipped).toEqual([]);
     expect(existsSync(join(tmp, ".github/workflows/lyse.yml"))).toBe(true);
-    expect(existsSync(join(tmp, ".github/scripts/lyse-gate.mjs"))).toBe(true);
+    expect(existsSync(join(tmp, ".github/scripts/lyse-gate.mjs"))).toBe(false);
   });
 
-  it("workflow embeds the requested lyseVersion and threshold", () => {
-    runAddCiGate({ cwd: tmp, lyseVersion: "0.2.0-alpha.1", threshold: 5 });
+  it("workflow runs the diff-first audit gate", () => {
+    runAddCiGate({ cwd: tmp });
+    const yml = readFileSync(join(tmp, ".github/workflows/lyse.yml"), "utf8");
+    expect(yml).toMatch(/audit --scope new/);
+    expect(existsSync(join(tmp, ".github/scripts/lyse-gate.mjs"))).toBe(false);
+  });
+
+  it("workflow embeds the requested lyseVersion", () => {
+    runAddCiGate({ cwd: tmp, lyseVersion: "0.2.0-alpha.1" });
     const wf = readFileSync(join(tmp, ".github/workflows/lyse.yml"), "utf8");
     expect(wf).toContain('LYSE_VERSION: "0.2.0-alpha.1"');
-    expect(wf).toContain('GATE_THRESHOLD: "5"');
   });
 
-  it("gate script surfaces the grade, auto-fail callout, and per-axis regression markers (v2)", () => {
-    runAddCiGate({ cwd: tmp });
-    const gate = readFileSync(join(tmp, ".github/scripts/lyse-gate.mjs"), "utf8");
-    expect(gate).toContain("**Grade:**");
-    expect(gate).toContain("Automatic fail");
-    expect(gate).toContain("pr.grade");
-    // per-axis regression markers in the axes table
-    expect(gate).toContain("d < -threshold ?");
-  });
-
-  it("workflow uses defaults when no options passed", () => {
+  it("workflow uses the default lyseVersion when no options passed", () => {
     runAddCiGate({ cwd: tmp });
     const wf = readFileSync(join(tmp, ".github/workflows/lyse.yml"), "utf8");
     expect(wf).toContain(`LYSE_VERSION: "${CI_GATE_DEFAULTS.lyseVersion}"`);
-    expect(wf).toContain(`GATE_THRESHOLD: "${CI_GATE_DEFAULTS.threshold}"`);
   });
 
   it("default lyseVersion is the running CLI version (not a moving tag like `alpha`)", () => {
@@ -118,12 +110,11 @@ describe("runAddCiGate", () => {
     }
   });
 
-  it("refuses to overwrite existing files without --force", () => {
+  it("refuses to overwrite an existing workflow without --force", () => {
     mkdirSync(join(tmp, ".github/workflows"), { recursive: true });
     writeFileSync(join(tmp, ".github/workflows/lyse.yml"), "preexisting\n");
     const r = runAddCiGate({ cwd: tmp });
-    expect(r.written).toContain(".github/scripts/lyse-gate.mjs");
-    expect(r.written).not.toContain(".github/workflows/lyse.yml");
+    expect(r.written).toEqual([]);
     expect(r.skipped).toEqual([
       { path: ".github/workflows/lyse.yml", reason: "already exists (pass --force to overwrite)" },
     ]);
@@ -135,7 +126,7 @@ describe("runAddCiGate", () => {
     mkdirSync(join(tmp, ".github/workflows"), { recursive: true });
     writeFileSync(join(tmp, ".github/workflows/lyse.yml"), "old\n");
     const r = runAddCiGate({ cwd: tmp, force: true });
-    expect(r.written).toContain(".github/workflows/lyse.yml");
+    expect(r.written).toEqual([".github/workflows/lyse.yml"]);
     expect(r.skipped).toEqual([]);
     expect(readFileSync(join(tmp, ".github/workflows/lyse.yml"), "utf8")).not.toBe("old\n");
   });
@@ -144,41 +135,31 @@ describe("runAddCiGate", () => {
     expect(() => runAddCiGate({ cwd: join(tmp, "nope") })).toThrow(AddCiGateError);
   });
 
-  it("rejects negative threshold", () => {
+  it("rejects negative threshold (back-compat validation)", () => {
     expect(() => runAddCiGate({ cwd: tmp, threshold: -1 })).toThrow(/non-negative/);
   });
 
-  it("rejects NaN threshold", () => {
+  it("rejects NaN threshold (back-compat validation)", () => {
     expect(() => runAddCiGate({ cwd: tmp, threshold: Number.NaN })).toThrow(/non-negative/);
   });
 
-  it("generated script starts with shebang and has the expected top-level shape", () => {
-    runAddCiGate({ cwd: tmp });
-    const script = readFileSync(join(tmp, ".github/scripts/lyse-gate.mjs"), "utf8");
-    expect(script.startsWith("#!/usr/bin/env node")).toBe(true);
-    expect(script).toContain('import { readFileSync } from "node:fs"');
-    expect(script).toContain("function loadReport(");
-    expect(script).toContain("function diffFindings(");
-    expect(script).toContain("function buildComment(");
-    expect(script).toContain("main(process.argv)");
-  });
-
-  it("generated workflow has all the gate steps", () => {
+  it("generated workflow has the diff-first gate steps", () => {
     runAddCiGate({ cwd: tmp });
     const wf = readFileSync(join(tmp, ".github/workflows/lyse.yml"), "utf8");
-    // Spot-check the critical steps
-    expect(wf).toContain("Audit PR");
-    expect(wf).toContain("Audit main (best-effort baseline)");
-    expect(wf).toContain("Run gate");
-    expect(wf).toContain("Post PR comment");
-    expect(wf).toContain("Fail on regression");
-    expect(wf).toContain("Detect fork PR");
+    expect(wf).toContain("name: Lyse audit");
+    expect(wf).toContain("actions/checkout@v6");
+    expect(wf).toContain("actions/setup-node@v6");
+    expect(wf).toContain("Lyse diff gate");
+    expect(wf).toContain("audit --scope new");
+    expect(wf).toContain("lyse baseline write");
   });
 
-  it("includes an advisory scoped step that surfaces new drift on changed files", () => {
+  it("does not embed the old two-audit / PR-comment machinery", () => {
     runAddCiGate({ cwd: tmp });
     const wf = readFileSync(join(tmp, ".github/workflows/lyse.yml"), "utf8");
-    expect(wf).toContain("--scope changed");
-    expect(wf).toContain("--base origin/main");
+    expect(wf).not.toContain("lyse-gate.mjs");
+    expect(wf).not.toContain("Post PR comment");
+    expect(wf).not.toContain("Audit main");
+    expect(wf).not.toContain("GATE_THRESHOLD");
   });
 });
