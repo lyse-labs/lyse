@@ -139,6 +139,23 @@ Color literals are pervasive in legitimate code (token-definition files, documen
 
 Use the `confidence: medium` filter in the handoff payload to see only findings where the rule has higher signal.
 
+### Per-class precision (measured)
+
+Colour is the only token axis where `exact` (a literal identical to an existing
+token) is treated as drift; every numeric axis treats `exact` as on-scale =
+compliant. The line below is auto-generated from the checked-in
+[`rules-precision.json`](../../packages/core/rules-precision.json) ledger, whose
+`exact` bucket is verified deterministically (no LLM) and is the only
+gate-eligible class. `near`/`novel`/`unresolved` are LLM-judge candidates and
+are not measured here.
+
+<!-- reliability:auto:start -->
+- exact · app: measured 50.0% · N=84 · deterministic
+- near · app: not measured
+- novel · app: not measured
+- unresolved · app: not measured
+<!-- reliability:auto:end -->
+
 ## Related rules
 
 - [`tokens/no-hardcoded-spacing`](./tokens-no-hardcoded-spacing.md)

@@ -123,3 +123,10 @@ The `near` band is one step of the repo's own scale, a fixed resolver constant �
 
 - [Health Score](../guide/health-score.md) — how rules combine into the final score.
 - [Configuration](../guide/configuration.md) — `.lyse.yaml` reference.
+
+## Reliability
+
+<!-- reliability:auto:start -->
+- near · app: not measured
+- novel · app: not measured
+<!-- reliability:auto:end -->

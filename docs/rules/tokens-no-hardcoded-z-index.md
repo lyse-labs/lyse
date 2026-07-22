@@ -67,3 +67,9 @@ This is a value-drift rule; like the other hardcoded-value detectors it is **sta
 
 - [MDN: `z-index`](https://developer.mozilla.org/en-US/docs/Web/CSS/z-index)
 - [Health Score](../guide/health-score.md) — how rules combine into the final score.
+
+## Reliability
+
+<!-- reliability:auto:start -->
+- novel · app: not measured
+<!-- reliability:auto:end -->
