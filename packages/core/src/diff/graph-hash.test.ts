@@ -19,7 +19,15 @@ describe("computeGraphHash", () => {
   });
   it("changes when a token is added", () => {
     const g = emptyGraph();
-    const g2 = { ...g, tokens: [{ id: "color.brand", axis: "color", rawValue: "#000" } as unknown as DesignSystemGraph["tokens"][number]] };
+    const g2 = { ...g, tokens: [{ id: "color.brand", axis: "colors", rawValue: "#000" } as unknown as DesignSystemGraph["tokens"][number]] };
+    expect(computeGraphHash(g)).not.toBe(computeGraphHash(g2));
+  });
+  it("changes when usage differs, proving { full: true } is passed to serializeGraph", () => {
+    const g = emptyGraph();
+    const g2: DesignSystemGraph = {
+      ...g,
+      usage: [{ file: "src/Button.tsx", kind: "imports-ds-module", count: 3 }],
+    };
     expect(computeGraphHash(g)).not.toBe(computeGraphHash(g2));
   });
 });
