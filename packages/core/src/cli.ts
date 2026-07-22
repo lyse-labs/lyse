@@ -58,6 +58,7 @@ import { resolveLlmConsentNonInteractive } from "./llm/consent.js";
 import { runTelemetryOn, runTelemetryOff, runTelemetryStatus } from "./commands/telemetry.js";
 import { runBenchPack } from "./commands/bench-pack.js";
 import { runHandoffCommand } from "./commands/handoff.js";
+import { runBaselineWrite } from "./commands/baseline.js";
 import { writeGraph } from "./graph/persist.js";
 import type { DesignSystemGraph } from "./graph/types.js";
 
@@ -912,6 +913,23 @@ const badgeCommand = defineCommand({
   },
 });
 
+const baselineCommand = defineCommand({
+  meta: { name: "baseline", description: "Manage the diff-first finding baseline (.lyse/baseline.json)" },
+  subCommands: {
+    write: defineCommand({
+      meta: { name: "write", description: "Audit the repo and write .lyse/baseline.json (commit it to gate only NEW findings)" },
+      args: {
+        path: { type: "positional", required: false, default: ".", description: "repository root" },
+        ...GLOBAL_FLAGS,
+      },
+      async run({ args }) {
+        applyGlobalFlags(args);
+        await runBaselineWrite({ root: resolve(String(args.path ?? ".")), quiet: args.quiet === true });
+      },
+    }),
+  },
+});
+
 export const initCommand = defineCommand({
   meta: { name: "init", description: "Interactive wizard for first-time setup" },
   args: {
@@ -1162,7 +1180,7 @@ const main = defineCommand({
     "no-color": { type: "boolean", description: "Disable ANSI color output" },
     quiet: { type: "boolean", description: "Suppress informational output" },
   },
-  subCommands: { init: initCommand, audit: auditCommand, fix: fixCommand, add: addCommand, install: installCommand, share: shareCommand, badge: badgeCommand, agents: agentsCommand, "agents-md": agentsMdCommand, handoff: handoffCommand, "bench-pack": benchPackCommand, version: versionCommand, explain: explainCommand, mcp: mcpCommand, feedback: feedbackCommand, telemetry: telemetryCommand },
+  subCommands: { init: initCommand, audit: auditCommand, fix: fixCommand, add: addCommand, install: installCommand, share: shareCommand, badge: badgeCommand, baseline: baselineCommand, agents: agentsCommand, "agents-md": agentsMdCommand, handoff: handoffCommand, "bench-pack": benchPackCommand, version: versionCommand, explain: explainCommand, mcp: mcpCommand, feedback: feedbackCommand, telemetry: telemetryCommand },
   async run({ args, cmd, rawArgs }) {
     applyGlobalFlags(args);
 
