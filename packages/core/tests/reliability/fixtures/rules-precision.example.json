@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": {
+    "corpus": "example-fixture",
+    "commit": "0000000",
+    "measuredAt": "1970-01-01T00:00:00.000Z"
+  },
+  "buckets": [
+    {
+      "ruleId": "tokens/no-hardcoded-color",
+      "class": "exact",
+      "zone": "app",
+      "n": 40,
+      "precision": 0.95,
+      "precisionWilsonLB": 0.91,
+      "recall": null,
+      "recallWilsonLB": null,
+      "labelSource": "auto",
+      "gateEligible": true
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-color",
+      "class": "near",
+      "zone": "app",
+      "n": 30,
+      "precision": 0.8,
+      "precisionWilsonLB": 0.7,
+      "recall": null,
+      "recallWilsonLB": null,
+      "labelSource": "llm-provisional",
+      "gateEligible": false
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-spacing",
+      "class": "exact",
+      "zone": "app",
+      "n": 0,
+      "precision": null,
+      "precisionWilsonLB": null,
+      "recall": null,
+      "recallWilsonLB": null,
+      "labelSource": "none",
+      "gateEligible": false
+    }
+  ]
+}
