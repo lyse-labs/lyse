@@ -59,3 +59,9 @@ Value-drift rule — **stable** and **scored**: it contributes to the Health Sco
 ## See also
 
 - [Health Score](../guide/health-score.md)
+
+## Reliability
+
+<!-- reliability:auto:start -->
+- novel · app: not measured
+<!-- reliability:auto:end -->

@@ -75,3 +75,10 @@ lyse-disable tokens/no-hardcoded-media-query
 - [`tokens/responsive-breakpoints`](./tokens-responsive-breakpoints.md) — the repo-level presence check.
 - [MDN: Using media queries](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_media_queries/Using_media_queries)
 - [Health Score](../guide/health-score.md) — how rules combine into the final score.
+
+## Reliability
+
+<!-- reliability:auto:start -->
+- near · app: not measured
+- novel · app: not measured
+<!-- reliability:auto:end -->

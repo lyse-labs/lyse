@@ -39,3 +39,43 @@ describe("rules-precision.example.json (illustrative fixture, not a real measure
     expect(raw).toBe(reserialized);
   });
 });
+
+const realUrl = new URL("../../rules-precision.json", import.meta.url);
+const realRaw = readFileSync(realUrl, "utf8");
+const real = JSON.parse(realRaw) as RulePrecisionLedger;
+
+describe("rules-precision.json (the real committed measurement artifact)", () => {
+  it("has schemaVersion 1", () => {
+    expect(real.schemaVersion).toBe(1);
+  });
+
+  it("records a real corpus and commit (not the example placeholder)", () => {
+    expect(real.generatedFrom.corpus).not.toBe("example-fixture");
+    expect(real.generatedFrom.commit).not.toBe("0000000");
+  });
+
+  it("has gateEligible computed from gateEligibleFor for every bucket (no hand-edit drift)", () => {
+    for (const bucket of real.buckets) {
+      const { gateEligible, ...rest } = bucket;
+      expect(gateEligible).toBe(gateEligibleFor(rest satisfies Omit<LedgerBucket, "gateEligible">));
+    }
+  });
+
+  it("never coerces an unmeasured bucket's precision to 0 (honesty: n=0 means precision null)", () => {
+    for (const bucket of real.buckets) {
+      if (bucket.n === 0) expect(bucket.precision).toBeNull();
+    }
+  });
+
+  it("gates only deterministic auto-labeled buckets (candidate/none never gate-eligible)", () => {
+    for (const bucket of real.buckets) {
+      if (bucket.labelSource !== "auto") {
+        expect(bucket.gateEligible).toBe(false);
+      }
+    }
+  });
+
+  it("is byte-stable under serializeLedger (deterministic, sorted)", () => {
+    expect(serializeLedger(real)).toBe(realRaw);
+  });
+});

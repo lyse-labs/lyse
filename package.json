@@ -17,7 +17,9 @@
     "version": "changeset version",
     "release": "pnpm --filter @lyse-labs/lyse build && changeset publish",
     "clone:bench": "tsx scripts/clone-bench-corpus.ts",
-    "measure:rules": "tsx scripts/measure-rules.ts"
+    "measure:rules": "tsx scripts/measure-rules.ts",
+    "measure:ledger": "tsx scripts/measure-ledger.ts",
+    "docs:reliability:rules": "tsx scripts/generate-rule-docs-reliability.ts"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",

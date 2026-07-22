@@ -55,3 +55,9 @@ Value-drift rule — **experimental** and reported-only; does not contribute to 
 ## See also
 
 - [Health Score](../guide/health-score.md)
+
+## Reliability
+
+<!-- reliability:auto:start -->
+- novel · app: not measured
+<!-- reliability:auto:end -->
