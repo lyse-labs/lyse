@@ -15,7 +15,7 @@ const ruleId = "tokens/no-hardcoded-color";
 const gateEligibleBucket: Omit<LedgerBucket, "gateEligible"> = {
   ruleId,
   class: "exact",
-  zone: "ds-source",
+  zone: "app",
   n: 40,
   precision: 0.95,
   precisionWilsonLB: 0.91,

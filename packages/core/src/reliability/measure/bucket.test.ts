@@ -32,4 +32,10 @@ describe("gateEligibleFor", () => {
   it("is false when precisionWilsonLB is null (unmeasured)", () => {
     expect(gateEligibleFor({ ...base, precision: null, precisionWilsonLB: null })).toBe(false);
   });
+  it("is true at the exact n boundary (n=35), proving the gate uses >=", () => {
+    expect(gateEligibleFor({ ...base, n: 35 })).toBe(true);
+  });
+  it("is true at the exact wilsonLB boundary (0.90), proving the gate uses >=", () => {
+    expect(gateEligibleFor({ ...base, n: 35, precisionWilsonLB: 0.9 })).toBe(true);
+  });
 });

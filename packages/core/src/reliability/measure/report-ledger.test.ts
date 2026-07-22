@@ -8,7 +8,7 @@ const meta = { corpus: "t", commit: "0", measuredAt: "1970-01-01T00:00:00.000Z" 
 const gateEligibleBucket: Omit<LedgerBucket, "gateEligible"> = {
   ruleId: "tokens/no-hardcoded-color",
   class: "exact",
-  zone: "ds-source",
+  zone: "app",
   n: 40,
   precision: 0.95,
   precisionWilsonLB: 0.91,

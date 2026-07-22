@@ -2,6 +2,8 @@ import type { Resolver } from "../../graph/resolve/index.js";
 import type { ResolveClass } from "../../graph/resolve/types.js";
 import type { TokenAxis } from "../../graph/types.js";
 
+// tokens/no-hardcoded-gradient is intentionally omitted: gradients have no
+// single-value TokenAxis, so they never bucket to a resolvable class.
 const RULE_AXIS: Record<string, TokenAxis> = {
   "tokens/no-hardcoded-color": "colors",
   "tokens/no-hardcoded-spacing": "spacing",

@@ -26,16 +26,30 @@ describe("verifyExact", () => {
   });
   it("rejects a trivial value as fp", () => {
     const g2 = { ...g, tokens: [{ id: "c.white", axis: "colors" as const, rawValue: "#ffffff", source: "dtcg" as const }] };
-    expect(verifyExact(row(), "#ffffff", g2, createResolver(g2)).verdict).toBe("fp");
+    const label = verifyExact(row(), "#ffffff", g2, createResolver(g2));
+    expect(label.verdict).toBe("fp");
+    expect(label.reason).toBe("trivial value");
   });
   it("rejects a token-definition file as fp", () => {
-    expect(verifyExact(row({ file: "src/theme.ts" }), "#3b82f6", g, r()).verdict).toBe("fp");
+    const label = verifyExact(row({ file: "src/theme.ts" }), "#3b82f6", g, r());
+    expect(label.verdict).toBe("fp");
+    expect(label.reason).toBe("token-definition file");
   });
   it("rejects a non-app zone as fp", () => {
     const g3 = graph({ "src/App.tsx": "ds-source" });
-    expect(verifyExact(row(), "#3b82f6", g3, createResolver(g3)).verdict).toBe("fp");
+    const label = verifyExact(row(), "#3b82f6", g3, createResolver(g3));
+    expect(label.verdict).toBe("fp");
+    expect(label.reason).toBe("non-app zone");
   });
   it("is INDEPENDENT of the finding's confidence (low-confidence row still tp)", () => {
     expect(verifyExact(row({ confidence: "low" }), "#3b82f6", g, r()).verdict).toBe("tp");
+  });
+  it("throws when called with a non-token ruleId", () => {
+    expect(() =>
+      verifyExact(row({ ruleId: "a11y/essentials" }), "#3b82f6", g, r()),
+    ).toThrow();
+  });
+  it("throws when the literal does not re-resolve to exact on the axis", () => {
+    expect(() => verifyExact(row(), "#ff00aa", g, r())).toThrow();
   });
 });
