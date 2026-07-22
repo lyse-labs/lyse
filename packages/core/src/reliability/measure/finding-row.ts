@@ -1,4 +1,5 @@
 import type { Confidence } from "../../types.js";
+import type { ResolveClass } from "../../graph/resolve/types.js";
 
 export interface FindingRow {
   ruleId: string;
@@ -10,4 +11,6 @@ export interface FindingRow {
   confidence: Confidence;
   /** Original finding message — required by row-aware verifiers (e.g. stories/props-documented). */
   message?: string;
+  /** Re-resolved independently at harvest (NOT from confidence) for token rules; absent otherwise. */
+  resolutionClass?: ResolveClass;
 }
