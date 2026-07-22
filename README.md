@@ -36,11 +36,16 @@ lyse init --scaffold        # generate missing AI-readiness files (llms.txt, AGE
 lyse init --migrate-tokens  # convert legacy {value,type} token JSON to DTCG ({$value,$type})
 lyse explain X    # rationale + examples for a rule
 lyse mcp setup    # wire MCP into Cursor / Claude Code / Codex
-lyse add ci-gate  # install the score-regression CI gate (.github/workflows/lyse.yml)
+lyse add ci-gate  # install the diff-first CI gate (.github/workflows/lyse.yml)
+lyse baseline write  # record accepted findings to .lyse/baseline.json (commit it)
 lyse share        # copy a Markdown summary to your clipboard
 ```
 
 > **Trust boundary.** By default, `lyse handoff` launches your coding agent with its permission prompts bypassed so it can apply fixes unattended — only run it on repositories you trust. It confirms before spawning (`Continue? [y/N]`, skipped under `--yes` or non-interactively); pass `--review` to keep the agent's own per-action permission prompts instead.
+
+## Diff-first workflow
+
+Existing drift shouldn't block a PR. Run `lyse baseline write` once to record the accepted findings + scores to `.lyse/baseline.json`, commit it, then wire `lyse add ci-gate` (or run `lyse audit --scope new` yourself). CI gates only on *new* drift — a finding absent from the baseline, or a Health Score axis that regressed — never on the backlog. Finding identity is stable across reformatting (file + rule + normalized value, not line numbers), so a whitespace-only commit produces zero new findings. Re-run `lyse baseline write` whenever you deliberately accept new state.
 
 ## What it audits
 

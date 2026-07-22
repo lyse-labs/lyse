@@ -9,7 +9,7 @@ import { migrateLegacyTokensToDtcg } from "../codemods/migrate-tokens-dtcg.js";
 import { runMcpSetup } from "./mcp-setup.js";
 import { maybePromptForEmail } from "./email-prompt.js";
 import { appendAuditEvent, appendInitStepCompletedEvent } from "../history/ndjson-store.js";
-import { ensureGitignoreEntry } from "../util/gitignore.js";
+import { ensureLyseGitignore } from "../util/lyse-gitignore.js";
 import { VERSION } from "../index.js";
 import type { AxisScore } from "../types.js";
 import { detectStack } from "./init-detect.js";
@@ -48,7 +48,7 @@ export async function runInit(opt: InitOptions): Promise<void> {
   await writeLyseYaml(opt.cwd, detected);
 
   // 4. Update .gitignore
-  await ensureGitignoreEntry(opt.cwd, ".lyse/");
+  await ensureLyseGitignore(opt.cwd);
 
   // 5. Run first audit (static-only — Layer 4 is a no-op stub in v0.1).
   const pipeline = await wizardTask("Running first audit…", "Audit complete", () =>

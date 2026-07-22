@@ -1,7 +1,7 @@
-import { createHash } from "node:crypto";
 import type { AuditResult, Finding, Severity } from "../types.js";
 import { RULE_METADATA, RULES_VERSION } from "../rules/manifest.js";
 import { SUB_AXES } from "../reliability/catalogue/sub-axes.js";
+import { findingIdsFor } from "../diff/anchor.js";
 
 const SARIF_VERSION = "2.1.0";
 const SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json";
@@ -50,13 +50,7 @@ function ruleDefinitionFromMeta(meta: (typeof RULE_METADATA)[number]) {
   };
 }
 
-function fingerprintFor(finding: Finding): string {
-  const startLine = Math.max(1, finding.location.line);
-  const canonical = `${finding.ruleId} ${finding.location.file} ${startLine} ${finding.message}`;
-  return createHash("sha256").update(canonical, "utf8").digest("hex");
-}
-
-function findingToResult(finding: Finding, suppressed = false) {
+function findingToResult(finding: Finding, ids: Map<Finding, string>, suppressed = false) {
   const startLine = Math.max(1, finding.location.line);
   const startColumn = Math.max(1, finding.location.column);
   const result: Record<string, unknown> = {
@@ -78,7 +72,7 @@ function findingToResult(finding: Finding, suppressed = false) {
       },
     ],
     partialFingerprints: {
-      "primaryLocationLineHash/v1": fingerprintFor(finding),
+      "lyseFindingId/v1": ids.get(finding) ?? "",
     },
   };
   if (finding.suggestion) {
@@ -106,6 +100,12 @@ export function renderSarif(result: AuditResult, options: SarifRenderOptions = {
   // not just the ones with findings.
   const rules = RULE_METADATA.map(ruleDefinitionFromMeta);
 
+  // Diff-first identity (Task 1's findingIdsFor): stable across reformatting/line
+  // shift, keyed on rule+file+content-anchor bucket, not on line number. Computed
+  // over active + suppressed findings together so ordinals (and thus ids) don't
+  // shift when a finding's suppression state changes between scans.
+  const ids = findingIdsFor([...result.findings, ...(result.suppressedFindings ?? [])]);
+
   const sarif = {
     $schema: SARIF_SCHEMA,
     version: SARIF_VERSION,
@@ -125,8 +125,8 @@ export function renderSarif(result: AuditResult, options: SarifRenderOptions = {
           },
         },
         results: [
-          ...result.findings.map((f) => findingToResult(f)),
-          ...(result.suppressedFindings ?? []).map((f) => findingToResult(f, true)),
+          ...result.findings.map((f) => findingToResult(f, ids)),
+          ...(result.suppressedFindings ?? []).map((f) => findingToResult(f, ids, true)),
         ],
         invocations: [
           {

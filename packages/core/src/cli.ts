@@ -39,7 +39,7 @@ import { runInstall } from "./commands/install.js";
 import { syncPendingEmail } from "./commands/email-prompt.js";
 import { runMcpSetup } from "./commands/mcp-setup.js";
 import { appendAuditEvent, appendCommandInvokedEvent } from "./history/ndjson-store.js";
-import { ensureGitignoreEntry } from "./util/gitignore.js";
+import { ensureLyseGitignore } from "./util/lyse-gitignore.js";
 import { withSpinner } from "./util/with-spinner.js";
 import { showActionMenu } from "./menu/action-menu.js";
 import { buildClassifyContext, populateConfidence } from "./codemods/safety.js";
@@ -58,6 +58,12 @@ import { resolveLlmConsentNonInteractive } from "./llm/consent.js";
 import { runTelemetryOn, runTelemetryOff, runTelemetryStatus } from "./commands/telemetry.js";
 import { runBenchPack } from "./commands/bench-pack.js";
 import { runHandoffCommand } from "./commands/handoff.js";
+import { runBaselineWrite } from "./commands/baseline.js";
+import { readBaseline, BaselineError } from "./diff/baseline.js";
+import { selectNew } from "./diff/delta.js";
+import { evaluateGate } from "./diff/gate.js";
+import { stableRuleIds } from "./reliability/score/stable-sub-axes.js";
+import { SUB_AXES } from "./reliability/catalogue/sub-axes.js";
 import { writeGraph } from "./graph/persist.js";
 import type { DesignSystemGraph } from "./graph/types.js";
 
@@ -210,7 +216,7 @@ const auditCommand = defineCommand({
     threshold: { type: "string", description: "fail (exit 1) if final score < threshold", default: "0" },
     scope: {
       type: "string",
-      description: "Limit the audit to git-changed files: `changed` (committed vs --base), `staged`, or `uncommitted` (working-tree edits + untracked). Default: whole tree.",
+      description: "Limit findings: `changed`/`staged`/`uncommitted` (git file scope), or `new` (only findings absent from .lyse/baseline.json). Default: whole tree.",
     },
     staged: {
       type: "boolean",
@@ -290,6 +296,8 @@ const auditCommand = defineCommand({
     applyGlobalFlags(args);
     const startTime = Date.now();
     const repoRoot = resolve(args.root);
+    let newScopeGateFail = false;
+    let newScopeGateReasons: string[] = [];
 
     // T40: one-time warning when migrating from an alpha release. Printed to
     // stderr so it doesn't pollute stdout-captured JSON/SARIF output, and
@@ -452,7 +460,7 @@ const auditCommand = defineCommand({
     }
 
     // Ensure .lyse/ is in .gitignore before writing history (idempotent guard against untracked-dirty)
-    await ensureGitignoreEntry(repoRoot, ".lyse/");
+    await ensureLyseGitignore(repoRoot);
 
     // Append audit event to history (for delta display)
     const tokensScore = result.axes.find((a) => a.axis === "tokens")?.score;
@@ -472,6 +480,36 @@ const auditCommand = defineCommand({
     }, null);
 
     writeGraph(repoRoot, graph, { full: args["graph-full"] === true });
+
+    if (args["scope"] === "new") {
+      let baseline;
+      try {
+        baseline = readBaseline(join(repoRoot, ".lyse", "baseline.json"));
+      } catch (e) {
+        if (e instanceof BaselineError) {
+          console.error(`[lyse] ${e.message}`);
+          process.exit(64);
+        }
+        throw e;
+      }
+      const { newFindings, staleGraph } = selectNew(result.findings, baseline, graph);
+      if (staleGraph) {
+        console.error(
+          "[lyse] baseline may be stale: the design-system graph changed since it was written. Re-run `lyse baseline write`.",
+        );
+      }
+      const currentScores: Partial<Record<import("./types.js").AxisName, number>> = {};
+      for (const a of result.axes) if (typeof a.score === "number") currentScores[a.axis] = a.score;
+      const gate = evaluateGate({
+        newFindings,
+        currentScores,
+        baseline,
+        scoreContributingRuleIds: stableRuleIds(SUB_AXES, { filterRan: false }),
+      });
+      newScopeGateFail = gate.fail;
+      newScopeGateReasons = gate.reasons;
+      result.findings = newFindings;
+    }
 
     const isTTY = process.stdout.isTTY ?? false;
     const format = args.format ?? (isTTY ? "text" : "json");
@@ -619,7 +657,13 @@ const auditCommand = defineCommand({
       await ensureConsentDecision();
     }
 
-    if (didFail) {
+    if (args["scope"] === "new") {
+      if (newScopeGateFail) {
+        for (const r of newScopeGateReasons) console.error(`[lyse] gate: ${r}`);
+        process.exit(1);
+      }
+      // implicit exit 0
+    } else if (didFail) {
       process.exit(1);
     }
     // Implicit exit 0 (success)
@@ -912,6 +956,23 @@ const badgeCommand = defineCommand({
   },
 });
 
+const baselineCommand = defineCommand({
+  meta: { name: "baseline", description: "Manage the diff-first finding baseline (.lyse/baseline.json)" },
+  subCommands: {
+    write: defineCommand({
+      meta: { name: "write", description: "Audit the repo and write .lyse/baseline.json (commit it to gate only NEW findings)" },
+      args: {
+        path: { type: "positional", required: false, default: ".", description: "repository root" },
+        ...GLOBAL_FLAGS,
+      },
+      async run({ args }) {
+        applyGlobalFlags(args);
+        await runBaselineWrite({ root: resolve(String(args.path ?? ".")), quiet: args.quiet === true });
+      },
+    }),
+  },
+});
+
 export const initCommand = defineCommand({
   meta: { name: "init", description: "Interactive wizard for first-time setup" },
   args: {
@@ -943,11 +1004,11 @@ const addCommand = defineCommand({
     "ci-gate": defineCommand({
       meta: {
         name: "ci-gate",
-        description: "Install the Lyse score-regression CI gate (.github/workflows/lyse.yml + .github/scripts/lyse-gate.mjs)",
+        description: "Install the Lyse diff-first CI gate (.github/workflows/lyse.yml — runs `lyse audit --scope new`)",
       },
       args: {
         path: { type: "positional", required: false, default: ".", description: "repository root" },
-        threshold: { type: "string", description: "max allowed score drop before the gate fails (default 0)" },
+        threshold: { type: "string", description: "no-op in the diff-first gate (kept for back-compat)" },
         "lyse-version": { type: "string", description: "Lyse CLI version the workflow should pin (default: the running CLI version)" },
         force: { type: "boolean", default: false, description: "overwrite existing files" },
         "force-not-a-repo": {
@@ -972,7 +1033,7 @@ const addCommand = defineCommand({
             for (const s of result.skipped) process.stdout.write(`Skipped ${s.path} — ${s.reason}\n`);
             if (result.written.length > 0) {
               process.stdout.write(
-                "\nNext: commit these files and open a PR. Lyse will audit every subsequent PR.\n",
+                "\nNext: run `lyse baseline write`, commit .lyse/baseline.json + the workflow, then open a PR.\n",
               );
             }
           }
@@ -1162,7 +1223,7 @@ const main = defineCommand({
     "no-color": { type: "boolean", description: "Disable ANSI color output" },
     quiet: { type: "boolean", description: "Suppress informational output" },
   },
-  subCommands: { init: initCommand, audit: auditCommand, fix: fixCommand, add: addCommand, install: installCommand, share: shareCommand, badge: badgeCommand, agents: agentsCommand, "agents-md": agentsMdCommand, handoff: handoffCommand, "bench-pack": benchPackCommand, version: versionCommand, explain: explainCommand, mcp: mcpCommand, feedback: feedbackCommand, telemetry: telemetryCommand },
+  subCommands: { init: initCommand, audit: auditCommand, fix: fixCommand, add: addCommand, install: installCommand, share: shareCommand, badge: badgeCommand, baseline: baselineCommand, agents: agentsCommand, "agents-md": agentsMdCommand, handoff: handoffCommand, "bench-pack": benchPackCommand, version: versionCommand, explain: explainCommand, mcp: mcpCommand, feedback: feedbackCommand, telemetry: telemetryCommand },
   async run({ args, cmd, rawArgs }) {
     applyGlobalFlags(args);
 

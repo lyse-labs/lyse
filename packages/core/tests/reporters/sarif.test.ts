@@ -216,19 +216,19 @@ describe("renderSarif", () => {
   });
 
   describe("partialFingerprints", () => {
-    it("every result has a non-empty hex primaryLocationLineHash/v1", () => {
+    it("every result has a non-empty hex lyseFindingId/v1", () => {
       const sarif = JSON.parse(renderSarif(sample));
       const result = sarif.runs[0].results[0];
       expect(result.partialFingerprints).toBeDefined();
-      const fp: string = result.partialFingerprints["primaryLocationLineHash/v1"];
+      const fp: string = result.partialFingerprints["lyseFindingId/v1"];
       expect(fp).toMatch(/^[0-9a-f]{64}$/);
     });
 
     it("same AuditResult rendered twice produces identical fingerprints (determinism)", () => {
       const sarif1 = JSON.parse(renderSarif(sample));
       const sarif2 = JSON.parse(renderSarif(sample));
-      const fp1: string = sarif1.runs[0].results[0].partialFingerprints["primaryLocationLineHash/v1"];
-      const fp2: string = sarif2.runs[0].results[0].partialFingerprints["primaryLocationLineHash/v1"];
+      const fp1: string = sarif1.runs[0].results[0].partialFingerprints["lyseFindingId/v1"];
+      const fp2: string = sarif2.runs[0].results[0].partialFingerprints["lyseFindingId/v1"];
       expect(fp1).toBe(fp2);
     });
 
@@ -241,8 +241,8 @@ describe("renderSarif", () => {
         ],
       };
       const sarif = JSON.parse(renderSarif(r));
-      const fp1: string = sarif.runs[0].results[0].partialFingerprints["primaryLocationLineHash/v1"];
-      const fp2: string = sarif.runs[0].results[1].partialFingerprints["primaryLocationLineHash/v1"];
+      const fp1: string = sarif.runs[0].results[0].partialFingerprints["lyseFindingId/v1"];
+      const fp2: string = sarif.runs[0].results[1].partialFingerprints["lyseFindingId/v1"];
       expect(fp1).not.toBe(fp2);
     });
 
@@ -255,8 +255,8 @@ describe("renderSarif", () => {
         ],
       };
       const sarif = JSON.parse(renderSarif(r));
-      const fp1: string = sarif.runs[0].results[0].partialFingerprints["primaryLocationLineHash/v1"];
-      const fp2: string = sarif.runs[0].results[1].partialFingerprints["primaryLocationLineHash/v1"];
+      const fp1: string = sarif.runs[0].results[0].partialFingerprints["lyseFindingId/v1"];
+      const fp2: string = sarif.runs[0].results[1].partialFingerprints["lyseFindingId/v1"];
       expect(fp1).not.toBe(fp2);
     });
 
@@ -269,8 +269,8 @@ describe("renderSarif", () => {
         ],
       };
       const sarif = JSON.parse(renderSarif(r));
-      const fp1: string = sarif.runs[0].results[0].partialFingerprints["primaryLocationLineHash/v1"];
-      const fp2: string = sarif.runs[0].results[1].partialFingerprints["primaryLocationLineHash/v1"];
+      const fp1: string = sarif.runs[0].results[0].partialFingerprints["lyseFindingId/v1"];
+      const fp2: string = sarif.runs[0].results[1].partialFingerprints["lyseFindingId/v1"];
       expect(fp1).not.toBe(fp2);
     });
 
@@ -281,9 +281,35 @@ describe("renderSarif", () => {
       const r2: AuditResult = { ...sample, findings: [findingB, findingA] };
       const sarif1 = JSON.parse(renderSarif(r1));
       const sarif2 = JSON.parse(renderSarif(r2));
-      const fpA_pos0: string = sarif1.runs[0].results[0].partialFingerprints["primaryLocationLineHash/v1"];
-      const fpA_pos1: string = sarif2.runs[0].results[1].partialFingerprints["primaryLocationLineHash/v1"];
+      const fpA_pos0: string = sarif1.runs[0].results[0].partialFingerprints["lyseFindingId/v1"];
+      const fpA_pos1: string = sarif2.runs[0].results[1].partialFingerprints["lyseFindingId/v1"];
       expect(fpA_pos0).toBe(fpA_pos1);
+    });
+
+    it("partialFingerprints are stable when a finding's line moves (diff-first identity)", () => {
+      // Same ruleId + file + fixGroup.from (anchor bucket) across both results — only
+      // location.line differs. Each result carries a single finding in that bucket, so
+      // the diff-first id (keyed on rule+file+bucket+ordinal, never on line) must match.
+      const colorFinding = {
+        ...sample.findings[0]!,
+        location: { file: "src/Page.tsx", line: 12, column: 18 },
+        fixGroup: { key: "tokens/no-hardcoded-color::#2563eb", from: "#2563eb" },
+      };
+      const movedColorFinding = {
+        ...colorFinding,
+        location: { file: "src/Page.tsx", line: 137, column: 4 },
+      };
+      const resultA: AuditResult = { ...sample, findings: [colorFinding] };
+      const resultB: AuditResult = { ...sample, findings: [movedColorFinding] };
+
+      const sarifA = JSON.parse(renderSarif(resultA));
+      const sarifB = JSON.parse(renderSarif(resultB));
+      const fpA: string = sarifA.runs[0].results[0].partialFingerprints["lyseFindingId/v1"];
+      const fpB: string = sarifB.runs[0].results[0].partialFingerprints["lyseFindingId/v1"];
+
+      expect(fpA).toMatch(/^[0-9a-f]{64}$/);
+      expect(fpB).toMatch(/^[0-9a-f]{64}$/);
+      expect(fpA).toBe(fpB);
     });
   });
 });

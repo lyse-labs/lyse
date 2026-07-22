@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Diff-first engine (P4).** `lyse baseline write` records the accepted findings + adoption scores + graph hash to a committed `.lyse/baseline.json`; `lyse audit --scope new` reports and gates only findings absent from that baseline (stable, reformat-proof finding identity). A reformat-only commit produces zero new findings.
+- The CI gate (`lyse add ci-gate`) now runs `lyse audit --scope new` and self-gates via exit code.
+
 ### Changed
+
+- SARIF `partialFingerprints` now use a reformat-proof `lyseFindingId/v1` (was `primaryLocationLineHash/v1`, line+message based).
+- `lyse add ci-gate` no longer emits `.github/scripts/lyse-gate.mjs`; the workflow is a single self-gating `audit --scope new` step. `.lyse/` is now ignored via `.lyse/*` + `!.lyse/baseline.json` (contents-form ignore + negation, since Git cannot re-include a file under an excluded directory) so the committed baseline stays trackable.
 
 - **Token rules now resolve values against the repo's own derived scales instead of a hardcoded default list — audit numbers change on every real repo, and scores are NOT comparable across this change.** Eleven `tokens/no-hardcoded-*` rules previously asked "is this literal a byte-for-byte member of a flat token map (or, for spacing, of a hardcoded Tailwind list)?". They now ask the Design System Graph what scale *this* repo actually uses — Tailwind config, `*.tokens.json`, CSS custom properties, SCSS variables, fused across sources — and classify every detected value into exactly one of four classes:
 
