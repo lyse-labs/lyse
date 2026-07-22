@@ -59,6 +59,11 @@ import { runTelemetryOn, runTelemetryOff, runTelemetryStatus } from "./commands/
 import { runBenchPack } from "./commands/bench-pack.js";
 import { runHandoffCommand } from "./commands/handoff.js";
 import { runBaselineWrite } from "./commands/baseline.js";
+import { readBaseline, BaselineError } from "./diff/baseline.js";
+import { selectNew } from "./diff/delta.js";
+import { evaluateGate } from "./diff/gate.js";
+import { stableRuleIds } from "./reliability/score/stable-sub-axes.js";
+import { SUB_AXES } from "./reliability/catalogue/sub-axes.js";
 import { writeGraph } from "./graph/persist.js";
 import type { DesignSystemGraph } from "./graph/types.js";
 
@@ -211,7 +216,7 @@ const auditCommand = defineCommand({
     threshold: { type: "string", description: "fail (exit 1) if final score < threshold", default: "0" },
     scope: {
       type: "string",
-      description: "Limit the audit to git-changed files: `changed` (committed vs --base), `staged`, or `uncommitted` (working-tree edits + untracked). Default: whole tree.",
+      description: "Limit findings: `changed`/`staged`/`uncommitted` (git file scope), or `new` (only findings absent from .lyse/baseline.json). Default: whole tree.",
     },
     staged: {
       type: "boolean",
@@ -291,6 +296,8 @@ const auditCommand = defineCommand({
     applyGlobalFlags(args);
     const startTime = Date.now();
     const repoRoot = resolve(args.root);
+    let newScopeGateFail = false;
+    let newScopeGateReasons: string[] = [];
 
     // T40: one-time warning when migrating from an alpha release. Printed to
     // stderr so it doesn't pollute stdout-captured JSON/SARIF output, and
@@ -474,6 +481,36 @@ const auditCommand = defineCommand({
 
     writeGraph(repoRoot, graph, { full: args["graph-full"] === true });
 
+    if (args["scope"] === "new") {
+      let baseline;
+      try {
+        baseline = readBaseline(join(repoRoot, ".lyse", "baseline.json"));
+      } catch (e) {
+        if (e instanceof BaselineError) {
+          console.error(`[lyse] ${e.message}`);
+          process.exit(64);
+        }
+        throw e;
+      }
+      const { newFindings, staleGraph } = selectNew(result.findings, baseline, graph);
+      if (staleGraph) {
+        console.error(
+          "[lyse] baseline may be stale: the design-system graph changed since it was written. Re-run `lyse baseline write`.",
+        );
+      }
+      const currentScores: Partial<Record<import("./types.js").AxisName, number>> = {};
+      for (const a of result.axes) if (typeof a.score === "number") currentScores[a.axis] = a.score;
+      const gate = evaluateGate({
+        newFindings,
+        currentScores,
+        baseline,
+        scoreContributingRuleIds: stableRuleIds(SUB_AXES, { filterRan: false }),
+      });
+      newScopeGateFail = gate.fail;
+      newScopeGateReasons = gate.reasons;
+      result.findings = newFindings;
+    }
+
     const isTTY = process.stdout.isTTY ?? false;
     const format = args.format ?? (isTTY ? "text" : "json");
 
@@ -620,7 +657,13 @@ const auditCommand = defineCommand({
       await ensureConsentDecision();
     }
 
-    if (didFail) {
+    if (args["scope"] === "new") {
+      if (newScopeGateFail) {
+        for (const r of newScopeGateReasons) console.error(`[lyse] gate: ${r}`);
+        process.exit(1);
+      }
+      // implicit exit 0
+    } else if (didFail) {
       process.exit(1);
     }
     // Implicit exit 0 (success)
