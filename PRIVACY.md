@@ -141,7 +141,7 @@ When the LLM precision filter runs (`lyse audit --llm`), verdicts are cached to 
 
 What's stored per entry, and nothing else:
 
-- A **content hash** — the finding's rule ID, file path, and normalized value bucket (no line/column, so reformatting/moving code doesn't invalidate it) — combined with an **axis-scoped token-context hash** (a hash of the relevant design-token set, so a token change invalidates only the affected verdicts).
+- A **content hash** — the finding's rule ID, file path, and normalized value bucket (no line/column, so reformatting/moving code doesn't invalidate it — and because the key omits line/column, all occurrences of the same literal value in one file share a single cached verdict) — combined with an **axis-scoped token-context hash** (a hash of the relevant design-token set, so a token change invalidates only the affected verdicts).
 - The **verdict label** (`violation` / `fp` / `uncertain`), a **confidence** number, and the **producing model name**.
 
 What's never stored: no source text, no file content, and no code context. The key is a one-way hash commitment to the finding's identity, not the literal — but low-entropy inputs (a hex color has ~16.7M possibilities, common spacing values far fewer) mean a reader who already knows the rule and file could brute-force the hash back to that one literal. That literal is a non-sensitive design-token value, typically already visible elsewhere in the source tree, so the cache remains safe to commit to a public repo.

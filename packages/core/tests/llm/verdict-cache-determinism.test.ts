@@ -302,4 +302,40 @@ describe("verdict cache — key stability", () => {
     ]);
     expect(verdictKey(f, graphAfterSpacingChange)).toBe(verdictKey(f, graphBefore));
   });
+
+  // Owner-approved design decision (see PRIVACY.md, "LLM verdict cache"): the
+  // key deliberately omits line/column, so two occurrences of the SAME literal
+  // in the SAME file resolve to the SAME verdictKey — "one verdict per value
+  // per file". A consequence, accepted at spec time, is that if the live LLM
+  // would have judged two such occurrences differently, only one verdict
+  // (whichever is cached) governs both on replay — last-write-wins, not a bug.
+  // This test pins that granularity so it can't silently regress.
+  it("value-level granularity (owner-approved): two occurrences of the same literal in one file share a single cached verdict", async () => {
+    const repoRoot = freshRepoRoot();
+    const occurrence1 = colorFinding({ from: "#aaaaaa", file: "App.tsx", line: 1 });
+    const occurrence2 = colorFinding({ from: "#aaaaaa", file: "App.tsx", line: 30 });
+    expect(keyOf(occurrence2)).toBe(keyOf(occurrence1)); // same value + same file ⇒ same key, despite different lines
+
+    const cache = VerdictCache.load(repoRoot);
+    cache.record({ key: keyOf(occurrence1), verdict: "fp", confidence: 0.9, model: "test-model" }); // single shared entry
+
+    const { connector, complete } = throwingConnector();
+    const fileContents = new Map([["App.tsx", "irrelevant"]]);
+
+    const result = await runFilterStage(
+      {
+        repoRoot,
+        config: MIN_CONFIG,
+        flags: { llmConsented: true },
+        findings: [occurrence1, occurrence2],
+        fileContents,
+        graph: GRAPH,
+      },
+      { connector, cache },
+    );
+
+    expect(result.findings).toHaveLength(0); // both occurrences drop — resolved via the one shared verdict
+    expect(complete).toHaveBeenCalledTimes(0);
+    expect(result.meta.filteredCount).toBe(2);
+  });
 });
