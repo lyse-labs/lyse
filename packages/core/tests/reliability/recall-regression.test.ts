@@ -11,14 +11,15 @@ const key = (b: { ruleId: string; class: string; zone: string }) => `${b.ruleId}
 
 describe("rules-recall.json (the committed seeded-drift recall baseline)", () => {
   it(
-    "current recall never regresses below the committed baseline",
+    "regenerated recall reproduces the committed rules-recall.json buckets exactly (golden)",
     async () => {
       const fresh = await measureRecall();
       const freshByKey = new Map(fresh.map((b) => [key(b), b]));
+      expect(fresh.length).toBe(committed.buckets.length);
       for (const base of committed.buckets) {
         const now = freshByKey.get(key(base));
         expect(now, `missing bucket ${key(base)}`).toBeDefined();
-        expect(now!.recall, `recall regressed on ${key(base)}`).toBeGreaterThanOrEqual(base.recall!);
+        expect(now).toEqual(base);
       }
     },
     120_000,

@@ -9,6 +9,8 @@
  * (ruleId, class, zone) and writes `packages/core/rules-recall.json`.
  *
  * Usage: tsx scripts/measure-recall.ts [--commit <sha>] [--at <iso>]
+ *
+ * Regenerate: pnpm exec tsx scripts/measure-recall.ts --commit "$(git rev-parse --short HEAD)" --at "<ISO8601>"  (run from repo root; no-arg defaults are fixed for determinism)
  */
 
 import { writeFileSync } from "node:fs";
