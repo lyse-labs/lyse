@@ -144,7 +144,7 @@ What's stored per entry, and nothing else:
 - A **content hash** — the finding's rule ID, file path, and normalized value bucket (no line/column, so reformatting/moving code doesn't invalidate it) — combined with an **axis-scoped token-context hash** (a hash of the relevant design-token set, so a token change invalidates only the affected verdicts).
 - The **verdict label** (`violation` / `fp` / `uncertain`), a **confidence** number, and the **producing model name**.
 
-What's never stored: no source text, no file content, and no cleartext literal value (not even the hardcoded color/spacing value that triggered the finding). The key is a one-way hash; the cache is safe to commit to a public repo — it cannot be used to reconstruct your source.
+What's never stored: no source text, no file content, and no code context. The key is a one-way hash commitment to the finding's identity, not the literal — but low-entropy inputs (a hex color has ~16.7M possibilities, common spacing values far fewer) mean a reader who already knows the rule and file could brute-force the hash back to that one literal. That literal is a non-sensitive design-token value, typically already visible elsewhere in the source tree, so the cache remains safe to commit to a public repo.
 
 **Determinism caveat (read this before relying on it):** `lyse audit --llm` is byte-identical across runs **given a committed, warm cache** — this is a lockfile guarantee, the same shape as `npm ci` being deterministic given a committed `package-lock.json`. It is not a claim that the underlying LLM call itself is deterministic. The *first* time a finding is judged (a cache miss), that judgement still comes from a live, non-deterministic LLM call and is only local until the cache file is committed.
 
@@ -155,7 +155,7 @@ Two flags control cache behavior in CI and local workflows:
 
 A team that prefers a per-machine cache over a shared, deterministic one can add `.lyse/verdicts.json` to `.gitignore` — this trades away the shared-determinism guarantee above but changes nothing else.
 
-The cache is gated on the same LLM opt-in as the rest of §1: a default `lyse audit` (no `--llm`) never reads or writes it, regardless of whether a `.lyse/verdicts.json` file exists in the repo.
+The cache is gated on the same LLM opt-in described above: a default `lyse audit` (no `--llm`) never reads or writes it, regardless of whether a `.lyse/verdicts.json` file exists in the repo.
 
 *(Accuracy note: in the `lyse` project's own repo, `.lyse/` is git-ignored wholesale for dogfooding — the "committed lockfile" guidance above describes the recommended setup for your project, not this one.)*
 
