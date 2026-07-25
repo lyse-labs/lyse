@@ -1,0 +1,26 @@
+import { describe, it, expect } from "vitest";
+import { measureRecall } from "../../src/reliability/recall/measure-recall.js";
+import { RECALL_FIXTURES } from "../../src/reliability/recall/fixtures.js";
+
+describe("measureRecall", () => {
+  it("produces resolver-confirmed buckets; colour exact recall is measured", async () => {
+    const colourFx = RECALL_FIXTURES.filter((f) => f.axis === "colors");
+    const buckets = await measureRecall(colourFx);
+    const exact = buckets.find((b) => b.ruleId === "tokens/no-hardcoded-color" && b.class === "exact" && b.zone === "app");
+    expect(exact).toBeDefined();
+    expect(exact!.seeded).toBeGreaterThanOrEqual(35);
+    expect(exact!.recall).toBe(exact!.caught / exact!.seeded);
+    expect(exact!.recallWilsonLB).toBeGreaterThan(0);
+    expect(exact!.recallSource).toBe("seeded");
+  }, 60_000);
+
+  it("spacing near recall is non-zero now that literals carry a rule-visible unit", async () => {
+    const spacingFx = RECALL_FIXTURES.filter((f) => f.axis === "spacing");
+    const buckets = await measureRecall(spacingFx);
+    const near = buckets.find((b) => b.ruleId === "tokens/no-hardcoded-spacing" && b.class === "near" && b.zone === "app");
+    expect(near).toBeDefined();
+    expect(near!.seeded).toBeGreaterThan(0);
+    expect(near!.caught).toBeGreaterThan(0);
+    expect(near!.recall).toBeGreaterThan(0);
+  }, 60_000);
+});
