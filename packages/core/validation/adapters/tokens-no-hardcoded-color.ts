@@ -337,7 +337,19 @@ export const colorAdapter: OracleAdapter = {
     { name: "css-rgb-level4-alpha", apply: (f) => ({ ...f, "src/Box.css": ".box { color: rgb(37 99 235 / 100%); }" }) },
     // Shorthand hex inside a Tailwind arbitrary value: exercises the
     // bracket-strip + shorthand normalization on the way to the resolver.
-    { name: "tailwind-arbitrary", apply: (f) => ({ ...f, "src/Btn.tsx": 'export const Btn = () => <button className="bg-[#fff]" />;' }) },
+    // Uses a non-trivial brand red (#e11 -> #ee1111) rather than #fff: white
+    // is a design-universal trivial color (isTrivialColor) and is no longer
+    // treated as drift regardless of resolution, so it can't serve as a
+    // positive observation here. The token is added to this mutation's own
+    // theme.css copy so the shorthand still resolves `exact`, not `novel`.
+    {
+      name: "tailwind-arbitrary",
+      apply: (f) => ({
+        ...f,
+        "src/theme.css": ":root { --color-fg: #2563eb; --color-bg: #ffffff; --color-danger: #ee1111; }",
+        "src/Btn.tsx": 'export const Btn = () => <button className="bg-[#e11]" />;',
+      }),
+    },
   ],
   // Each pair inlines a `:root { --color-a: …; }` token definition (the
   // custom-property declaration itself is guard-suppressed, never a finding)
@@ -345,16 +357,21 @@ export const colorAdapter: OracleAdapter = {
   // resolve `novel` (no known token), still consistent with each other but
   // never matching `expectViolation: true` under the four-class resolver.
   metamorphic: [
+    // Non-trivial brand colors (not #ffffff): white is a design-universal
+    // trivial color (isTrivialColor) and is no longer treated as drift
+    // regardless of resolution, so it can't discriminate notation-equivalence
+    // here — both sides would silently agree by being suppressed, not by
+    // being correctly resolved as the same token.
     {
       name: "hex-eq-rgb",
-      a: { "package.json": PKG, "src/m.css": ":root { --color-a: #ffffff; } .a { color: #ffffff; }" },
-      b: { "package.json": PKG, "src/m.css": ":root { --color-a: #ffffff; } .a { color: rgb(255, 255, 255); }" },
+      a: { "package.json": PKG, "src/m.css": ":root { --color-a: #7c3aed; } .a { color: #7c3aed; }" },
+      b: { "package.json": PKG, "src/m.css": ":root { --color-a: #7c3aed; } .a { color: rgb(124, 58, 237); }" },
       expectViolation: true,
     },
     {
       name: "shorthand-eq-longhand-hex",
-      a: { "package.json": PKG, "src/m.css": ":root { --color-a: #ffffff; } .a { color: #fff; }" },
-      b: { "package.json": PKG, "src/m.css": ":root { --color-a: #ffffff; } .a { color: #ffffff; }" },
+      a: { "package.json": PKG, "src/m.css": ":root { --color-a: #33cc33; } .a { color: #3c3; }" },
+      b: { "package.json": PKG, "src/m.css": ":root { --color-a: #33cc33; } .a { color: #33cc33; }" },
       expectViolation: true,
     },
     // Level 3 and Level 4 spellings of the same color must be judged the same.

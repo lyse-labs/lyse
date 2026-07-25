@@ -333,7 +333,8 @@ describe("isSvgIconContext — path helper unit tests", () => {
 
 describe("isSvgIconContext — path-only (content signal removed)", () => {
   // Content signal was removed to close a recall hole (mixed SVG + real DS colors).
-  // dataset id 86 (icon-library-picker.tsx) is now a RESIDUAL FP.
+  // dataset id 86 (icon-library-picker.tsx) was a RESIDUAL FP; now resolved —
+  // trivial-colour suppression (#fff/#000/transparent) catches this case.
 
   // *Icon.tsx basename still matches via path
   it("still identifies fill='#fff' in SomeIcon.tsx via path signal", () => {
@@ -395,11 +396,13 @@ describe("svg-icon rule integration — must NOT flag", () => {
     expect(result.findings).toHaveLength(0);
   });
 
-  // icon-library-picker.tsx — RESIDUAL FP (id 86): no icon-path signal; content signal removed
-  it("RESIDUAL FP: flags fill='#fff' in icon-library-picker.tsx (dataset id 86 — residual)", async () => {
+  // icon-library-picker.tsx — dataset id 86: no icon-path signal; content signal removed;
+  // formerly a residual FP, now resolved by trivial-colour suppression.
+  it("dataset id 86: fill='#fff' in icon-library-picker.tsx now suppressed as trivial colour (residual FP resolved)", async () => {
     // apps/v4/app/(app)/create/components/icon-library-picker.tsx — icon picker UI
     // NOT named *Icon.tsx and not in /icons/ dir — no path signal; content signal removed.
-    // Accepted residual FP: recall safety (mixed-file hole) outweighs this suppression.
+    // Formerly an accepted residual FP (recall safety outweighed suppression); now
+    // resolved — #fff is a design-universal trivial colour and is never flagged.
     const parsed = tsFile(
       "apps/v4/app/create/components/icon-library-picker.tsx",
       `export function IconPicker() {
@@ -411,8 +414,8 @@ describe("svg-icon rule integration — must NOT flag", () => {
 }`,
     );
     const result = await rule.evaluate(ctx, parsed);
-    // No longer suppressed — accepted residual FP
-    expect(result.findings.length).toBeGreaterThanOrEqual(1);
+    // Now suppressed — trivial-colour narrowing resolves this residual FP
+    expect(result.findings).toHaveLength(0);
   });
 });
 

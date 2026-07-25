@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "generatedFrom": {
     "corpus": "lyse-bench/tier1 web-apps: cal.com, documenso, plane, vercel-commerce (@pinned SHAs)",
-    "commit": "e8c0c6f",
-    "measuredAt": "2026-07-22T00:00:00.000Z"
+    "commit": "a136d5c",
+    "measuredAt": "2026-07-25T00:00:00.000Z"
   },
   "buckets": [
     {
@@ -46,13 +46,13 @@
       "ruleId": "tokens/no-hardcoded-color",
       "class": "exact",
       "zone": "app",
-      "n": 84,
-      "precision": 0.5,
-      "precisionWilsonLB": 0.3954393376854136,
+      "n": 40,
+      "precision": 1,
+      "precisionWilsonLB": 0.9123783988027134,
       "recall": null,
       "recallWilsonLB": null,
       "labelSource": "auto",
-      "gateEligible": false
+      "gateEligible": true
     },
     {
       "ruleId": "tokens/no-hardcoded-color",
@@ -70,7 +70,7 @@
       "ruleId": "tokens/no-hardcoded-color",
       "class": "novel",
       "zone": "app",
-      "n": 290,
+      "n": 245,
       "precision": null,
       "precisionWilsonLB": null,
       "recall": null,

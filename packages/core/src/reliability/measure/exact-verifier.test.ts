@@ -30,6 +30,13 @@ describe("verifyExact", () => {
     expect(label.verdict).toBe("fp");
     expect(label.reason).toBe("trivial value");
   });
+  it("rejects every representation of trivial white/black as fp (complete, parse-based)", () => {
+    for (const literal of ["rgb(255,255,255)", "hsl(0,0%,100%)", "rgb(0,0,0)"]) {
+      const gN = { ...g, tokens: [{ id: "c.trivial", axis: "colors" as const, rawValue: literal, source: "dtcg" as const }] };
+      const label = verifyExact(row(), literal, gN, createResolver(gN));
+      expect(label).toEqual({ verdict: "fp", source: "auto", reason: "trivial value" });
+    }
+  });
   it("rejects a token-definition file as fp", () => {
     const label = verifyExact(row({ file: "src/theme.ts" }), "#3b82f6", g, r());
     expect(label.verdict).toBe("fp");
