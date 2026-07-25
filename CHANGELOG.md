@@ -18,10 +18,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- `tokens/no-hardcoded-color` no longer flags design-universal trivial colours
-  (pure white, pure black, fully transparent) as drift — fewer false positives.
-  The colour `exact` precision bucket was re-measured on the pinned corpus; no
-  Health Score or default-behaviour change (`tokens.color` remains unscored).
+- **`tokens/no-hardcoded-color` no longer flags design-universal trivial colours**
+  (pure white, pure black, fully transparent) as drift, in any representation — they
+  coincide with a token by ubiquity, not by intent. This removes a class of false
+  positives and **narrows the colour `exact` measurement bucket**: re-measured on the
+  pinned corpus it moves from 50% precision (N=84, every FP a trivial — see the P5a
+  entry above) to **100% precision (N=40, Wilson lower bound 0.912, deterministic,
+  gate-eligible)** — Lyse's first honestly gate-eligible colour bucket. Honest score
+  note: this is **not** fully score-neutral. The overall Health Score is unchanged on
+  the reference fixtures, but because removing false-positive violations correctly
+  raises measured token adoption, the per-axis **tokens** score can rise slightly
+  where trivial-colour FPs existed (carbon 77→78, polaris 95→96 in the golden corpus).
+  `tokens.color` stays `contributesToScore: false` — the gate-eligible bucket is
+  evidence for a future scored sub-axis, not yet one; certifying it would need an
+  independent gold-label pass (the deterministic verifier cannot see a brand hex that
+  byte-coincides with a repo's own token).
 
 - SARIF `partialFingerprints` now use a reformat-proof `lyseFindingId/v1` (was `primaryLocationLineHash/v1`, line+message based).
 - `lyse add ci-gate` no longer emits `.github/scripts/lyse-gate.mjs`; the workflow is a single self-gating `audit --scope new` step. `.lyse/` is now ignored via `.lyse/*` + `!.lyse/baseline.json` (contents-form ignore + negation, since Git cannot re-include a file under an excluded directory) so the committed baseline stays trackable.
