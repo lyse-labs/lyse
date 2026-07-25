@@ -168,7 +168,7 @@ export async function runFilterStage(
   // Verdict cache (opt-in via a resolved graph AND a run-level LLM opt-in).
   // Absent graph → skip entirely. Absent opt-in → skip entirely, even with a
   // graph present, so a default (non-`--llm`) audit never consults a
-  // committed cache — see task-3b-brief.md.
+  // committed cache — the cache must never turn on LLM behavior on its own.
   const llmOptedIn =
     input.flags?.llmConsented === true ||
     input.flags?.llmFrozen === true ||

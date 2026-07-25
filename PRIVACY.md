@@ -135,6 +135,32 @@ Permanent opt-out: set `llm: { provider: 'none' }` in `.lyse.yaml`.
 
 ---
 
+## LLM verdict cache (`.lyse/verdicts.json`)
+
+When the LLM precision filter runs (`lyse audit --llm`), verdicts are cached to `.lyse/verdicts.json`. Unlike the audit trail at `.lyse/llm-calls.jsonl`, this file is **meant to be committed** — like a `package-lock.json`, a team commits it so `lyse audit --llm` replays deterministically for every teammate and in CI, without a live LLM call on every run.
+
+What's stored per entry, and nothing else:
+
+- A **content hash** — the finding's rule ID, file path, and normalized value bucket (no line/column, so reformatting/moving code doesn't invalidate it) — combined with an **axis-scoped token-context hash** (a hash of the relevant design-token set, so a token change invalidates only the affected verdicts).
+- The **verdict label** (`violation` / `fp` / `uncertain`), a **confidence** number, and the **producing model name**.
+
+What's never stored: no source text, no file content, and no cleartext literal value (not even the hardcoded color/spacing value that triggered the finding). The key is a one-way hash; the cache is safe to commit to a public repo — it cannot be used to reconstruct your source.
+
+**Determinism caveat (read this before relying on it):** `lyse audit --llm` is byte-identical across runs **given a committed, warm cache** — this is a lockfile guarantee, the same shape as `npm ci` being deterministic given a committed `package-lock.json`. It is not a claim that the underlying LLM call itself is deterministic. The *first* time a finding is judged (a cache miss), that judgement still comes from a live, non-deterministic LLM call and is only local until the cache file is committed.
+
+Two flags control cache behavior in CI and local workflows:
+
+- `--llm-frozen` — replay only. A cache miss is never sent to the LLM; instead it's reported and the process exits non-zero. Use this in CI to catch an unreviewed/uncommitted cache change before it silently falls back to a live call.
+- `--llm-refresh` — re-judge every target finding (ignoring existing entries) and rewrite the cache file.
+
+A team that prefers a per-machine cache over a shared, deterministic one can add `.lyse/verdicts.json` to `.gitignore` — this trades away the shared-determinism guarantee above but changes nothing else.
+
+The cache is gated on the same LLM opt-in as the rest of §1: a default `lyse audit` (no `--llm`) never reads or writes it, regardless of whether a `.lyse/verdicts.json` file exists in the repo.
+
+*(Accuracy note: in the `lyse` project's own repo, `.lyse/` is git-ignored wholesale for dogfooding — the "committed lockfile" guidance above describes the recommended setup for your project, not this one.)*
+
+---
+
 ## 5b. Optional email capture (`lyse init`)
 
 Email is captured **only** during the `lyse init` wizard. `lyse audit` never
