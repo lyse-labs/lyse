@@ -85,12 +85,12 @@ describe("rule tokens/no-hardcoded-color", () => {
     expect(result.findings[0].location.file).toBe("src/Box.tsx");
   });
 
-  it("flags Tailwind arbitrary value bg-[#fff]", async () => {
+  it("flags Tailwind arbitrary value bg-[#2563eb]", async () => {
     const parsed: ParsedFiles = {
       ts: [
         {
           path: "src/X.tsx",
-          source: '<div className="bg-[#ffffff]" />',
+          source: '<div className="bg-[#2563eb]" />',
           imports: [],
           ast: null,
         },
@@ -100,6 +100,7 @@ describe("rule tokens/no-hardcoded-color", () => {
     };
     const result = await rule.evaluate(ctx, parsed);
     expect(result.findings.length).toBeGreaterThanOrEqual(1);
+    expect(result.findings.some((f) => f.message.includes("#2563eb"))).toBe(true);
   });
 
   it("does not flag currentColor / transparent / inherit", async () => {
@@ -689,7 +690,7 @@ describe("Guard A — rule: does NOT flag hardcoded color in test/story/fixture 
 
   it("STILL flags hex in a .css file (recall guard)", async () => {
     const parsed: ParsedFiles = {
-      ts: [], css: [{ path: "src/theme.css", source: ".x { color: #fff; }", root: null }], cssInJs: [],
+      ts: [], css: [{ path: "src/theme.css", source: ".x { color: #3b82f6; }", root: null }], cssInJs: [],
     };
     const result = await rule.evaluate(ctx, parsed);
     expect(result.findings).toHaveLength(1);
@@ -1132,9 +1133,9 @@ describe("data-palette guard — CSS multi-color contexts must still flag (recal
 
   // Case 2: SCSS rule block with #fff + multiple rgb() color stops — the block
   // has ≥3 color literals but it is a CSS rule block, not a JS palette object.
-  it("MUST flag #fff and rgb() stops in a SCSS rule block with ≥5 color literals", async () => {
+  it("MUST flag #3b82f6 and rgb() stops in a SCSS rule block with ≥5 color literals", async () => {
     const source = `.btn-signup-mktg {
-  color: #fff;
+  color: #3b82f6;
   background: linear-gradient(
     to bottom,
     rgb(40, 167, 69),
@@ -1142,7 +1143,7 @@ describe("data-palette guard — CSS multi-color contexts must still flag (recal
     rgb(24, 105, 43),
     rgb(18, 80, 32)
   );
-  border-color: #fff;
+  border-color: #3b82f6;
 }`;
     const parsed: ParsedFiles = {
       ts: [],
@@ -1150,9 +1151,9 @@ describe("data-palette guard — CSS multi-color contexts must still flag (recal
       cssInJs: [],
     };
     const result = await rule.evaluate(ctx, parsed);
-    // #fff and the rgb() stops are all real brand-color drift — must not be suppressed
+    // #3b82f6 and the rgb() stops are all real brand-color drift — must not be suppressed
     expect(result.findings.length).toBeGreaterThanOrEqual(3);
-    expect(result.findings.some((f) => f.message.includes("#fff"))).toBe(true);
+    expect(result.findings.some((f) => f.message.includes("#3b82f6"))).toBe(true);
   });
 
   // Case 3: detectInText with isCssSource=true never suppresses multi-color CSS blocks
@@ -1387,6 +1388,41 @@ describe("legacy (no-resolver) contexts are behaviour-preserving", () => {
     expect(res.findings).toHaveLength(1);
     expect(res.findings[0]?.severity).toBe("warning");
     expect(res.findings[0]?.confidence).toBeUndefined();
+  });
+});
+
+describe("trivial-colour suppression (design-universal white/black/transparent)", () => {
+  const runCss = async (source: string) => {
+    const parsed: ParsedFiles = { ts: [], css: [{ path: "src/app.css", source, root: null }], cssInJs: [] };
+    return rule.evaluate(ctx, parsed);
+  };
+
+  it("does NOT flag pure white / black / transparent literals", async () => {
+    for (const v of ["#fff", "#ffffff", "#000", "#000000", "rgb(255,255,255)", "rgb(0,0,0)", "hsl(0,0%,100%)", "rgba(0,0,0,0)"]) {
+      const res = await runCss(`.x { color: ${v}; }`);
+      expect(res.findings, `${v} must be suppressed`).toHaveLength(0);
+    }
+  });
+
+  it("does NOT flag a trivial Tailwind arbitrary value bg-[#ffffff]", async () => {
+    const parsed: ParsedFiles = {
+      ts: [{ path: "src/X.tsx", source: '<div className="bg-[#ffffff]" />', imports: [], ast: null }],
+      css: [],
+      cssInJs: [],
+    };
+    const res = await rule.evaluate(ctx, parsed);
+    expect(res.findings).toHaveLength(0);
+  });
+
+  it("STILL flags real drift and translucent white (not trivial)", async () => {
+    const drift = await runCss(`.x { color: #2563eb; }`);
+    expect(drift.findings.some((f) => f.message.includes("#2563eb"))).toBe(true);
+    const translucent = await runCss(`.x { background: rgba(255,255,255,0.15); }`);
+    expect(
+      translucent.findings.some(
+        (f) => f.message.includes("rgba(255, 255, 255, 0.15)") || f.message.includes("rgba(255,255,255,0.15)"),
+      ),
+    ).toBe(true);
   });
 });
 

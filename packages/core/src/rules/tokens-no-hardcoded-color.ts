@@ -10,6 +10,7 @@ import { makeFixGroup } from "./_fix-group.js";
 import { classifyColorRole } from "./_color-ast-role.js";
 import { isScored, reverseLookup } from "../graph/query.js";
 import type { Resolution, ResolveClass, Resolver } from "../graph/resolve/types.js";
+import { isTrivialColor } from "../graph/resolve/trivial-color.js";
 
 // Allow one level of nested parens so hsl(var(--token)) is captured whole.
 // Pattern: (?:[^)(]|\([^)]*\))* matches any mix of non-paren chars and
@@ -398,6 +399,11 @@ function colorVerdict(ctx: RuleContext, raw: string): ColorVerdict | undefined {
   // finding `message`.
   const key = raw.replace(/^.*\[(.*)]$/, "$1").toLowerCase();
   const rawLower = raw.toLowerCase();
+
+  // Design-universal trivials (pure white/black/transparent) are not drift —
+  // they coincide with a token by ubiquity, not by intent. Suppress across all
+  // classes (exact/near/novel). See graph/resolve/trivial-color.ts.
+  if (isTrivialColor(key)) return undefined;
 
   // Legacy path (no ctx.resolver — MCP `audit_file`, single-file rule contexts,
   // codemod contexts). Byte-identical to the pre-resolver rule: always
