@@ -165,8 +165,15 @@ export async function runFilterStage(
   }
   const sortedFiles = [...byFile.keys()].sort();
 
-  // Verdict cache (opt-in via a resolved graph). Absent graph → skip entirely.
-  const useCache = input.graph !== undefined;
+  // Verdict cache (opt-in via a resolved graph AND a run-level LLM opt-in).
+  // Absent graph → skip entirely. Absent opt-in → skip entirely, even with a
+  // graph present, so a default (non-`--llm`) audit never consults a
+  // committed cache — see task-3b-brief.md.
+  const llmOptedIn =
+    input.flags?.llmConsented === true ||
+    input.flags?.llmFrozen === true ||
+    input.flags?.llmRefresh === true;
+  const useCache = input.graph !== undefined && llmOptedIn;
   const cache = useCache ? (opts?.cache ?? VerdictCache.load(input.repoRoot)) : undefined;
   const refresh = input.flags?.llmRefresh === true;
   const frozen = input.flags?.llmFrozen === true;

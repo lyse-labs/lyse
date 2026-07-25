@@ -100,7 +100,14 @@ describe("runFilterStage — verdict cache", () => {
       const fileContents = new Map([["src/App.tsx", "line one\nline two"]]);
 
       const result = await runFilterStage(
-        { repoRoot, config: MIN_CONFIG, flags: undefined, findings: [dropF, keepF], fileContents, graph: GRAPH },
+        {
+          repoRoot,
+          config: MIN_CONFIG,
+          flags: { llmConsented: true },
+          findings: [dropF, keepF],
+          fileContents,
+          graph: GRAPH,
+        },
         { connector, cache },
       );
 
@@ -129,7 +136,14 @@ describe("runFilterStage — verdict cache", () => {
       const fileContents = new Map([["src/App.tsx", "line one\nline two"]]);
 
       const result = await runFilterStage(
-        { repoRoot, config: MIN_CONFIG, flags: undefined, findings: [hitF, missF], fileContents, graph: GRAPH },
+        {
+          repoRoot,
+          config: MIN_CONFIG,
+          flags: { llmConsented: true },
+          findings: [hitF, missF],
+          fileContents,
+          graph: GRAPH,
+        },
         { connector, cache },
       );
 
@@ -220,7 +234,7 @@ describe("runFilterStage — verdict cache", () => {
       const fileContents = new Map([["src/App.tsx", "const a = red;"]]);
 
       await runFilterStage(
-        { repoRoot, config: MIN_CONFIG, flags: undefined, findings: [f], fileContents, graph: GRAPH },
+        { repoRoot, config: MIN_CONFIG, flags: { llmConsented: true }, findings: [f], fileContents, graph: GRAPH },
         { connector, cache },
       );
 
@@ -234,6 +248,48 @@ describe("runFilterStage — verdict cache", () => {
       expect(dirtyAtFlush).toHaveBeenCalledWith(repoRoot);
       expect(existsSync(join(repoRoot, ".lyse", "verdicts.json"))).toBe(true);
       expect(cache.lookup(key(f))).toBeDefined();
+    });
+  });
+
+  it("does not consult the cache when the LLM filter is not opted-in (default audit)", async () => {
+    await withTempRepo(async (repoRoot) => {
+      const f = colorFinding({ from: "#aaaaaa", line: 1 });
+      const cache = VerdictCache.load(repoRoot);
+      // Pre-seed a HIT that would drop the finding if the cache were consulted.
+      cache.record({ key: key(f), verdict: "fp", confidence: 0.95, model: "seed" });
+      const recordSpy = vi.spyOn(cache, "record");
+      const lookupSpy = vi.spyOn(cache, "lookup");
+      // Empty text = a default-audit Noop connector response (fails safe: keep + bail).
+      const { connector } = fakeConnector("");
+      const fileContents = new Map([["src/App.tsx", "const a = red;"]]);
+
+      const result = await runFilterStage(
+        {
+          repoRoot,
+          config: MIN_CONFIG,
+          flags: {}, // no llmConsented / llmFrozen / llmRefresh
+          findings: [f],
+          fileContents,
+          graph: GRAPH,
+        },
+        { connector, cache },
+      );
+
+      // The pre-seeded "fp" hit had zero effect: the finding is still present,
+      // with no cache-sourced (or any) llmJudgement attached.
+      expect(result.findings).toHaveLength(1);
+      expect(result.findings[0]!.fixGroup?.from).toBe("#aaaaaa");
+      expect(result.findings[0]!.llmJudgement).toBeUndefined();
+      // The cache itself was never touched by the stage.
+      expect(lookupSpy).not.toHaveBeenCalled();
+      expect(recordSpy).not.toHaveBeenCalled();
+      // The pre-seeded entry is still exactly what we seeded (untouched).
+      expect(cache.lookup(key(f))).toEqual({
+        key: key(f),
+        verdict: "fp",
+        confidence: 0.95,
+        model: "seed",
+      });
     });
   });
 
