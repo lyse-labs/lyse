@@ -23,6 +23,14 @@ function colorCandidates(hex: string): string[] {
 
 const NUM_NUDGES = [1, 2, 3, 4, 6, 9, 15, 40, 100];
 
+/** Loader strips px off spacing-family axes; the canonical CSS literal for those tokens is px. */
+const AXIS_DEFAULT_UNIT: Partial<Record<TokenAxis, string>> = {
+  spacing: "px",
+  radii: "px",
+  borderWidth: "px",
+  breakpoints: "px",
+};
+
 export function generateLiterals(
   resolver: Resolver,
   tokens: TokenNode[],
@@ -53,7 +61,8 @@ export function generateLiterals(
       if (n === null) continue;
       if (cls === "exact") { if (push(t.rawValue)) break; }
       else {
-        const unit = t.rawValue.replace(/^[+-]?[\d.]+/, "");
+        const derivedUnit = t.rawValue.replace(/^[+-]?[\d.]+/, "");
+        const unit = derivedUnit || AXIS_DEFAULT_UNIT[axis] || "";
         for (const d of NUM_NUDGES) { if (push(`${n + d}${unit}`) || push(`${Math.max(0, n - d)}${unit}`)) break; }
       }
     }

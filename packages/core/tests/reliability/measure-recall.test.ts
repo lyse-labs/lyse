@@ -13,4 +13,14 @@ describe("measureRecall", () => {
     expect(exact!.recallWilsonLB).toBeGreaterThan(0);
     expect(exact!.recallSource).toBe("seeded");
   }, 60_000);
+
+  it("spacing near recall is non-zero now that literals carry a rule-visible unit", async () => {
+    const spacingFx = RECALL_FIXTURES.filter((f) => f.axis === "spacing");
+    const buckets = await measureRecall(spacingFx);
+    const near = buckets.find((b) => b.ruleId === "tokens/no-hardcoded-spacing" && b.class === "near" && b.zone === "app");
+    expect(near).toBeDefined();
+    expect(near!.seeded).toBeGreaterThan(0);
+    expect(near!.caught).toBeGreaterThan(0);
+    expect(near!.recall).toBeGreaterThan(0);
+  }, 60_000);
 });
