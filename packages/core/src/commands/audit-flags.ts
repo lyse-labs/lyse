@@ -38,6 +38,10 @@ export interface AuditFlags {
   costCapUsd?: number;
   /** If true, bypass the cache and force a fresh LLM call. */
   noCache?: boolean;
+  /** Fail (non-zero exit) instead of making a live LLM call on any verdict-cache miss. */
+  llmFrozen?: boolean;
+  /** Ignore cached verdicts on read and re-judge every finding, rewriting the cache. */
+  llmRefresh?: boolean;
   /** Override the LLM provider (e.g. "anthropic" | "openai" | "ollama"). */
   llmProvider?: string;
   /** Override the LLM model identifier. */

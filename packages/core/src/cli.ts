@@ -256,6 +256,14 @@ const auditCommand = defineCommand({
       type: "boolean",
       description: "Disable the LLM layer for this run (static-only LLM behaviour)",
     },
+    "llm-frozen": {
+      type: "boolean",
+      description: "Fail (non-zero exit) on any verdict-cache miss instead of calling the LLM — CI replay of a committed .lyse/verdicts.json",
+    },
+    "llm-refresh": {
+      type: "boolean",
+      description: "Ignore cached verdicts and re-judge every finding, rewriting .lyse/verdicts.json",
+    },
     dim: {
       type: "string",
       description:
@@ -366,6 +374,8 @@ const auditCommand = defineCommand({
         ? { costCapUsd: parseFloat(args["cost-cap-usd"] as string) }
         : {}),
       ...(args["no-cache"] === true ? { noCache: true } : {}),
+      ...(args["llm-frozen"] === true ? { llmFrozen: true } : {}),
+      ...(args["llm-refresh"] === true ? { llmRefresh: true } : {}),
       ...(typeof args["llm-provider"] === "string" && args["llm-provider"]
         ? { llmProvider: args["llm-provider"] as string }
         : {}),
@@ -636,6 +646,19 @@ const auditCommand = defineCommand({
     }
 
     // Exit code logic — sysexits.h-style
+
+    // --llm-frozen (CI replay of a committed .lyse/verdicts.json): any finding
+    // that wasn't in the cache is a hard failure, independent of --threshold /
+    // --scope. Checked first so a frozen miss always wins the exit code.
+    const frozenMisses = result.meta?.layer4?.frozenMisses ?? 0;
+    if (frozenMisses > 0) {
+      console.error(
+        `[lyse] ${frozenMisses} finding(s) not in the verdict cache. ` +
+          `Run \`lyse audit --llm\` locally and commit .lyse/verdicts.json.`,
+      );
+      process.exit(1);
+    }
+
     const threshold = parseInt(String(args.threshold ?? "0"), 10);
     if (Number.isNaN(threshold)) {
       console.error(`Invalid --threshold value: ${args.threshold}`);

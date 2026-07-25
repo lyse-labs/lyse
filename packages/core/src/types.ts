@@ -347,6 +347,8 @@ export interface Layer4Meta {
   filterRan?: boolean;
   /** Number of color/spacing findings dropped by the LLM precision filter. */
   filteredCount?: number;
+  /** Number of findings not in the verdict cache under --llm-frozen (CI replay miss). */
+  frozenMisses?: number;
 }
 
 /**

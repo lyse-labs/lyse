@@ -610,6 +610,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     flags,
     findings: runResult.findings,
     fileContents,
+    graph,
   });
   if (filter.meta.filteredCount > 0) {
     runResult.findings = filter.findings;
@@ -649,6 +650,9 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     ...layer4.meta,
     ...(filter.meta.filterRan
       ? { filterRan: true, filteredCount: filter.meta.filteredCount }
+      : {}),
+    ...(filter.meta.frozenMisses !== undefined && filter.meta.frozenMisses > 0
+      ? { frozenMisses: filter.meta.frozenMisses }
       : {}),
   };
   // -----------------------------------------------------------------------

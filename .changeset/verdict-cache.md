@@ -1,0 +1,5 @@
+---
+"@lyse-labs/lyse": minor
+---
+
+The LLM precision filter is now deterministic under a committed `.lyse/verdicts.json` verdict cache: `lyse audit --llm` with a warm cache is byte-identical across runs and makes zero connector calls. Two new flags — `--llm-frozen` (CI replay: fail with a non-zero exit on any cache miss instead of calling out) and `--llm-refresh` (re-judge every target finding and rewrite the cache). The cache stores hashes and verdict labels only (a content hash + axis-scoped token-context hash, the verdict enum, a confidence number, and the producing model name) — never source text or the cleartext literal value — so it's commit-safe like a lockfile. Default `lyse audit` (no `--llm`) is unchanged: static-only, zero network calls, cache untouched. No score change. Honest caveat: determinism holds given a committed warm cache — a lockfile guarantee analogous to `npm ci`, not a claim that the LLM itself is deterministic; a first-time judging pass (cache miss) is still a live, non-deterministic call.
