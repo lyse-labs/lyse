@@ -53,7 +53,7 @@ export function generateLiterals(
       if (n === null) continue;
       if (cls === "exact") { if (push(t.rawValue)) break; }
       else {
-        const unit = t.rawValue.replace(/^[\d.]+/, "");
+        const unit = t.rawValue.replace(/^[+-]?[\d.]+/, "");
         for (const d of NUM_NUDGES) { if (push(`${n + d}${unit}`) || push(`${Math.max(0, n - d)}${unit}`)) break; }
       }
     }

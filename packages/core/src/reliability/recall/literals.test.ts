@@ -23,14 +23,45 @@ describe("generateLiterals (colours)", () => {
   it("near: every generated literal resolves near", () => {
     const out = generateLiterals(r, COLORS, "colors", "near", 5);
     expect(out.length).toBeGreaterThan(0);
+    expect(out.length).toBeLessThanOrEqual(5);
     for (const v of out) expect(r.resolve("colors", v).class).toBe("near");
   });
   it("novel: every generated literal resolves novel", () => {
     const out = generateLiterals(r, COLORS, "colors", "novel", 5);
     expect(out.length).toBeGreaterThan(0);
+    expect(out.length).toBeLessThanOrEqual(5);
     for (const v of out) expect(r.resolve("colors", v).class).toBe("novel");
   });
   it("is deterministic", () => {
     expect(generateLiterals(r, COLORS, "colors", "near", 5)).toEqual(generateLiterals(r, COLORS, "colors", "near", 5));
+  });
+});
+
+const SPACING: TokenNode[] = [
+  { id: "s.04", axis: "spacing", rawValue: "4px", source: "dtcg" },
+  { id: "s.08", axis: "spacing", rawValue: "8px", source: "dtcg" },
+  { id: "s.12", axis: "spacing", rawValue: "12px", source: "dtcg" },
+  { id: "s.16", axis: "spacing", rawValue: "16px", source: "dtcg" },
+  { id: "s.24", axis: "spacing", rawValue: "24px", source: "dtcg" },
+  { id: "s.32", axis: "spacing", rawValue: "32px", source: "dtcg" },
+  { id: "s.48", axis: "spacing", rawValue: "48px", source: "dtcg" },
+];
+
+describe("generateLiterals (numeric / spacing)", () => {
+  const g = graphOf(SPACING); const r = createResolver(g);
+  it("near: every generated literal resolves near, capped", () => {
+    const out = generateLiterals(r, SPACING, "spacing", "near", 5);
+    expect(out.length).toBeGreaterThan(0);
+    expect(out.length).toBeLessThanOrEqual(5);
+    for (const v of out) expect(r.resolve("spacing", v).class).toBe("near");
+  });
+  it("novel: every generated literal resolves novel, capped", () => {
+    const out = generateLiterals(r, SPACING, "spacing", "novel", 5);
+    expect(out.length).toBeGreaterThan(0);
+    expect(out.length).toBeLessThanOrEqual(5);
+    for (const v of out) expect(r.resolve("spacing", v).class).toBe("novel");
+  });
+  it("is deterministic", () => {
+    expect(generateLiterals(r, SPACING, "spacing", "near", 5)).toEqual(generateLiterals(r, SPACING, "spacing", "near", 5));
   });
 });
