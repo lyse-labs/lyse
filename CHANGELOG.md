@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `tokens/no-hardcoded-color` no longer flags design-universal trivial colours
+  (pure white, pure black, fully transparent) as drift — fewer false positives.
+  The colour `exact` precision bucket was re-measured on the pinned corpus; no
+  Health Score or default-behaviour change (`tokens.color` remains unscored).
+
 - SARIF `partialFingerprints` now use a reformat-proof `lyseFindingId/v1` (was `primaryLocationLineHash/v1`, line+message based).
 - `lyse add ci-gate` no longer emits `.github/scripts/lyse-gate.mjs`; the workflow is a single self-gating `audit --scope new` step. `.lyse/` is now ignored via `.lyse/*` + `!.lyse/baseline.json` (contents-form ignore + negation, since Git cannot re-include a file under an excluded directory) so the committed baseline stays trackable.
 

@@ -109,6 +109,7 @@ The perceptual tolerance that separates `near` from `novel` (ΔEOK ≤ 0.02) is 
 ## What does NOT trigger this rule
 
 - `transparent`, `currentColor`, `inherit`, `initial`, `unset` — these are intentional escape hatches.
+- **Design-universal trivial colours** — pure white, pure black, and fully-transparent values are not flagged as drift, in any representation (`#fff`, `#ffffff`, `rgb(255, 255, 255)`, `white`, `rgba(0, 0, 0, 0)`, …), even when they exactly match a token. These values coincide with a token by ubiquity rather than intent: nearly every design system happens to define a white/black/transparent token, so a byte-identical match here is not evidence the author reached for a hex code instead of the token. Genuine drift is still flagged, including translucent white or black (any partial alpha) and any near-white/near-black value that isn't bit-for-bit white or black.
 - **Test / spec / story / fixture files** — `*.test.*`, `*.spec.*`, `*.stories.*`, `*.fixture.*`, `__tests__/**`, `__mocks__/**`, `**/fixtures/**`. Color literals in these roles are assertion artefacts or documentation, not UI drift.
 - **Schema / data / config / type-declaration files** — `*.dto.*`, `*.input.*`, `*.schema.*`, `*.entity.*`, `*.config.*`, `*.d.ts`, and files under `dto/` or `schemas/`. For example, a NestJS `@ApiProperty({ example: "#FFFFFF" })` is schema documentation.
 - **Color token-definition files** — files whose job is to define the color palette are the source of truth, not drift:
