@@ -3,9 +3,9 @@
   "axes": [
     {
       "axis": "tokens",
-      "findings": 19,
+      "findings": 18,
       "opportunities": 82,
-      "score": 77
+      "score": 78
     },
     {
       "axis": "a11y",
@@ -39,8 +39,8 @@
     }
   ],
   "finalScore": 83,
-  "findingsCount": 234,
-  "findingsDigest": "8405d5d95da3f49378b0bd6b08c49c4bc50ada6fee0a37a053ea2e7b8835ded8",
+  "findingsCount": 233,
+  "findingsDigest": "4d1311069c3084f6e7a80cca923607fd707dd5d4881c3754008cb624bdef18a2",
   "grade": {
     "autoFailed": false,
     "grade": "A",
@@ -113,7 +113,7 @@
         {
           "count": 11,
           "files": 2,
-          "gain": 1,
+          "gain": 2,
           "key": "versioning/deprecation-markers",
           "migrationScale": false,
           "ruleId": "versioning/deprecation-markers"

@@ -3,7 +3,7 @@
   "axes": [
     {
       "axis": "tokens",
-      "findings": 95,
+      "findings": 87,
       "opportunities": 3903,
       "score": 98
     },
@@ -39,8 +39,8 @@
     }
   ],
   "finalScore": 86,
-  "findingsCount": 1832,
-  "findingsDigest": "ead6f43717e7538739b5dccf0b07783f768f2c34a9d3a3ccc368bc552f787f7d",
+  "findingsCount": 1824,
+  "findingsDigest": "edfced26a206ee3d37483d0693d227debe2f8188d017ed184ae2c235600100cf",
   "grade": {
     "autoFailed": false,
     "grade": "A",
