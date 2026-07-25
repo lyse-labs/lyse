@@ -150,7 +150,7 @@ gate-eligible class. `near`/`novel`/`unresolved` are LLM-judge candidates and
 are not measured here.
 
 <!-- reliability:auto:start -->
-- exact · app: measured 50.0% · N=84 · deterministic
+- exact · app: measured 100.0% · N=40 · deterministic · gate-eligible
 - near · app: not measured
 - novel · app: not measured
 - unresolved · app: not measured
