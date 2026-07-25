@@ -19,6 +19,7 @@
     "clone:bench": "tsx scripts/clone-bench-corpus.ts",
     "measure:rules": "tsx scripts/measure-rules.ts",
     "measure:ledger": "tsx scripts/measure-ledger.ts",
+    "measure:recall": "tsx scripts/measure-recall.ts",
     "docs:reliability:rules": "tsx scripts/generate-rule-docs-reliability.ts"
   },
   "devDependencies": {

@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "recallGeneratedFrom": {
+    "source": "seeded-drift fixtures",
+    "commit": "d48356a",
+    "measuredAt": "2026-07-25T00:00:00.000Z"
+  },
+  "buckets": [
+    {
+      "ruleId": "tokens/no-hardcoded-color",
+      "class": "exact",
+      "zone": "app",
+      "seeded": 40,
+      "caught": 40,
+      "recall": 1,
+      "recallWilsonLB": 0.9123783988027134,
+      "recallSource": "seeded"
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-color",
+      "class": "near",
+      "zone": "app",
+      "seeded": 60,
+      "caught": 60,
+      "recall": 1,
+      "recallWilsonLB": 0.93982814785791,
+      "recallSource": "seeded"
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-color",
+      "class": "novel",
+      "zone": "app",
+      "seeded": 60,
+      "caught": 60,
+      "recall": 1,
+      "recallWilsonLB": 0.93982814785791,
+      "recallSource": "seeded"
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-spacing",
+      "class": "near",
+      "zone": "app",
+      "seeded": 60,
+      "caught": 59,
+      "recall": 0.9833333333333333,
+      "recallWilsonLB": 0.9114487027240993,
+      "recallSource": "seeded"
+    },
+    {
+      "ruleId": "tokens/no-hardcoded-spacing",
+      "class": "novel",
+      "zone": "app",
+      "seeded": 30,
+      "caught": 30,
+      "recall": 1,
+      "recallWilsonLB": 0.8864866068260312,
+      "recallSource": "seeded"
+    }
+  ]
+}
