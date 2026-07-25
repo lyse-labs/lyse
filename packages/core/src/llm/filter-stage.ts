@@ -1,9 +1,11 @@
 import type { Finding, LyseConfig, LlmJudgement, LlmVerdict } from "../types.js";
 import type { AuditFlags } from "../commands/audit-flags.js";
+import type { DesignSystemGraph } from "../graph/types.js";
 import type { ConnectorClient } from "./connectors/types.js";
 import { resolveConnector } from "./connectors/resolver.js";
 import { extractJson, withTimeout } from "./llm-utils.js";
 import { containsLikelySecret } from "./secret-scan.js";
+import { VerdictCache, verdictKey } from "./verdict-cache.js";
 
 export interface FilterStageInput {
   repoRoot: string;
@@ -11,6 +13,14 @@ export interface FilterStageInput {
   flags: AuditFlags | undefined;
   findings: Finding[];
   fileContents: Map<string, string>; // keyed by RELATIVE path (== finding.location.file)
+  /**
+   * The resolved design-system graph. When present, LLM verdicts are cached in
+   * `.lyse/verdicts.json` keyed by a reformat-proof content hash + axis-scoped
+   * token hash: warm keys are replayed without a live call. When ABSENT the
+   * cache is skipped entirely and the stage behaves byte-identically to a
+   * cache-free run (fail-safe / backward-compatible).
+   */
+  graph?: DesignSystemGraph;
 }
 
 export interface FilterStageResult {
@@ -22,12 +32,15 @@ export interface FilterStageResult {
     bailed?: boolean;
     modelUsed?: string;
     usdSpent?: number;
+    /** Count of cache misses left unjudged because `--llm-frozen` forbade a live call. */
+    frozenMisses?: number;
   };
 }
 
 export interface FilterStageOptions {
   connector?: ConnectorClient; // injected in tests → zero real spawn
   timeoutMs?: number;
+  cache?: VerdictCache; // injected in tests; else VerdictCache.load(repoRoot) when a graph is present
 }
 
 /** Only these rules are sent to the LLM filter for FP suppression. */
@@ -152,6 +165,13 @@ export async function runFilterStage(
   }
   const sortedFiles = [...byFile.keys()].sort();
 
+  // Verdict cache (opt-in via a resolved graph). Absent graph → skip entirely.
+  const useCache = input.graph !== undefined;
+  const cache = useCache ? (opts?.cache ?? VerdictCache.load(input.repoRoot)) : undefined;
+  const refresh = input.flags?.llmRefresh === true;
+  const frozen = input.flags?.llmFrozen === true;
+  let frozenMisses = 0;
+
   const droppedKeys = new Set<string>();
   const judgementByKey = new Map<string, LlmJudgement>();
   let filterRan = false;
@@ -185,7 +205,44 @@ export async function runFilterStage(
     const judgedFindings = allFileFindings.slice(0, MAX_FINDINGS_PER_FILE);
     // overflowFindings (index >= MAX_FINDINGS_PER_FILE) are implicitly kept (not in droppedKeys)
 
-    const prompt = buildFilterPrompt(file, source, judgedFindings);
+    // Partition into cache hits (applied here, no live call) and misses (still
+    // need a verdict). Without a graph the cache is skipped, so `misses` is the
+    // whole array and everything below is byte-identical to a cache-free run.
+    let misses: Finding[];
+    if (!useCache) {
+      misses = judgedFindings;
+    } else {
+      misses = [];
+      for (const f of judgedFindings) {
+        const vk = verdictKey(f, input.graph!);
+        const hit = !refresh && vk !== null ? cache!.lookup(vk) : undefined;
+        if (hit !== undefined) {
+          // A hit is always a drop or a keep+judgement (outcome 3 is never cached).
+          if (hit.verdict === "fp") {
+            droppedKeys.add(findingKey(f));
+          } else {
+            judgementByKey.set(findingKey(f), { verdict: hit.verdict, confidence: hit.confidence });
+          }
+          filterRan = true;
+        } else {
+          misses.push(f);
+        }
+      }
+    }
+
+    // Fully cached file → no connector call.
+    if (misses.length === 0) {
+      continue;
+    }
+
+    // Frozen: a miss must not trigger a live call. Keep the miss findings and
+    // record the shortfall for the CLI's non-zero exit (Task 4).
+    if (useCache && frozen) {
+      frozenMisses += misses.length;
+      continue;
+    }
+
+    const prompt = buildFilterPrompt(file, source, misses);
 
     let result;
     try {
@@ -226,21 +283,35 @@ export async function runFilterStage(
     // (verdict "fp" or legacy keep=false). "violation"/"uncertain" are kept; a
     // valid verdict + numeric confidence is attached as llmJudgement for the
     // conformal scoring gate (D2). Out-of-range/missing → keep, no judgement.
+    // `verdict.index` maps into `misses` — only the misses were sent.
     for (const verdict of parsed.verdicts) {
       if (
         typeof verdict.index !== "number" ||
         !Number.isFinite(verdict.index) ||
         verdict.index < 0 ||
-        verdict.index >= judgedFindings.length
+        verdict.index >= misses.length
       ) {
         continue; // out-of-range → ignore (keep)
       }
-      const finding = judgedFindings[verdict.index];
+      const finding = misses[verdict.index];
       if (finding === undefined) continue;
 
       const isFp = verdict.verdict === "fp" || verdict.keep === false;
       if (isFp) {
         droppedKeys.add(findingKey(finding));
+        if (useCache) {
+          const vk = verdictKey(finding, input.graph!);
+          // Canonicalise the drop as "fp" so replay reproduces it regardless of
+          // whether the live verdict was "fp" or the legacy keep=false form.
+          if (vk !== null) {
+            cache!.record({
+              key: vk,
+              verdict: "fp",
+              confidence: clamp01(verdict.confidence ?? 0),
+              model: lastModelUsed ?? "",
+            });
+          }
+        }
         continue;
       }
 
@@ -254,9 +325,23 @@ export async function runFilterStage(
           verdict: v as LlmVerdict,
           confidence: clamp01(verdict.confidence),
         });
+        if (useCache) {
+          const vk = verdictKey(finding, input.graph!);
+          if (vk !== null) {
+            cache!.record({
+              key: vk,
+              verdict: v as LlmVerdict,
+              confidence: clamp01(verdict.confidence),
+              model: lastModelUsed ?? "",
+            });
+          }
+        }
       }
+      // Outcome 3 (kept, no usable judgement) is NOT recorded — stays a miss.
     }
   }
+
+  if (useCache) cache!.flush(input.repoRoot);
 
   const kept = input.findings
     .filter((f) => !droppedKeys.has(findingKey(f)))
@@ -274,6 +359,7 @@ export async function runFilterStage(
     ...(bailed ? { bailed: true } : {}),
     ...(lastModelUsed !== undefined ? { modelUsed: lastModelUsed } : {}),
     ...(filterRan ? { usdSpent: totalUsdSpent } : {}),
+    ...(frozenMisses > 0 ? { frozenMisses } : {}),
   };
 
   return { findings: kept, meta };
