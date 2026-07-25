@@ -1,21 +1,10 @@
 import { zoneOf } from "../../graph/query.js";
+import { isTrivialColor } from "../../graph/resolve/trivial-color.js";
 import { axisForRuleId, resolveRowClass } from "./resolve-row-class.js";
 import type { Label } from "./auto-label.js";
 import type { FindingRow } from "./finding-row.js";
 import type { Resolver } from "../../graph/resolve/index.js";
 import type { DesignSystemGraph } from "../../graph/types.js";
-
-const TRIVIAL_VALUES = new Set(["0", "1", "#ffffff", "#000000"]);
-
-const SHORTHAND_HEX: Record<string, string> = {
-  "#fff": "#ffffff",
-  "#000": "#000000",
-};
-
-function normalizeLiteral(literal: string): string {
-  const normalized = literal.trim().toLowerCase();
-  return SHORTHAND_HEX[normalized] ?? normalized;
-}
 
 const TOKEN_DEF_FILE_RE = /(?:^|\/)(?:[^/]+\.tokens\.json|tokens\.(?:ts|js|css)|theme\.(?:ts|js))$/;
 
@@ -46,7 +35,7 @@ export function verifyExact(
     return { verdict: "fp", source: "auto", reason: "non-app zone" };
   }
 
-  if (TRIVIAL_VALUES.has(normalizeLiteral(literal))) {
+  if (isTrivialColor(literal)) {
     return { verdict: "fp", source: "auto", reason: "trivial value" };
   }
 
