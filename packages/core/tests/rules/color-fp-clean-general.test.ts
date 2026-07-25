@@ -89,8 +89,8 @@ describe("Fix A: hex inside CSS attribute selector — must NOT flag", () => {
     expect(result.findings.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("still flags background: #fff in authored CSS", async () => {
-    const result = await rule.evaluate(ctx, cssFile("src/card.css", `.card { background: #fff; }`));
+  it("still flags background: #3b82f6 in authored CSS", async () => {
+    const result = await rule.evaluate(ctx, cssFile("src/card.css", `.card { background: #3b82f6; }`));
     expect(result.findings.length).toBeGreaterThanOrEqual(1);
   });
 });
@@ -120,7 +120,7 @@ describe("Fix B: Tailwind compiled CSS (generator banner) — must NOT flag", ()
 
   // Recall guard: a non-tailwind CSS file with the same color MUST flag
   it("still flags hex in a regular authored CSS file (no tailwindcss banner)", async () => {
-    const source = `.card { background-color: #ffffff; }`;
+    const source = `.card { background-color: #123456; }`;
     const result = await rule.evaluate(ctx, cssFile("src/card.css", source));
     expect(result.findings.length).toBeGreaterThanOrEqual(1);
   });

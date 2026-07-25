@@ -276,7 +276,7 @@ describe("data-palette recall — lone colors and small collections MUST still f
   });
 
   it("flags hardcoded colors in a 2-item array (below palette threshold)", async () => {
-    const src = `const pair = ['#ffffff', '#000000'];`;
+    const src = `const pair = ['#3b82f6', '#8b5cf6'];`;
     const parsed = tsFile("src/components/Toggle.tsx", src);
     const result = await rule.evaluate(ctx, parsed);
     // Both items are below the palette threshold — MUST still flag
