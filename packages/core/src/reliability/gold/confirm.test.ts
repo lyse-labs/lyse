@@ -291,6 +291,131 @@ describe("gold/confirm confirmCandidate", () => {
     });
   });
 
+  it("JS residual exploit closed (present-but-unextractable owner block): real base.orange400 changed to computeColor(...) while an unrelated file also declares base with the OLD literal as a quoted string => null", async () => {
+    const repo = makeRepo(
+      "js-residual-exploit",
+      {
+        "comp.tsx": "const glowHappyHour = '#FD7E00';\n",
+        // The REAL owner object: orange400 now holds a call expression (a value
+        // CHANGE), NOT a quoted colour — nothing is extractable from this block.
+        "tokens.ts": "export const base = {\n  orange400: computeColor(999, 999, 999),\n};\n",
+        // An unrelated module ALSO declares an object named `base` whose
+        // orange400 still carries the OLD literal (owner-name collisions on
+        // base/colors/theme are ordinary in DS repos).
+        "legacy-tokens.ts": 'export const base = {\n  orange400: "#FD7E00",\n};\n',
+      },
+      {
+        "comp.tsx": "const glowHappyHour = base.orange400; //'#FD7E00'\n",
+      },
+    );
+    const candidate = await onlyCandidate(repo.dir, "canvas-kit");
+    expect(candidate.addedRef).toBe("base.orange400");
+    expect(candidate.removedLiteral).toBe("#FD7E00");
+    // The real owner block has orange400 present-but-unextractable
+    // (computeColor(...)), so resolution fails closed to [] instead of falling
+    // through to legacy-tokens.ts's stale "#FD7E00". No GoldLabel is fabricated.
+    const label = await confirmCandidate(repo.dir, candidate);
+    expect(label).toBeNull();
+  });
+
+  it("JS external owner => null: base is only imported (no in-repo object-literal decl) so base.orange400 is unresolved", async () => {
+    const repo = makeRepo(
+      "js-external-owner",
+      {
+        "comp.tsx": "const glowHappyHour = '#FD7E00';\n",
+      },
+      {
+        "comp.tsx":
+          'import { base } from "@workday/canvas-tokens-web";\nconst glowHappyHour = base.orange400; //\'#FD7E00\'\n',
+      },
+    );
+    const candidate = await onlyCandidate(repo.dir, "canvas-kit");
+    expect(candidate.addedRef).toBe("base.orange400");
+    expect(candidate.removedLiteral).toBe("#FD7E00");
+    // `base` has no in-repo `const base = { ... }` declaration (imported), so
+    // there is no owner block to resolve from => [] => null. This is the correct
+    // outcome for the real corpus, where JS/TS tokens are external-npm.
+    const label = await confirmCandidate(repo.dir, candidate);
+    expect(label).toBeNull();
+  });
+
+  it("CSS commented-out var def not resolved: only occurrence of --brand is inside a comment => null; a live def governs when present => GoldLabel", async () => {
+    // Only COMMENTED defs exist — a raw-text grep would match them, PostCSS
+    // reads real Declaration nodes only and finds nothing.
+    const commentedRepo = makeRepo(
+      "css-var-commented",
+      {
+        "x.scss": ".a {\n  color: #f00;\n}\n",
+        "tokens.scss": "// --brand: #f00;\n/* --brand: #f00; */\n",
+      },
+      {
+        "x.scss": ".a {\n  color: var(--brand);\n}\n",
+      },
+    );
+    const commentedCandidate = await onlyCandidate(commentedRepo.dir, "some-ds");
+    expect(commentedCandidate.removedLiteral).toBe("#f00");
+    expect(commentedCandidate.addedRef).toBe("var(--brand)");
+    expect(await confirmCandidate(commentedRepo.dir, commentedCandidate)).toBeNull();
+
+    // A LIVE def (#f00) governs even with a commented decoy (#00f) present: the
+    // comment is excluded, so resolution is unanimous rather than conflicting.
+    const liveRepo = makeRepo(
+      "css-var-live",
+      {
+        "x.scss": ".a {\n  color: #f00;\n}\n",
+        "tokens.scss": "// --brand: #00f;\n:root {\n  --brand: #f00;\n}\n",
+      },
+      {
+        "x.scss": ".a {\n  color: var(--brand);\n}\n",
+      },
+    );
+    const liveCandidate = await onlyCandidate(liveRepo.dir, "some-ds");
+    expect(await confirmCandidate(liveRepo.dir, liveCandidate)).toEqual({
+      repo: liveCandidate.repo,
+      commit: liveRepo.commit,
+      parent: liveRepo.parent,
+      file: "x.scss",
+      line: liveCandidate.line,
+      literal: "#f00",
+      expectedToken: "var(--brand)",
+      axis: "colors",
+      ruleId: "tokens/no-hardcoded-color",
+    });
+  });
+
+  it("Gate A JS multi-hunk line-shift still confirms: an earlier insertion shifts the candidate off the parent decl's line, yet the content-match parent check finds it => GoldLabel", async () => {
+    const repo = makeRepo(
+      "js-line-shift",
+      {
+        "comp.tsx": "const a = 1;\nconst glowHappyHour = '#FD7E00';\n",
+        "tokens.ts": 'export const base = {\n  orange400: "#FD7E00",\n};\n',
+      },
+      {
+        // Three new lines are inserted BEFORE the candidate declaration, so the
+        // child's glowHappyHour sits at line 5 while the parent's was at line 2
+        // — well outside the old ±1 window (which would have false-rejected).
+        "comp.tsx":
+          "const a = 1;\nconst pad1 = 2;\nconst pad2 = 3;\nconst pad3 = 4;\nconst glowHappyHour = base.orange400; //'#FD7E00'\n",
+      },
+    );
+    const candidate = await onlyCandidate(repo.dir, "canvas-kit");
+    expect(candidate.addedRef).toBe("base.orange400");
+    expect(candidate.removedLiteral).toBe("#FD7E00");
+    expect(candidate.line).toBe(5);
+    const label = await confirmCandidate(repo.dir, candidate);
+    expect(label).toEqual({
+      repo: candidate.repo,
+      commit: repo.commit,
+      parent: repo.parent,
+      file: "comp.tsx",
+      line: 5,
+      literal: "#FD7E00",
+      expectedToken: "base.orange400",
+      axis: "colors",
+      ruleId: "tokens/no-hardcoded-color",
+    });
+  });
+
   it("Tangled 10-way value split (tangled-brand-refresh): exact colorEquals accepts 4, rejects 6 (incl. line 33 ±1-LSB boundary)", async () => {
     const pairs: Array<{ line: number; name: string; token: string; literal: string }> = [
       { line: 22, name: "illuminateStopColor1", token: "base.red200", literal: "#FFA198" },

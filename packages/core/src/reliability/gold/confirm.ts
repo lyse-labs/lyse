@@ -110,12 +110,14 @@ function extractLhs(line: string): { lhs: string; rhs: string } | null {
 }
 
 // Gate A (JS/TS): lightweight same-assignment check — the child line at the
-// candidate's line binds the ref, and the PARENT line at the corresponding
-// position binds the literal under the SAME left-hand side. Both sides are
-// line-pinned: the child to `c.line`, the parent to `c.line` and its immediate
-// neighbours (a `-U0` modify pair keeps the changed line's index stable, so the
-// prior value sits at `c.line` or ±1). Scanning the whole parent file would let
-// an unrelated same-named binding elsewhere satisfy the gate.
+// candidate's line binds the ref, and the PARENT file carries the literal under
+// the SAME left-hand side. The child is line-pinned to `c.line`; the parent side
+// matches by CONTENT (a line whose LHS identifier equals the child's AND whose
+// RHS carries `removedLiteral`) rather than a `c.line ±1` window. The LHS+literal
+// pair uniquely identifies the declaration, so the match survives line shifts
+// from an earlier hunk in the same file (which a ±1 window would false-reject),
+// while still being specific enough that an unrelated same-named binding without
+// the literal cannot satisfy the gate.
 function gateAStructuralJs(
   childSource: string,
   parentSource: string,
@@ -129,9 +131,7 @@ function gateAStructuralJs(
 
   const needle = c.removedLiteral.toLowerCase();
   const parentLines = parentSource.split("\n");
-  for (const idx of [c.line - 2, c.line - 1, c.line]) {
-    const line = parentLines[idx];
-    if (line === undefined) continue;
+  for (const line of parentLines) {
     const parentDecl = extractLhs(line);
     if (
       parentDecl !== null &&
@@ -142,24 +142,6 @@ function gateAStructuralJs(
     }
   }
   return false;
-}
-
-async function gitGrep(
-  repoDir: string,
-  commit: string,
-  fixed: string,
-  pathspecs: string[],
-): Promise<string[]> {
-  try {
-    const out = await git(
-      ["grep", "--no-color", "-h", "-I", "-F", "-e", fixed, commit, "--", ...pathspecs],
-      repoDir,
-    );
-    return out.split("\n").filter((line) => line.length > 0);
-  } catch {
-    // `git grep` exits non-zero (throws here) when nothing matches.
-    return [];
-  }
 }
 
 async function gitGrepFiles(
@@ -184,30 +166,179 @@ async function gitGrepFiles(
   }
 }
 
+// Resolve a `--x` custom property in-repo at `commit`. A raw-text grep cannot
+// tell a live definition from a commented-out one (`// --x: #f00;` or
+// `/* --x: #f00 */`), so both would fabricate a match. Parse each candidate file
+// with PostCSS (postcss-scss for `.scss`, as Gate A does) and read real
+// `Declaration` nodes only — comments are Comment nodes and are excluded. The
+// unanimous-agreement discipline lives in `gateBValueMatch` (zero -> unresolved;
+// disagreement -> fail closed).
 async function resolveCssVarValues(
   repoDir: string,
   commit: string,
   varName: string,
 ): Promise<string[]> {
   if (varName.length === 0) return [];
-  const lines = await gitGrep(repoDir, commit, varName, CSS_PATHSPECS);
-  const defRe = new RegExp(`(?:^|[^\\w-])${escapeRegExp(varName)}\\s*:\\s*([^;}\\n]+)`);
+  const files = await gitGrepFiles(repoDir, commit, varName, CSS_PATHSPECS);
   const values: string[] = [];
-  for (const line of lines) {
-    const value = defRe.exec(line)?.[1];
-    if (value !== undefined) values.push(value.trim());
+  for (const file of files) {
+    const source = await gitShowFile(repoDir, commit, file);
+    if (source.length === 0) continue;
+    const root = parseRoot(source, file);
+    if (root === null) continue;
+    root.walkDecls((decl) => {
+      if (decl.prop === varName) values.push(decl.value.trim());
+    });
   }
   return values;
 }
 
-// External-package tokens (e.g. primer/css or canvas-kit values shipped in npm
-// packages) are OUT OF SCOPE here: the in-repo resolver returns [] for them and
-// confirm fails closed. Task 7 (orchestrator) materializes the pinned corpus
-// token values into the checkout before calling confirm, keeping this resolver
-// pure in-repo. In-repo multi-definition disambiguation is handled HERE: the
-// FIRST segment of `A.b(.c)` scopes resolution to files that also name the
-// owning object `A`, and `gateBValueMatch` fails closed if the surviving
-// definitions still disagree.
+// Read the value token that follows a `:` in an object-literal body, honouring
+// quote and bracket depth so a colour with internal commas (`rgb(1, 2, 3)`) or a
+// call expression (`computeColor(1, 2, 3)`) is captured whole instead of being
+// truncated at its first inner comma. Stops at a top-level `,`, `;`, `}` or
+// newline.
+function readValueToken(body: string, start: number): string {
+  let i = start;
+  while (i < body.length && /\s/.test(body.charAt(i))) i++;
+  let depth = 0;
+  let quote = "";
+  const out: string[] = [];
+  for (; i < body.length; i++) {
+    const ch = body.charAt(i);
+    if (quote) {
+      out.push(ch);
+      if (ch === "\\") {
+        const next = body.charAt(i + 1);
+        if (next.length > 0) {
+          out.push(next);
+          i++;
+        }
+      } else if (ch === quote) {
+        quote = "";
+      }
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      quote = ch;
+      out.push(ch);
+      continue;
+    }
+    if (ch === "(" || ch === "[" || ch === "{") {
+      depth++;
+      out.push(ch);
+      continue;
+    }
+    if (ch === ")" || ch === "]" || ch === "}") {
+      if (depth === 0) break;
+      depth--;
+      out.push(ch);
+      continue;
+    }
+    if (depth === 0 && (ch === "," || ch === ";" || ch === "\n")) break;
+    out.push(ch);
+  }
+  return out.join("").trim();
+}
+
+// A raw value token -> its parseable colour, or null. Surrounding matching
+// quotes are stripped first (`"#FD7E00"` -> `#FD7E00`). `colorEquals(v, v)` is
+// the sole (independent) parseability probe.
+function valueTokenToColour(raw: string): string | null {
+  let v = raw.trim();
+  const first = v.charAt(0);
+  if ((first === '"' || first === "'" || first === "`") && v.charAt(v.length - 1) === first) {
+    v = v.slice(1, -1);
+  }
+  if (v.length === 0) return null;
+  return colorEquals(v, v) ? v : null;
+}
+
+// Return the substring inside the object literal whose opening brace sits at
+// `open`, honouring quotes so a brace inside a string is not mistaken for a
+// structural one. Null if the braces never balance.
+function objectLiteralBody(source: string, open: number): string | null {
+  let depth = 0;
+  let quote = "";
+  for (let i = open; i < source.length; i++) {
+    const ch = source.charAt(i);
+    if (quote) {
+      if (ch === "\\") {
+        i++;
+      } else if (ch === quote) {
+        quote = "";
+      }
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      quote = ch;
+      continue;
+    }
+    if (ch === "{") {
+      depth++;
+      continue;
+    }
+    if (ch === "}") {
+      depth--;
+      if (depth === 0) return source.slice(open + 1, i);
+    }
+  }
+  return null;
+}
+
+interface OwnerBlockScan {
+  colours: string[];
+  unextractable: boolean;
+}
+
+// Scan the genuine in-repo declaration blocks of the OWNER identifier
+// (`(export )? const|let|var <owner> = { ... }`, top-level) for the leaf `key`.
+// For each owner block that names the key: a parseable colour is collected; a
+// value that is NOT a parseable colour (a call like `computeColor(...)`, a
+// spread, a reference) sets `unextractable` — the resolution then fails closed
+// rather than falling through to some OTHER file's value for the same key. If
+// the owner is never declared in-repo as an object literal (imported/external,
+// or absent), the scan is empty.
+function scanOwnerBlocks(source: string, owner: string, key: string): OwnerBlockScan {
+  const colours: string[] = [];
+  let unextractable = false;
+  const ownerRe = new RegExp(
+    `^[ \\t]*(?:export\\s+)?(?:const|let|var)\\s+${escapeRegExp(owner)}\\s*=\\s*\\{`,
+    "gm",
+  );
+  const keyRe = new RegExp(`(?:^|[,{\\s])["'\`]?${escapeRegExp(key)}["'\`]?\\s*:`, "g");
+  let ownerMatch: RegExpExecArray | null;
+  while ((ownerMatch = ownerRe.exec(source)) !== null) {
+    const matched = ownerMatch[0];
+    if (matched === undefined) continue;
+    const braceIndex = ownerMatch.index + matched.length - 1;
+    const body = objectLiteralBody(source, braceIndex);
+    if (body === null) continue;
+    keyRe.lastIndex = 0;
+    let keyMatch: RegExpExecArray | null;
+    while ((keyMatch = keyRe.exec(body)) !== null) {
+      const colonIndex = body.indexOf(":", keyMatch.index);
+      if (colonIndex === -1) continue;
+      const colour = valueTokenToColour(readValueToken(body, colonIndex + 1));
+      if (colour !== null) colours.push(colour);
+      else unextractable = true;
+      keyRe.lastIndex = colonIndex + 1;
+    }
+  }
+  return { colours, unextractable };
+}
+
+// External-package tokens (e.g. canvas-kit's `base`, IMPORTED from
+// `@workday/canvas-tokens-web`) are OUT OF SCOPE here: in-repo resolution returns
+// [] and confirm fails closed. Task 7 (orchestrator) materializes the pinned
+// corpus token values into the checkout before calling confirm, keeping this
+// resolver pure in-repo. In-repo resolution succeeds ONLY when the OWNER object
+// (`firstSegment`, e.g. `base`) is genuinely declared in-repo as an object
+// literal: resolve the leaf key strictly from those owner-declaration blocks. If
+// the key is present in an owner block but its value is not a parseable colour
+// (`computeColor(...)`) the whole resolution is unresolved -> [] (fail closed,
+// never fall through to an unrelated file's stale value). Disagreement across
+// owner blocks is caught downstream by `gateBValueMatch`.
 async function resolveJsTokenValues(
   repoDir: string,
   commit: string,
@@ -215,38 +346,23 @@ async function resolveJsTokenValues(
 ): Promise<string[]> {
   const segments = memberExpr.split(".");
   const key = segments[segments.length - 1];
-  const firstSegment = segments[0];
+  const owner = segments[0];
   if (key === undefined || key.length === 0) return [];
+  if (owner === undefined || owner.length === 0) return [];
 
-  const keyFiles = await gitGrepFiles(repoDir, commit, key, JS_TOKEN_PATHSPECS);
-  if (keyFiles.length === 0) return [];
+  // Owner-declaration blocks live in files that name the owner as a whole word.
+  const files = await gitGrepFiles(repoDir, commit, owner, JS_TOKEN_PATHSPECS, true);
+  if (files.length === 0) return [];
 
-  let files = keyFiles;
-  if (
-    segments.length > 1 &&
-    firstSegment !== undefined &&
-    firstSegment.length > 0 &&
-    firstSegment !== key
-  ) {
-    const ownerFiles = await gitGrepFiles(repoDir, commit, firstSegment, JS_TOKEN_PATHSPECS, true);
-    const scoped = keyFiles.filter((file) => ownerFiles.includes(file));
-    if (scoped.length > 0) files = scoped;
-  }
-
-  // Also match quoted-JSON keys (`"orange400": "#..."`) — `*.json` token files
-  // are in scope, and the disagreement gate keeps the broadening safe.
-  const defRe = new RegExp(
-    `(?:^|[^\\w$])["']?${escapeRegExp(key)}["']?\\s*[:=]\\s*["']([^"']+)["']`,
-  );
-  const values: string[] = [];
+  const colours: string[] = [];
   for (const file of files) {
     const source = await gitShowFile(repoDir, commit, file);
-    for (const line of source.split("\n")) {
-      const value = defRe.exec(line)?.[1];
-      if (value !== undefined) values.push(value.trim());
-    }
+    if (source.length === 0) continue;
+    const scan = scanOwnerBlocks(source, owner, key);
+    if (scan.unextractable) return [];
+    for (const colour of scan.colours) colours.push(colour);
   }
-  return values;
+  return colours;
 }
 
 // Gate B value agreement. `colorEquals(v, v)` doubles as a parseability probe
