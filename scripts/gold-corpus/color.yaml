@@ -1,0 +1,19 @@
+criteria:
+  oss: true
+  shipsTokenSystem: true
+  showsMigrationPeriod: true
+  didNotUseLyse: true
+
+entries:
+  - repo: primer-css
+    url: https://github.com/primer/css
+    sha: 8541ed1db1e0d9c4551ea76ba400d6d0cf682897
+    parent: 8088676afd287054fc6fd5ac653b1da075ff0c36
+  - repo: primer-react
+    url: https://github.com/primer/react
+    sha: 919c6cd26ffccb907d325f8cc5914fa971d07685
+    parent: 9903c80dd29aa8ffb8800006e38060143168f844
+  - repo: canvas-kit
+    url: https://github.com/Workday/canvas-kit
+    sha: 30279d7c3d004668196c395d1fc3050cc6e373c6
+    parent: 6b57badf34512437caade1c0641a1db6301e3421

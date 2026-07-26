@@ -1,0 +1,47 @@
+Token definition verification for tangled-brand-refresh.diff
+Repo: Workday/canvas-kit @ commit 30279d7c3d004668196c395d1fc3050cc6e373c6
+File: modules/labs-react/ai-assistant-ingress-button/lib/AIAssistantIngressButton.tsx
+(renamed in the same commit from AiAssistantIngressButton.tsx -> AIAssistantIngressButton.tsx)
+
+Package pinned in this commit's yarn.lock: @workday/canvas-tokens-web@3.0.0-alpha.9
+(resolved 56fa84f1166e66ee45858274113733ad453fa663 / npm-packed and inspected locally).
+Token values live in package/css/base/_variables.css as OKLCH; converted to
+sRGB with the standard Bjorn Ottosson OKLab matrices (independent script, see
+positive-js-token.tokendef for the method) and compared to the hex literal
+that was removed on the same line.
+
+Ten hex-literal -> base.<token> pairs land in this ONE commit, in this ONE
+file, interleaved with unrelated edits (an import-casing rename
+`AiAssistantIngressButtonProps`->`AIAssistantIngressButtonProps`, a
+`getAiAssistantIngressIcon`->`getAIAssistantIngressIcon` import rename, new
+`&:is(:focus-visible, .focus)` JSX blocks, and a `modifiers: {toggled:
+'true'}` -> `{toggled: true}` type fix elsewhere in the same file):
+
+line 22  illuminateStopColor1 = '#FFA198' -> base.red200     computed #FFB2A7  MISMATCH (deltaRGB=22.7)
+line 23  illuminateStopColor2 = '#FFCAA0' -> base.orange200  computed #FFC48A  MISMATCH (deltaRGB=22.8)
+line 24  illuminateStopColor3 = '#FFCA79' -> base.orange200  computed #FFC48A  MISMATCH (deltaRGB=18.0)
+line 25  illuminateStopColor4 = '#FDCA44' -> base.amber200   computed #FDE65E  MISMATCH (deltaRGB=38.2)
+line 26  illuminateStopColor5 = '#FFB74D' -> base.amber300   computed #FEC10C  MISMATCH (deltaRGB=65.8)
+line 31  glowEraser           = '#FFC2FD' -> base.magenta200 computed #FFC2FD  EXACT
+line 32  glowHighlighter      = '#FFF3A8' -> base.amber100   computed #FFF3A8  EXACT
+line 33  glowLunchBreak       = '#FEC10B' -> base.amber300   computed #FEC10C  EXACT (deltaRGB=1, rounding)
+line 34  glowHappyHour        = '#FD7E00' -> base.orange400  computed #FD7E00  EXACT
+line 35  glowThumbtack        = '#FC5B05' -> base.coral500   computed #FC5B05  EXACT
+
+Interpretation: this single real commit is simultaneously (a) a genuine
+colour-tokenization for the "glow" box-shadow colours (5/5 exact,
+value-preserving) and (b) a brand-refresh colour CHANGE for the "illuminate"
+gradient stop colours (5/5 meaningfully different), landed together with
+unrelated identifier-rename noise. A naive commit-level or file-level
+heuristic ("this commit replaces hex with tokens, therefore accept") would
+be wrong for half the lines. This is the reason it is captured as the
+"tangled" fixture: Task 4's line-level candidate extraction must find all 10
+pairs as separate CandidateChange objects (ignoring the casing-rename/JSX
+noise, which does not match the colour-literal regex), and Task 5's
+independent value-equality must accept exactly the 5 "glow" lines and reject
+the 5 "illuminate" lines - it must NOT treat the commit as a monolithic
+unit. expected.json therefore records `expected: null` for this fixture as
+a whole (per the Task 1 brief's fixture-level schema for tangled entries)
+with `reason: "tangled-mixed-value-preserving-and-value-changing"`, while
+documenting the full per-line breakdown above for when Task 4/5 need to
+assert on individual candidates extracted from it.

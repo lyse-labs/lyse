@@ -1,0 +1,24 @@
+Token definition verification for positive-css-var.diff
+Repo: primer/css @ commit 8541ed1db1e0d9c4551ea76ba400d6d0cf682897
+Removed literal: #f9826c
+Added token: var(--color-underlinenav-border-active)
+
+The token's CSS custom property is NOT defined inside primer/css itself; it is
+generated from the npm dependency pinned in this commit's package.json:
+
+  $ git show 8541ed1db1e0d9c4551ea76ba400d6d0cf682897:package.json | grep primitives
+    "@primer/primitives": "^4.3.5"
+
+Resolved and fetched the exact published version:
+
+  $ npm pack @primer/primitives@4.3.5
+  $ grep -rn "color-underlinenav-border-active" package/dist/scss/colors/_light.scss
+    package/dist/scss/colors/_light.scss:454:    --color-underlinenav-border-active: #f9826c;
+
+Source excerpt (package/dist/scss/colors/_light.scss, light theme mixin, line 454):
+    --color-underlinenav-border-active: #f9826c;
+
+Result: #f9826c == #f9826c -> EXACT match. Value-preserving.
+(dark / dark_dimmed variants differ, e.g. #f78166, but the light theme is the
+default/base theme primer/css ships, and it is the value that was literally
+in the source line being replaced.)
