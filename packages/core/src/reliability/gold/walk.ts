@@ -213,7 +213,13 @@ export function parseUnifiedDiff(content: string, meta: ParseDiffMeta): Candidat
           if (addedEntries.length > 0) flushBlock();
           const decl = extractDeclaration(contentLine);
           if (decl) {
-            const colorMatch = COLOR_LITERAL_RE.exec(decl.value);
+            // Mirror the `+` side: a colour that survives ONLY inside a
+            // trailing comment (`const c = deriveColor(); // '#FD7E00'`) is not
+            // the line's real removed value — strip the comment (url:// guarded)
+            // before reading the literal so a commented hex cannot fabricate a
+            // removedLiteral for a removed line whose real value isn't a colour.
+            const strippedValue = stripTrailingComment(decl.value);
+            const colorMatch = COLOR_LITERAL_RE.exec(strippedValue);
             if (colorMatch) {
               removedEntries.push({ key: decl.key, literal: colorMatch[0] });
             }

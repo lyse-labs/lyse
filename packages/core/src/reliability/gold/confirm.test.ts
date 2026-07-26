@@ -508,4 +508,53 @@ describe("gold/confirm confirmCandidate", () => {
       }
     }
   });
+
+  it("review round 4: same-name decl in a DIFFERENT function must not fabricate a label — closed at BOTH the walk layer (removed-line comment strip) and the Gate A JS layer (enclosing-block scope)", async () => {
+    // The reviewer's exploit composes two bugs. ComponentA's real removed value
+    // is `deriveColor()` with the old hex only in a trailing comment; ComponentB
+    // (untouched) independently declares the SAME name with a real `#FD7E00`.
+    const parent =
+      "function ComponentA() {\n" +
+      "  const glowHappyHour = deriveColor(); // was '#FD7E00'\n" +
+      "  return glowHappyHour;\n" +
+      "}\n" +
+      "function ComponentB() {\n" +
+      "  const glowHappyHour = '#FD7E00';\n" +
+      "  return glowHappyHour;\n" +
+      "}\n";
+    // Only ComponentA's line changes to the token ref.
+    const child =
+      "function ComponentA() {\n" +
+      "  const glowHappyHour = base.orange400;\n" +
+      "  return glowHappyHour;\n" +
+      "}\n" +
+      "function ComponentB() {\n" +
+      "  const glowHappyHour = '#FD7E00';\n" +
+      "  return glowHappyHour;\n" +
+      "}\n";
+    const repo = makeRepo("js-crossscope", { "comp.tsx": parent }, { "comp.tsx": child });
+
+    // Layer 1 (walk / Bug 1): the removed line's only hex lives in a `//`
+    // comment; its real value is a function call, so walk emits ZERO candidates.
+    const candidates = await walkTokenizationCommits(repo.dir, "canvas-kit");
+    expect(candidates).toHaveLength(0);
+
+    // Layer 2 (Gate A / Bug 2): even handed the candidate directly, ComponentB's
+    // same-name #FD7E00 lives in a DIFFERENT enclosing block, so it cannot
+    // satisfy Gate A for ComponentA's change. Inject a matching value so Gate B
+    // WOULD pass, isolating Gate A as the rejecter => null.
+    const injected: ResolveTokenValue = async (ref) =>
+      ref === "base.orange400" ? ["#FD7E00"] : [];
+    const handed: CandidateChange = {
+      repo: "synthetic",
+      commit: repo.commit,
+      parent: repo.parent,
+      file: "comp.tsx",
+      removedLiteral: "#FD7E00",
+      addedRef: "base.orange400",
+      line: 2,
+      massCodemod: false,
+    };
+    expect(await confirmCandidate(repo.dir, handed, injected)).toBeNull();
+  });
 });

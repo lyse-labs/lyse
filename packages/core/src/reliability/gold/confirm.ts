@@ -148,16 +148,119 @@ function stripJsLineComments(value: string): string {
   return out;
 }
 
+interface JsBlock {
+  header: string;
+  start: number;
+  end: number;
+}
+
+interface JsScan {
+  blocks: JsBlock[];
+  depthAtLineStart: number[];
+}
+
+// Lightweight brace-depth walk: pair every `{`/`}` (skipping braces inside
+// strings, template literals, and `//` / `/* */` comments) into a block spanned
+// by its opening/closing line, and record the nesting depth at the start of each
+// line. The block's `header` is the trimmed text of its opening-brace line — the
+// JS analogue of a CSS selector, used to align the SAME enclosing function/block
+// between child and parent.
+function scanJsBlocks(source: string): JsScan {
+  const lines = source.split("\n");
+  const depthAtLineStart = new Array<number>(lines.length).fill(0);
+  const blocks: JsBlock[] = [];
+  const stack: number[] = [];
+  let depth = 0;
+  let line = 1;
+  let quote = "";
+  let inLineComment = false;
+  let inBlockComment = false;
+
+  for (let i = 0; i < source.length; i++) {
+    const ch = source.charAt(i);
+    const next = source.charAt(i + 1);
+
+    if (ch === "\n") {
+      line++;
+      inLineComment = false;
+      if (line - 1 < depthAtLineStart.length) depthAtLineStart[line - 1] = depth;
+      continue;
+    }
+    if (inLineComment) continue;
+    if (inBlockComment) {
+      if (ch === "*" && next === "/") {
+        inBlockComment = false;
+        i++;
+      }
+      continue;
+    }
+    if (quote) {
+      if (ch === "\\") {
+        i++;
+        continue;
+      }
+      if (ch === quote) quote = "";
+      continue;
+    }
+    if (ch === "/" && next === "/") {
+      inLineComment = true;
+      i++;
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      inBlockComment = true;
+      i++;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      quote = ch;
+      continue;
+    }
+    if (ch === "{") {
+      stack.push(line);
+      depth++;
+      continue;
+    }
+    if (ch === "}") {
+      const openLine = stack.pop();
+      depth = Math.max(0, depth - 1);
+      if (openLine !== undefined) {
+        blocks.push({ header: (lines[openLine - 1] ?? "").trim(), start: openLine, end: line });
+      }
+    }
+  }
+  return { blocks, depthAtLineStart };
+}
+
+// The innermost block enclosing a 1-based line, or null when the line sits at
+// module scope (no enclosing braces).
+function enclosingBlock(scan: JsScan, targetLine: number): JsBlock | null {
+  let best: JsBlock | null = null;
+  for (const block of scan.blocks) {
+    if (block.start <= targetLine && targetLine <= block.end) {
+      if (best === null || block.start > best.start) best = block;
+    }
+  }
+  return best;
+}
+
 // Gate A (JS/TS): the child line at the candidate's line binds the ref, and the
-// PARENT file carries the literal under the SAME left-hand side. The child is
-// line-pinned to `c.line`; the parent side matches by CONTENT (a line whose LHS
-// identifier equals the child's AND whose comment-stripped RHS carries
-// `removedLiteral`), so the match survives line shifts from an earlier hunk in
-// the same file. The parent match must be UNAMBIGUOUS: the literal has to appear
-// (comments stripped) in the RHS of EXACTLY ONE same-LHS declaration. Zero
-// matches (the literal lived only in a comment, or nowhere) or more than one
-// (a shadowed same-named declaration) fail closed — recall loss on ambiguity is
-// preferred to a false accept that would fabricate ground truth.
+// PARENT file carries the literal under the SAME left-hand side WITHIN THE SAME
+// enclosing function/block. The child is line-pinned to `c.line`; the parent
+// side matches by CONTENT (a line whose LHS identifier equals the child's AND
+// whose comment-stripped RHS carries `removedLiteral`), so the match survives
+// line shifts from an earlier hunk in the same file. The parent search is SCOPED
+// to the block enclosing `c.line` — module scope counts only parent module-scope
+// declarations (depth 0); a block-scoped candidate counts only parent
+// declarations inside a block with the same header (the JS analogue of the CSS
+// `enclosingSelector` scope). Without this scope an unrelated, differently
+// scoped same-name declaration elsewhere in the parent file could supply the
+// sole match and fabricate ground truth. The parent match must be UNAMBIGUOUS:
+// the literal has to appear (comments stripped) in the RHS of EXACTLY ONE
+// same-LHS declaration within that scope. Zero matches (the literal lived only
+// in a comment, in a different scope, or nowhere) or more than one (a shadowed
+// same-named declaration) fail closed — recall loss on ambiguity is preferred to
+// a false accept.
 function gateAStructuralJs(
   childSource: string,
   parentSource: string,
@@ -169,10 +272,27 @@ function gateAStructuralJs(
   const childDecl = extractLhs(childLine);
   if (childDecl === null || !childDecl.rhs.includes(c.addedRef)) return false;
 
+  const childBlock = enclosingBlock(scanJsBlocks(childSource), c.line);
+  const parentScan = scanJsBlocks(parentSource);
+  const inScope = (lineNo: number): boolean => {
+    if (childBlock === null) {
+      return (parentScan.depthAtLineStart[lineNo - 1] ?? 0) === 0;
+    }
+    for (const block of parentScan.blocks) {
+      if (block.header === childBlock.header && block.start <= lineNo && lineNo <= block.end) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   const needle = c.removedLiteral.toLowerCase();
   const parentLines = parentSource.split("\n");
   let matches = 0;
-  for (const line of parentLines) {
+  for (let i = 0; i < parentLines.length; i++) {
+    if (!inScope(i + 1)) continue;
+    const line = parentLines[i];
+    if (line === undefined) continue;
     const parentDecl = extractLhs(line);
     if (parentDecl === null || parentDecl.lhs !== childDecl.lhs) continue;
     if (stripJsLineComments(parentDecl.rhs).toLowerCase().includes(needle)) matches++;

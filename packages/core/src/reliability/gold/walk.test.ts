@@ -206,6 +206,26 @@ describe("gold/walk parseUnifiedDiff", () => {
     ]);
   });
 
+  it("review round 4 / Bug 1: a colour that lives ONLY in a trailing comment on the removed line yields no candidate (its real removed value is a function call, not a colour)", () => {
+    // The `-` line's real value is `deriveColor()`; the hex only appears inside
+    // a `//` comment. Without stripping the comment on the removed side, the
+    // colour regex would read `#FD7E00` out of the comment and emit a candidate
+    // with a fabricated removedLiteral. After the fix (stripTrailingComment on
+    // the `-` side, mirroring the `+` side) the removed value carries no colour,
+    // so no removed entry is recorded and the replace-block flushes empty.
+    const diff = [
+      "diff --git a/src/comp.tsx b/src/comp.tsx",
+      "--- a/src/comp.tsx",
+      "+++ b/src/comp.tsx",
+      "@@ -1 +1 @@",
+      "-const c = deriveColor(); // '#FD7E00'",
+      "+const c = tok.x;",
+    ].join("\n");
+
+    const candidates = parseUnifiedDiff(diff, META);
+    expect(candidates).toEqual([]);
+  });
+
   it("does not tag massCodemod when a commit yields exactly 30 or fewer candidates", () => {
     const hunkLines: string[] = [];
     for (let n = 0; n < 30; n++) {
