@@ -11,9 +11,11 @@ const HSL_RE = /^hsla?\(\s*([^)]+)\s*\)$/i;
 // Strict, whole-token numeric patterns — `Number.parseFloat` only parses a
 // prefix and silently ignores trailing junk (e.g. "59px", "Infinity" would
 // otherwise slip through), so every token must match one of these in full
-// before it is handed to `Number.parseFloat`.
-const NUMBER_RE = /^-?\d+(\.\d+)?$/;
-const PERCENT_RE = /^-?\d+(\.\d+)?%$/;
+// before it is handed to `Number.parseFloat`. The body accepts a leading
+// sign and either a leading-dot (".5") or trailing-dot ("59.") decimal, to
+// match idiomatic CSS/SCSS number syntax without accepting exponents.
+const NUMBER_RE = /^[+-]?(\d+\.?\d*|\.\d+)$/;
+const PERCENT_RE = /^[+-]?(\d+\.?\d*|\.\d+)%$/;
 
 function clampByte(n: number): number {
   return Math.min(255, Math.max(0, n));

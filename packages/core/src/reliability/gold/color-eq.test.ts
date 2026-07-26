@@ -23,6 +23,14 @@ describe("gold/color-eq", () => {
     expect(colorEquals("hsl(0,50%%,50%)", "#bf4040")).toBe(false);
     expect(colorEquals("rgb(255,255,255)", "#ffffff")).toBe(true);
   });
+  it("accepts idiomatic CSS number formats without regressing rejects (review round 2)", () => {
+    expect(colorEquals("rgba(0,0,0,.5)", "rgba(0,0,0,0.5)")).toBe(true);
+    expect(colorEquals("rgb(+59,130,246)", "#3b82f6")).toBe(true);
+    expect(colorEquals("rgb(59.,130,246)", "#3b82f6")).toBe(true);
+    expect(colorEquals("rgb(59px,130,246)", "#3b82f6")).toBe(false);
+    expect(colorEquals("rgb(Infinity,0,0)", "#ff0000")).toBe(false);
+    expect(colorEquals("rgb(300,300,300)", "#ffffff")).toBe(false);
+  });
   it("is independent of Lyse's resolver/parser (no import)", () => {
     const src = readFileSync(new URL("./color-eq.ts", import.meta.url), "utf8");
     expect(src).not.toMatch(/graph\/resolve/);
