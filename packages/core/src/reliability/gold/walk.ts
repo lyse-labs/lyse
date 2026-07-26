@@ -30,13 +30,67 @@ interface Declaration {
   value: string;
 }
 
+// JS_DECL_RE's `.+$` greedily swallows the WHOLE physical line's remainder as
+// one value blob. When a single line actually holds a SECOND declaration --
+// either a wholly separate statement (`const a = fn(); const b = '#hex';`)
+// or a comma-separated multi-binding (`const a = fn(), b = '#hex';`) -- that
+// blob silently fuses two unrelated key/value pairs together, and the
+// caller's colour/token regexes then first-match over the fused text. That
+// cross-wires the pairing (e.g. reading `b`'s hex as if it were `a`'s
+// removed value). There is no reliable way to tell FROM THE VALUE ALONE
+// which declaration a matched colour/token belongs to, so this fails closed:
+// a value containing a second top-level `const`/`let`/`var` binding, or a
+// top-level (paren/bracket/brace depth 0, outside quotes) comma -- which in
+// valid JS after a declarator's `=` can only mean a second declarator, since
+// a bare comma-operator expression isn't legal unparenthesized there -- makes
+// the whole line ambiguous. A comma/`=` INSIDE an expression (`fn(a, b)`,
+// `a === b ? '#fff' : '#000'`) sits at depth > 0 or isn't a keyword match, so
+// it does not trigger this.
+function hasAmbiguousDeclaration(value: string): boolean {
+  let masked = "";
+  let depth = 0;
+  let quote = "";
+  for (let i = 0; i < value.length; i++) {
+    const ch = value.charAt(i);
+    if (quote) {
+      if (ch === quote) quote = "";
+      masked += " ";
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      quote = ch;
+      masked += " ";
+      continue;
+    }
+    if (ch === "(" || ch === "[" || ch === "{") {
+      depth++;
+      masked += " ";
+      continue;
+    }
+    if (ch === ")" || ch === "]" || ch === "}") {
+      depth = Math.max(0, depth - 1);
+      masked += " ";
+      continue;
+    }
+    masked += depth === 0 ? ch : " ";
+  }
+  if (masked.includes(",")) return true;
+  return /(?:^|[^\w$])(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=/.test(masked);
+}
+
 function extractDeclaration(diffLine: string): Declaration | null {
   const trimmed = diffLine.slice(1).trim();
   const jsMatch = JS_DECL_RE.exec(trimmed);
   if (jsMatch) {
     const key = jsMatch[1];
     const value = jsMatch[2];
-    if (key !== undefined && value !== undefined) return { key, value };
+    if (key !== undefined && value !== undefined) {
+      // Ambiguity is judged on the comment-stripped value -- a decoy
+      // `const`/comma sitting only inside a trailing `//` or `/* */` comment
+      // must not fail-close a line whose real code is a single declaration.
+      if (hasAmbiguousDeclaration(stripTrailingComment(value))) return null;
+      return { key, value };
+    }
   }
   const cssMatch = CSS_DECL_RE.exec(trimmed);
   if (cssMatch) {

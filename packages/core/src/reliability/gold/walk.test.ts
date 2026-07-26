@@ -305,6 +305,77 @@ describe("gold/walk parseUnifiedDiff", () => {
     expect(candidates[0]?.removedLiteral).not.toBe("#FD7E00");
   });
 
+  it("review round 7 / Fix 1: two separate declarations fused onto one physical line yield ZERO candidates (fail closed, no cross-wire)", () => {
+    // JS_DECL_RE's `.+$` swallows the whole line as one value blob. Without
+    // the multi-declaration guard, the colour regex would read `glowHappyHour`'s
+    // `#FD7E00` as if it belonged to `a`, and the token regex would read `a`'s
+    // `someFn()`... except `someFn()` isn't a token match, so in THIS exact
+    // repro the cross-wire would actually surface as `addedRef: base.someOther`
+    // paired with `removedLiteral: #FD7E00` -- a wrong pairing (the real
+    // relationship is `#FD7E00 -> base.orange400`). The fix must emit nothing
+    // for this line rather than risk that silent mismatch.
+    const diff = [
+      "diff --git a/src/comp.tsx b/src/comp.tsx",
+      "--- a/src/comp.tsx",
+      "+++ b/src/comp.tsx",
+      "@@ -1 +1 @@",
+      "-const a = someFn(); const glowHappyHour = '#FD7E00';",
+      "+const a = base.someOther; const glowHappyHour = base.orange400;",
+    ].join("\n");
+
+    const candidates = parseUnifiedDiff(diff, META);
+    expect(candidates).toEqual([]);
+  });
+
+  it("review round 7 / Fix 1: a comma-separated multi-binding declaration yields ZERO candidates (ambiguous, same vector as two separate statements)", () => {
+    // `const a = fn(), glowHappyHour = '#FD7E00';` is ONE statement with TWO
+    // declarators sharing a `const`. The value after `a =` is
+    // `fn(), glowHappyHour = '#FD7E00';` -- a top-level (depth-0) comma
+    // separates the bindings, which is exactly as ambiguous as two full
+    // statements: there is no way to tell from the value alone which
+    // declarator a matched colour/token belongs to.
+    const diff = [
+      "diff --git a/src/comp.tsx b/src/comp.tsx",
+      "--- a/src/comp.tsx",
+      "+++ b/src/comp.tsx",
+      "@@ -1 +1 @@",
+      "-const a = fn(), glowHappyHour = '#FD7E00';",
+      "+const a = base.x, glowHappyHour = base.orange400;",
+    ].join("\n");
+
+    const candidates = parseUnifiedDiff(diff, META);
+    expect(candidates).toEqual([]);
+  });
+
+  it("review round 7 / Fix 1: a single declaration whose expression merely CONTAINS a comma/`=` still yields its normal candidate (guard must not over-trigger)", () => {
+    // `fn(a, b)`'s comma sits inside the call's parens (depth > 0), and the
+    // `||` operator is not a declaration keyword -- this is unambiguously ONE
+    // declaration. The multi-declaration guard must leave it alone.
+    const diff = [
+      "diff --git a/src/comp.tsx b/src/comp.tsx",
+      "--- a/src/comp.tsx",
+      "+++ b/src/comp.tsx",
+      "@@ -1 +1 @@",
+      "-const x = fn(a, b) || '#FD7E00';",
+      "+const x = fn(a, b) || tok.y;",
+    ].join("\n");
+
+    const candidates = parseUnifiedDiff(diff, META);
+    expect(candidates).toEqual([
+      {
+        repo: "test-repo",
+        commit: "COMMIT_SHA",
+        parent: "PARENT_SHA",
+        file: "src/comp.tsx",
+        removedLiteral: "#FD7E00",
+        addedRef: "tok.y",
+        line: 1,
+        parentLine: 1,
+        massCodemod: false,
+      },
+    ]);
+  });
+
   it("does not tag massCodemod when a commit yields exactly 30 or fewer candidates", () => {
     const hunkLines: string[] = [];
     for (let n = 0; n < 30; n++) {
