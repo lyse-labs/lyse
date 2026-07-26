@@ -40,6 +40,13 @@ today's `tokens/no-hardcoded-color` rule flags that literal on the tree as it st
 **before** the tokenization commit. Output: `packages/core/rules-recall-mined.json`,
 `recallSource: "git-mined"`.
 
+Because a design system's own repo would normally zone its source as
+`ds-source` — where a raw colour is an expected token *definition*, not drift —
+the harness forces `dsSelfMode` off on the checked-out tree so the mined literal
+is measured as **app** (consumer) drift. So the number answers "would the rule
+flag this literal as app-consumer drift," not "does Lyse flag it on the DS repo
+as-is"; the bucket is labelled `zone: "app"` accordingly.
+
 **What this number is, precisely.** It is **conditional recall on remediated
 drift** — P(Lyse flags the value | a developer eventually tokenized it) — not
 recall over all drift that exists in the wild. It is **survivorship-biased**:

@@ -21,6 +21,14 @@ function driftedLiteralOf(finding: Finding): string {
   return finding.fixGroup?.from ?? "";
 }
 
+// Join on file + normalized colour value, NOT on line number — intentionally.
+// `label.line` is the ADDED ref's line in the CHILD (tokenization) commit, but
+// this measurement audits the PARENT tree, where the removed literal sits at a
+// different old-file line whenever the hunk shifted lines (e.g. the primer
+// fixture: label.line 42 vs its parent line 43). Matching `f.location.line` to
+// `label.line` would therefore silently miss line-shifted labels. This mirrors
+// `diff/anchor.ts#anchorKey` (file + rule + normalized literal, the reformat-
+// proof content identity). Do NOT "tighten" this to also compare line numbers.
 function isCaught(findings: readonly Finding[], label: GoldLabel): boolean {
   return findings.some(
     (f) =>
