@@ -1,0 +1,31 @@
+commit 30279d7c3d004668196c395d1fc3050cc6e373c6
+Author: Manuel Carrera <mannycarrera4@users.noreply.github.com>
+Date:   Thu Jul 24 15:16:07 2025 -0600
+
+    fix: Update AI Ingress Button Colors (#3403)
+
+    NOTE (curated by Task 1, gold-mining harness): this file is a hand-scoped,
+    single-line excerpt of the real commit 30279d7c3d004668196c395d1fc3050cc6e373c6
+    in Workday/canvas-kit, restricted to modules/labs-react/ai-assistant-ingress-button/lib/AIAssistantIngressButton.tsx
+    line 34. The full, unmodified commit (which bundles this line with 4 other
+    hex->token pairs, some value-preserving and some value-CHANGING as part of a
+    brand refresh, plus unrelated identifier-casing renames) is captured verbatim
+    in tangled-brand-refresh.diff. This excerpt isolates the one pairing on that
+    line that is genuinely value-preserving (verified: base.orange400 resolves,
+    via @workday/canvas-tokens-web@3.0.0-alpha.9 pinned in this commit's
+    yarn.lock, to --cnvs-base-palette-orange-400: oklch(0.7261 0.1852 52.58 / 1)
+    == #FD7E00 exactly). Real repo, real commit, real line content and real line
+    number (34, unchanged old->new since it is a pure 1:1 substitution with no
+    preceding insertions) - only the surrounding diff context was trimmed for
+    fixture isolation. See task-1-report.md for the full verification trail.
+
+diff --git a/modules/labs-react/ai-assistant-ingress-button/lib/AiAssistantIngressButton.tsx b/modules/labs-react/ai-assistant-ingress-button/lib/AIAssistantIngressButton.tsx
+similarity index 75%
+rename from modules/labs-react/ai-assistant-ingress-button/lib/AiAssistantIngressButton.tsx
+rename to modules/labs-react/ai-assistant-ingress-button/lib/AIAssistantIngressButton.tsx
+index cf2018b24..8bb52c46e 100644
+--- a/modules/labs-react/ai-assistant-ingress-button/lib/AiAssistantIngressButton.tsx
++++ b/modules/labs-react/ai-assistant-ingress-button/lib/AIAssistantIngressButton.tsx
+@@ -34 +34 @@ const glowLunchBreak = base.amber300; //'#FEC10B';
+-const glowHappyHour = '#FD7E00';
++const glowHappyHour = base.orange400; //'#FD7E00';

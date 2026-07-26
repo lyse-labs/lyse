@@ -30,6 +30,82 @@ Every Lyse PR runs `pnpm test:recall` in CI; the build blocks if any `stable` su
 
 The separate `measure:recall` seeded-drift harness (`packages/core/rules-recall.json`, `recallSource: "seeded"`) is a narrower, non-gating CI regression net and candidate recall estimate — distinct from the antivirus/gold-set recall system described above.
 
+#### Label provenance — git-mined conditional recall
+
+A third, independent recall source: `pnpm mine:recall` (`scripts/mine-gold-recall.ts`,
+run from the repo root) mines a pinned, non-Lyse OSS design-system corpus
+(`scripts/gold-corpus/color.yaml`) for git commits where a developer tokenized a
+hardcoded colour — replacing a literal with a token reference — then checks whether
+today's `tokens/no-hardcoded-color` rule flags that literal on the tree as it stood
+**before** the tokenization commit. Output: `packages/core/rules-recall-mined.json`,
+`recallSource: "git-mined"`.
+
+Because a design system's own repo would normally zone its source as
+`ds-source` — where a raw colour is an expected token *definition*, not drift —
+the harness forces `dsSelfMode` off on the checked-out tree so the mined literal
+is measured as **app** (consumer) drift. So the number answers "would the rule
+flag this literal as app-consumer drift," not "does Lyse flag it on the DS repo
+as-is"; the bucket is labelled `zone: "app"` accordingly.
+
+**What this number is, precisely.** It is **conditional recall on remediated
+drift** — P(Lyse flags the value | a developer eventually tokenized it) — not
+recall over all drift that exists in the wild. It is **survivorship-biased**:
+only drift that was already found, judged worth fixing, and fixed by a human
+is eligible to become a label at all. Drift nobody ever tokenized (because it
+was subtle, low-traffic, or simply missed) cannot appear in this set, and
+fixed drift skews toward the more obvious cases a maintainer would notice
+in a diff. Treat it as a lower-bound sanity check on "does Lyse at least
+catch the drift humans already agreed was drift," not as an estimate of
+Lyse's recall over the true population of drift.
+
+**How the label stays honest (ADR 0022 §3).** A candidate tokenization
+commit only becomes a gold label if it clears every one of these, fail-closed:
+
+- **Non-Lyse repos only** — the corpus is pinned OSS design systems that did
+  not use Lyse, so no label can be circularly shaped by Lyse's own output.
+- **Independent value-equality** — `reliability/gold/color-eq.ts` is a
+  fresh, self-contained colour parser/comparator that never imports Lyse's
+  own resolver; a mined label can never bless the resolver's own blind spots.
+- **Structural-slot (Gate A) + value (Gate B) agreement** — the removed
+  literal and the added token reference must occupy the *same* declaration
+  slot (same property, same rule/selector, or same LHS for JS/TS), and the
+  token's resolved value(s) must unanimously equal the removed literal.
+  Any tangle (literal removed from one place, token added to another),
+  ambiguous resolution, or disagreement drops the candidate — never
+  fabricates a label.
+- **Measurement-only, never gating** — `recallSource: "git-mined"` cannot
+  be gate-eligible; enforced by
+  `packages/core/tests/reliability/gold/non-gating.test.ts`, which proves
+  even a relabelled, full-N bucket fails the gate because a recall-only
+  bucket structurally carries no `precisionWilsonLB`.
+- **No score change** — `mine:recall` is a `scripts/` measurement tool;
+  `lyse audit` never invokes it.
+
+**The result is the headline, not a defect.** The first run: **70 candidate
+tokenization commits** found across the 4 pinned corpus repos (primer-css 42,
+primer-react 8, canvas-kit 14, polaris 6) narrowed to **1 confirmed gold
+label** — primer-css's `var(--color-underlinenav-border-active)` replacing
+`#f9826c` — for **N=1, caught=1, recall=1.0, Wilson lower bound=0.207**
+(`tokens/no-hardcoded-color · exact · app`). The other 69 were dropped, every
+drop fail-closed and explainable: most external-package token references
+resolve to a real value only for the 2 pinned fixtures the gates were built
+against; canvas-kit's candidate commit renamed the file, so Gate A's parent-side
+read at the new path returned nothing; polaris's `--primary` is defined in
+multiple theme blocks, so Gate B's unanimous-value check disagreed and failed
+closed. This tiny N is the **honest survivorship / data-availability wall**
+the design anticipated: value-preserving colour→token commits are
+CSS-dominated, and a large share reference token packages that live outside
+the mined repo entirely — it is a finding about the data, not a bug in the
+harness. Determinism is proven separately: two runs over the same pinned
+corpus produce byte-identical buckets.
+
+Because of this bias and this N, git-mined recall is always reported
+**beside** the seeded synthetic recall above (`rules-recall.json`,
+`recallSource: "seeded"`), never headlined alone — the two numbers bound the
+truth from opposite directions: seeded recall shows whether the rule catches
+constructed drift at scale; git-mined recall shows whether it catches the
+specific, real drift a human once tokenized by hand.
+
 ### Pillar 3 — Coverage via the public catalogue
 
 Lyse ships **6 axes** (`tokens`, `a11y`, `components`, `stories`, `ai-surface`, `ai-governance`) decomposed into **66 sub-axes** (1 per rule). Every sub-axis is tagged `stable`, `experimental`, or `disabled`. Only `stable` contributes to the Health Score by default. **Promotion gate (dual)** — both computed as a Wilson 95 % lower bound on **N ≥ 40** independently-provenanced samples: **recall ≥ 0.90** for a sub-axis to ship as a claim (`stable`), and **precision ≥ 0.90** for its findings to contribute to the Health Score (a rule that clears recall but not precision is reported at weight 0 until precision clears). **52 sub-axes are currently `stable`.** Honest status: today's `stable` set was calibrated under the earlier synthetic recall suite; migrating every `stable` rule onto the N ≥ 40 independent-provenance dual gate is in progress (per-rule state in [`docs/architecture/per-rule-slo.md`](./per-rule-slo.md)). The rest ship `experimental` (reported-only). The full catalogue is auto-generated at [`docs/architecture/sub-axes.md`](./sub-axes.md).

@@ -1,0 +1,51 @@
+Token definition verification for positive-js-token.diff
+Repo: Workday/canvas-kit @ commit 30279d7c3d004668196c395d1fc3050cc6e373c6
+File: modules/labs-react/ai-assistant-ingress-button/lib/AIAssistantIngressButton.tsx, line 34
+Removed literal: #FD7E00
+Added token: base.orange400 (imported: `import {system, base} from '@workday/canvas-tokens-web';`)
+
+Exact dependency version pinned at this commit (from yarn.lock, not just the
+semver range in package.json):
+
+  $ git show 30279d7c3:yarn.lock | grep -A2 '"@workday/canvas-tokens-web@'
+    "@workday/canvas-tokens-web@3.0.0-alpha.9":
+      version "3.0.0-alpha.9"
+      resolved ".../canvas-tokens-web-3.0.0-alpha.9.tgz#56fa84f1166e66ee45858274113733ad453fa663"
+
+  $ npm pack @workday/canvas-tokens-web@3.0.0-alpha.9
+  $ grep orange400 package/dist/es6/base/index.js
+    export const orange400 = "--cnvs-base-palette-orange-400";
+
+`base.orange400` is a CSS custom-property NAME (design-token indirection,
+same pattern as primer's var(--...)), not a literal colour by itself.
+Its value is defined in the token package's generated CSS:
+
+  $ grep -n "cnvs-base-palette-orange-400" package/css/base/_variables.css
+    --cnvs-base-palette-orange-400: oklch(0.7261 0.1852 52.58 / 1);
+
+The token system stores colour as OKLCH, so equality against the removed hex
+literal requires an OKLCH -> sRGB conversion (standard Bjorn Ottosson OKLab
+matrices). Computed with a local, independent script (not Lyse's resolver):
+
+  oklch(0.7261, 0.1852, 52.58) -> sRGB (253, 126, 0) -> #FD7E00
+
+  #FD7E00 (removed literal) = rgb(253, 126, 0)
+  base.orange400 (resolved) = rgb(253, 126, 0)
+
+Result: EXACT match (deltaRGB = 0). Value-preserving.
+
+Context / caveat (see tangled-brand-refresh.diff for the full picture): this
+same commit changes 4 other similarly-shaped hex -> base.<token> pairs in the
+same file. Re-running the same OKLCH->sRGB check on all 10 lines in the
+commit found:
+  - 5 EXACT matches (deltaRGB 0-1): glowEraser->base.magenta200,
+    glowHighlighter->base.amber100, glowLunchBreak->base.amber300,
+    glowHappyHour->base.orange400 (the one isolated here), glowThumbtack->base.coral500
+  - 5 VALUE-CHANGED (deltaRGB 18-66, a real, perceptible colour difference):
+    illuminateStopColor1..5 -> base.red200/orange200/orange200/amber200/amber300
+This is why glowHappyHour was chosen for the isolated "clean positive"
+fixture, and why the full file is additionally captured as
+tangled-brand-refresh.diff: the same commit/file mixes value-preserving and
+value-changing hex->token replacements (a real "brand refresh" landed
+together with pure tokenization), which is exactly the kind of per-line
+value-equality gold-labelling Task 5 must get right.

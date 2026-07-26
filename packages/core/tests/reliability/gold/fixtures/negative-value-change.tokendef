@@ -1,0 +1,24 @@
+Token definition verification for negative-value-change.diff
+Repo: primer/css @ commit ece7a3e68c65252960b41d6df1b8ff64cb33c93f
+Removed literal: #ff0 (pure yellow, rgb(255,255,0))
+Added token: var(--color-attention-subtle)
+
+  $ git show ece7a3e68c65252960b41d6df1b8ff64cb33c93f:package.json | grep primitives
+    "@primer/primitives": "^7.1.0"
+
+  $ npm pack @primer/primitives@7.1.0
+  $ grep -n "color-attention-subtle" package/dist/scss/colors/_light.scss
+    package/dist/scss/colors/_light.scss:298:    --color-attention-subtle: #fff8c5;
+
+Source excerpt (package/dist/scss/colors/_light.scss, light theme mixin, line 298):
+    --color-attention-subtle: #fff8c5;
+
+Result: #ff0 (255,255,0) != #fff8c5 (255,248,197) -> DIFFERENT colours.
+Reason: value-change. The commit is a real, non-synthetic tokenization commit
+(GitHub PR #1756, "Update mark tag to use background-color:
+var(--color-attention-subtle);") but the semantic token it reaches for is a
+pale-yellow "attention subtle" background, not the exact bright yellow
+`#ff0` that was hardcoded before. This MUST be rejected by independent
+colour value-equality (gold/color-eq.ts, Task 3) even though it is a
+completely legitimate, real hardcoded-colour -> token replacement commit
+made by the primer/css maintainers themselves.

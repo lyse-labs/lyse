@@ -1,0 +1,25 @@
+commit ece7a3e68c65252960b41d6df1b8ff64cb33c93f
+Author: Kevin Heis <heiskr@users.noreply.github.com>
+Date:   Thu Nov 18 17:34:17 2021 -0800
+
+    Update mark tag to use background-color: var(--color-attention-subtle); (#1756)
+    
+    * Update mark tag to use background-color: var(--color-attention-subtle);
+    
+    * Create lazy-snails-try.md
+    
+    Co-authored-by: Katie Langerman <langermank@github.com>
+
+diff --git a/src/base/normalize.scss b/src/base/normalize.scss
+index 6a1e3c10..3d6b1118 100644
+--- a/src/base/normalize.scss
++++ b/src/base/normalize.scss
+@@ -161,7 +161,7 @@ h1 {
+  */
+ 
+ mark {
+-  background-color: #ff0;
++  background-color: var(--color-attention-subtle);
+   color: var(--color-text-primary);
+ }
+ 

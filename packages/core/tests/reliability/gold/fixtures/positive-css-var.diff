@@ -1,0 +1,24 @@
+commit 8541ed1db1e0d9c4551ea76ba400d6d0cf682897
+Author: simurai <simurai@github.com>
+Date:   Wed Jun 23 19:21:14 2021 +0900
+
+    Use variable for the active border of the UnderlineNav (#1472)
+    
+    * Replace hex with variable
+    
+    * Create rude-rockets-flow.md
+
+diff --git a/src/navigation/underline-nav.scss b/src/navigation/underline-nav.scss
+index 4bd7a543..7b25dec8 100644
+--- a/src/navigation/underline-nav.scss
++++ b/src/navigation/underline-nav.scss
+@@ -39,8 +39,7 @@
+   &[aria-current]:not([aria-current=false]) {
+     font-weight: $font-weight-bold;
+     color: var(--color-underlinenav-text-active);
+-    // stylelint-disable-next-line primer/borders
+-    border-bottom-color: #f9826c; // custom coral
++    border-bottom-color: var(--color-underlinenav-border-active);
+     outline: 1px dotted transparent; // Support Firefox custom colors
+     outline-offset: -1px;
+ 
