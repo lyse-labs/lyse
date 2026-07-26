@@ -77,7 +77,7 @@
       { "line": 26, "literal": "#FFB74D", "match": false, "token": "base.amber300" },
       { "line": 31, "literal": "#FFC2FD", "match": true, "token": "base.magenta200" },
       { "line": 32, "literal": "#FFF3A8", "match": true, "token": "base.amber100" },
-      { "line": 33, "literal": "#FEC10B", "match": true, "token": "base.amber300" },
+      { "line": 33, "literal": "#FEC10B", "match": true, "note": "match:true is a HUMAN +-1-tolerant judgment; base.amber300 resolves to #FEC10C (254,193,12) vs literal #FEC10B (254,193,11), a 1-LSB OKLCH->sRGB rounding difference. The harness's exact colorEquals returns FALSE here (blue 12 != 11), so confirmCandidate fails closed -> null. Intended: do NOT loosen colorEquals.", "token": "base.amber300" },
       { "line": 34, "literal": "#FD7E00", "match": true, "token": "base.orange400" },
       { "line": 35, "literal": "#FC5B05", "match": true, "token": "base.coral500" }
     ],
