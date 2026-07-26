@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -181,6 +181,114 @@ describe("gold/confirm confirmCandidate", () => {
     };
     const label = await confirmCandidate(repo.dir, candidate);
     expect(label).toBeNull();
+  });
+
+  it("JS false-accept closed (unscoped-resolution exploit): real base.orange400 changed to #ABCDEF while an unrelated legacy file still defines orange400=#FD7E00 => null", async () => {
+    const repo = makeRepo(
+      "js-false-accept",
+      {
+        "comp.tsx": "const glowHappyHour = '#FD7E00';\n",
+        "tokens.ts": 'export const base = {\n  orange400: "#FD7E00",\n};\n',
+        "legacy-palette.ts": 'export const legacy = {\n  orange400: "#FD7E00",\n};\n',
+      },
+      {
+        // The REAL token moved to a new colour...
+        "tokens.ts": 'export const base = {\n  orange400: "#ABCDEF",\n};\n',
+        // ...but the tokenization still stashes the OLD literal in the comment,
+        // and legacy-palette.ts (unrelated) keeps orange400 = the OLD literal.
+        "comp.tsx": "const glowHappyHour = base.orange400; //'#FD7E00'\n",
+      },
+    );
+    const candidate = await onlyCandidate(repo.dir, "canvas-kit");
+    expect(candidate.addedRef).toBe("base.orange400");
+    expect(candidate.removedLiteral).toBe("#FD7E00");
+    // Before the fix, the whole-repo last-segment grep found legacy-palette.ts's
+    // orange400 = #FD7E00 and accept-on-any-match emitted a GoldLabel even though
+    // the real base.orange400 now resolves to #ABCDEF. First-segment scoping
+    // (base) excludes legacy-palette.ts, and the disagreement gate is the backstop.
+    const label = await confirmCandidate(repo.dir, candidate);
+    expect(label).toBeNull();
+  });
+
+  it("CSS multi-def ambiguity closed: --x defined with two different values (light + dark) => null (ambiguous)", async () => {
+    const repo = makeRepo(
+      "css-multidef",
+      {
+        "button.scss": ".x {\n  background: #111111;\n}\n",
+        "tokens.scss":
+          ":root {\n  --x: #111111;\n}\n.dark {\n  --x: #222222;\n}\n",
+      },
+      {
+        "button.scss": ".x {\n  background: var(--x);\n}\n",
+      },
+    );
+    const candidate = await onlyCandidate(repo.dir, "some-ds");
+    expect(candidate.removedLiteral).toBe("#111111");
+    expect(candidate.addedRef).toBe("var(--x)");
+    // --x resolves to BOTH #111111 and #222222. Accept-on-any-match would pass
+    // (removedLiteral == #111111), but the resolution is ambiguous => fail closed.
+    const label = await confirmCandidate(repo.dir, candidate);
+    expect(label).toBeNull();
+  });
+
+  it("Gate A CSS selector scope: same property+literal in a DIFFERENT selector must not satisfy Gate A for the changed rule", async () => {
+    // REJECT: the changed rule (.a) actually held #0000ff; #f00 lives only in an
+    // unrelated rule (.b). A file-scoped Gate A would wrongly accept.
+    const rejectRepo = makeRepo(
+      "css-selscope-reject",
+      {
+        "x.scss": ".a {\n  color: #0000ff;\n}\n.b {\n  color: #f00;\n}\n",
+        "tokens.scss": ":root {\n  --brand: #f00;\n}\n",
+      },
+      {
+        "x.scss": ".a {\n  color: var(--brand);\n}\n.b {\n  color: #f00;\n}\n",
+      },
+    );
+    const rejectCandidate: CandidateChange = {
+      repo: "synthetic",
+      commit: rejectRepo.commit,
+      parent: rejectRepo.parent,
+      file: "x.scss",
+      removedLiteral: "#f00",
+      addedRef: "var(--brand)",
+      line: 2,
+      massCodemod: false,
+    };
+    expect(await confirmCandidate(rejectRepo.dir, rejectCandidate)).toBeNull();
+
+    // ACCEPT: the changed rule (.a) genuinely held #f00; a different rule (.b)
+    // carries an unrelated colour. The changed rule's own prior value governs.
+    const acceptRepo = makeRepo(
+      "css-selscope-accept",
+      {
+        "x.scss": ".a {\n  color: #f00;\n}\n.b {\n  color: #0000ff;\n}\n",
+        "tokens.scss": ":root {\n  --brand: #f00;\n}\n",
+      },
+      {
+        "x.scss": ".a {\n  color: var(--brand);\n}\n.b {\n  color: #0000ff;\n}\n",
+      },
+    );
+    const acceptCandidate: CandidateChange = {
+      repo: "synthetic",
+      commit: acceptRepo.commit,
+      parent: acceptRepo.parent,
+      file: "x.scss",
+      removedLiteral: "#f00",
+      addedRef: "var(--brand)",
+      line: 2,
+      massCodemod: false,
+    };
+    expect(await confirmCandidate(acceptRepo.dir, acceptCandidate)).toEqual({
+      repo: "synthetic",
+      commit: acceptRepo.commit,
+      parent: acceptRepo.parent,
+      file: "x.scss",
+      line: 2,
+      literal: "#f00",
+      expectedToken: "var(--brand)",
+      axis: "colors",
+      ruleId: "tokens/no-hardcoded-color",
+    });
   });
 
   it("Tangled 10-way value split (tangled-brand-refresh): exact colorEquals accepts 4, rejects 6 (incl. line 33 ±1-LSB boundary)", async () => {
