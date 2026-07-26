@@ -16,6 +16,13 @@ describe("gold/color-eq", () => {
   it("false on unparseable (fail-closed for a label filter)", () => {
     expect(colorEquals("var(--x)", "#000")).toBe(false);
   });
+  it("fails closed on invalid/out-of-range tokens (review round 1)", () => {
+    expect(colorEquals("rgb(59px, 130, 246)", "#3b82f6")).toBe(false);
+    expect(colorEquals("rgb(Infinity,0,0)", "#ff0000")).toBe(false);
+    expect(colorEquals("rgb(300,300,300)", "#ffffff")).toBe(false);
+    expect(colorEquals("hsl(0,50%%,50%)", "#bf4040")).toBe(false);
+    expect(colorEquals("rgb(255,255,255)", "#ffffff")).toBe(true);
+  });
   it("is independent of Lyse's resolver/parser (no import)", () => {
     const src = readFileSync(new URL("./color-eq.ts", import.meta.url), "utf8");
     expect(src).not.toMatch(/graph\/resolve/);

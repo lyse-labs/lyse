@@ -8,6 +8,12 @@ interface Rgba {
 const HEX_RE = /^#([0-9a-f]{3,8})$/i;
 const RGB_RE = /^rgba?\(\s*([^)]+)\s*\)$/i;
 const HSL_RE = /^hsla?\(\s*([^)]+)\s*\)$/i;
+// Strict, whole-token numeric patterns — `Number.parseFloat` only parses a
+// prefix and silently ignores trailing junk (e.g. "59px", "Infinity" would
+// otherwise slip through), so every token must match one of these in full
+// before it is handed to `Number.parseFloat`.
+const NUMBER_RE = /^-?\d+(\.\d+)?$/;
+const PERCENT_RE = /^-?\d+(\.\d+)?%$/;
 
 function clampByte(n: number): number {
   return Math.min(255, Math.max(0, n));
@@ -57,24 +63,30 @@ function parseHex(value: string): Rgba | null {
 function parseChannelToken(token: string): number | null {
   const trimmed = token.trim();
   if (trimmed.endsWith("%")) {
+    if (!PERCENT_RE.test(trimmed)) return null;
     const pct = Number.parseFloat(trimmed.slice(0, -1));
-    if (Number.isNaN(pct)) return null;
-    return (pct / 100) * 255;
+    const value = (pct / 100) * 255;
+    if (value < 0 || value > 255) return null;
+    return value;
   }
+  if (!NUMBER_RE.test(trimmed)) return null;
   const n = Number.parseFloat(trimmed);
-  if (Number.isNaN(n)) return null;
+  if (n < 0 || n > 255) return null;
   return n;
 }
 
 function parseAlphaToken(token: string): number | null {
   const trimmed = token.trim();
   if (trimmed.endsWith("%")) {
+    if (!PERCENT_RE.test(trimmed)) return null;
     const pct = Number.parseFloat(trimmed.slice(0, -1));
-    if (Number.isNaN(pct)) return null;
-    return pct / 100;
+    const value = pct / 100;
+    if (value < 0 || value > 1) return null;
+    return value;
   }
+  if (!NUMBER_RE.test(trimmed)) return null;
   const n = Number.parseFloat(trimmed);
-  if (Number.isNaN(n)) return null;
+  if (n < 0 || n > 1) return null;
   return n;
 }
 
@@ -107,7 +119,7 @@ function parseRgb(value: string): Rgba | null {
   if (r === null || g === null || b === null) return null;
   const a = aTok === undefined ? 1 : parseAlphaToken(aTok);
   if (a === null) return null;
-  return { r: clampByte(r), g: clampByte(g), b: clampByte(b), a: clampAlpha(a) };
+  return { r, g, b, a };
 }
 
 function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: number } {
@@ -164,16 +176,19 @@ function parseHsl(value: string): Rgba | null {
   const lTok = parts[2];
   const aTok = parts[3];
   if (hTok === undefined || sTok === undefined || lTok === undefined) return null;
-  const h = Number.parseFloat(hTok);
-  if (Number.isNaN(h)) return null;
-  if (!sTok.endsWith("%") || !lTok.endsWith("%")) return null;
-  const s = Number.parseFloat(sTok.slice(0, -1));
-  const l = Number.parseFloat(lTok.slice(0, -1));
-  if (Number.isNaN(s) || Number.isNaN(l)) return null;
+  const hTrimmed = hTok.trim();
+  if (!NUMBER_RE.test(hTrimmed)) return null;
+  const h = Number.parseFloat(hTrimmed);
+  const sTrimmed = sTok.trim();
+  const lTrimmed = lTok.trim();
+  if (!PERCENT_RE.test(sTrimmed) || !PERCENT_RE.test(lTrimmed)) return null;
+  const s = Number.parseFloat(sTrimmed.slice(0, -1));
+  const l = Number.parseFloat(lTrimmed.slice(0, -1));
+  if (s < 0 || s > 100 || l < 0 || l > 100) return null;
   const a = aTok === undefined ? 1 : parseAlphaToken(aTok);
   if (a === null) return null;
   const { r, g, b } = hslToRgb(h, s / 100, l / 100);
-  return { r, g, b, a: clampAlpha(a) };
+  return { r, g, b, a };
 }
 
 // Fresh, self-contained parser (ADR 0022 §3b): must not share Lyse's own
