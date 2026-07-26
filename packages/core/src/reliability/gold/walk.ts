@@ -49,9 +49,106 @@ function extractDeclaration(diffLine: string): Declaration | null {
 // A trailing `//` comment on a `+` line is where the fixtures deliberately
 // stash the OLD hex (e.g. `base.orange400; //'#FD7E00';`) — it must not
 // disqualify the candidate or be mistaken for the added token reference.
+// But a bare `indexOf("//")` also cuts into a legitimate `url(https://...)`
+// value, so `//` only counts as a comment start at paren/quote depth 0 —
+// inside `url(...)` or a quoted string it's left alone.
 function stripTrailingComment(value: string): string {
-  const idx = value.indexOf("//");
-  return (idx === -1 ? value : value.slice(0, idx)).trim();
+  let depth = 0;
+  let quote = "";
+  for (let i = 0; i < value.length; i++) {
+    const ch = value.charAt(i);
+    if (quote) {
+      if (ch === quote) quote = "";
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (ch === "(") {
+      depth++;
+      continue;
+    }
+    if (ch === ")") {
+      depth = Math.max(0, depth - 1);
+      continue;
+    }
+    if (depth === 0 && ch === "/" && value.charAt(i + 1) === "/") {
+      return value.slice(0, i).trim();
+    }
+  }
+  return value.trim();
+}
+
+interface RemovedEntry {
+  key: string;
+  literal: string;
+}
+
+interface AddedEntry {
+  key: string;
+  addedRef: string;
+  lineNumber: number;
+}
+
+// A replace-block is a maximal run of `-` lines immediately followed by a
+// maximal run of `+` lines (no context line, and no interleaved opposite
+// run, in between). Pairing is scoped to a single block so unrelated
+// same-key declarations elsewhere in the hunk — e.g. a pure deletion, or a
+// wholly different declaration that happens to reuse the same CSS
+// property/JS identifier — can never be mistaken for each other via a
+// whole-hunk-scoped FIFO. Within a block, a key with exactly one removed
+// entry (or N removed vs. a different count of added) pairs positionally
+// (FIFO) — unambiguous. A key with >= 2 removed AND >= 2 added entries in
+// the SAME block is a case the diff gives no reliable signal for (a
+// reordered same-key swap looks identical to an in-order replace) — that
+// case fails closed (no candidate emitted for that key) rather than risk a
+// silently wrong pairing reaching the downstream value-equality gate.
+function flushReplaceBlock(
+  removedEntries: RemovedEntry[],
+  addedEntries: AddedEntry[],
+  candidates: CandidateChange[],
+  meta: ParseDiffMeta,
+  currentFile: string,
+): void {
+  if (removedEntries.length === 0 || addedEntries.length === 0) return;
+
+  const removedByKey = new Map<string, string[]>();
+  for (const entry of removedEntries) {
+    const queue = removedByKey.get(entry.key) ?? [];
+    queue.push(entry.literal);
+    removedByKey.set(entry.key, queue);
+  }
+
+  const addedCountByKey = new Map<string, number>();
+  for (const entry of addedEntries) {
+    addedCountByKey.set(entry.key, (addedCountByKey.get(entry.key) ?? 0) + 1);
+  }
+
+  const ambiguousKeys = new Set<string>();
+  for (const [key, queue] of removedByKey) {
+    if (queue.length >= 2 && (addedCountByKey.get(key) ?? 0) >= 2) {
+      ambiguousKeys.add(key);
+    }
+  }
+
+  for (const added of addedEntries) {
+    if (ambiguousKeys.has(added.key)) continue;
+    const queue = removedByKey.get(added.key);
+    if (!queue || queue.length === 0) continue;
+    const removedLiteral = queue.shift();
+    if (removedLiteral === undefined) continue;
+    candidates.push({
+      repo: meta.repo,
+      commit: meta.commit,
+      parent: meta.parent,
+      file: currentFile,
+      removedLiteral,
+      addedRef: added.addedRef,
+      line: added.lineNumber,
+      massCodemod: false,
+    });
+  }
 }
 
 function fileFromPlusPlusPlusLine(line: string): string {
@@ -92,7 +189,14 @@ export function parseUnifiedDiff(content: string, meta: ParseDiffMeta): Candidat
       const newStart = header[1];
       if (newStart === undefined) continue;
       let newLine = Number.parseInt(newStart, 10);
-      const pendingRemoved = new Map<string, string[]>();
+
+      let removedEntries: RemovedEntry[] = [];
+      let addedEntries: AddedEntry[] = [];
+      const flushBlock = (): void => {
+        flushReplaceBlock(removedEntries, addedEntries, candidates, meta, currentFile);
+        removedEntries = [];
+        addedEntries = [];
+      };
 
       while (
         index < lines.length &&
@@ -103,13 +207,17 @@ export function parseUnifiedDiff(content: string, meta: ParseDiffMeta): Candidat
         index++;
 
         if (contentLine.startsWith("-")) {
+          // A `+` run ending and immediately being followed by a new `-`
+          // run means the previous replace-block is over — flush it before
+          // starting to accumulate the next one.
+          if (addedEntries.length > 0) flushBlock();
           const decl = extractDeclaration(contentLine);
-          if (!decl) continue;
-          const colorMatch = COLOR_LITERAL_RE.exec(decl.value);
-          if (!colorMatch) continue;
-          const queue = pendingRemoved.get(decl.key) ?? [];
-          queue.push(colorMatch[0]);
-          pendingRemoved.set(decl.key, queue);
+          if (decl) {
+            const colorMatch = COLOR_LITERAL_RE.exec(decl.value);
+            if (colorMatch) {
+              removedEntries.push({ key: decl.key, literal: colorMatch[0] });
+            }
+          }
           continue;
         }
 
@@ -117,30 +225,25 @@ export function parseUnifiedDiff(content: string, meta: ParseDiffMeta): Candidat
           const lineNumber = newLine;
           newLine++;
           const decl = extractDeclaration(contentLine);
-          if (!decl) continue;
-          const queue = pendingRemoved.get(decl.key);
-          if (!queue || queue.length === 0) continue;
-          const strippedValue = stripTrailingComment(decl.value);
-          if (COLOR_LITERAL_RE.test(strippedValue)) continue;
-          const tokenMatch = TOKEN_REF_RE.exec(strippedValue);
-          if (!tokenMatch) continue;
-          const removedLiteral = queue.shift();
-          if (removedLiteral === undefined) continue;
-          candidates.push({
-            repo: meta.repo,
-            commit: meta.commit,
-            parent: meta.parent,
-            file: currentFile,
-            removedLiteral,
-            addedRef: tokenMatch[0],
-            line: lineNumber,
-            massCodemod: false,
-          });
+          if (decl) {
+            const strippedValue = stripTrailingComment(decl.value);
+            if (!COLOR_LITERAL_RE.test(strippedValue)) {
+              const tokenMatch = TOKEN_REF_RE.exec(strippedValue);
+              if (tokenMatch) {
+                addedEntries.push({ key: decl.key, addedRef: tokenMatch[0], lineNumber });
+              }
+            }
+          }
           continue;
         }
 
+        // A context line (or any other non `-`/`+` line, e.g. a
+        // "\ No newline at end of file" marker) ends any open replace-block
+        // — pairing must never carry state across a gap.
+        flushBlock();
         newLine++;
       }
+      flushBlock();
       continue;
     }
 
