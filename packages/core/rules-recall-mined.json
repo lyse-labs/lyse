@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "recallGeneratedFrom": {
+    "source": "git-mined (scripts/gold-corpus/color.yaml)",
+    "commit": "4bb1cc0",
+    "measuredAt": "2026-07-26T00:00:00.000Z"
+  },
+  "buckets": [
+    {
+      "ruleId": "tokens/no-hardcoded-color",
+      "class": "exact",
+      "zone": "app",
+      "labels": 1,
+      "caught": 1,
+      "recall": 1,
+      "recallWilsonLB": 0.20654931437723742,
+      "recallSource": "git-mined"
+    }
+  ]
+}
