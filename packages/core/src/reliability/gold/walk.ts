@@ -8,6 +8,7 @@ export interface CandidateChange {
   removedLiteral: string;
   addedRef: string;
   line: number;
+  parentLine: number;
   massCodemod: boolean;
 }
 
@@ -19,7 +20,7 @@ export interface ParseDiffMeta {
 
 const COLOR_LITERAL_RE = /#[0-9a-f]{3,8}\b|rgba?\([^)]*\)|hsla?\([^)]*\)/i;
 const TOKEN_REF_RE = /var\(--[\w-]+\)|[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)+/;
-const HUNK_HEADER_RE = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
+const HUNK_HEADER_RE = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
 const JS_DECL_RE = /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(.+)$/;
 const CSS_DECL_RE = /^([A-Za-z-]+)\s*:\s*(.+)$/;
 const MASS_CODEMOD_THRESHOLD = 30;
@@ -67,7 +68,7 @@ function stripTrailingComment(value: string): string {
       out += ch;
       continue;
     }
-    if (ch === '"' || ch === "'") {
+    if (ch === '"' || ch === "'" || ch === "`") {
       quote = ch;
       out += ch;
       continue;
@@ -89,6 +90,10 @@ function stripTrailingComment(value: string): string {
       const end = value.indexOf("*/", i + 2);
       if (end === -1) break;
       i = end + 1;
+      // A block comment is whitespace: collapse it to a single space so
+      // fragments on either side (`#FD7E/* x */00`) cannot fuse into a
+      // spurious value (`#FD7E00`).
+      out += " ";
       continue;
     }
     out += ch;
@@ -99,6 +104,7 @@ function stripTrailingComment(value: string): string {
 interface RemovedEntry {
   key: string;
   literal: string;
+  lineNumber: number;
 }
 
 interface AddedEntry {
@@ -129,10 +135,10 @@ function flushReplaceBlock(
 ): void {
   if (removedEntries.length === 0 || addedEntries.length === 0) return;
 
-  const removedByKey = new Map<string, string[]>();
+  const removedByKey = new Map<string, RemovedEntry[]>();
   for (const entry of removedEntries) {
     const queue = removedByKey.get(entry.key) ?? [];
-    queue.push(entry.literal);
+    queue.push(entry);
     removedByKey.set(entry.key, queue);
   }
 
@@ -152,16 +158,17 @@ function flushReplaceBlock(
     if (ambiguousKeys.has(added.key)) continue;
     const queue = removedByKey.get(added.key);
     if (!queue || queue.length === 0) continue;
-    const removedLiteral = queue.shift();
-    if (removedLiteral === undefined) continue;
+    const removed = queue.shift();
+    if (removed === undefined) continue;
     candidates.push({
       repo: meta.repo,
       commit: meta.commit,
       parent: meta.parent,
       file: currentFile,
-      removedLiteral,
+      removedLiteral: removed.literal,
       addedRef: added.addedRef,
       line: added.lineNumber,
+      parentLine: removed.lineNumber,
       massCodemod: false,
     });
   }
@@ -202,8 +209,10 @@ export function parseUnifiedDiff(content: string, meta: ParseDiffMeta): Candidat
       const header = HUNK_HEADER_RE.exec(line);
       index++;
       if (!header) continue;
-      const newStart = header[1];
-      if (newStart === undefined) continue;
+      const oldStart = header[1];
+      const newStart = header[2];
+      if (oldStart === undefined || newStart === undefined) continue;
+      let oldLine = Number.parseInt(oldStart, 10);
       let newLine = Number.parseInt(newStart, 10);
 
       let removedEntries: RemovedEntry[] = [];
@@ -227,6 +236,11 @@ export function parseUnifiedDiff(content: string, meta: ParseDiffMeta): Candidat
           // run means the previous replace-block is over — flush it before
           // starting to accumulate the next one.
           if (addedEntries.length > 0) flushBlock();
+          // The old-file line of this removed line — recorded so Gate A can
+          // check the exact parent declaration by line number (not by re-finding
+          // it via name/scope heuristics).
+          const removedLineNumber = oldLine;
+          oldLine++;
           const decl = extractDeclaration(contentLine);
           if (decl) {
             // Mirror the `+` side: a colour that survives ONLY inside a
@@ -237,7 +251,7 @@ export function parseUnifiedDiff(content: string, meta: ParseDiffMeta): Candidat
             const strippedValue = stripTrailingComment(decl.value);
             const colorMatch = COLOR_LITERAL_RE.exec(strippedValue);
             if (colorMatch) {
-              removedEntries.push({ key: decl.key, literal: colorMatch[0] });
+              removedEntries.push({ key: decl.key, literal: colorMatch[0], lineNumber: removedLineNumber });
             }
           }
           continue;
@@ -261,8 +275,10 @@ export function parseUnifiedDiff(content: string, meta: ParseDiffMeta): Candidat
 
         // A context line (or any other non `-`/`+` line, e.g. a
         // "\ No newline at end of file" marker) ends any open replace-block
-        // — pairing must never carry state across a gap.
+        // — pairing must never carry state across a gap. A context line
+        // advances BOTH file counters.
         flushBlock();
+        oldLine++;
         newLine++;
       }
       flushBlock();

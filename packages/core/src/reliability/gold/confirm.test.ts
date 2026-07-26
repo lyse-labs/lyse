@@ -179,6 +179,7 @@ describe("gold/confirm confirmCandidate", () => {
       removedLiteral: "#f00",
       addedRef: "var(--brand)",
       line: 3,
+      parentLine: 2,
       massCodemod: false,
     };
     const label = await confirmCandidate(repo.dir, candidate);
@@ -294,6 +295,7 @@ describe("gold/confirm confirmCandidate", () => {
       removedLiteral: "#f00",
       addedRef: "var(--brand)",
       line: 2,
+      parentLine: 5,
       massCodemod: false,
     };
     expect(await confirmCandidate(rejectRepo.dir, rejectCandidate)).toBeNull();
@@ -318,6 +320,7 @@ describe("gold/confirm confirmCandidate", () => {
       removedLiteral: "#f00",
       addedRef: "var(--brand)",
       line: 2,
+      parentLine: 2,
       massCodemod: false,
     };
     expect(await confirmCandidate(acceptRepo.dir, acceptCandidate)).toEqual({
@@ -333,13 +336,14 @@ describe("gold/confirm confirmCandidate", () => {
     });
   });
 
-  it("Gate A JS: shadowed / commented-literal parent => null (comment-stripped + ambiguity fail closed)", async () => {
+  it("Gate A JS: the parent line at parentLine must bind the SAME LHS and carry the literal — comment-only or LHS-mismatch => null", async () => {
     // Both sub-cases inject a matching value so Gate B WOULD pass, isolating
     // Gate A as the rejecter.
     const injectFd7e00: ResolveTokenValue = async () => ["#FD7E00"];
 
-    // (a) COMMENT-ONLY: the real parent RHS is a ref; the removed literal appears
-    // only in a trailing comment. Comment-stripped => 0 same-LHS matches => null.
+    // (a) COMMENT-ONLY: the parent line's real RHS is a ref; the removed literal
+    // appears only in a trailing comment. Comment-stripped, the parent line at
+    // parentLine does not carry the literal => null.
     const commentRepo = makeRepo(
       "js-gatea-comment",
       { "comp.tsx": "const glowHappyHour = base.legacyOrange; // #FD7E00\n" },
@@ -353,34 +357,35 @@ describe("gold/confirm confirmCandidate", () => {
       removedLiteral: "#FD7E00",
       addedRef: "base.orange400",
       line: 1,
+      parentLine: 1,
       massCodemod: false,
     };
     expect(await confirmCandidate(commentRepo.dir, commentCandidate, injectFd7e00)).toBeNull();
 
-    // (b) SHADOWED: two same-LHS declarations both carry the literal in their
-    // RHS => ambiguous (matches !== 1) => fail closed.
-    const shadowRepo = makeRepo(
-      "js-gatea-shadow",
-      {
-        "comp.tsx":
-          "const glowHappyHour = '#FD7E00';\nconst glowHappyHour = '#FD7E00';\n",
-      },
+    // (b) LHS MISMATCH: the parent line at parentLine binds a DIFFERENT
+    // left-hand side than the child line. Same LHS on both lines is what proves
+    // it is the same declaration slot; a mismatch => null. (Walk never pairs
+    // across slots, but Gate A must still fail closed if handed such a candidate.)
+    const mismatchRepo = makeRepo(
+      "js-gatea-lhs-mismatch",
+      { "comp.tsx": "const someOtherToken = '#FD7E00';\n" },
       { "comp.tsx": "const glowHappyHour = base.orange400;\n" },
     );
-    const shadowCandidate: CandidateChange = {
+    const mismatchCandidate: CandidateChange = {
       repo: "synthetic",
-      commit: shadowRepo.commit,
-      parent: shadowRepo.parent,
+      commit: mismatchRepo.commit,
+      parent: mismatchRepo.parent,
       file: "comp.tsx",
       removedLiteral: "#FD7E00",
       addedRef: "base.orange400",
       line: 1,
+      parentLine: 1,
       massCodemod: false,
     };
-    expect(await confirmCandidate(shadowRepo.dir, shadowCandidate, injectFd7e00)).toBeNull();
+    expect(await confirmCandidate(mismatchRepo.dir, mismatchCandidate, injectFd7e00)).toBeNull();
   });
 
-  it("Gate A JS multi-hunk line-shift still confirms (with injection): an earlier insertion shifts the candidate off the parent decl's line, yet the content-match parent check finds it => GoldLabel", async () => {
+  it("Gate A JS multi-hunk line-shift still confirms (with injection): an earlier insertion puts the child decl on a different line than the parent decl, yet parentLine points at the exact parent line => GoldLabel", async () => {
     const repo = makeRepo(
       "js-line-shift",
       {
@@ -388,8 +393,10 @@ describe("gold/confirm confirmCandidate", () => {
       },
       {
         // Three new lines are inserted BEFORE the candidate declaration, so the
-        // child's glowHappyHour sits at line 5 while the parent's was at line 2
-        // — well outside a ±1 window (which would have false-rejected).
+        // child's glowHappyHour sits at line 5 while the parent's was at line 2.
+        // walk records line=5 (new) and parentLine=2 (old) from the diff's own
+        // `-2 +2,4` numbering, so Gate A reads the right parent line regardless
+        // of the shift.
         "comp.tsx":
           "const a = 1;\nconst pad1 = 2;\nconst pad2 = 3;\nconst pad3 = 4;\nconst glowHappyHour = base.orange400; //'#FD7E00'\n",
       },
@@ -398,6 +405,7 @@ describe("gold/confirm confirmCandidate", () => {
     expect(candidate.addedRef).toBe("base.orange400");
     expect(candidate.removedLiteral).toBe("#FD7E00");
     expect(candidate.line).toBe(5);
+    expect(candidate.parentLine).toBe(2);
     const resolveTokenValue: ResolveTokenValue = async (ref) =>
       ref === "base.orange400" ? ["#FD7E00"] : [];
     const label = await confirmCandidate(repo.dir, candidate, resolveTokenValue);
@@ -539,10 +547,11 @@ describe("gold/confirm confirmCandidate", () => {
     const candidates = await walkTokenizationCommits(repo.dir, "canvas-kit");
     expect(candidates).toHaveLength(0);
 
-    // Layer 2 (Gate A / Bug 2): even handed the candidate directly, ComponentB's
-    // same-name #FD7E00 lives in a DIFFERENT enclosing block, so it cannot
-    // satisfy Gate A for ComponentA's change. Inject a matching value so Gate B
-    // WOULD pass, isolating Gate A as the rejecter => null.
+    // Layer 2 (Gate A / Bug 2): even handed the candidate directly, parentLine
+    // points at ComponentA's own line 2 (deriveColor(), literal only in a
+    // comment) — comment-stripped it carries no literal, so Gate A fails.
+    // ComponentB's same-name #FD7E00 on another line is never read. Inject a
+    // matching value so Gate B WOULD pass, isolating Gate A => null.
     const injected: ResolveTokenValue = async (ref) =>
       ref === "base.orange400" ? ["#FD7E00"] : [];
     const handed: CandidateChange = {
@@ -553,6 +562,7 @@ describe("gold/confirm confirmCandidate", () => {
       removedLiteral: "#FD7E00",
       addedRef: "base.orange400",
       line: 2,
+      parentLine: 2,
       massCodemod: false,
     };
     expect(await confirmCandidate(repo.dir, handed, injected)).toBeNull();
@@ -586,11 +596,11 @@ describe("gold/confirm confirmCandidate", () => {
     const candidates = await walkTokenizationCommits(repo.dir, "canvas-kit");
     expect(candidates).toHaveLength(0);
 
-    // Layer 2 (Gate A JS, handed the candidate directly): ComponentB's
-    // same-name #FD7E00 lives in a DIFFERENT enclosing block, and ComponentA's
-    // own parent RHS carries the literal only inside the block comment
-    // (comment-stripped by stripJsLineComments), so neither can satisfy Gate A.
-    // Inject a matching value so Gate B WOULD pass, isolating Gate A => null.
+    // Layer 2 (Gate A JS, handed the candidate directly): parentLine points at
+    // ComponentA's own line 2, whose RHS carries the literal only inside the
+    // block comment (collapsed to a space by stripJsLineComments), so it cannot
+    // satisfy Gate A. ComponentB's same-name #FD7E00 on another line is never
+    // read. Inject a matching value so Gate B WOULD pass, isolating Gate A => null.
     const injected: ResolveTokenValue = async (ref) =>
       ref === "base.orange400" ? ["#FD7E00"] : [];
     const handed: CandidateChange = {
@@ -601,6 +611,76 @@ describe("gold/confirm confirmCandidate", () => {
       removedLiteral: "#FD7E00",
       addedRef: "base.orange400",
       line: 2,
+      parentLine: 2,
+      massCodemod: false,
+    };
+    expect(await confirmCandidate(repo.dir, handed, injected)).toBeNull();
+  });
+
+  it("review round 6: two same-header `useEffect` blocks — parentLine at the deriveColor() one lacks the literal => null (old enclosing-block header match would have fabricated a label)", async () => {
+    // The prior enclosing-block heuristic keyed on the trimmed opening-brace
+    // line as a JS 'selector'. Two `useEffect(() => {` blocks share that header,
+    // so the parent's OTHER block (holding a real '#FD7E00') could satisfy Gate A
+    // for the changed block. Keying on the exact old-file line kills this: the
+    // candidate's parentLine points at the deriveColor() line, which — comment
+    // stripped — carries no literal, so Gate A fails.
+    const parent =
+      "useEffect(() => {\n" +
+      "  const glowHappyHour = deriveColor(); // '#FD7E00'\n" +
+      "}, []);\n" +
+      "useEffect(() => {\n" +
+      "  const glowHappyHour = '#FD7E00';\n" +
+      "}, []);\n";
+    const child =
+      "useEffect(() => {\n" +
+      "  const glowHappyHour = base.orange400;\n" +
+      "}, []);\n" +
+      "useEffect(() => {\n" +
+      "  const glowHappyHour = '#FD7E00';\n" +
+      "}, []);\n";
+    const repo = makeRepo("js-useeffect-header", { "comp.tsx": parent }, { "comp.tsx": child });
+    const injected: ResolveTokenValue = async (ref) =>
+      ref === "base.orange400" ? ["#FD7E00"] : [];
+    const handed: CandidateChange = {
+      repo: "synthetic",
+      commit: repo.commit,
+      parent: repo.parent,
+      file: "comp.tsx",
+      removedLiteral: "#FD7E00",
+      addedRef: "base.orange400",
+      line: 2,
+      parentLine: 2,
+      massCodemod: false,
+    };
+    expect(await confirmCandidate(repo.dir, handed, injected)).toBeNull();
+  });
+
+  it("review round 6: a top-level `var` redeclaration — parentLine at the deriveColor() decl lacks the literal => null (old module-scope match would have fabricated a label)", async () => {
+    // The prior module-scope branch counted ANY depth-0 same-name declaration.
+    // A later top-level `var glowHappyHour = '#FD7E00'` redeclaration would then
+    // supply the literal for a change made to the FIRST (deriveColor) decl. The
+    // exact-line key reads only parentLine (the deriveColor decl), whose
+    // comment-stripped RHS has no literal => Gate A fails.
+    const parent =
+      "var glowHappyHour = deriveColor();\n" +
+      "doStuff(glowHappyHour);\n" +
+      "var glowHappyHour = '#FD7E00';\n";
+    const child =
+      "var glowHappyHour = base.orange400;\n" +
+      "doStuff(glowHappyHour);\n" +
+      "var glowHappyHour = '#FD7E00';\n";
+    const repo = makeRepo("js-toplevel-var", { "comp.tsx": parent }, { "comp.tsx": child });
+    const injected: ResolveTokenValue = async (ref) =>
+      ref === "base.orange400" ? ["#FD7E00"] : [];
+    const handed: CandidateChange = {
+      repo: "synthetic",
+      commit: repo.commit,
+      parent: repo.parent,
+      file: "comp.tsx",
+      removedLiteral: "#FD7E00",
+      addedRef: "base.orange400",
+      line: 1,
+      parentLine: 1,
       massCodemod: false,
     };
     expect(await confirmCandidate(repo.dir, handed, injected)).toBeNull();

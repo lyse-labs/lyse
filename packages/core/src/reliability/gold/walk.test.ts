@@ -23,6 +23,7 @@ describe("gold/walk parseUnifiedDiff", () => {
         removedLiteral: "#f9826c",
         addedRef: "var(--color-underlinenav-border-active)",
         line: 42,
+        parentLine: 43,
         massCodemod: false,
       },
     ]);
@@ -39,6 +40,7 @@ describe("gold/walk parseUnifiedDiff", () => {
         removedLiteral: "#008060",
         addedRef: "var(--primary)",
         line: 29,
+        parentLine: 26,
         massCodemod: false,
       },
     ]);
@@ -55,6 +57,7 @@ describe("gold/walk parseUnifiedDiff", () => {
         removedLiteral: "#FD7E00",
         addedRef: "base.orange400",
         line: 34,
+        parentLine: 34,
         massCodemod: false,
       },
     ]);
@@ -71,6 +74,7 @@ describe("gold/walk parseUnifiedDiff", () => {
         removedLiteral: "#ff0",
         addedRef: "var(--color-attention-subtle)",
         line: 164,
+        parentLine: 164,
         massCodemod: false,
       },
     ]);
@@ -80,23 +84,27 @@ describe("gold/walk parseUnifiedDiff", () => {
     const candidates = parseUnifiedDiff(readFixture("tangled-brand-refresh.diff"), META);
     expect(candidates).toHaveLength(10);
     const byLine = new Map(candidates.map((c) => [c.line, c]));
-    const expectedPairs: Array<{ line: number; literal: string; token: string }> = [
-      { line: 22, literal: "#FFA198", token: "base.red200" },
-      { line: 23, literal: "#FFCAA0", token: "base.orange200" },
-      { line: 24, literal: "#FFCA79", token: "base.orange200" },
-      { line: 25, literal: "#FDCA44", token: "base.amber200" },
-      { line: 26, literal: "#FFB74D", token: "base.amber300" },
-      { line: 31, literal: "#FFC2FD", token: "base.magenta200" },
-      { line: 32, literal: "#FFF3A8", token: "base.amber100" },
-      { line: 33, literal: "#FEC10B", token: "base.amber300" },
-      { line: 34, literal: "#FD7E00", token: "base.orange400" },
-      { line: 35, literal: "#FC5B05", token: "base.coral500" },
+    // parentLine == line for every pair here: both hunk blocks are balanced
+    // (5 removed vs 5 added, then 5 vs 5) starting at old==new, so no insertion
+    // shifts the old/new counters apart.
+    const expectedPairs: Array<{ line: number; parentLine: number; literal: string; token: string }> = [
+      { line: 22, parentLine: 22, literal: "#FFA198", token: "base.red200" },
+      { line: 23, parentLine: 23, literal: "#FFCAA0", token: "base.orange200" },
+      { line: 24, parentLine: 24, literal: "#FFCA79", token: "base.orange200" },
+      { line: 25, parentLine: 25, literal: "#FDCA44", token: "base.amber200" },
+      { line: 26, parentLine: 26, literal: "#FFB74D", token: "base.amber300" },
+      { line: 31, parentLine: 31, literal: "#FFC2FD", token: "base.magenta200" },
+      { line: 32, parentLine: 32, literal: "#FFF3A8", token: "base.amber100" },
+      { line: 33, parentLine: 33, literal: "#FEC10B", token: "base.amber300" },
+      { line: 34, parentLine: 34, literal: "#FD7E00", token: "base.orange400" },
+      { line: 35, parentLine: 35, literal: "#FC5B05", token: "base.coral500" },
     ];
     for (const expected of expectedPairs) {
       const candidate = byLine.get(expected.line);
       expect(candidate).toBeDefined();
       expect(candidate?.removedLiteral).toBe(expected.literal);
       expect(candidate?.addedRef).toBe(expected.token);
+      expect(candidate?.parentLine).toBe(expected.parentLine);
       expect(candidate?.file).toBe(
         "modules/labs-react/ai-assistant-ingress-button/lib/AIAssistantIngressButton.tsx",
       );
@@ -168,6 +176,7 @@ describe("gold/walk parseUnifiedDiff", () => {
         removedLiteral: "#444444",
         addedRef: "var(--token-444)",
         line: 8,
+        parentLine: 9,
         massCodemod: false,
       },
     ]);
@@ -201,6 +210,7 @@ describe("gold/walk parseUnifiedDiff", () => {
         removedLiteral: "#ff0000",
         addedRef: "x.png",
         line: 1,
+        parentLine: 1,
         massCodemod: false,
       },
     ]);
@@ -242,6 +252,57 @@ describe("gold/walk parseUnifiedDiff", () => {
 
     const candidates = parseUnifiedDiff(diff, META);
     expect(candidates).toEqual([]);
+  });
+
+  it("review round 6: a `//` inside a backtick template literal is not mis-stripped — a template-literal colour still yields a candidate (recall)", () => {
+    // Without the backtick in stripTrailingComment's quote guard, the `//` in
+    // `https://cdn/#FD7E00` reads as a comment start and truncates the value at
+    // `https:`, dropping #FD7E00 -> candidate silently lost. With the guard the
+    // template literal is treated as a quoted string, the `//` is ignored, and
+    // the colour survives.
+    const diff = [
+      "diff --git a/src/comp.tsx b/src/comp.tsx",
+      "--- a/src/comp.tsx",
+      "+++ b/src/comp.tsx",
+      "@@ -1 +1 @@",
+      "-const bg = `https://cdn/#FD7E00`;",
+      "+const bg = tokens.bg;",
+    ].join("\n");
+
+    const candidates = parseUnifiedDiff(diff, META);
+    expect(candidates).toEqual([
+      {
+        repo: "test-repo",
+        commit: "COMMIT_SHA",
+        parent: "PARENT_SHA",
+        file: "src/comp.tsx",
+        removedLiteral: "#FD7E00",
+        addedRef: "tokens.bg",
+        line: 1,
+        parentLine: 1,
+        massCodemod: false,
+      },
+    ]);
+  });
+
+  it("review round 6: a `/* */` block comment inside a value collapses to a space — `#FD7E/* x */00` does not fuse into `#FD7E00`", () => {
+    // If the block comment were dropped to the empty string, the two fragments
+    // would reassemble into the full colour `#FD7E00`. Collapsing it to a single
+    // space (block comments are whitespace) keeps them apart: the colour regex
+    // reads only the leading `#FD7E`, never the fused value.
+    const diff = [
+      "diff --git a/src/comp.tsx b/src/comp.tsx",
+      "--- a/src/comp.tsx",
+      "+++ b/src/comp.tsx",
+      "@@ -1 +1 @@",
+      "-const c = #FD7E/* x */00;",
+      "+const c = tok.x;",
+    ].join("\n");
+
+    const candidates = parseUnifiedDiff(diff, META);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.removedLiteral).toBe("#FD7E");
+    expect(candidates[0]?.removedLiteral).not.toBe("#FD7E00");
   });
 
   it("does not tag massCodemod when a commit yields exactly 30 or fewer candidates", () => {
@@ -297,6 +358,7 @@ describe("gold/walk walkTokenizationCommits", () => {
         removedLiteral: "#ff0000",
         addedRef: "var(--primary)",
         line: 2,
+        parentLine: 2,
         massCodemod: false,
       },
     ]);
