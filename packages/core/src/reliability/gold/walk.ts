@@ -51,33 +51,49 @@ function extractDeclaration(diffLine: string): Declaration | null {
 // disqualify the candidate or be mistaken for the added token reference.
 // But a bare `indexOf("//")` also cuts into a legitimate `url(https://...)`
 // value, so `//` only counts as a comment start at paren/quote depth 0 —
-// inside `url(...)` or a quoted string it's left alone.
+// inside `url(...)` or a quoted string it's left alone. A single-line
+// `/* ... */` block comment (or a `/*` with no closing `*/` on the line) is
+// stripped the same way, at the same depth-0 guard — e.g.
+// `deriveColor(); /* was '#FD7E00' */` must not surface the hex as this
+// line's real value, mirroring confirm.ts's `stripJsLineComments`.
 function stripTrailingComment(value: string): string {
+  let out = "";
   let depth = 0;
   let quote = "";
   for (let i = 0; i < value.length; i++) {
     const ch = value.charAt(i);
     if (quote) {
       if (ch === quote) quote = "";
+      out += ch;
       continue;
     }
     if (ch === '"' || ch === "'") {
       quote = ch;
+      out += ch;
       continue;
     }
     if (ch === "(") {
       depth++;
+      out += ch;
       continue;
     }
     if (ch === ")") {
       depth = Math.max(0, depth - 1);
+      out += ch;
       continue;
     }
     if (depth === 0 && ch === "/" && value.charAt(i + 1) === "/") {
-      return value.slice(0, i).trim();
+      break;
     }
+    if (depth === 0 && ch === "/" && value.charAt(i + 1) === "*") {
+      const end = value.indexOf("*/", i + 2);
+      if (end === -1) break;
+      i = end + 1;
+      continue;
+    }
+    out += ch;
   }
-  return value.trim();
+  return out.trim();
 }
 
 interface RemovedEntry {

@@ -557,4 +557,52 @@ describe("gold/confirm confirmCandidate", () => {
     };
     expect(await confirmCandidate(repo.dir, handed, injected)).toBeNull();
   });
+
+  it("review round 5: same ComponentA/ComponentB exploit with the decoy literal inside a `/* ... */` block comment — closed at BOTH layers", async () => {
+    // Same shape as the review-round-4 exploit, but ComponentA's decoy hex is
+    // stashed in a `/* ... */` block comment instead of a `//` line comment.
+    const parent =
+      "function ComponentA() {\n" +
+      "  const glowHappyHour = deriveColor(); /* was '#FD7E00' */\n" +
+      "  return glowHappyHour;\n" +
+      "}\n" +
+      "function ComponentB() {\n" +
+      "  const glowHappyHour = '#FD7E00';\n" +
+      "  return glowHappyHour;\n" +
+      "}\n";
+    const child =
+      "function ComponentA() {\n" +
+      "  const glowHappyHour = base.orange400;\n" +
+      "  return glowHappyHour;\n" +
+      "}\n" +
+      "function ComponentB() {\n" +
+      "  const glowHappyHour = '#FD7E00';\n" +
+      "  return glowHappyHour;\n" +
+      "}\n";
+    const repo = makeRepo("js-crossscope-block", { "comp.tsx": parent }, { "comp.tsx": child });
+
+    // Layer 1 (walk): the removed line's only hex lives in a `/* */` block
+    // comment; its real value is a function call, so walk emits ZERO candidates.
+    const candidates = await walkTokenizationCommits(repo.dir, "canvas-kit");
+    expect(candidates).toHaveLength(0);
+
+    // Layer 2 (Gate A JS, handed the candidate directly): ComponentB's
+    // same-name #FD7E00 lives in a DIFFERENT enclosing block, and ComponentA's
+    // own parent RHS carries the literal only inside the block comment
+    // (comment-stripped by stripJsLineComments), so neither can satisfy Gate A.
+    // Inject a matching value so Gate B WOULD pass, isolating Gate A => null.
+    const injected: ResolveTokenValue = async (ref) =>
+      ref === "base.orange400" ? ["#FD7E00"] : [];
+    const handed: CandidateChange = {
+      repo: "synthetic",
+      commit: repo.commit,
+      parent: repo.parent,
+      file: "comp.tsx",
+      removedLiteral: "#FD7E00",
+      addedRef: "base.orange400",
+      line: 2,
+      massCodemod: false,
+    };
+    expect(await confirmCandidate(repo.dir, handed, injected)).toBeNull();
+  });
 });

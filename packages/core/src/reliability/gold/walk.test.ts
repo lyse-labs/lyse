@@ -226,6 +226,24 @@ describe("gold/walk parseUnifiedDiff", () => {
     expect(candidates).toEqual([]);
   });
 
+  it("review round 5: a colour that lives ONLY in a single-line block comment on the removed line yields no candidate (same vector as review round 4's `//` case, for `/* */`)", () => {
+    // Mirrors the review-round-4 `//` regression, but the decoy hex is stashed
+    // in a `/* ... */` block comment instead. Without stripping it, the colour
+    // regex would read `#FD7E00` out of the comment and fabricate a candidate
+    // for a removed line whose real value (`deriveColor()`) is not a colour.
+    const diff = [
+      "diff --git a/src/comp.tsx b/src/comp.tsx",
+      "--- a/src/comp.tsx",
+      "+++ b/src/comp.tsx",
+      "@@ -1 +1 @@",
+      "-const c = deriveColor(); /* was '#FD7E00' */",
+      "+const c = tok.x;",
+    ].join("\n");
+
+    const candidates = parseUnifiedDiff(diff, META);
+    expect(candidates).toEqual([]);
+  });
+
   it("does not tag massCodemod when a commit yields exactly 30 or fewer candidates", () => {
     const hunkLines: string[] = [];
     for (let n = 0; n < 30; n++) {
