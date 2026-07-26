@@ -28,4 +28,4 @@ index cf2018b24..8bb52c46e 100644
 +++ b/modules/labs-react/ai-assistant-ingress-button/lib/AIAssistantIngressButton.tsx
 @@ -34 +34 @@ const glowLunchBreak = base.amber300; //'#FEC10B';
 -const glowHappyHour = '#FD7E00';
-+const glowHappyHour = base.orange400; //'#FD7E00'
++const glowHappyHour = base.orange400; //'#FD7E00';

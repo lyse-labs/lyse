@@ -1,3 +1,7 @@
+# NOTE: this file's top level is { criteria, entries }, not a bare array —
+# consumers must read `doc.entries` (e.g. `yaml.parse(text).entries`).
+# Calling `parseBenchYaml` directly on this file's raw text returns `[]`,
+# not an error, since parseBenchYaml expects a top-level array.
 criteria:
   oss: true
   shipsTokenSystem: true
@@ -17,3 +21,7 @@ entries:
     url: https://github.com/Workday/canvas-kit
     sha: 30279d7c3d004668196c395d1fc3050cc6e373c6
     parent: 6b57badf34512437caade1c0641a1db6301e3421
+  - repo: polaris
+    url: https://github.com/Shopify/polaris
+    sha: 6e958b1c597fcc98dadc2d24d8e7c29a397e20c5
+    parent: 1324b3ccc83df99610737e3a0ae338a4c7171de6

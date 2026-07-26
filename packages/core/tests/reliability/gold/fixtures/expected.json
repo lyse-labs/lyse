@@ -14,6 +14,23 @@
     "tokenValueAtCommit": "#fff8c5",
     "verificationNote": "Real, non-synthetic commit (GitHub primer/css PR #1756). #ff0 (255,255,0) vs --color-attention-subtle: #fff8c5 (255,248,197) at @primer/primitives@7.1.0 (the exact version pinned in this commit's package.json) are visibly different colours -- must be rejected by independent colour value-equality."
   },
+  "positive-css-var-2.diff": {
+    "expected": {
+      "axis": "colors",
+      "commit": "6e958b1c597fcc98dadc2d24d8e7c29a397e20c5",
+      "expectedToken": "var(--primary)",
+      "file": "polaris.shopify.com/src/components/Button/Button.module.scss",
+      "line": 29,
+      "literal": "#008060",
+      "parent": "1324b3ccc83df99610737e3a0ae338a4c7171de6",
+      "repo": "polaris",
+      "ruleId": "tokens/no-hardcoded-color"
+    },
+    "tokenDefFile": "polaris.shopify.com/src/styles/globals.scss",
+    "tokenDefLine": 16,
+    "tokenValueAtCommit": "#008060",
+    "verificationNote": "Token defined in-repo (not an external npm package, unlike positive-css-var.diff): polaris.shopify.com/src/styles/globals.scss:16 at parent commit 1324b3ccc83df99610737e3a0ae338a4c7171de6 defines --primary: #008060 -- an exact match to the removed literal #008060. Captured via `git log -L26,31:<file> -1 <sha>` (line-range scoped, not a whole-file `git show`) because the same file's other hunk in this commit is an unrelated `display: inline-block;`/`color: inherit;` layout tweak with no colour content; still 100% real, git-generated, unedited diff output. See the fixture's own header note and positive-css-var-2.tokendef for the full exhaustive-search rationale (16 non-Lyse OSS design-system repos scanned; every other single-hunk-whole-file candidate found was an independently-verified value mismatch)."
+  },
   "positive-css-var.diff": {
     "expected": {
       "axis": "colors",

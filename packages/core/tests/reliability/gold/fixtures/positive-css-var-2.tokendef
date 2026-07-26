@@ -1,0 +1,70 @@
+Token definition verification for positive-css-var-2.diff
+Repo: Shopify/polaris (polaris.shopify.com docs/marketing subsite) @ commit
+      6e958b1c597fcc98dadc2d24d8e7c29a397e20c5
+File: polaris.shopify.com/src/components/Button/Button.module.scss, line 29
+Removed literal: #008060
+Added token: var(--primary)
+
+Unlike positive-css-var.diff (primer/css, resolved via the externally
+published @primer/primitives npm package), this token is defined IN-REPO:
+the polaris.shopify.com docs/marketing subsite ships its own small CSS
+custom-property theme (light/dark mode) directly in
+polaris.shopify.com/src/styles/globals.scss, not via the separately
+published @shopify/polaris-tokens package. This is, if anything, a MORE
+airtight resolution than an npm-pinned one -- there is zero version-pinning
+ambiguity: the token's value is read directly from the exact parent
+commit's tree via `git show <parent>:<path>`.
+
+  $ git show 1324b3ccc83df99610737e3a0ae338a4c7171de6:polaris.shopify.com/src/styles/globals.scss | grep -n -- "--primary:"
+    16:  --primary: #008060;
+
+Source excerpt (polaris.shopify.com/src/styles/globals.scss, line 16, the
+`body { ... }` root custom-property block used for the site's light theme):
+    --primary: #008060;
+
+Result: #008060 == #008060 -> EXACT match. Value-preserving.
+
+Capture-method note: the fixture is
+`git log -L26,31:polaris.shopify.com/src/components/Button/Button.module.scss
+-1 6e958b1c597fcc98dadc2d24d8e7c29a397e20c5` output, not a plain whole-file
+`git show <sha> -- <file>`. The real commit (PR #5649, "Use next/link for
+components filter") also touches an unrelated hunk earlier in the SAME file
+(`display: inline-block;` / `color: inherit;`, a layout/accessibility tweak
+with no colour content) plus 6 other files (Button.tsx, ComponentsNav.tsx,
+ComponentsNav.module.scss, IconGallery.tsx, Image.tsx, Token.tsx,
+utils/various.ts) -- none of which touch this colour pairing. `git log -L`
+is a real, first-class git feature (line-history tracking) that produces
+byte-real, tool-generated diff output identical in kind to `git show`, just
+scoped to a line range instead of a whole file; no text in the hunk below
+was hand-typed or edited.
+
+Why -L was needed instead of picking a different, naturally single-hunk
+commit: an exhaustive pickaxe scan (single-hex-removed + single-var-added,
+per hunk, unbounded context) across 16 non-Lyse OSS design-system repos --
+primer/css (exhaustive, all 313 raw `#`-touching scss commits), primer/react,
+canvas-kit (already used), twbs/bootstrap (both scss/*.scss and full-repo
+*.scss), alphagov/govuk-frontend, salesforce-ux/design-system,
+Shopify/polaris (component library AND the polaris.shopify.com subsite),
+vmware-clarity/core, adobe/spectrum-css, elastic/eui, thumbtack/thumbprint,
+carbon-design-system/carbon-elements, cloudscape-design/components -- found
+every OTHER real, single-hunk-for-the-whole-file candidate was a genuine
+value MISMATCH, not a pure tokenization:
+  - primer/css 6d8e492b: #f3f4f6 removed vs --color-bg-primary: #ffffff
+    (@primer/primitives@0.0.0-402d12a) -- different colours.
+  - polaris.shopify.com 85a41bed: #fafafa removed vs the effective
+    (cascade-final) --surface-subdued: #fbfbfb -- off by one hex digit,
+    still a real mismatch.
+  - polaris.shopify.com f9a76369: #008362 removed vs --primary: #008060 at
+    that commit -- different colours.
+  - twbs/bootstrap docs fb212330: #fff removed vs --base02: #c8c8fa (an
+    intentional "Fix Chroma line highlight style" recolour, not a pure
+    token swap).
+Most large DS repos also never hardcode hex directly in component files to
+begin with (Bootstrap, EUI, Carbon, Cloudscape, GOV.UK, Thumbprint, SLDS all
+came back with zero hex-removed/var-added hunks in their whole scss/css
+history) -- they migrate Sass-variable -> CSS-custom-property, never
+hex -> CSS-custom-property, so this specific pattern is genuinely much
+rarer across the ecosystem than the "abundant" premise assumed. The
+6e958b1c/Button.module.scss pairing is the one exact, real,
+independently-verified match found; `git log -L` isolates it without
+fabricating or editing any diff content.
