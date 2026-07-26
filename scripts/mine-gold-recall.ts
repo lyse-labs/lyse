@@ -17,7 +17,9 @@
  *
  * Usage: tsx scripts/mine-gold-recall.ts [--commit <sha>] [--at <iso>]
  *
- * Regenerate: pnpm --filter @lyse-labs/lyse exec tsx scripts/mine-gold-recall.ts --commit "$(git rev-parse --short HEAD)" --at "<ISO8601>"
+ * Regenerate (from the repo ROOT — the script lives at repo-root scripts/, not packages/core):
+ *   pnpm mine:recall --commit "$(git rev-parse --short HEAD)" --at "<ISO8601>"
+ *   (equivalently: pnpm exec tsx scripts/mine-gold-recall.ts --commit ... --at ...)
  */
 
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
