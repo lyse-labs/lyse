@@ -9,8 +9,11 @@ const SCSS_DECL_RE = /\$([A-Za-z0-9_-]+)\s*:\s*([^;!}]+?)\s*(?:!default)?\s*[;}]
 const CSS_DECL_RE = /(--[A-Za-z0-9_-]+)\s*:\s*([^;}]+?)\s*[;}]/g;
 const VAR_REF_RE = /^var\(\s*(--[A-Za-z0-9_-]+)\s*\)?/;
 
-function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+function stripComments(source: string, kind: TokenFileKind): string {
+  const noBlock = source.replace(/\/\*[\s\S]*?\*\//g, "");
+  // `//` line comments exist in SCSS, NOT in CSS — do not strip them for CSS
+  // (a CSS value like url(https://…) or a `--token` after `//` must survive).
+  return kind === "scss" ? noBlock.replace(/\/\/[^\n]*/g, "") : noBlock;
 }
 
 function pushValue(map: Map<string, string[]>, key: string, value: string): void {
@@ -24,7 +27,7 @@ function pushValue(map: Map<string, string[]>, key: string, value: string): void
  *  colour are kept — aliases (`$x: $y`) and non-colours are dropped (fail-closed
  *  at Gate B). A token redefined across themes yields multiple values. */
 export function parseTokenFile(content: string, kind: TokenFileKind): Map<string, string[]> {
-  const cleaned = stripComments(content);
+  const cleaned = stripComments(content, kind);
   const map = new Map<string, string[]>();
   const re = kind === "scss" ? SCSS_DECL_RE : CSS_DECL_RE;
   re.lastIndex = 0;

@@ -31,6 +31,17 @@ describe("parseTokenFile", () => {
     const m = parseTokenFile(".light{--brand:#111111}.dark{--brand:#222222}", "css");
     expect(m.get("--brand")).toEqual(["#111111", "#222222"]);
   });
+
+  it("treats // as a comment in SCSS but NOT in CSS", () => {
+    // SCSS: `//` is a real line comment → the trailing declaration is stripped.
+    const scss = parseTokenFile("$a: #111111; // $b: #222222;", "scss");
+    expect(scss.get("$a")).toEqual(["#111111"]);
+    expect(scss.has("$b")).toBe(false);
+    // CSS: `//` is not a comment → a declaration after it on the same line survives.
+    const css = parseTokenFile("--a: #111111; // --b: #222222;", "css");
+    expect(css.get("--a")).toEqual(["#111111"]);
+    expect(css.get("--b")).toEqual(["#222222"]);
+  });
 });
 
 describe("tokenRefKey", () => {
