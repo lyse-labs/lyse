@@ -3,6 +3,7 @@ import { extractComponents } from "./extract/components.js";
 import { extractStories } from "./extract/stories.js";
 import { buildZoneMap } from "./zones.js";
 import type { ParsedFiles, ComponentInventoryEntry, StoryIndex } from "../types.js";
+import type { ExternalTokenPackage } from "../loaders/external-tokens.js";
 import type {
   DesignSystemGraph, ComponentNode, StoryNode, UsageEdgeAggregate,
   ExtractionReportEntry, ExtractionReport,
@@ -18,12 +19,15 @@ export interface GraphInputs {
   excludePaths: string[];
   baseInventory: ComponentInventoryEntry[];
   componentFiles: Map<string, string>;
+  tokenPackages?: ExternalTokenPackage[];
 }
 
 const CONFIG_HINT = "docs/guide/configuration.md";
 
 export async function buildDesignSystemGraph(inputs: GraphInputs): Promise<DesignSystemGraph> {
-  const tokenExtraction = await extractTokens(inputs.repoRoot, inputs.parsed, inputs.fileContents);
+  const tokenExtraction = await extractTokens(
+    inputs.repoRoot, inputs.parsed, inputs.fileContents, inputs.tokenPackages ?? [],
+  );
 
   const componentExtraction = extractComponents({
     baseInventory: inputs.baseInventory,

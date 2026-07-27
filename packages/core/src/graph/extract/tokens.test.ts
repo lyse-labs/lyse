@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -308,5 +308,30 @@ describe("extractTokens (css/scss sources)", () => {
     const out = await extractTokens(process.cwd(), parsed, new Map());
     expect(out.sources).toContain("css-custom-property");
     expect(out.nodes.some((n) => n.source === "css-custom-property" && n.rawValue === "#3b82f6")).toBe(true);
+  });
+});
+
+const EMPTY: ParsedFiles = { ts: [], css: [], cssInJs: [] };
+
+describe("extractTokens external packages", () => {
+  it("injects external-package colour nodes when tokenPackages is given", async () => {
+    const root = mkdtempSync(join(tmpdir(), "lyse-extok-"));
+    const css = join(root, "node_modules/@acme/tokens/tokens.css");
+    mkdirSync(join(css, ".."), { recursive: true });
+    writeFileSync(css, ":root { --color-brand: #3b82f6; }");
+
+    const withPkg = await extractTokens(root, EMPTY, new Map(), [{ name: "@acme/tokens" }]);
+    expect(withPkg.nodes.some((n) => n.source === "external-package" && n.rawValue === "#3b82f6")).toBe(true);
+    expect(withPkg.sources).toContain("external-package");
+  });
+
+  it("is a no-op when tokenPackages is omitted (default [])", async () => {
+    const root = mkdtempSync(join(tmpdir(), "lyse-extok-none-"));
+    const css = join(root, "node_modules/@acme/tokens/tokens.css");
+    mkdirSync(join(css, ".."), { recursive: true });
+    writeFileSync(css, ":root { --color-brand: #3b82f6; }");
+
+    const result = await extractTokens(root, EMPTY, new Map());
+    expect(result.nodes.some((n) => n.source === "external-package")).toBe(false);
   });
 });

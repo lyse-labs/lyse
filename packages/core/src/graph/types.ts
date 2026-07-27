@@ -9,7 +9,8 @@ export type TokenAxis =
 
 export type TokenSource =
   | "tailwind-v3" | "tailwind-v4" | "dtcg" | "css-custom-property"
-  | "scss-variable" | "style-dictionary" | "tokens-studio" | "figma-variables";
+  | "scss-variable" | "style-dictionary" | "tokens-studio" | "figma-variables"
+  | "external-package";
 
 export type ComponentDetection =
   | "module-config" | "convention" | "story-backref" | "ds-self";

@@ -492,6 +492,7 @@ export interface LyseConfig {
     componentsModule?: string;
     elements?: Record<string, string>;
     excludePaths?: string[];
+    tokenPackages?: Array<string | { name: string; files?: string[] }>;
   };
   /**
    * Per-rule configuration keyed by rule id. `"off"` (or `{ severity: "off" }`)

@@ -20,6 +20,16 @@ export const LyseConfigSchema = z.object({
       componentsModule: z.string().optional(),
       elements: z.record(z.string(), z.string()).optional(),
       excludePaths: z.array(z.string()).optional(),
+      // External DS packages whose tokens Lyse should resolve from node_modules.
+      // A bare string is shorthand for { name, files: undefined }.
+      tokenPackages: z
+        .array(
+          z.union([
+            z.string().min(1),
+            z.object({ name: z.string().min(1), files: z.array(z.string()).optional() }),
+          ]),
+        )
+        .optional(),
     })
     // YAML `designSystem:` with no value parses as null — treat as "not set".
     .nullish()

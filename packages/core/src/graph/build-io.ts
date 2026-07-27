@@ -8,11 +8,14 @@ import { buildComponentInventory, componentNameFromPath } from "../loaders/compo
 import { detectFromPackageJson } from "../detection/from-package-json.js";
 import { posixRelative } from "../util/paths.js";
 import { buildDesignSystemGraph } from "./builder.js";
+import { loadConfig } from "../config/schema.js";
+import { normalizeTokenPackages } from "../loaders/external-tokens.js";
 import type { ParsedFiles } from "../types.js";
 import type { DesignSystemGraph } from "./types.js";
 
 export async function buildGraphForRoot(root: string): Promise<DesignSystemGraph> {
   const absoluteRoot = resolve(root);
+  const config = loadConfig(absoluteRoot, { onError: "degrade" });
   const files = await walk(absoluteRoot, { extraIgnores: [] });
   const parsed: ParsedFiles = { ts: [], css: [], cssInJs: [] };
   const fileContents = new Map<string, string>();
@@ -54,5 +57,6 @@ export async function buildGraphForRoot(root: string): Promise<DesignSystemGraph
     excludePaths: [...DEFAULT_EXCLUDE_PATHS],
     baseInventory,
     componentFiles: componentSources,
+    tokenPackages: normalizeTokenPackages(config.designSystem?.tokenPackages),
   });
 }

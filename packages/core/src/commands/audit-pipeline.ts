@@ -27,6 +27,7 @@ import { extractCssInJs } from "../parsers/css-in-js.js";
 import { extractSfcStyleCss } from "../parsers/sfc-styles.js";
 import { extractSfcScript } from "../parsers/sfc-script.js";
 import { loadTokens } from "../loaders/tokens.js";
+import { normalizeTokenPackages } from "../loaders/external-tokens.js";
 import { loadStories } from "../loaders/stories.js";
 import {
   buildComponentInventory,
@@ -426,6 +427,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     excludePaths,
     baseInventory: componentInventory,
     componentFiles: componentSources,
+    tokenPackages: normalizeTokenPackages(config.designSystem?.tokenPackages),
   });
   // Legacy alias: preserve the pipeline's ORIGINAL discovery order verbatim
   // (module-configured / dsSelfMode repos → byte-identical), and only APPEND the

@@ -120,6 +120,27 @@ designSystem:
 
 If unset, Lyse scans all files except those in `excludePaths` and the default excludes.
 
+### `designSystem.tokenPackages`
+
+Resolve design tokens from an **installed** npm design-system package so Lyse can
+tell that a hardcoded value is really one of your DS tokens.
+
+```yaml
+designSystem:
+  tokenPackages:
+    - "@primer/primitives"                 # read the package's shipped token files
+    - name: "@acme/tokens"                  # or point at exact artifacts
+      files: ["dist/css/**/*.css"]
+```
+
+- **Local-first:** Lyse reads only files already in your `node_modules` — never the network.
+- **Opt-in:** with no `tokenPackages`, Lyse behaves exactly as before.
+- **v1 scope:** **colours only**, from CSS custom-property and JSON token files. Packages
+  that ship tokens only as a JavaScript theme object (e.g. MUI, Chakra) are not yet resolved.
+- **Score impact:** enabling this re-classifies hardcoded colours that match an external
+  token from "novel value" to high-confidence drift (with a suggested fix), which can move
+  your colour-axis score.
+
 ## `rules`
 
 ### Disabling a rule
