@@ -22,14 +22,12 @@ function pushValue(map: Map<string, string[]>, key: string, value: string): void
   map.set(key, list);
 }
 
-/** Extract token-name → colour value(s) from a CSS/SCSS token file. Keys are the
- *  reference form (`$name` / `--name`). Only entries whose value is a literal
- *  colour are kept — aliases (`$x: $y`) and non-colours are dropped (fail-closed
- *  at Gate B). A token redefined across themes yields multiple values. */
-export function parseTokenFile(content: string, kind: TokenFileKind): Map<string, string[]> {
-  const cleaned = stripComments(content, kind);
-  const map = new Map<string, string[]>();
-  const re = kind === "scss" ? SCSS_DECL_RE : CSS_DECL_RE;
+function collectDecls(
+  cleaned: string,
+  re: RegExp,
+  keyOf: (rawName: string) => string,
+  map: Map<string, string[]>,
+): void {
   re.lastIndex = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(cleaned)) !== null) {
@@ -38,8 +36,28 @@ export function parseTokenFile(content: string, kind: TokenFileKind): Map<string
     if (rawName === undefined || rawValue === undefined) continue;
     const value = rawValue.trim();
     if (!isColorLiteral(value)) continue;
-    const key = kind === "scss" ? `$${rawName}` : rawName;
-    pushValue(map, key, value.toLowerCase());
+    pushValue(map, keyOf(rawName), value.toLowerCase());
+  }
+}
+
+/** Extract token-name → colour value(s) from a CSS/SCSS token file. Keys are the
+ *  reference form (`$name` / `--name`). Only entries whose value is a literal
+ *  colour are kept — aliases (`$x: $y`) and non-colours are dropped (fail-closed
+ *  at Gate B). A token redefined across themes yields multiple values.
+ *
+ *  CSS custom properties (`--x`) are scanned in BOTH kinds: real token packages
+ *  (e.g. `@primer/primitives`) ship their `--x` custom-property declarations
+ *  inside `.scss`-named dist files (a compiled colours mixin), never a `.css`
+ *  file — so a `var(--x)` ref can only be resolved from such a snapshot if `--x`
+ *  is read regardless of extension. SCSS `$name` declarations exist only in
+ *  `.scss`. Keys stay in reference form (`--name` vs `$name`), so a `var(--x)`
+ *  ref key and a `$x` ref key can never collide. */
+export function parseTokenFile(content: string, kind: TokenFileKind): Map<string, string[]> {
+  const cleaned = stripComments(content, kind);
+  const map = new Map<string, string[]>();
+  collectDecls(cleaned, CSS_DECL_RE, (name) => name, map);
+  if (kind === "scss") {
+    collectDecls(cleaned, SCSS_DECL_RE, (name) => `$${name}`, map);
   }
   return map;
 }
