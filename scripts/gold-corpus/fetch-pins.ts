@@ -49,11 +49,17 @@ export function writePin(
 // npm pack <name>@<version> into a temp dir, extract, return the unpacked package root.
 function npmPackAndExtract(name: string, version: string): { dir: string; cleanup: () => void } {
   const work = mkdtempSync(join(tmpdir(), "lyse-pack-"));
-  const tgz = execFileSync("npm", ["pack", `${name}@${version}`, "--silent"], { cwd: work })
-    .toString().trim().split("\n").pop() as string;
-  execFileSync("tar", ["-xzf", tgz], { cwd: work });
-  // npm tarballs unpack to a top-level "package/" dir.
-  return { dir: join(work, "package"), cleanup: () => rmSync(work, { recursive: true, force: true }) };
+  const cleanup = () => rmSync(work, { recursive: true, force: true });
+  try {
+    const tgz = execFileSync("npm", ["pack", `${name}@${version}`, "--silent"], { cwd: work })
+      .toString().trim().split("\n").pop() as string;
+    execFileSync("tar", ["-xzf", tgz], { cwd: work });
+    // npm tarballs unpack to a top-level "package/" dir.
+    return { dir: join(work, "package"), cleanup };
+  } catch (e) {
+    cleanup();
+    throw e;
+  }
 }
 
 function main(): void {
