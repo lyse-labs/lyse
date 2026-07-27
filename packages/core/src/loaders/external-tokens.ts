@@ -11,7 +11,10 @@ export interface ExternalTokenPackage {
 
 // Same custom-property grammar as graph/extract/tokens.ts:104 — kept local so
 // this loader stays self-contained (it reads raw package files, not ParsedFiles).
-const CSS_DECL_RE = /(--[^\s:{}]+)\s*:\s*([^;]+?)\s*;/g;
+// This variant also terminates on `}` (not just `;`) so the last declaration in
+// a rule block is still captured when minified vendor CSS omits the trailing
+// semicolon before the closing brace.
+const CSS_DECL_RE = /(--[^\s:{}]+)\s*:\s*([^;}]+?)\s*[;}]/g;
 
 // Default artifact discovery when no explicit `files` are configured. CSS is the
 // dominant format for the packages v1 targets (Primer/Polaris/Radix); JSON covers

@@ -90,4 +90,17 @@ describe("fromExternalPackages", () => {
       "@acme/tokens/b.css#--b",
     ]);
   });
+
+  it("captures the last declaration in a minified rule (no trailing semicolon before })", async () => {
+    const root = pkgRepo({
+      "node_modules/@acme/tokens/dist.css": ":root{--a:#111111;--b:#222222}",
+    });
+    const nodes = await fromExternalPackages(root, [{ name: "@acme/tokens" }]);
+    expect(nodes.map((n) => n.rawValue)).toEqual(["#111111", "#222222"]);
+  });
+
+  it("returns [] when no packages are configured (opt-in)", async () => {
+    const root = pkgRepo({ "node_modules/@acme/tokens/t.css": ":root { --c: #010203; }" });
+    expect(await fromExternalPackages(root, [])).toEqual([]);
+  });
 });
