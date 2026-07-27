@@ -200,6 +200,13 @@ function parseColorIndependent(value: string): Rgba | null {
   return parseHex(trimmed) ?? parseRgb(trimmed) ?? parseHsl(trimmed);
 }
 
+/** True iff `value` is a literal colour this independent parser recognises.
+ *  Kept here (not in token-file.ts) so all colour recognition stays in the
+ *  zero-import module (ADR 0022 §3b). */
+export function isColorLiteral(value: string): boolean {
+  return parseColorIndependent(value) !== null;
+}
+
 export function colorEquals(a: string, b: string): boolean {
   const ca = parseColorIndependent(a);
   const cb = parseColorIndependent(b);
