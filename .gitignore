@@ -70,3 +70,10 @@ lyse-golden-corpus/
 
 # Measurement campaign — cloned benchmark corpus (pinned SHAs, reproducible)
 .bench-corpus/
+
+# Gold-corpus pinned external-token snapshots ARE committed (small,
+# provenance-hashed data, not build output) — re-include despite `dist/` above.
+# Git can't re-include a file under an excluded dir without also un-excluding
+# the dir itself (see packages/core/src/util/lyse-gitignore.ts for the same gotcha).
+!scripts/gold-corpus/pins/
+!scripts/gold-corpus/pins/**/dist/
