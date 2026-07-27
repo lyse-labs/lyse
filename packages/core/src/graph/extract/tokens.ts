@@ -1,6 +1,7 @@
 import {
   fromTailwindV3, fromTailwindV4, fromDtcg, fromValueTypeTokens,
 } from "../../loaders/tokens.js";
+import { fromExternalPackages, type ExternalTokenPackage } from "../../loaders/external-tokens.js";
 import { normalizeToDtcg } from "../../tokens/normalizer.js";
 import { isDtcgToken } from "../../tokens/dtcg-model.js";
 import { dimensionAxisForPath, numberAxisForPath } from "../../tokens/axis-heuristics.js";
@@ -195,6 +196,7 @@ export async function extractTokens(
   root: string,
   parsed: ParsedFiles,
   fileContents: Map<string, string>,
+  tokenPackages: ExternalTokenPackage[] = [],
 ): Promise<TokenExtraction> {
   const maps = (await Promise.all([
     fromTailwindV3(root), fromTailwindV4(root), fromDtcg(root), fromValueTypeTokens(root),
@@ -211,6 +213,10 @@ export async function extractTokens(
   }
   for (const n of declsToNodes(scssVarDeclsFromContents(fileContents), "scss-variable")) {
     nodes.push(n); sources.add(n.source);
+  }
+  for (const n of await fromExternalPackages(root, tokenPackages)) {
+    nodes.push(n);
+    sources.add(n.source);
   }
   return { nodes, conflicts: detectTokenConflicts(nodes), sources: [...sources].sort() };
 }
