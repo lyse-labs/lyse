@@ -103,4 +103,9 @@ describe("fromExternalPackages", () => {
     const root = pkgRepo({ "node_modules/@acme/tokens/t.css": ":root { --c: #010203; }" });
     expect(await fromExternalPackages(root, [])).toEqual([]);
   });
+
+  it("is fail-safe on a traversal `name` that escapes node_modules (no throw, no output)", async () => {
+    const root = pkgRepo({ "node_modules/@acme/tokens/t.css": ":root { --c: #010203; }" });
+    expect(await fromExternalPackages(root, [{ name: "../evil" }])).toEqual([]);
+  });
 });

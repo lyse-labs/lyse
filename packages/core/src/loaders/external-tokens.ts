@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { relative, resolve, sep } from "node:path";
 import fg from "fast-glob";
 import { parseColor } from "../a11y/contrast.js";
 import type { TokenNode } from "../graph/types.js";
@@ -105,9 +105,14 @@ export async function fromExternalPackages(
   packages: ExternalTokenPackage[],
 ): Promise<TokenNode[]> {
   const nodes: TokenNode[] = [];
+  const nmRoot = resolve(root, "node_modules");
   for (const pkg of packages) {
-    const dir = join(root, "node_modules", pkg.name);
-    if (!existsSync(dir)) continue;
+    // Containment guard: skip (never throw) an empty/absolute/traversal `name`
+    // that would resolve outside `<root>/node_modules` — e.g. "" (node_modules
+    // itself) or "../evil". A valid scoped name like "@acme/tokens" resolves
+    // to a proper descendant and passes through unchanged.
+    const dir = resolve(nmRoot, pkg.name);
+    if (dir === nmRoot || !(dir + sep).startsWith(nmRoot + sep) || !existsSync(dir)) continue;
     const patterns = pkg.files ?? DEFAULT_PATTERNS;
     let files: string[];
     try {

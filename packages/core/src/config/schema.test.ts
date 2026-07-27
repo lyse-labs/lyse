@@ -25,4 +25,14 @@ describe("designSystem.tokenPackages", () => {
     const r = safeParseLyseConfig({ designSystem: { tokenPackages: [{ files: ["x"] }] } });
     expect(r.ok).toBe(false);
   });
+
+  it("rejects an empty string entry", () => {
+    const r = safeParseLyseConfig({ designSystem: { tokenPackages: [""] } });
+    expect(r.ok).toBe(false);
+  });
+
+  it("rejects an object entry with an empty name", () => {
+    const r = safeParseLyseConfig({ designSystem: { tokenPackages: [{ name: "" }] } });
+    expect(r.ok).toBe(false);
+  });
 });

@@ -25,8 +25,8 @@ export const LyseConfigSchema = z.object({
       tokenPackages: z
         .array(
           z.union([
-            z.string(),
-            z.object({ name: z.string(), files: z.array(z.string()).optional() }),
+            z.string().min(1),
+            z.object({ name: z.string().min(1), files: z.array(z.string()).optional() }),
           ]),
         )
         .optional(),
