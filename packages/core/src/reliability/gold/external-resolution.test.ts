@@ -38,13 +38,13 @@ function git(args: string[], cwd: string): void {
 //      four load-bearing outcomes unweakened. The drop-on-JS-ref case is
 //      unaffected in form: `theme.colors.brand` is a dotted identifier and IS
 //      detected by TOKEN_REF_RE, matching the brief exactly.
-function twoCommitRepo(childValue: string): string {
+function twoCommitRepo(childValue: string, parentLiteral = "#3b82f6"): string {
   const dir = mkdtempSync(join(tmpdir(), "lyse-gold-e2e-"));
   git(["init", "-q"], dir);
   git(["config", "user.email", "t@t.t"], dir);
   git(["config", "user.name", "t"], dir);
   git(["config", "commit.gpgsign", "false"], dir);
-  writeFileSync(join(dir, "a.scss"), ".x {\n  color: #3b82f6;\n}\n");
+  writeFileSync(join(dir, "a.scss"), `.x {\n  color: ${parentLiteral};\n}\n`);
   git(["add", "."], dir);
   git(["commit", "-q", "-m", "before"], dir);
   writeFileSync(join(dir, "a.scss"), `.x {\n  color: ${childValue};\n}\n`);
@@ -101,7 +101,40 @@ describe("external-token resolution end-to-end", () => {
     expect(await confirmFirst(repo, resolver)).toBeNull();
   });
 
-  it("drops a JS member-access ref (out of v1 scope) — fail-closed, no false label", async () => {
+  it("confirms a JS member ref when a JSON snapshot value equals the removed literal", async () => {
+    const repo = twoCommitRepo("base.orange400");
+    const resolver = makePinnedResolveTokenValue(
+      repo,
+      loadPinnedTokens(pins({ "t.json": JSON.stringify({ "base.orange400": "#3b82f6" }) }), ["t.json"]),
+    );
+    expect(await confirmFirst(repo, resolver)).not.toBeNull();
+  });
+
+  it("confirms a JS member ref whose OKLCH snapshot value equals the removed hex (canvas-kit path)", async () => {
+    const repo = twoCommitRepo("base.orange400", "#fd7e00");
+    const resolver = makePinnedResolveTokenValue(
+      repo,
+      loadPinnedTokens(
+        pins({ "t.json": JSON.stringify({ "base.orange400": "oklch(0.7261 0.1852 52.58 / 1)" }) }),
+        ["t.json"],
+      ),
+    );
+    expect(await confirmFirst(repo, resolver)).not.toBeNull();
+  });
+
+  it("rejects a JS member ref whose OKLCH snapshot differs from the removed hex", async () => {
+    const repo = twoCommitRepo("base.orange400", "#3b82f6");
+    const resolver = makePinnedResolveTokenValue(
+      repo,
+      loadPinnedTokens(
+        pins({ "t.json": JSON.stringify({ "base.orange400": "oklch(0.7261 0.1852 52.58 / 1)" }) }),
+        ["t.json"],
+      ),
+    );
+    expect(await confirmFirst(repo, resolver)).toBeNull();
+  });
+
+  it("drops an unresolved JS member ref (no snapshot entry) — fail-closed", async () => {
     const repo = twoCommitRepo("theme.colors.brand");
     const resolver = makePinnedResolveTokenValue(repo, new Map());
     expect(await confirmFirst(repo, resolver)).toBeNull();
