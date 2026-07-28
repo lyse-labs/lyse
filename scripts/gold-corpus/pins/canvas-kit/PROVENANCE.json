@@ -1,0 +1,9 @@
+[
+  {
+    "package": "@workday/canvas-tokens-web",
+    "version": "3.0.0-alpha.9",
+    "path": "canvas-tokens.base.json",
+    "sha256": "adda447ef9f528f9bc99860156c4b588f391c970c315c984d612255eda834503",
+    "method": "js-resolve"
+  }
+]

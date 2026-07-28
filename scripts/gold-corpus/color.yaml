@@ -33,6 +33,19 @@ entries:
     url: https://github.com/Workday/canvas-kit
     sha: 30279d7c3d004668196c395d1fc3050cc6e373c6
     parent: 6b57badf34512437caade1c0641a1db6301e3421
+    # canvas-kit migrated hardcoded hex to @workday/canvas-tokens-web `base.*`
+    # member refs (e.g. `base.orange400`). The JS export is a CSS-var NAME
+    # (`--cnvs-base-palette-orange-400`); the real value lives in the package's
+    # own CSS as OKLCH (`oklch(0.7261 0.1852 52.58 / 1)`). fetch-pins JS mode
+    # resolves member -> var-name -> OKLCH at curation and commits the flat JSON.
+    tokenPackage:
+      name: "@workday/canvas-tokens-web"
+      version: "3.0.0-alpha.9"
+      files: ["canvas-tokens.base.json"]
+      js:
+        modules:
+          base: "dist/es6/base/index.js"
+        cssVars: ["css/base/_variables.css"]
   - repo: polaris
     url: https://github.com/Shopify/polaris
     sha: 6e958b1c597fcc98dadc2d24d8e7c29a397e20c5
