@@ -10,7 +10,9 @@ function kindFor(path: string): TokenFileKind | null {
 }
 
 /** Load + parse the committed snapshot file(s) for one corpus repo into a single
- *  ref→values map. Missing files / non-CSS-SCSS files are skipped (never throw). */
+ *  ref→values map. `.css`/`.scss` files parse as CSS/SCSS token files; `.json`
+ *  files parse as flat member→colour maps (the JS-token snapshot). Missing files
+ *  and unknown extensions are skipped (never throw). */
 export function loadPinnedTokens(pinsRepoDir: string, files: string[]): Map<string, string[]> {
   const merged = new Map<string, string[]>();
   for (const rel of files) {
