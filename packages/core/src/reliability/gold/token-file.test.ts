@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { parseTokenFile, tokenRefKey } from "./token-file.js";
+import { parseTokenFile, parseTokenJson, tokenRefKey } from "./token-file.js";
 import { isColorLiteral } from "./color-eq.js";
 
 describe("isColorLiteral", () => {
@@ -72,11 +72,37 @@ describe("parseTokenFile", () => {
 });
 
 describe("tokenRefKey", () => {
-  it("normalizes CSS and SCSS references, rejects JS member access", () => {
+  it("normalizes CSS and SCSS references", () => {
     expect(tokenRefKey("var(--blue-9)")).toBe("--blue-9");
     expect(tokenRefKey("$blue-500")).toBe("$blue-500");
-    expect(tokenRefKey("theme.colors.brand")).toBeNull();
-    expect(tokenRefKey("base.orange400")).toBeNull();
+  });
+  it("resolves dotted JS member refs verbatim (canvas-kit base.orange400)", () => {
+    expect(tokenRefKey("base.orange400")).toBe("base.orange400");
+    expect(tokenRefKey("theme.colors.brand")).toBe("theme.colors.brand");
+  });
+  it("rejects a bare identifier / non-member", () => {
+    expect(tokenRefKey("base")).toBeNull();
+    expect(tokenRefKey("42")).toBeNull();
+  });
+});
+
+describe("parseTokenJson", () => {
+  it("keeps colour-valued members (incl. OKLCH), drops the rest", () => {
+    const json = JSON.stringify({
+      "base.orange400": "oklch(0.7261 0.1852 52.58 / 1)",
+      "base.blue": "#3b82f6",
+      "base.spacing": "8px",
+      "base.count": 5,
+    });
+    const m = parseTokenJson(json);
+    expect(m.get("base.orange400")).toEqual(["oklch(0.7261 0.1852 52.58 / 1)"]);
+    expect(m.get("base.blue")).toEqual(["#3b82f6"]);
+    expect(m.has("base.spacing")).toBe(false); // non-colour dropped
+    expect(m.has("base.count")).toBe(false); // non-string dropped
+  });
+  it("returns an empty map for malformed / non-object JSON", () => {
+    expect(parseTokenJson("not json").size).toBe(0);
+    expect(parseTokenJson("[1,2,3]").size).toBe(0);
   });
 });
 

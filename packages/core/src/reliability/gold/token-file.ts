@@ -8,6 +8,7 @@ export type TokenFileKind = "scss" | "css";
 const SCSS_DECL_RE = /\$([A-Za-z0-9_-]+)\s*:\s*([^;!}]+?)\s*(?:!default)?\s*[;}]/g;
 const CSS_DECL_RE = /(--[A-Za-z0-9_-]+)\s*:\s*([^;}]+?)\s*[;}]/g;
 const VAR_REF_RE = /^var\(\s*(--[A-Za-z0-9_-]+)\s*\)?/;
+const MEMBER_REF_RE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)+$/;
 
 function stripComments(source: string, kind: TokenFileKind): string {
   const noBlock = source.replace(/\/\*[\s\S]*?\*\//g, "");
@@ -63,11 +64,35 @@ export function parseTokenFile(content: string, kind: TokenFileKind): Map<string
 }
 
 /** Normalize a token reference from a diff into a parser key: `var(--blue-9)` →
- *  `--blue-9`, `$blue-500` → `$blue-500`. Returns null for anything else (JS
- *  member access `theme.colors.x` / `base.orange400`) — out of v1 scope. */
+ *  `--blue-9`, `$blue-500` → `$blue-500`, and a dotted JS member ref
+ *  (`base.orange400`) → itself (matched against a JSON member snapshot). Returns
+ *  null for a bare identifier or anything else. */
 export function tokenRefKey(addedRef: string): string | null {
   const ref = addedRef.trim();
   if (ref.startsWith("$")) return /^\$[A-Za-z0-9_-]+$/.test(ref) ? ref : null;
   const varMatch = VAR_REF_RE.exec(ref);
-  return varMatch?.[1] ?? null;
+  if (varMatch?.[1] !== undefined) return varMatch[1];
+  return MEMBER_REF_RE.test(ref) ? ref : null;
+}
+
+/** Parse a flat JSON value map `{ "<member.path>": "<colour>" }` — the
+ *  curation-time-resolved JS token snapshot — into a ref→values map. Only
+ *  colour-valued string entries are kept (fail-closed at Gate B). Malformed or
+ *  non-object JSON yields an empty map (never throws). */
+export function parseTokenJson(content: string): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return map;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return map;
+  for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+    if (typeof value !== "string") continue;
+    const v = value.trim();
+    if (!isColorLiteral(v)) continue;
+    pushValue(map, key, v.toLowerCase());
+  }
+  return map;
 }
