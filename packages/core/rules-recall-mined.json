@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "recallGeneratedFrom": {
     "source": "git-mined (scripts/gold-corpus/color.yaml)",
-    "commit": "a79e3c8",
+    "commit": "522dbb6",
     "measuredAt": "1970-01-01T00:00:00.000Z"
   },
   "buckets": [

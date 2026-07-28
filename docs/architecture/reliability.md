@@ -95,20 +95,42 @@ hardcoded value map: the value now comes from the real pinned artifact
 caught=3, recall=1.0, Wilson lower bound=0.439** (`tokens/no-hardcoded-color ·
 exact · app`), up from N=1.
 
-The other repos contribute 0, each for an honest, documented reason:
-**canvas-kit**'s migrations reference the token as a JS member access
-(`base.orange400`), which the walk surfaces but v1 does not resolve (JS-token
-snapshots are a follow-up), so its former hardcoded pin is intentionally gone;
-**primer-react** and **polaris** are not yet curated with a `tokenPackage` (a
-follow-up to grow N further). Two structural limits also bound v1: only a
-`var(--x)` reference whose value ships as a CSS custom property (`--x:`) in the
-snapshot resolves — a bare SCSS `$var` reference is not surfaced by the walk
-today (follow-up); and intra-snapshot alias chains are not dereferenced. This
-modest N is the honest **survivorship / data-availability wall** the design
-anticipated — value-preserving colour→token commits are CSS-dominated and
-largely reference token packages outside the mined repo — a finding about the
-data, not a bug in the harness. Determinism is proven separately: two runs over
-the same pinned corpus + committed snapshots produce byte-identical buckets.
+The other repos contribute 0, each for an honest, documented reason.
+**canvas-kit** is now curated with a **JS-token snapshot**: its colours
+reference the token as a JS member access (`base.orange400` from
+`@workday/canvas-tokens-web`), and the harness resolves these through a
+committed, curation-time-resolved JSON value map (member → CSS-var-name → the
+package's own OKLCH value; `fetch-pins` JS mode, sha256-provenanced in
+`PROVENANCE.json`). The resolver works: `base.orange400` resolves to
+`oklch(0.7261 0.1852 52.58 / 1)`, which the independent parser — now OKLCH-aware
+(`reliability/gold/color-eq.ts`) — converts to exactly `#fd7e00`, and **4 of
+canvas-kit's 14 candidates are value-equal at the pixel**. Yet **all 14 correctly
+reject**, because the sampled commit is not a migration at all: the file was
+authored with tokens from birth, the prior hex written only into a trailing
+comment (`base.orange400; //'#FD7E00'`) — verified, the const was never a
+hardcoded literal anywhere in the file's history. The walk pairs the comment-hex
+with the ref (a phantom candidate); Gate A / the parent-source check finds no
+pre-migration value in the parent tree and fails closed. This is the harness
+refusing the comment-hex fabrication trap, working exactly as designed.
+**primer-react** and **polaris** resolve their colours through an *in-repo*
+prevaled theme (a JS object) — the deliberately-forbidden in-repo scraping path
+(#253) — so they are structurally excluded, not a curation follow-up. One
+structural limit also bounds the CSS side: only a `var(--x)` reference whose
+value ships as a CSS custom property (`--x:`) resolves — a bare SCSS `$var`
+reference is not surfaced by the walk today.
+
+This N is the honest **survivorship / data-availability wall** the design
+anticipated, now confirmed on both sides: value-preserving colour→token commits
+are CSS-dominated (primer-css's 2020 migration), while the JS side of the sampled
+corpus offers no genuine migration to confirm — modern DS repos increasingly
+author with tokens from the start (documenting the prior hex in a comment) rather
+than retro-fit pre-existing hardcoded values. The **JS-token snapshot + OKLCH
+lever is built and validated end-to-end** — it resolves canvas-kit's `base.*`
+refs to their exact values — and stands ready for any future corpus entry that
+*is* a genuine JS migration; on today's corpus it correctly adds 0. This is a
+finding about the data, not a bug in the harness. Determinism is proven
+separately: two runs over the same pinned corpus + committed snapshots produce
+byte-identical buckets.
 
 Because of this bias and this N, git-mined recall is always reported
 **beside** the seeded synthetic recall above (`rules-recall.json`,

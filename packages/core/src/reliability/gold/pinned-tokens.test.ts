@@ -34,6 +34,15 @@ describe("loadPinnedTokens", () => {
     expect(m.get("--brand")).toEqual(["#f9826c"]); // custom property read from a .scss file
     expect(m.has("--z")).toBe(false); // non-colour dropped
   });
+
+  it("reads a .json member snapshot (JS token lever)", () => {
+    const dir = pinsDir({
+      "tokens.json": JSON.stringify({ "base.orange400": "oklch(0.7261 0.1852 52.58 / 1)", "base.n": 5 }),
+    });
+    const m = loadPinnedTokens(dir, ["tokens.json"]);
+    expect(m.get("base.orange400")).toEqual(["oklch(0.7261 0.1852 52.58 / 1)"]);
+    expect(m.has("base.n")).toBe(false);
+  });
 });
 
 describe("independence (ADR 0022 §3b)", () => {
@@ -51,5 +60,20 @@ describe("makePinnedResolveTokenValue", () => {
     const resolve = makePinnedResolveTokenValue("/no/such/repo", new Map([["$brand", ["#3b82f6"]]]));
     expect(await resolve("$brand", "deadbeef")).toEqual(["#3b82f6"]);
     expect(await resolve("var(--x)", "deadbeef")).toEqual([]); // not pinned, no in-repo git → []
+  });
+
+  it("resolves a JS member ref from a .json snapshot before any in-repo lookup", async () => {
+    const resolve = makePinnedResolveTokenValue(
+      "/no/such/repo",
+      loadPinnedTokens(
+        (() => {
+          const d = mkdtempSync(join(tmpdir(), "lyse-pins-"));
+          writeFileSync(join(d, "t.json"), JSON.stringify({ "base.orange400": "#fd7e00" }));
+          return d;
+        })(),
+        ["t.json"],
+      ),
+    );
+    expect(await resolve("base.orange400", "deadbeef")).toEqual(["#fd7e00"]);
   });
 });

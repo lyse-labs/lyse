@@ -13,8 +13,10 @@ import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseGoldCorpusYaml } from "../mine-gold-recall.js";
+import { loadPinnedTokens } from "../../packages/core/src/reliability/gold/pinned-tokens.js";
+import { isColorLiteral } from "../../packages/core/src/reliability/gold/color-eq.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "..", "..");
@@ -26,6 +28,7 @@ export interface ProvenanceRecord {
   version: string;
   path: string;
   sha256: string;
+  method?: "js-resolve";
 }
 
 /** Write one snapshot file under pinsRepoDir and return its provenance record. */
@@ -62,7 +65,26 @@ function npmPackAndExtract(name: string, version: string): { dir: string; cleanu
   }
 }
 
-function main(): void {
+/** Flatten one JS namespace's string exports (each a `--cnvs-…` CSS-var name)
+ *  to `{ "<namespace>.<export>": <colour> }` by resolving each var name against
+ *  the package's own CSS (`varMap`). Non-string exports, unresolved names, and
+ *  non-colour values are dropped (fail-closed). Curation-only. */
+export function resolveJsMembers(
+  namespace: string,
+  exports: Record<string, unknown>,
+  varMap: Map<string, string[]>,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [name, value] of Object.entries(exports)) {
+    if (typeof value !== "string") continue;
+    const resolved = varMap.get(value)?.[0];
+    if (resolved === undefined || !isColorLiteral(resolved)) continue;
+    out[`${namespace}.${name}`] = resolved;
+  }
+  return out;
+}
+
+async function main(): Promise<void> {
   const entries = parseGoldCorpusYaml(readFileSync(CORPUS_PATH, "utf8"));
   for (const entry of entries) {
     const pin = entry.tokenPackage;
@@ -71,13 +93,36 @@ function main(): void {
     const { dir, cleanup } = npmPackAndExtract(pin.name, pin.version);
     try {
       const provenance: ProvenanceRecord[] = [];
-      for (const rel of pin.files) {
-        const content = readFileSync(join(dir, rel), "utf8");
-        provenance.push(writePin(pinsRepoDir, pin, rel, content));
+      if (pin.js !== undefined) {
+        // JS mode: resolve member -> var-name -> colour at curation, commit flat JSON.
+        const varMap = loadPinnedTokens(dir, pin.js.cssVars);
+        const flat: Record<string, string> = {};
+        for (const [namespace, modRel] of Object.entries(pin.js.modules)) {
+          const mod = (await import(pathToFileURL(join(dir, modRel)).href)) as Record<string, unknown>;
+          Object.assign(flat, resolveJsMembers(namespace, mod, varMap));
+        }
+        const sorted = Object.fromEntries(
+          Object.entries(flat).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+        );
+        const outPath = pin.files[0];
+        if (outPath === undefined) throw new Error(`${entry.repo}: js mode needs files[0] as the JSON output path`);
+        const json = JSON.stringify(sorted, null, 2) + "\n";
+        const record = writePin(pinsRepoDir, pin, outPath, json);
+        provenance.push({ ...record, method: "js-resolve" });
+        process.stderr.write(
+          `[fetch-pins] ${entry.repo}: js-resolved ${Object.keys(sorted).length} member(s) from ${pin.name}@${pin.version}\n`,
+        );
+      } else {
+        for (const rel of pin.files) {
+          const content = readFileSync(join(dir, rel), "utf8");
+          provenance.push(writePin(pinsRepoDir, pin, rel, content));
+        }
+        process.stderr.write(
+          `[fetch-pins] ${entry.repo}: ${provenance.length} file(s) from ${pin.name}@${pin.version}\n`,
+        );
       }
       mkdirSync(pinsRepoDir, { recursive: true });
       writeFileSync(join(pinsRepoDir, "PROVENANCE.json"), JSON.stringify(provenance, null, 2) + "\n");
-      process.stderr.write(`[fetch-pins] ${entry.repo}: ${provenance.length} file(s) from ${pin.name}@${pin.version}\n`);
     } finally {
       cleanup();
     }
@@ -85,5 +130,8 @@ function main(): void {
 }
 
 if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
-  main();
+  main().catch((e) => {
+    process.stderr.write(String(e) + "\n");
+    process.exit(1);
+  });
 }

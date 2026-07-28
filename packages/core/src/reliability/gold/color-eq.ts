@@ -193,11 +193,83 @@ function parseHsl(value: string): Rgba | null {
   return { r, g, b, a };
 }
 
+const OKLCH_RE = /^oklch\(\s*([^)]+?)\s*\)$/i;
+
+function parseOklchComponent(token: string, kind: "L" | "C" | "H" | "A"): number | null {
+  const t = token.trim();
+  if (t.endsWith("%")) {
+    if (!PERCENT_RE.test(t)) return null;
+    const pct = Number.parseFloat(t.slice(0, -1));
+    if (kind === "L" || kind === "A") return pct / 100; // 100% -> 1
+    if (kind === "C") return (pct / 100) * 0.4; // 100% -> 0.4 (CSS Color 4)
+    return null; // H percent invalid
+  }
+  let body = t;
+  if (kind === "H" && /deg$/i.test(body)) body = body.slice(0, -3).trim();
+  if (!NUMBER_RE.test(body)) return null;
+  return Number.parseFloat(body);
+}
+
+function oklchChannelsToRgb(L: number, C: number, H: number): { r: number; g: number; b: number } {
+  const hr = (H * Math.PI) / 180;
+  const a = C * Math.cos(hr);
+  const bb = C * Math.sin(hr);
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * bb;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * bb;
+  const s_ = L - 0.0894841775 * a - 1.2914855480 * bb;
+  const l = l_ ** 3;
+  const m = m_ ** 3;
+  const s = s_ ** 3;
+  const lr = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+  const lg = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+  const lb = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+  const gamma = (v: number): number =>
+    v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
+  return {
+    r: clampByte(gamma(lr) * 255),
+    g: clampByte(gamma(lg) * 255),
+    b: clampByte(gamma(lb) * 255),
+  };
+}
+
+// OKLCH support (ADR 0022 §3b): fresh independent math, not shared with Lyse's
+// resolver. Modern token packages (e.g. @workday/canvas-tokens-web) ship colour
+// values as OKLCH; a git-mined value-preserving migration can only be confirmed
+// if this independent parser can compare the token's OKLCH to the old hex.
+function parseOklch(value: string): Rgba | null {
+  const match = OKLCH_RE.exec(value);
+  if (!match) return null;
+  const inner = match[1];
+  if (inner === undefined) return null;
+  const slash = inner.split("/");
+  const coords = slash[0];
+  const alphaPart = slash[1];
+  if (coords === undefined || slash.length > 2) return null;
+  const parts = coords.trim().split(/\s+/).filter((s) => s.length > 0);
+  if (parts.length !== 3) return null;
+  const lTok = parts[0];
+  const cTok = parts[1];
+  const hTok = parts[2];
+  if (lTok === undefined || cTok === undefined || hTok === undefined) return null;
+  const L = parseOklchComponent(lTok, "L");
+  const C = parseOklchComponent(cTok, "C");
+  const H = parseOklchComponent(hTok, "H");
+  if (L === null || C === null || H === null) return null;
+  let alpha = 1;
+  if (alphaPart !== undefined) {
+    const parsed = parseOklchComponent(alphaPart, "A");
+    if (parsed === null) return null;
+    alpha = clampAlpha(parsed);
+  }
+  const { r, g, b } = oklchChannelsToRgb(L, C, H);
+  return { r, g, b, a: alpha };
+}
+
 // Fresh, self-contained parser (ADR 0022 §3b): must not share Lyse's own
 // resolver/parser, or a mined gold label could bless the resolver's own blind spots.
 function parseColorIndependent(value: string): Rgba | null {
   const trimmed = value.trim();
-  return parseHex(trimmed) ?? parseRgb(trimmed) ?? parseHsl(trimmed);
+  return parseHex(trimmed) ?? parseRgb(trimmed) ?? parseHsl(trimmed) ?? parseOklch(trimmed);
 }
 
 /** True iff `value` is a literal colour this independent parser recognises.

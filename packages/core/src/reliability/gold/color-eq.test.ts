@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { colorEquals } from "./color-eq.js";
+import { colorEquals, isColorLiteral } from "./color-eq.js";
 
 describe("gold/color-eq", () => {
   it("equal across representations", () => {
@@ -35,5 +35,21 @@ describe("gold/color-eq", () => {
     const src = readFileSync(new URL("./color-eq.ts", import.meta.url), "utf8");
     expect(src).not.toMatch(/graph\/resolve/);
     expect(src).not.toMatch(/a11y\/contrast/);
+  });
+});
+
+describe("OKLCH", () => {
+  it("parses OKLCH and equals the sRGB hex it converts to", () => {
+    // @workday/canvas-tokens-web base.orange400 = oklch(0.7261 0.1852 52.58 / 1) = #fd7e00
+    expect(colorEquals("oklch(0.7261 0.1852 52.58 / 1)", "#fd7e00")).toBe(true);
+    expect(colorEquals("oklch(72.61% 0.1852 52.58)", "#fd7e00")).toBe(true); // %-lightness form
+  });
+  it("isColorLiteral accepts OKLCH, rejects garbage", () => {
+    expect(isColorLiteral("oklch(0.7261 0.1852 52.58 / 1)")).toBe(true);
+    expect(isColorLiteral("oklch(nope)")).toBe(false);
+    expect(isColorLiteral("oklch(0.7 0.1)")).toBe(false); // needs 3 coords
+  });
+  it("uses strict equality — a 1-unit-off hex does NOT equal the OKLCH (no tolerance)", () => {
+    expect(colorEquals("oklch(0.7261 0.1852 52.58 / 1)", "#fd7e01")).toBe(false);
   });
 });
