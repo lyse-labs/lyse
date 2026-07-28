@@ -81,23 +81,34 @@ commit only becomes a gold label if it clears every one of these, fail-closed:
 - **No score change** — `mine:recall` is a `scripts/` measurement tool;
   `lyse audit` never invokes it.
 
-**The result is the headline, not a defect.** The first run: **70 candidate
-tokenization commits** found across the 4 pinned corpus repos (primer-css 42,
-primer-react 8, canvas-kit 14, polaris 6) narrowed to **1 confirmed gold
-label** — primer-css's `var(--color-underlinenav-border-active)` replacing
-`#f9826c` — for **N=1, caught=1, recall=1.0, Wilson lower bound=0.207**
-(`tokens/no-hardcoded-color · exact · app`). The other 69 were dropped, every
-drop fail-closed and explainable: most external-package token references
-resolve to a real value only for the 2 pinned fixtures the gates were built
-against; canvas-kit's candidate commit renamed the file, so Gate A's parent-side
-read at the new path returned nothing; polaris's `--primary` is defined in
-multiple theme blocks, so Gate B's unanimous-value check disagreed and failed
-closed. This tiny N is the **honest survivorship / data-availability wall**
-the design anticipated: value-preserving colour→token commits are
-CSS-dominated, and a large share reference token packages that live outside
-the mined repo entirely — it is a finding about the data, not a bug in the
-harness. Determinism is proven separately: two runs over the same pinned
-corpus produce byte-identical buckets.
+**The result, honestly.** Across the 4 pinned corpus repos the walk finds
+**70 candidate** tokenization commits (primer-css 42, primer-react 8,
+canvas-kit 14, polaris 6). External token *values* are recovered from a
+committed, pinned package **snapshot** — the token file the consuming repo
+depended on at that commit (`scripts/gold-corpus/pins/<repo>/` with a
+`PROVENANCE.json` recording `package@version:path` + a sha256), parsed by a
+resolver-independent gold parser (`reliability/gold/token-file.ts`, which
+imports neither `graph/resolve` nor `a11y/contrast`). This replaces the earlier
+hardcoded value map: the value now comes from the real pinned artifact
+(un-fabricable), not a hand-typed constant. With primer-css pinned to
+`@primer/primitives@4.3.5`, **3** of its candidates confirm — for **N=3,
+caught=3, recall=1.0, Wilson lower bound=0.439** (`tokens/no-hardcoded-color ·
+exact · app`), up from N=1.
+
+The other repos contribute 0, each for an honest, documented reason:
+**canvas-kit**'s migrations reference the token as a JS member access
+(`base.orange400`), which the walk surfaces but v1 does not resolve (JS-token
+snapshots are a follow-up), so its former hardcoded pin is intentionally gone;
+**primer-react** and **polaris** are not yet curated with a `tokenPackage` (a
+follow-up to grow N further). Two structural limits also bound v1: only a
+`var(--x)` reference whose value ships as a CSS custom property (`--x:`) in the
+snapshot resolves — a bare SCSS `$var` reference is not surfaced by the walk
+today (follow-up); and intra-snapshot alias chains are not dereferenced. This
+modest N is the honest **survivorship / data-availability wall** the design
+anticipated — value-preserving colour→token commits are CSS-dominated and
+largely reference token packages outside the mined repo — a finding about the
+data, not a bug in the harness. Determinism is proven separately: two runs over
+the same pinned corpus + committed snapshots produce byte-identical buckets.
 
 Because of this bias and this N, git-mined recall is always reported
 **beside** the seeded synthetic recall above (`rules-recall.json`,

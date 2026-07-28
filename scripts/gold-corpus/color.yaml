@@ -13,6 +13,18 @@ entries:
     url: https://github.com/primer/css
     sha: 8541ed1db1e0d9c4551ea76ba400d6d0cf682897
     parent: 8088676afd287054fc6fd5ac653b1da075ff0c36
+    # The migration at `sha` replaces `#f9826c` with
+    # `var(--color-underlinenav-border-active)`, whose value lives in the
+    # external `@primer/primitives` package (primer/css depended on `^4.3.5`),
+    # NOT in primer/css's own tracked source — so the in-repo resolver returns
+    # [] and the label is unrecoverable without this pinned snapshot. Only the
+    # LIGHT-theme colours file is pinned: the hardcoded literal `#f9826c` is the
+    # light value, and pinning the dark themes too (which use `#f78166`) would
+    # make Gate B's unanimous-value check disagree and (correctly) fail closed.
+    tokenPackage:
+      name: "@primer/primitives"
+      version: "4.3.5"
+      files: ["dist/scss/colors/_light.scss"]
   - repo: primer-react
     url: https://github.com/primer/react
     sha: 919c6cd26ffccb907d325f8cc5914fa971d07685

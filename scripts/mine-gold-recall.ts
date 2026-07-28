@@ -29,7 +29,6 @@ import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import {
   confirmCandidate,
-  resolveCssVarInRepo,
   type ResolveTokenValue,
 } from "../packages/core/src/reliability/gold/confirm.js";
 import { git } from "../packages/core/src/reliability/gold/git.js";
@@ -41,17 +40,34 @@ import type {
 } from "../packages/core/src/reliability/gold/types.js";
 import { walkTokenizationCommits } from "../packages/core/src/reliability/gold/walk.js";
 import { wilsonLowerBound } from "../packages/core/src/reliability/catalogue/promotion.js";
+import { loadPinnedTokens, makePinnedResolveTokenValue } from "../packages/core/src/reliability/gold/pinned-tokens.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..");
 const CORPUS_PATH = resolve(REPO_ROOT, "scripts/gold-corpus/color.yaml");
 const OUT_PATH = join(REPO_ROOT, "packages/core/rules-recall-mined.json");
+const PINS_ROOT = resolve(REPO_ROOT, "scripts/gold-corpus/pins");
+
+interface TokenPackagePin {
+  name: string;
+  version: string;
+  files: string[];
+}
 
 interface CorpusEntry {
   repo: string;
   url: string;
   sha: string;
   parent: string;
+  tokenPackage?: TokenPackagePin;
+}
+
+function parseTokenPackage(raw: unknown): TokenPackagePin | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const { name, version, files } = raw as Record<string, unknown>;
+  if (typeof name !== "string" || typeof version !== "string") return null;
+  if (!Array.isArray(files) || files.some((f) => typeof f !== "string")) return null;
+  return { name, version, files: files as string[] };
 }
 
 export function parseGoldCorpusYaml(yamlText: string): CorpusEntry[] {
@@ -61,7 +77,7 @@ export function parseGoldCorpusYaml(yamlText: string): CorpusEntry[] {
   if (!Array.isArray(rawEntries)) return [];
   return rawEntries.flatMap((item: unknown) => {
     if (typeof item !== "object" || item === null) return [];
-    const { repo, url, sha, parent } = item as Record<string, unknown>;
+    const { repo, url, sha, parent, tokenPackage } = item as Record<string, unknown>;
     if (
       typeof repo !== "string" ||
       typeof url !== "string" ||
@@ -70,7 +86,14 @@ export function parseGoldCorpusYaml(yamlText: string): CorpusEntry[] {
     ) {
       return [];
     }
-    return [{ repo, url, sha, parent }];
+    // A PRESENT-but-malformed tokenPackage drops the entry (fail-closed).
+    let pin: TokenPackagePin | undefined;
+    if (tokenPackage !== undefined) {
+      const parsed = parseTokenPackage(tokenPackage);
+      if (parsed === null) return [];
+      pin = parsed;
+    }
+    return [{ repo, url, sha, parent, ...(pin !== undefined ? { tokenPackage: pin } : {}) }];
   });
 }
 
@@ -92,44 +115,27 @@ function arg(name: string, fallback: string): string {
   return i !== -1 && value !== undefined ? value : fallback;
 }
 
-// Independently-verified historical token values for the two "explicit
-// expected" corpus fixtures whose token is defined in an EXTERNAL npm
-// package rather than in-repo (`tests/reliability/gold/fixtures/expected.json`,
-// curated during corpus mining: positive-css-var.diff / positive-js-token.diff).
-// `resolveCssVarInRepo` alone returns [] for these (git-grep over the CLONED
-// repo alone can never see an external package's source), so without this
-// pin those two known-real migrations would be undercounted as "unresolved".
-// This is NOT circular: it only supplies the historical TOKEN VALUE (what
-// the token resolved to back then, verified independently against the
-// pinned npm package version at the time) -- it says nothing about whether
-// today's rule catches the drift, which is the wholly separate, genuinely
-// independent question `measureGoldRecall` answers by re-running the CURRENT
-// rule engine against the checked-out parent commit.
-function pinnedKey(repo: string, commit: string, ref: string): string {
-  return `${repo}${commit}${ref}`;
-}
-
-const KNOWN_EXTERNAL_TOKEN_VALUES: ReadonlyMap<string, string> = new Map([
-  [
-    pinnedKey(
-      "primer-css",
-      "8541ed1db1e0d9c4551ea76ba400d6d0cf682897",
-      "var(--color-underlinenav-border-active)",
-    ),
-    "#f9826c", // @primer/primitives@4.3.5, dist/scss/colors/_light.scss:454
-  ],
-  [
-    pinnedKey("canvas-kit", "30279d7c3d004668196c395d1fc3050cc6e373c6", "base.orange400"),
-    "#FD7E00", // @workday/canvas-tokens-web@3.0.0-alpha.9 --cnvs-base-palette-orange-400 (OKLCH->sRGB)
-  ],
-]);
-
-function makeResolveTokenValue(repoDir: string, repoName: string): ResolveTokenValue {
-  return async (ref, commit) => {
-    const pinned = KNOWN_EXTERNAL_TOKEN_VALUES.get(pinnedKey(repoName, commit, ref));
-    if (pinned !== undefined) return [pinned];
-    return resolveCssVarInRepo(repoDir, ref, commit);
-  };
+// Independently-verified historical token values for corpus fixtures whose
+// token is defined in an EXTERNAL npm package rather than in-repo. The
+// in-repo `resolveCssVarInRepo` alone returns [] for these (git-grep over
+// the CLONED repo alone can never see an external package's source), so
+// without a pin, known-real migrations that resolve through an external
+// package would be undercounted as "unresolved". `loadPinnedTokens` parses
+// committed snapshot file(s) under `scripts/gold-corpus/pins/<repo>/`
+// (`entry.tokenPackage.files`) -- a real npm package artifact checked into
+// this repo at corpus-curation time, never fetched at run time. This is NOT
+// circular: it only supplies the historical TOKEN VALUE (what the token
+// resolved to back then, verified independently against the pinned npm
+// package version) -- it says nothing about whether today's rule catches
+// the drift, which is the wholly separate, genuinely independent question
+// `measureGoldRecall` answers by re-running the CURRENT rule engine against
+// the checked-out parent commit.
+function makeResolveTokenValue(repoDir: string, entry: CorpusEntry): ResolveTokenValue {
+  const files = entry.tokenPackage?.files ?? [];
+  const pinned = files.length > 0
+    ? loadPinnedTokens(join(PINS_ROOT, entry.repo), files)
+    : new Map<string, string[]>();
+  return makePinnedResolveTokenValue(repoDir, pinned);
 }
 
 async function cloneAndPin(url: string, sha: string, dest: string): Promise<void> {
@@ -214,7 +220,7 @@ async function processEntry(entry: CorpusEntry, scratchRoot: string): Promise<Mi
     return [];
   }
 
-  const resolveTokenValue = makeResolveTokenValue(dest, entry.repo);
+  const resolveTokenValue = makeResolveTokenValue(dest, entry);
   const labels: GoldLabel[] = [];
   for (const candidate of candidates) {
     try {
