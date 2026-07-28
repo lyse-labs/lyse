@@ -48,10 +48,16 @@ const CORPUS_PATH = resolve(REPO_ROOT, "scripts/gold-corpus/color.yaml");
 const OUT_PATH = join(REPO_ROOT, "packages/core/rules-recall-mined.json");
 const PINS_ROOT = resolve(REPO_ROOT, "scripts/gold-corpus/pins");
 
+interface TokenPackageJs {
+  modules: Record<string, string>;
+  cssVars: string[];
+}
+
 interface TokenPackagePin {
   name: string;
   version: string;
   files: string[];
+  js?: TokenPackageJs;
 }
 
 interface CorpusEntry {
@@ -62,12 +68,34 @@ interface CorpusEntry {
   tokenPackage?: TokenPackagePin;
 }
 
+function parseTokenPackageJs(raw: unknown): TokenPackageJs | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const { modules, cssVars } = raw as Record<string, unknown>;
+  if (typeof modules !== "object" || modules === null || Array.isArray(modules)) return null;
+  const entries = Object.entries(modules);
+  if (entries.length === 0) return null;
+  if (entries.some(([k, v]) => typeof k !== "string" || typeof v !== "string")) return null;
+  if (!Array.isArray(cssVars) || cssVars.some((f) => typeof f !== "string")) return null;
+  return { modules: modules as Record<string, string>, cssVars: cssVars as string[] };
+}
+
 function parseTokenPackage(raw: unknown): TokenPackagePin | null {
   if (typeof raw !== "object" || raw === null) return null;
-  const { name, version, files } = raw as Record<string, unknown>;
+  const { name, version, files, js } = raw as Record<string, unknown>;
   if (typeof name !== "string" || typeof version !== "string") return null;
   if (!Array.isArray(files) || files.some((f) => typeof f !== "string")) return null;
-  return { name, version, files: files as string[] };
+  let jsBlock: TokenPackageJs | undefined;
+  if (js !== undefined) {
+    const parsed = parseTokenPackageJs(js);
+    if (parsed === null) return null; // present-but-malformed -> fail closed
+    jsBlock = parsed;
+  }
+  return {
+    name,
+    version,
+    files: files as string[],
+    ...(jsBlock !== undefined ? { js: jsBlock } : {}),
+  };
 }
 
 export function parseGoldCorpusYaml(yamlText: string): CorpusEntry[] {
