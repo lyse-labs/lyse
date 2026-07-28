@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { resolveCssVarInRepo, type ResolveTokenValue } from "./confirm.js";
-import { parseTokenFile, tokenRefKey, type TokenFileKind } from "./token-file.js";
+import { parseTokenFile, parseTokenJson, tokenRefKey, type TokenFileKind } from "./token-file.js";
 
 function kindFor(path: string): TokenFileKind | null {
   if (path.endsWith(".scss")) return "scss";
@@ -15,15 +15,22 @@ export function loadPinnedTokens(pinsRepoDir: string, files: string[]): Map<stri
   const merged = new Map<string, string[]>();
   for (const rel of files) {
     const abs = join(pinsRepoDir, rel);
-    const kind = kindFor(rel);
-    if (kind === null || !existsSync(abs)) continue;
+    if (!existsSync(abs)) continue;
     let content: string;
     try {
       content = readFileSync(abs, "utf8");
     } catch {
       continue;
     }
-    for (const [k, vals] of parseTokenFile(content, kind)) {
+    let parsed: Map<string, string[]>;
+    if (rel.endsWith(".json")) {
+      parsed = parseTokenJson(content);
+    } else {
+      const kind = kindFor(rel);
+      if (kind === null) continue;
+      parsed = parseTokenFile(content, kind);
+    }
+    for (const [k, vals] of parsed) {
       const list = merged.get(k) ?? [];
       list.push(...vals);
       merged.set(k, list);
