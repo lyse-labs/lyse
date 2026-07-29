@@ -4,8 +4,9 @@ import { walk, DEFAULT_EXCLUDE_PATHS } from "../walker.js";
 import { parseTs } from "../parsers/ts.js";
 import { parseCss } from "../parsers/css.js";
 import { loadStories } from "../loaders/stories.js";
-import { buildComponentInventory, componentNameFromPath } from "../loaders/components.js";
+import { componentNameFromPath } from "../loaders/components.js";
 import { detectFromPackageJson } from "../detection/from-package-json.js";
+import { resolveComponentsModule, buildInventoryForMode } from "../detection/components-resolution.js";
 import { posixRelative } from "../util/paths.js";
 import { buildDesignSystemGraph } from "./builder.js";
 import { loadConfig } from "../config/schema.js";
@@ -32,8 +33,10 @@ export async function buildGraphForRoot(root: string): Promise<DesignSystemGraph
   }
 
   const detected = await detectFromPackageJson(absoluteRoot);
-  const componentsModule = detected.componentsModule.value ?? null;
-  const dsSelfMode = detected.componentsModule.source.startsWith("workspace DS export");
+  const { componentsModule, dsSelfMode } = resolveComponentsModule(
+    config.designSystem?.componentsModule ?? null,
+    detected.componentsModule,
+  );
 
   const storyIndex = await loadStories(absoluteRoot);
   const componentSources = new Map<string, string>();
@@ -43,9 +46,12 @@ export async function buildGraphForRoot(root: string): Promise<DesignSystemGraph
     if (!resolved.strong && !storyIndex?.byTitle.has(resolved.name)) continue;
     if (!componentSources.has(resolved.name)) componentSources.set(resolved.name, src);
   }
-  const baseInventory = componentsModule
-    ? buildComponentInventory(componentsModule, parsed.ts, componentSources)
-    : [];
+  const baseInventory = buildInventoryForMode({
+    componentsModule,
+    dsSelfMode,
+    parsedTs: parsed.ts,
+    componentSources,
+  });
 
   return buildDesignSystemGraph({
     repoRoot: absoluteRoot,
