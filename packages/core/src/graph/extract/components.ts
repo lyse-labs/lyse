@@ -16,7 +16,13 @@ export function extractComponents(inputs: ComponentExtractInputs): ComponentExtr
   const detection: ComponentDetection = inputs.dsSelfMode ? "ds-self" : "module-config";
   const nodes: ComponentNode[] = inputs.baseInventory.map((e) => ({
     name: e.name,
-    file: inputs.componentFiles.get(e.name) ?? null,
+    // Always null: no real file path is available at this layer.
+    // `baseInventory` entries (ComponentInventoryEntry) carry only
+    // name/module/usageCount/props, and `componentFiles` maps a component
+    // name to its full SOURCE TEXT (consumed upstream for prop extraction),
+    // never a path — indexing it here would leak whole files into the
+    // manifest and AGENTS.md instead of a path.
+    file: null,
     module: e.module,
     exportKind: "unknown",
     usageCount: e.usageCount,

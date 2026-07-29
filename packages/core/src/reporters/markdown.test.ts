@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { DsManifest } from "../manifest/types.js";
+import type { DsManifest, ManifestComponent, ManifestProp } from "../manifest/types.js";
 import type { AuditResult } from "../types.js";
 import { renderAgentsMd } from "./markdown.js";
 
@@ -143,5 +143,70 @@ describe("renderAgentsMd — honesty guarantees", () => {
   it("renders the 'None detected.' fallback under Stack detected when the stack is empty", () => {
     const md = renderAgentsMd(manifest(), { ...auditResult(), stack: [] });
     expect(md).toMatch(/## 1\. Stack detected\nNone detected\./);
+  });
+});
+
+describe("renderAgentsMd — prop code-span safety", () => {
+  function componentWithProp(prop: ManifestProp): ManifestComponent {
+    return {
+      name: "Button",
+      module: "@acme/ui",
+      file: null,
+      exportKind: "named",
+      isDesignSystem: true,
+      detection: "module-config",
+      usageCount: 1,
+      props: [prop],
+      storyCount: 0,
+    };
+  }
+
+  it("collapses a multi-line prop type onto one line instead of breaking the code span", () => {
+    const md = renderAgentsMd(
+      manifest({
+        components: [
+          componentWithProp({
+            name: "variant",
+            type: '"primary"\n  | "secondary"\n  | "ghost"',
+            optional: true,
+            default: null,
+            variants: null,
+          }),
+        ],
+      }),
+      auditResult(),
+    );
+    expect(md).toContain('`"primary" | "secondary" | "ghost"`');
+    expect(md).not.toContain("\n  |");
+  });
+
+  it("widens the backtick fence so a backtick-bearing prop type cannot break the code span", () => {
+    const md = renderAgentsMd(
+      manifest({
+        components: [
+          componentWithProp({
+            name: "name",
+            type: "`icon-${string}`",
+            optional: false,
+            default: null,
+            variants: null,
+          }),
+        ],
+      }),
+      auditResult(),
+    );
+    expect(md).toContain("`` `icon-${string}` ``");
+  });
+
+  it("omits the default clause for an empty-string prop default instead of rendering empty backticks", () => {
+    const md = renderAgentsMd(
+      manifest({
+        components: [
+          componentWithProp({ name: "label", type: "string", optional: true, default: "", variants: null }),
+        ],
+      }),
+      auditResult(),
+    );
+    expect(md).not.toContain("default:");
   });
 });

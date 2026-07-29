@@ -27,7 +27,11 @@ describe("cli agents-md", () => {
 
   it("emits real token ids from the graph, not just a namespace placeholder", () => {
     const out = execSync(`node ${cli} agents ${fixtureWithTokens} --static-only`, { encoding: "utf8" });
-    expect(out).toContain("Design tokens");
+    // `tokens-ds` declares exactly one DTCG token — color.brand.primary: #3b82f6
+    // (see fixtures/tokens-ds/design.tokens.json) — so both its resolved id and
+    // its value must appear verbatim. A namespace-placeholder template (the old
+    // static output) could never produce either string.
+    expect(out).toContain("`color/brand/primary` → `#3b82f6`");
     expect(out).not.toContain("color/*");
   });
 });
