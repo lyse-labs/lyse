@@ -405,13 +405,13 @@ lyse agents > AGENTS.md
 The generated file:
 
 - Lists real token ids and values, grouped by axis (`colors`, `spacing`, …) — not namespace placeholders.
-- Documents component contracts: module, file, props (including string-literal variant lists), and Storybook story coverage.
+- Documents component contracts: module, props (including string-literal variant lists), and Storybook story coverage.
 - Surfaces extraction-degradation warnings, naming the affected extractor and a remediation step, whenever token/component/story detection is incomplete.
-- Stamps a `token_set_hash` so an agent can tell the token set has changed since the file was last generated.
+- Stamps a `token_set_hash` so an agent can tell the token set has changed since the file was last generated — note this hash covers the token set only, so a component-only change doesn't move it.
 
 Commit `AGENTS.md` to your repo. Cursor, Claude Code, and similar tools read it on session start.
 
-`lyse agents` renders the same DS Machine Manifest as Markdown — see [`docs/architecture/manifest.md`](../architecture/manifest.md) for the underlying JSON contract and schema (also available via `lyse manifest` or the MCP `get_ds_manifest` tool).
+`lyse agents` renders the DS Machine Manifest contract as Markdown — same schema, same projection code as `lyse manifest` and the MCP `get_ds_manifest` tool; see [`docs/architecture/manifest.md`](../architecture/manifest.md) for the underlying JSON contract and schema. It is not guaranteed to print an identical manifest to `lyse manifest` for the same repo, though: the two commands build the Design System Graph through different entry points and can resolve `designSystem.componentsModule` differently — see [§7](../architecture/manifest.md#7-relationship-to-other-surfaces) for the full caveat.
 
 > **Deprecated alias:** `lyse agents-md` still works but is deprecated. Use `lyse agents` going forward.
 

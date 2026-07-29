@@ -184,8 +184,9 @@ To add a new MCP tool:
    - An implementation function.
 2. Register in `server.ts` (`ListToolsRequestSchema` and `CallToolRequestSchema` handlers).
 3. Document in `docs/guide/mcp-server.md` (user-facing).
-4. Update `packages/core/src/reporters/markdown.ts` to include the new tool in generated `AGENTS.md`.
-5. Test in `packages/core/tests/mcp/<tool-name>.test.ts`.
+4. Test in `packages/core/tests/mcp/<tool-name>.test.ts`.
+
+`packages/core/src/reporters/markdown.ts` (generated `AGENTS.md`) does not list MCP tools at all — it renders the DS Machine Manifest (tokens, component contracts, extraction warnings), not a tool catalogue — so adding a tool never requires touching it.
 
 The new tool should follow the same patterns:
 - Inputs validated with JSON Schema (the MCP SDK handles this when the schema is correct).
