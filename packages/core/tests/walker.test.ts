@@ -37,7 +37,7 @@ describe("walker default excludes", () => {
     const files = await walk(tmp);
     const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
-    expect(rel).not.toContain(join("examples", "basic", "b.tsx"));
+    expect(rel).not.toContain("examples/basic/b.tsx");
   });
 
   it("excludes apps/docs/ by default", async () => {
@@ -50,7 +50,7 @@ describe("walker default excludes", () => {
     const files = await walk(tmp);
     const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
-    expect(rel).not.toContain(join("apps", "docs", "pages", "index.tsx"));
+    expect(rel).not.toContain("apps/docs/pages/index.tsx");
   });
 
   it("excludes packages/dev/ by default", async () => {
@@ -63,7 +63,7 @@ describe("walker default excludes", () => {
     const files = await walk(tmp);
     const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
-    expect(rel).not.toContain(join("packages", "dev", "scripts", "gen.ts"));
+    expect(rel).not.toContain("packages/dev/scripts/gen.ts");
   });
 
   it("excludes **/fixtures/** by default", async () => {
@@ -76,7 +76,7 @@ describe("walker default excludes", () => {
     const files = await walk(tmp);
     const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
-    expect(rel).not.toContain(join("packages", "core", "fixtures", "full-ds.tsx"));
+    expect(rel).not.toContain("packages/core/fixtures/full-ds.tsx");
   });
 
   it("excludes **/__mocks__/** by default", async () => {
@@ -89,7 +89,7 @@ describe("walker default excludes", () => {
     const files = await walk(tmp);
     const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
-    expect(rel).not.toContain(join("tools", "github", "__mocks__", "AiHandler.ts"));
+    expect(rel).not.toContain("tools/github/__mocks__/AiHandler.ts");
   });
 
   it("excludes **/__fixtures__/** by default (the Jest double-underscore convention, distinct from **/fixtures/**)", async () => {
@@ -102,7 +102,7 @@ describe("walker default excludes", () => {
     const files = await walk(tmp);
     const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
-    expect(rel).not.toContain(join("packages", "box", "__fixtures__", "CustomizableBox.tsx"));
+    expect(rel).not.toContain("packages/box/__fixtures__/CustomizableBox.tsx");
   });
 
   it("excludes component files nested under a stories/ subfolder by default (Storybook demo components, e.g. <pkg>/stories/components/*.tsx)", async () => {
@@ -118,7 +118,7 @@ describe("walker default excludes", () => {
     const files = await walk(tmp);
     const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
-    expect(rel).not.toContain(join("packages", "data-grid", "stories", "components", "DataGridDemo.tsx"));
+    expect(rel).not.toContain("packages/data-grid/stories/components/DataGridDemo.tsx");
   });
 
   it("keeps stylesheets nested under a stories/ subfolder (a real token source on some repos, e.g. radix-ui/primitives keeps CSS custom properties in apps/storybook/stories/*.stories.module.css) while still excluding code files in the same directory", async () => {
@@ -133,9 +133,9 @@ describe("walker default excludes", () => {
 
     const files = await walk(tmp);
     const rel = files.map((f) => posixRelative(tmp, f));
-    expect(rel).toContain(join("apps", "storybook", "stories", "Button.stories.module.css"));
-    expect(rel).toContain(join("apps", "storybook", "stories", "Button.stories.scss"));
-    expect(rel).not.toContain(join("apps", "storybook", "stories", "Button.stories.tsx"));
+    expect(rel).toContain("apps/storybook/stories/Button.stories.module.css");
+    expect(rel).toContain("apps/storybook/stories/Button.stories.scss");
+    expect(rel).not.toContain("apps/storybook/stories/Button.stories.tsx");
   });
 
   it("does not over-exclude legitimately-named dirs that merely contain 'mock'/'fixture'/'stor' as a substring, not an exact segment", async () => {
@@ -171,9 +171,9 @@ describe("walker default excludes", () => {
     // src is included
     expect(rel).toContain("src/a.tsx");
     // default excludes still apply
-    expect(rel).not.toContain(join("examples", "b.tsx"));
+    expect(rel).not.toContain("examples/b.tsx");
     // user exclude also applies
-    expect(rel).not.toContain(join("custom-dir", "c.tsx"));
+    expect(rel).not.toContain("custom-dir/c.tsx");
   });
 
   it("excludes starters/ by default", async () => {
@@ -186,7 +186,7 @@ describe("walker default excludes", () => {
     const files = await walk(tmp);
     const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
-    expect(rel).not.toContain(join("starters", "vite", "App.tsx"));
+    expect(rel).not.toContain("starters/vite/App.tsx");
   });
 
   it("excludes playground/ by default", async () => {
@@ -199,7 +199,7 @@ describe("walker default excludes", () => {
     const files = await walk(tmp);
     const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
-    expect(rel).not.toContain(join("playground", "test.tsx"));
+    expect(rel).not.toContain("playground/test.tsx");
   });
 
   it("excludes e2e/ by default", async () => {
@@ -212,7 +212,7 @@ describe("walker default excludes", () => {
     const files = await walk(tmp);
     const rel = files.map((f) => posixRelative(tmp, f));
     expect(rel).toContain("src/a.tsx");
-    expect(rel).not.toContain(join("e2e", "spec.ts"));
+    expect(rel).not.toContain("e2e/spec.ts");
   });
 
   it("excludes nested doc/demo-site packages inside a monorepo (e.g. packages/paste-website/**)", async () => {
