@@ -97,7 +97,7 @@ If nothing happens:
 
 ## Tools exposed
 
-Both tools declare an MCP **`outputSchema`** and return **`structuredContent`** (the
+All five tools declare an MCP **`outputSchema`** and return **`structuredContent`** (the
 typed result object) alongside the human-readable text. MCP clients that support
 structured output get a validated, typed payload — no re-parsing a text blob — and
 the server validates its own output against the schema before sending. The `content`
@@ -209,11 +209,54 @@ block, so the guardrail never rejects a valid edit on an unproven signal.
 introduces a stable-rule violation is rejected with an actionable explanation
 (rule, line, message); advisory findings are surfaced but don't block.
 
+### `get_ds_manifest(project_root)`
+
+Returns the **DS Machine Manifest** — a stable, versioned, graph-derived
+contract describing a design system's tokens, component contracts, zone
+summary, and always-present extraction status. This is the surface to read
+**before writing code**: it changes only under SemVer, unlike the internal
+graph below. See [the manifest reference](../architecture/manifest.md) for
+the full schema (`packages/core/schemas/v1/lyse-manifest.json`) and
+versioning policy.
+
+**Parameters:**
+
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `project_root` | string | yes | Absolute path to the project root to build the manifest for. |
+
+**Returns** (also delivered as `structuredContent`, validated against the tool's `outputSchema`):
+
+```json
+{
+  "manifest": {
+    "schemaVersion": 1,
+    "generator": { "name": "lyse", "version": "0.2.0-alpha.6" },
+    "tokenSetHash": "sha256:9f2b...",
+    "tokens": [
+      { "id": "color.brand", "axis": "colors", "value": "#3b82f6", "source": "dtcg" }
+    ],
+    "components": [],
+    "zones": { "ds-source": 1, "app": 1, "story": 0, "test": 0, "generated": 0, "vendored": 0, "config": 0 },
+    "usage": [],
+    "extraction": { "entries": [], "conflicts": [] }
+  }
+}
+```
+
+**Use case:** before generating UI, an agent calls `get_ds_manifest` to learn
+the available tokens and component contracts up front — a stable contract it
+can rely on (and cache) across Lyse versions, rather than discovering the
+design system's shape only through repeated `audit_file` calls.
+
 ### `get_design_system_graph(project_root)`
 
-Returns the reified Design System Graph (tokens, components, stories, zones,
-extraction report) for a project — the machine-consumable surface an agent
-reads before writing code.
+Returns Lyse's **internal, unstable** Design System Graph (tokens,
+components, stories, zones, extraction report) for a project — the exact
+structure the audit pipeline itself works with. This is a debugging /
+inspection view: it may change shape without notice as Lyse's internals
+evolve, and carries no SemVer guarantee. Prefer `get_ds_manifest` above for
+anything you intend to depend on.
 
 **Parameters:**
 
@@ -238,9 +281,10 @@ reads before writing code.
 }
 ```
 
-**Use case:** before generating UI, an agent calls `get_design_system_graph` to
-learn the available tokens, components, and stories up front — rather than
-discovering the design system's shape only through repeated `audit_file` calls.
+**Use case:** debugging why a rule did (or didn't) see a token or component —
+inspecting the exact internal structure the audit pipeline built, before
+Lyse's normalization into the stable manifest shape. For "what does this
+design system have" before writing code, call `get_ds_manifest` instead.
 
 ## Resources exposed
 

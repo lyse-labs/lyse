@@ -71,9 +71,18 @@ structured content.
 | Field | Type | Notes |
 |---|---|---|
 | `id` | `string` | Token identifier, e.g. `"color.brand.primary"`. |
-| `axis` | `string` (enum) | One of `colors`, `spacing`, `typography`, `radii`, `shadows`, `motion`, `breakpoints`, `zIndex`, `opacity`, `borderWidth`. |
+| `axis` | `string` (open value set) | One of `colors`, `spacing`, `typography`, `radii`, `shadows`, `motion`, `breakpoints`, `zIndex`, `opacity`, `borderWidth` today — this set can grow in a minor release ([§4](#4-versioning-policy)). |
 | `value` | `string` | The token's raw resolved value, e.g. `"#3b82f6"`. |
-| `source` | `string` (enum) | One of `tailwind-v3`, `tailwind-v4`, `dtcg`, `css-custom-property`, `scss-variable`, `style-dictionary`, `tokens-studio`, `figma-variables`, `external-package`. |
+| `source` | `string` (open value set) | One of `tailwind-v3`, `tailwind-v4`, `dtcg`, `css-custom-property`, `scss-variable`, `style-dictionary`, `tokens-studio`, `figma-variables`, `external-package` today — this set can grow in a minor release ([§4](#4-versioning-policy)). |
+
+> **`id` is not unique.** The token extractor concatenates every source it
+> finds, so the same identifier can appear once per source that declares it —
+> for example a DTCG token and an equivalently-named CSS custom property can
+> both normalize to the same `id` with a different `value` (and `source`).
+> Don't build a naive `id → value` map without first choosing a precedence
+> across `source`; `tokens[]` is sorted by `(id, axis, source, value)`, not by
+> `id` alone, precisely because `id` doesn't uniquely identify an entry. See
+> `extraction.conflicts[]` for the manifest's own cross-source conflict report.
 
 ### `components[]` — `ManifestComponent`
 
@@ -84,10 +93,10 @@ structured content.
 | `file` | `string \| null` | Source file path; `null` when it can't be resolved. |
 | `exportKind` | `"named" \| "default" \| "unknown"` | |
 | `isDesignSystem` | `boolean` | Whether this is recognized as design-system-owned, as opposed to a consumer's own component. |
-| `detection` | `"module-config" \| "convention" \| "story-backref" \| "ds-self"` | How Lyse identified the component. |
+| `detection` | `string` (open value set) | How Lyse identified the component. One of `module-config`, `convention`, `story-backref`, `ds-self` today — this set can grow in a minor release ([§4](#4-versioning-policy)). |
 | `usageCount` | `integer` | Number of files importing/using the component. |
 | `props` | `ManifestProp[]` | See below. |
-| `storyCount` | `integer` | Number of Storybook story exports referencing the component. |
+| `storyCount` | `integer` | Number of distinct Storybook story **files** that reference the component (deduplicated) — not the number of named story exports within those files. |
 
 ### `components[].props[]` — `ManifestProp`
 
@@ -110,7 +119,7 @@ key would be ambiguous with a genuine zero.
 
 | Field | Type | Notes |
 |---|---|---|
-| `kind` | `string` (enum) | Currently only `imports-ds-module`. |
+| `kind` | `string` (open value set) | Currently only `imports-ds-module` — this set can grow in a minor release ([§4](#4-versioning-policy)). |
 | `files` | `integer` | Distinct files contributing to this kind. |
 | `count` | `integer` | Total edge count across those files. |
 
@@ -137,16 +146,16 @@ keep the artifact small on large repos ([§5](#5-guarantees)).
 
 | Field | Type | Notes |
 |---|---|---|
-| `axis` | `string` (enum) | Same axis enum as `tokens[].axis`. |
+| `axis` | `string` (open value set) | Same open value space as `tokens[].axis`. |
 | `value` | `string` | The raw value shared across the conflicting tokens. |
 | `tokenIds` | `string[]` | The token ids that declare this value, deduplicated and sorted. |
-| `sources` | `string[]` (enum) | The distinct sources that declared this value, deduplicated and sorted — always 2 or more (that's what makes it a conflict). Its length need not equal `tokenIds.length`: multiple token ids can share one source. |
+| `sources` | `string[]` (open value set) | Same open value space as `tokens[].source`. The distinct sources that declared this value, deduplicated and sorted — always 2 or more (that's what makes it a conflict). Its length need not equal `tokenIds.length`: multiple token ids can share one source. |
 
 ### Example (trimmed)
 
 ```json
 {
-  "$schema": "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-manifest.json",
+  "$schema": "https://github.com/lyse-labs/lyse/raw/main/packages/core/schemas/v1/lyse-manifest.json",
   "schemaVersion": 1,
   "generator": { "name": "lyse", "version": "0.2.0-alpha.6" },
   "tokenSetHash": "sha256:9f2b...",
@@ -188,12 +197,30 @@ and is the same file the `$schema` URL above resolves to.
 - `schemaVersion` (currently `1`) is the integer contract version for the
   manifest **shape**. It is independent of the npm package version, which
   travels in `generator.version`.
-- **Additive, optional changes are minor**: a new optional field, or a new
-  member appended to an existing enum (for example a new `TokenSource`),
-  ships in a minor package release without bumping `schemaVersion`.
-  Existing consumers keep working unmodified.
-- **Removing a field, renaming a field, or changing what a field means**
-  (its type or semantics) **is major**. Once ratified (see
+- **Some value-spaces are deliberately open.** Token `axis`, token `source`,
+  component `detection`, and usage `kind` are declared in the JSON Schema as
+  a plain `type: "string"` (not a closed `enum`), and `zones` accepts
+  additional properties beyond its 7 required keys. A new member of one of
+  these spaces — for example the `external-package` `TokenSource` added
+  after v1 first shipped, or a hypothetical new zone kind — is a **minor**,
+  non-breaking package release: the resulting manifest still validates
+  against the **same, unmodified** pinned `v1` schema. A consumer that
+  doesn't recognize the new value yet keeps working; it just sees a string
+  (or a zone key) it doesn't special-case.
+- **A few value-spaces are genuinely closed.** `extraction.entries[].status`
+  (`ok` / `degraded` / `failed`), `extraction.entries[].extractor` (`tokens`
+  / `components` / `stories` / `zones`), and `components[].exportKind`
+  (`named` / `default` / `unknown`) are real, closed JSON Schema `enum`s —
+  Lyse's own extraction logic is the only producer of these values, so
+  closing them lets a consumer exhaustively branch over them. Growing one of
+  these is *not* a same-schema minor release; it requires the major-version
+  process below.
+- **Additive, optional changes are minor**: a new optional field ships in a
+  minor package release without bumping `schemaVersion`. Existing consumers
+  keep working unmodified.
+- **Removing a field, renaming a field, changing what a field means (its
+  type or semantics), or growing one of the closed enums above** is
+  **major** and requires bumping `schemaVersion`. Once ratified (see
   [§8](#8-status)), a major change requires an explicit maintainer-approved
   ADR before shipping — it is not a change an agent or a single contributor
   can make unilaterally.
