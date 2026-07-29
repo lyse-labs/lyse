@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/lyse-labs/lyse/raw/main/schemas/v1/lyse-manifest.json",
+  "$id": "https://github.com/lyse-labs/lyse/raw/main/packages/core/schemas/v1/lyse-manifest.json",
   "title": "Lyse DS Machine Manifest",
   "description": "The DS Machine Manifest (schemaVersion 1): a stable, versioned, graph-derived contract describing a design system for machine consumers (agents, MCP clients, CI). Mirrors DsManifest in packages/core/src/manifest/types.ts. Built without running an audit — never affects the Health Score. Versioning policy in docs/architecture/manifest.md.",
   "type": "object",
@@ -32,12 +32,12 @@
           "id": { "type": "string" },
           "axis": {
             "type": "string",
-            "enum": ["colors", "spacing", "typography", "radii", "shadows", "motion", "breakpoints", "zIndex", "opacity", "borderWidth"]
+            "description": "Token axis. Open value space — currently known values: colors, spacing, typography, radii, shadows, motion, breakpoints, zIndex, opacity, borderWidth. A future release may add a new axis without bumping schemaVersion (docs/architecture/manifest.md §4)."
           },
           "value": { "type": "string" },
           "source": {
             "type": "string",
-            "enum": ["tailwind-v3", "tailwind-v4", "dtcg", "css-custom-property", "scss-variable", "style-dictionary", "tokens-studio", "figma-variables", "external-package"]
+            "description": "Where this token was declared. Open value space — currently known values: tailwind-v3, tailwind-v4, dtcg, css-custom-property, scss-variable, style-dictionary, tokens-studio, figma-variables, external-package. A future release may add a new source without bumping schemaVersion (docs/architecture/manifest.md §4)."
           }
         }
       }
@@ -56,7 +56,7 @@
           "isDesignSystem": { "type": "boolean" },
           "detection": {
             "type": "string",
-            "enum": ["module-config", "convention", "story-backref", "ds-self"]
+            "description": "How Lyse identified the component. Open value space — currently known values: module-config, convention, story-backref, ds-self. A future release may add a new detection method without bumping schemaVersion (docs/architecture/manifest.md §4)."
           },
           "usageCount": { "type": "integer", "minimum": 0 },
           "props": {
@@ -83,9 +83,9 @@
     },
     "zones": {
       "type": "object",
-      "description": "Per-zone-kind file counts. All 7 kinds are always present, even at 0 — an absent key would be ambiguous with a genuine zero.",
+      "description": "Per-zone-kind file counts. These 7 kinds are always present, even at 0 — an absent key would be ambiguous with a genuine zero. Open value space: a future release may add a new zone-kind key without bumping schemaVersion (docs/architecture/manifest.md §4) — any additional key must still be a non-negative integer.",
       "required": ["ds-source", "app", "story", "test", "generated", "vendored", "config"],
-      "additionalProperties": false,
+      "additionalProperties": { "type": "integer", "minimum": 0 },
       "properties": {
         "ds-source": { "type": "integer", "minimum": 0 },
         "app": { "type": "integer", "minimum": 0 },
@@ -104,7 +104,10 @@
         "required": ["kind", "files", "count"],
         "additionalProperties": false,
         "properties": {
-          "kind": { "type": "string", "enum": ["imports-ds-module"] },
+          "kind": {
+            "type": "string",
+            "description": "Usage edge kind. Open value space — currently the only known value is imports-ds-module. A future release may add a new kind without bumping schemaVersion (docs/architecture/manifest.md §4)."
+          },
           "files": { "type": "integer", "minimum": 0 },
           "count": { "type": "integer", "minimum": 0 }
         }
@@ -142,7 +145,7 @@
             "properties": {
               "axis": {
                 "type": "string",
-                "enum": ["colors", "spacing", "typography", "radii", "shadows", "motion", "breakpoints", "zIndex", "opacity", "borderWidth"]
+                "description": "Same open token-axis value space as tokens[].axis (docs/architecture/manifest.md §4)."
               },
               "value": { "type": "string" },
               "tokenIds": { "type": "array", "items": { "type": "string" } },
@@ -150,7 +153,7 @@
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "enum": ["tailwind-v3", "tailwind-v4", "dtcg", "css-custom-property", "scss-variable", "style-dictionary", "tokens-studio", "figma-variables", "external-package"]
+                  "description": "Same open token-source value space as tokens[].source (docs/architecture/manifest.md §4)."
                 }
               }
             }

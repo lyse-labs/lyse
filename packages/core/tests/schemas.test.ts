@@ -41,7 +41,15 @@ describe("JSON Schemas v1 — Draft 2020-12 validity", () => {
   it.each(files)("%s has $id and $schema", (file) => {
     const schema = JSON.parse(readFileSync(join(SCHEMAS_DIR, file), "utf8"));
     expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
-    expect(schema.$id).toMatch(/^https:\/\/github\.com\/lyse-labs\/lyse\/raw\/main\/schemas\/v1\/.+\.json$/);
+    // lyse-manifest.json's $id points at its REAL repo path: there is no root
+    // schemas/ directory on main (only packages/core/schemas/), so the plain
+    // "schemas/v1/…" pattern the other schemas use 404s for it — see
+    // docs/architecture/manifest.md §3. The other v1 schemas keep that
+    // pre-existing broken pattern; fixing them is a separate, out-of-scope
+    // cleanup (packages/core/src/graph/persist.ts, reporters/json.ts).
+    const expectedPrefix = file === "lyse-manifest.json" ? "packages/core/schemas/v1" : "schemas/v1";
+    const idPattern = new RegExp(`^https://github\\.com/lyse-labs/lyse/raw/main/${expectedPrefix}/.+\\.json$`);
+    expect(schema.$id).toMatch(idPattern);
   });
 });
 
@@ -297,13 +305,29 @@ describe("lyse-manifest.json validates a DsManifest", () => {
     expect(validate(rendered)).toBe(false);
   });
 
-  it("rejects a token carrying an unknown axis", () => {
+  it("accepts a token carrying a not-yet-known axis (open value space — §4 forward-compat)", () => {
+    // `axis` is deliberately `type: "string"` rather than a closed `enum` in the
+    // schema (docs/architecture/manifest.md §4), so a future Lyse version can add
+    // a new TokenAxis and the resulting manifest still validates against this
+    // SAME pinned v1 schema — no schemaVersion bump, no rejected manifest.
     const validate = makeAjv().compile(schema);
     const manifest = buildManifest(sampleGraph(), { version: "1.2.3" });
     const rendered = JSON.parse(serializeManifest(manifest)) as { tokens: Array<Record<string, unknown>> };
     const token = rendered.tokens[0];
     if (!token) throw new Error("expected sampleGraph() to produce at least one token");
-    token["axis"] = "not-a-real-axis";
+    token["axis"] = "not-a-real-axis-yet";
+    const valid = validate(rendered);
+    if (!valid) console.error(validate.errors);
+    expect(valid).toBe(true);
+  });
+
+  it("still rejects a token whose axis isn't a string (the open value space is not unbounded)", () => {
+    const validate = makeAjv().compile(schema);
+    const manifest = buildManifest(sampleGraph(), { version: "1.2.3" });
+    const rendered = JSON.parse(serializeManifest(manifest)) as { tokens: Array<Record<string, unknown>> };
+    const token = rendered.tokens[0];
+    if (!token) throw new Error("expected sampleGraph() to produce at least one token");
+    token["axis"] = 42;
     expect(validate(rendered)).toBe(false);
   });
 
