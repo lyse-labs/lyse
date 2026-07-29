@@ -1,4 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { resolveComponentsModule, buildInventoryForMode } from "./components-resolution.js";
 import type { DetectionResult } from "./types.js";
 import type { ParsedTsFile } from "../types.js";
@@ -132,5 +135,85 @@ describe("buildInventoryForMode", () => {
         componentSources: new Map(),
       }),
     ).toEqual([]);
+  });
+
+  describe("per-component module attribution (ds-self, componentFilePaths)", () => {
+    it("attributes each component to its own nearest-ancestor package.json name, not a single shared module", () => {
+      const root = mkdtempSync(join(tmpdir(), "lyse-cr-multi-pkg-"));
+      mkdirSync(join(root, "packages", "button", "src"), { recursive: true });
+      mkdirSync(join(root, "packages", "icons", "src"), { recursive: true });
+      writeFileSync(join(root, "packages", "button", "package.json"), JSON.stringify({ name: "@acme/button" }));
+      writeFileSync(join(root, "packages", "icons", "package.json"), JSON.stringify({ name: "@acme/icons" }));
+      const buttonPath = join(root, "packages", "button", "src", "Button.tsx");
+      const iconPath = join(root, "packages", "icons", "src", "Icon.tsx");
+      writeFileSync(buttonPath, `export function Button() {\n  return null;\n}\n`);
+      writeFileSync(iconPath, `export function Icon() {\n  return null;\n}\n`);
+
+      const result = buildInventoryForMode({
+        componentsModule: "@acme/fallback",
+        dsSelfMode: true,
+        parsedTs: [],
+        componentSources: new Map([
+          ["Button", readFileSync(buttonPath, "utf8")],
+          ["Icon", readFileSync(iconPath, "utf8")],
+        ]),
+        componentFilePaths: new Map([
+          ["Button", buttonPath],
+          ["Icon", iconPath],
+        ]),
+      });
+
+      expect(result).toHaveLength(2);
+      const button = result.find((e) => e.name === "Button");
+      const icon = result.find((e) => e.name === "Icon");
+      expect(button?.module).toBe("@acme/button");
+      expect(icon?.module).toBe("@acme/icons");
+      expect(button?.module).not.toBe(icon?.module);
+    });
+
+    it("falls back to componentsModule when the component's file has no ancestor package.json with a name", () => {
+      const root = mkdtempSync(join(tmpdir(), "lyse-cr-no-pkg-"));
+      mkdirSync(join(root, "orphan"), { recursive: true });
+      const orphanPath = join(root, "orphan", "Widget.tsx");
+      writeFileSync(orphanPath, `export function Widget() {\n  return null;\n}\n`);
+
+      const result = buildInventoryForMode({
+        componentsModule: "@acme/fallback",
+        dsSelfMode: true,
+        parsedTs: [],
+        componentSources: new Map([["Widget", readFileSync(orphanPath, "utf8")]]),
+        componentFilePaths: new Map([["Widget", orphanPath]]),
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.module).toBe("@acme/fallback");
+    });
+
+    it("falls back to componentsModule for a name missing from componentFilePaths (partial map)", () => {
+      const srcMap = new Map([["Orphan", "export { Orphan as default } from \"./Orphan.impl\";"]]);
+      const result = buildInventoryForMode({
+        componentsModule: "@acme/fallback",
+        dsSelfMode: true,
+        parsedTs: [],
+        componentSources: srcMap,
+        componentFilePaths: new Map(),
+      });
+
+      expect(result).toEqual([{ name: "Orphan", module: "@acme/fallback", usageCount: 0 }]);
+    });
+
+    it("omitting componentFilePaths entirely reproduces the pre-fix behavior (every entry gets componentsModule)", () => {
+      const result = buildInventoryForMode({
+        componentsModule: "@acme/ui",
+        dsSelfMode: true,
+        parsedTs: [],
+        componentSources: new Map([
+          ["Button", "export function Button() { return null; }"],
+          ["Card", "export function Card() { return null; }"],
+        ]),
+      });
+
+      expect(result.every((e) => e.module === "@acme/ui")).toBe(true);
+    });
   });
 });

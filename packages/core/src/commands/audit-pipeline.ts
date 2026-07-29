@@ -376,24 +376,31 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   // is only admitted when a Storybook title corroborates it — so utility folders
   // never pollute the inventory. A strong source wins over a weak one on a name
   // collision.
-  const resolvedSources = new Map<string, { src: string; strong: boolean }>();
+  const resolvedSources = new Map<string, { src: string; strong: boolean; rel: string }>();
   for (const [rel, src] of fileContents) {
     const resolved = componentNameFromPath(rel);
     if (resolved === null) continue;
     if (!resolved.strong && !storyIndex?.byTitle.has(resolved.name)) continue;
     const existing = resolvedSources.get(resolved.name);
     if (existing === undefined || (resolved.strong && !existing.strong)) {
-      resolvedSources.set(resolved.name, { src, strong: resolved.strong });
+      resolvedSources.set(resolved.name, { src, strong: resolved.strong, rel });
     }
   }
   const componentSources = new Map<string, string>(
     [...resolvedSources].map(([name, v]) => [name, v.src]),
+  );
+  // Absolute path per component — lets buildInventoryForMode's ds-self branch
+  // attribute each component to its OWN workspace package.json rather than
+  // stamping every component with the single monorepo-wide componentsModule.
+  const componentFilePaths = new Map<string, string>(
+    [...resolvedSources].map(([name, v]) => [name, join(absoluteRoot, v.rel)]),
   );
   const componentInventory = buildInventoryForMode({
     componentsModule,
     dsSelfMode,
     parsedTs: parsed.ts,
     componentSources,
+    componentFilePaths,
   });
 
   const graph = await buildDesignSystemGraph({
