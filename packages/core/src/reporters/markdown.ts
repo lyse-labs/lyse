@@ -60,7 +60,9 @@ function renderComponentBlock(component: ManifestComponent): string[] {
   const lines = [
     `### ${component.name}`,
     `- Module: \`${component.module}\``,
-    `- File: \`${component.file ?? "unknown"}\``,
+    // Omitted rather than rendered as "unknown": the graph cannot resolve component
+    // source paths yet, so the line would be noise on every component.
+    ...(component.file === null ? [] : [`- File: \`${component.file}\``]),
     `- Design system component: ${component.isDesignSystem ? "yes" : "no"}`,
     `- Detection: \`${component.detection}\``,
     `- Usage count: ${component.usageCount}`,

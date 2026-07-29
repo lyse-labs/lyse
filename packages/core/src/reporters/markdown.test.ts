@@ -44,6 +44,27 @@ describe("renderAgentsMd — graph-derived", () => {
     expect(md).toContain("16px");
   });
 
+  it("omits the File line when the path is unresolved instead of printing 'unknown'", () => {
+    const base = {
+      name: "Button",
+      module: "@acme/ui",
+      exportKind: "named" as const,
+      isDesignSystem: true,
+      detection: "module-config" as const,
+      usageCount: 1,
+      props: [],
+      storyCount: 0,
+    };
+    const withoutPath = renderAgentsMd(manifest({ components: [{ ...base, file: null }] }), auditResult());
+    expect(withoutPath).not.toContain("File:");
+    expect(withoutPath).toContain("Button");
+    const withPath = renderAgentsMd(
+      manifest({ components: [{ ...base, file: "src/Button.tsx" }] }),
+      auditResult(),
+    );
+    expect(withPath).toContain("- File: `src/Button.tsx`");
+  });
+
   it("renders component contracts including prop variants", () => {
     const md = renderAgentsMd(
       manifest({
