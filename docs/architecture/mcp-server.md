@@ -29,7 +29,7 @@ This means:
 
 `packages/core/src/mcp/server.ts` is the entry. It:
 
-1. Registers 3 tools: `audit_file`, `suggest_fix`, and `preflight_diff`.
+1. Registers 5 tools: `audit_file`, `suggest_fix`, `preflight_diff`, `get_design_system_graph`, and `get_ds_manifest`.
 2. Connects the transport.
 3. Logs errors to stderr (stdout is reserved for JSON-RPC).
 4. Handles SIGTERM / SIGINT gracefully.
@@ -52,14 +52,16 @@ Each tool is implemented in `packages/core/src/mcp/tools/<name>.ts` and register
 
 ```ts
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: TOOL_DEFINITIONS, // auditFileTool, suggestFixTool, preflightDiffTool
+  tools: TOOL_DEFINITIONS, // auditFileTool, suggestFixTool, preflightDiffTool, getDesignSystemGraphTool, getDsManifestTool
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
   switch (req.params.name) {
-    case "audit_file":     return await auditFileImpl(req.params.arguments);
-    case "suggest_fix":    return await suggestFixImpl(req.params.arguments);
-    case "preflight_diff": return await preflightDiffImpl(req.params.arguments);
+    case "audit_file":              return await auditFileImpl(req.params.arguments);
+    case "suggest_fix":             return await suggestFixImpl(req.params.arguments);
+    case "preflight_diff":          return await preflightDiffImpl(req.params.arguments);
+    case "get_design_system_graph": return await getDesignSystemGraphImpl(req.params.arguments);
+    case "get_ds_manifest":         return await getDsManifestImpl(req.params.arguments);
     default: throw new Error(`Unknown tool: ${req.params.name}`);
   }
 });

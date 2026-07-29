@@ -122,7 +122,7 @@ keep the artifact small on large repos ([§5](#5-guarantees)).
 | Field | Type | Notes |
 |---|---|---|
 | `entries` | `ManifestExtractionEntry[]` | One entry per extractor (`tokens`, `components`, `stories`, `zones`). |
-| `conflicts` | `ManifestTokenConflict[]` | Token conflicts: the same value declared under more than one token id. |
+| `conflicts` | `ManifestTokenConflict[]` | Cross-source token conflicts: the same raw value on the same axis, declared by tokens from 2+ distinct sources. Two token ids that share a value from the *same* source do not conflict. |
 
 `ManifestExtractionEntry`:
 
@@ -138,9 +138,9 @@ keep the artifact small on large repos ([§5](#5-guarantees)).
 | Field | Type | Notes |
 |---|---|---|
 | `axis` | `string` (enum) | Same axis enum as `tokens[].axis`. |
-| `value` | `string` | The value declared by more than one token. |
-| `tokenIds` | `string[]` | The conflicting token ids. |
-| `sources` | `string[]` (enum) | Same source enum as `tokens[].source`, one per conflicting token. |
+| `value` | `string` | The raw value shared across the conflicting tokens. |
+| `tokenIds` | `string[]` | The token ids that declare this value, deduplicated and sorted. |
+| `sources` | `string[]` (enum) | The distinct sources that declared this value, deduplicated and sorted — always 2 or more (that's what makes it a conflict). Its length need not equal `tokenIds.length`: multiple token ids can share one source. |
 
 ### Example (trimmed)
 
@@ -201,9 +201,12 @@ and is the same file the `$schema` URL above resolves to.
 ## 5. Guarantees
 
 - **Deterministic.** The same repo state produces byte-identical bytes:
-  object keys are sorted, array orderings are total (tokens by `id`,
-  components by `name`, zone kinds in a fixed declared order, usage by
-  `kind`), and the output ends in a trailing newline — the same
+  the manifest is passed through a recursive key-sorter, so every
+  object's keys — `zones` included — come out alphabetical in the
+  serialized JSON (`app, config, ds-source, generated, story, test,
+  vendored`, not the `ZONE_KINDS` declaration order used internally).
+  Array orderings are total (tokens by `id`, components by `name`, usage
+  by `kind`), and the output ends in a trailing newline — the same
   determinism discipline as Lyse's other artifacts.
 - **Zero-network, local-first.** Building the manifest reads only the
   repository tree. No network calls.
@@ -239,11 +242,11 @@ Lyse exposes several graph-adjacent surfaces. They are not interchangeable:
   it back. It's for a human inspecting repo state, not a contract.
 - **MCP `preflight_diff`** is the **write-time prevention** tool: pass it a
   proposed post-edit file buffer and it audits that buffer before you save
-  it, returning a `pass`/`blocked` verdict with findings partitioned into
-  `blocking` (only stable rules can block) and `advisory` (surfaced, never
-  blocks). Call it *while writing code*. `get_ds_manifest`, by contrast, is
-  what you read *before* writing code, to know what tokens and components
-  already exist.
+  it, returning a `pass` / `blocked` / `error` verdict with findings
+  partitioned into `blocking` (only stable rules can block) and
+  `advisory` (surfaced, never blocks). Call it *while writing code*.
+  `get_ds_manifest`, by contrast, is what you read *before* writing code,
+  to know what tokens and components already exist.
 
 See [`docs/guide/mcp-server.md`](../guide/mcp-server.md) for the full MCP
 tool reference and [`docs/architecture/mcp-server.md`](./mcp-server.md) for
