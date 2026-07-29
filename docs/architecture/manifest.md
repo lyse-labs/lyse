@@ -98,6 +98,13 @@ structured content.
 | `props` | `ManifestProp[]` | See below. |
 | `storyCount` | `integer` | Number of distinct Storybook story **files** that reference the component (deduplicated) — not the number of named story exports within those files. |
 
+> **`name` is not unique either.** Two distinct modules can export a
+> same-named component (for example two design systems both shipping a
+> `Button`). Don't build a naive `name → component` map without first
+> choosing a precedence across `module`; `components[]` is sorted by
+> `(name, module)`, not by `name` alone, for the same reason `tokens[]`
+> isn't sorted by `id` alone.
+
 ### `components[].props[]` — `ManifestProp`
 
 | Field | Type | Notes |
@@ -215,9 +222,20 @@ and is the same file the `$schema` URL above resolves to.
   closing them lets a consumer exhaustively branch over them. Growing one of
   these is *not* a same-schema minor release; it requires the major-version
   process below.
-- **Additive, optional changes are minor**: a new optional field ships in a
-  minor package release without bumping `schemaVersion`. Existing consumers
-  keep working unmodified.
+- **Adding a new optional field is minor, but not schema-file-free.** This
+  schema sets `additionalProperties: false` on the manifest root and its
+  nested objects — the open value-spaces above (`zones` included) are the
+  deliberate exceptions — so a manifest carrying a field the schema doesn't
+  list fails validation. Shipping a new optional field is still a **minor**
+  package release, without bumping `schemaVersion`: no field is removed or
+  reinterpreted, and code that reads the JSON keeps working unmodified. But
+  unlike growing an open value space above — which needs no schema-file
+  change at all — adding a field requires **republishing the v1 schema file
+  in place** (same URL, same `schemaVersion`) so the new field is listed in
+  `properties`. A consumer validating against its own **pinned copy** of the
+  schema will reject the new field until that copy is refreshed; validate
+  against the `$schema` URL at validation time rather than a vendored static
+  copy, so this class of change stays non-breaking for that consumer too.
 - **Removing a field, renaming a field, changing what a field means (its
   type or semantics), or growing one of the closed enums above** is
   **major** and requires bumping `schemaVersion`. Once ratified (see
@@ -231,10 +249,11 @@ and is the same file the `$schema` URL above resolves to.
   the manifest is passed through a recursive key-sorter, so every
   object's keys — `zones` included — come out alphabetical in the
   serialized JSON (`app, config, ds-source, generated, story, test,
-  vendored`, not the `ZONE_KINDS` declaration order used internally).
-  Array orderings are total (tokens by `id`, components by `name`, usage
-  by `kind`), and the output ends in a trailing newline — the same
-  determinism discipline as Lyse's other artifacts.
+  vendored`), not whatever order zone kinds happen to be declared in
+  internally. Array orderings are total (tokens by `(id, axis, source,
+  value)`, components by `(name, module)`, usage by `kind`), and the
+  output ends in a trailing newline — the same determinism discipline as
+  Lyse's other artifacts.
 - **Zero-network, local-first.** Building the manifest reads only the
   repository tree. No network calls.
 - **Built without running an audit.** `lyse manifest` builds the Design

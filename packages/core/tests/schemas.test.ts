@@ -38,16 +38,26 @@ describe("JSON Schemas v1 — Draft 2020-12 validity", () => {
     expect(() => makeAjv().compile(schema)).not.toThrow();
   });
 
+  // These 4 schemas predate lyse-manifest.json and keep a pre-existing broken
+  // $id prefix: there is no root schemas/ directory on main (only
+  // packages/core/schemas/), so their plain "schemas/v1/…" pattern 404s — see
+  // docs/architecture/manifest.md §3. Fixing them is a separate, out-of-scope
+  // cleanup (packages/core/src/graph/persist.ts, reporters/json.ts). New v1
+  // schemas are NOT expected to need this exception — they get the correct,
+  // real repo-path prefix by default below.
+  const LEGACY_BROKEN_ID_PREFIX_FILES = new Set([
+    "lyse-config.json",
+    "lyse-event.json",
+    "lyse-result.json",
+    "lyse-rules.json",
+  ]);
+
   it.each(files)("%s has $id and $schema", (file) => {
     const schema = JSON.parse(readFileSync(join(SCHEMAS_DIR, file), "utf8"));
     expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
-    // lyse-manifest.json's $id points at its REAL repo path: there is no root
-    // schemas/ directory on main (only packages/core/schemas/), so the plain
-    // "schemas/v1/…" pattern the other schemas use 404s for it — see
-    // docs/architecture/manifest.md §3. The other v1 schemas keep that
-    // pre-existing broken pattern; fixing them is a separate, out-of-scope
-    // cleanup (packages/core/src/graph/persist.ts, reporters/json.ts).
-    const expectedPrefix = file === "lyse-manifest.json" ? "packages/core/schemas/v1" : "schemas/v1";
+    const expectedPrefix = LEGACY_BROKEN_ID_PREFIX_FILES.has(file)
+      ? "schemas/v1"
+      : "packages/core/schemas/v1";
     const idPattern = new RegExp(`^https://github\\.com/lyse-labs/lyse/raw/main/${expectedPrefix}/.+\\.json$`);
     expect(schema.$id).toMatch(idPattern);
   });
@@ -328,6 +338,88 @@ describe("lyse-manifest.json validates a DsManifest", () => {
     const token = rendered.tokens[0];
     if (!token) throw new Error("expected sampleGraph() to produce at least one token");
     token["axis"] = 42;
+    expect(validate(rendered)).toBe(false);
+  });
+
+  it("accepts a token carrying a not-yet-known source (open value space — §4 forward-compat)", () => {
+    // `source` is deliberately `type: "string"` rather than a closed `enum` in the
+    // schema (docs/architecture/manifest.md §4), so a future Lyse version can add
+    // a new TokenSource and the resulting manifest still validates against this
+    // SAME pinned v1 schema — no schemaVersion bump, no rejected manifest.
+    const validate = makeAjv().compile(schema);
+    const manifest = buildManifest(sampleGraph(), { version: "1.2.3" });
+    const rendered = JSON.parse(serializeManifest(manifest)) as { tokens: Array<Record<string, unknown>> };
+    const token = rendered.tokens[0];
+    if (!token) throw new Error("expected sampleGraph() to produce at least one token");
+    token["source"] = "not-a-real-source-yet";
+    const valid = validate(rendered);
+    if (!valid) console.error(validate.errors);
+    expect(valid).toBe(true);
+  });
+
+  it("accepts a component carrying a not-yet-known detection method (open value space — §4 forward-compat)", () => {
+    // `detection` is deliberately `type: "string"` rather than a closed `enum` in
+    // the schema (docs/architecture/manifest.md §4), so a future Lyse version can
+    // add a new ComponentDetection and the resulting manifest still validates
+    // against this SAME pinned v1 schema — no schemaVersion bump, no rejected
+    // manifest.
+    const validate = makeAjv().compile(schema);
+    const manifest = buildManifest(sampleGraph(), { version: "1.2.3" });
+    const rendered = JSON.parse(serializeManifest(manifest)) as { components: Array<Record<string, unknown>> };
+    const component = rendered.components[0];
+    if (!component) throw new Error("expected sampleGraph() to produce at least one component");
+    component["detection"] = "not-a-real-detection-yet";
+    const valid = validate(rendered);
+    if (!valid) console.error(validate.errors);
+    expect(valid).toBe(true);
+  });
+
+  it("accepts a usage entry carrying a not-yet-known kind (open value space — §4 forward-compat)", () => {
+    // `kind` is deliberately `type: "string"` rather than a closed `enum` in the
+    // schema (docs/architecture/manifest.md §4), so a future Lyse version can add
+    // a new UsageEdgeKind and the resulting manifest still validates against this
+    // SAME pinned v1 schema — no schemaVersion bump, no rejected manifest.
+    const validate = makeAjv().compile(schema);
+    const manifest = buildManifest(sampleGraph(), { version: "1.2.3" });
+    const rendered = JSON.parse(serializeManifest(manifest)) as { usage: Array<Record<string, unknown>> };
+    const usageEntry = rendered.usage[0];
+    if (!usageEntry) throw new Error("expected sampleGraph() to produce at least one usage entry");
+    usageEntry["kind"] = "not-a-real-kind-yet";
+    const valid = validate(rendered);
+    if (!valid) console.error(validate.errors);
+    expect(valid).toBe(true);
+  });
+
+  it("accepts a manifest carrying a new zone key with a non-negative integer count (open value space — §4 forward-compat)", () => {
+    // `zones` accepts additional properties beyond its 7 required keys
+    // (docs/architecture/manifest.md §4), so a future Lyse version can add a new
+    // zone kind and the resulting manifest still validates against this SAME
+    // pinned v1 schema — no schemaVersion bump, no rejected manifest.
+    const validate = makeAjv().compile(schema);
+    const manifest = buildManifest(sampleGraph(), { version: "1.2.3" });
+    const rendered = JSON.parse(serializeManifest(manifest)) as { zones: Record<string, unknown> };
+    rendered.zones["not-a-real-zone-kind-yet"] = 3;
+    const valid = validate(rendered);
+    if (!valid) console.error(validate.errors);
+    expect(valid).toBe(true);
+  });
+
+  it("rejects a new zone key whose count is a string (the open value space still requires a non-negative integer)", () => {
+    // The residual constraint worth pinning: `zones`' additionalProperties schema
+    // is `{ type: "integer", minimum: 0 }`, not an unbounded `true` — a new zone
+    // key still has to carry a genuine non-negative integer count.
+    const validate = makeAjv().compile(schema);
+    const manifest = buildManifest(sampleGraph(), { version: "1.2.3" });
+    const rendered = JSON.parse(serializeManifest(manifest)) as { zones: Record<string, unknown> };
+    rendered.zones["not-a-real-zone-kind-yet"] = "3";
+    expect(validate(rendered)).toBe(false);
+  });
+
+  it("rejects a new zone key whose count is negative (the open value space still requires a non-negative integer)", () => {
+    const validate = makeAjv().compile(schema);
+    const manifest = buildManifest(sampleGraph(), { version: "1.2.3" });
+    const rendered = JSON.parse(serializeManifest(manifest)) as { zones: Record<string, unknown> };
+    rendered.zones["not-a-real-zone-kind-yet"] = -1;
     expect(validate(rendered)).toBe(false);
   });
 
