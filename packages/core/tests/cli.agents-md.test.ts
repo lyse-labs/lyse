@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { execSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -20,7 +21,9 @@ describe("cli agents-md", () => {
   });
 
   it("writes AGENTS.md to --output file", () => {
-    const tmp = `/tmp/lyse-agents-md-${Date.now()}.md`;
+    // Use the real OS temp dir, not a hardcoded "/tmp": on Windows that resolves
+    // to D:\tmp, which need not exist, and the write fails with ENOENT.
+    const tmp = join(mkdtempSync(join(tmpdir(), "lyse-agents-md-")), "AGENTS.md");
     execSync(`node ${cli} agents-md ${fixture} --static-only --output ${tmp}`, { encoding: "utf8" });
     expect(existsSync(tmp)).toBe(true);
   });
