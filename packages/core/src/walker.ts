@@ -71,8 +71,10 @@ export const DEFAULT_EXCLUDE_PATHS = [
   "tests/**",
   "e2e/**",
   "**/fixtures/**",
+  "**/__fixtures__/**",
   "**/test-utils/**",
   "**/__tests__/**",
+  "**/__mocks__/**",
 
   // Build/dev tooling
   "scripts/**",
@@ -82,8 +84,13 @@ export const DEFAULT_EXCLUDE_PATHS = [
   "packages/@*/dev*/**",
   "**/build-tools/**",
 
-  // Storybook config (stories are scanned elsewhere)
+  // Storybook: config, plus any `stories/` subfolder. `*.stories.tsx` files
+  // co-located next to real components are scanned separately via
+  // `loadStories()`, not via this walker — but demo/example components that
+  // live INSIDE a `stories/` directory (e.g. `<pkg>/stories/components/*.tsx`,
+  // used only to compose a story) are never design-system source.
   "**/.storybook/**",
+  "**/stories/**",
 ];
 
 function readGitignore(root: string): string[] {

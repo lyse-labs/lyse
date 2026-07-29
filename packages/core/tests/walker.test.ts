@@ -79,6 +79,67 @@ describe("walker default excludes", () => {
     expect(rel).not.toContain(join("packages", "core", "fixtures", "full-ds.tsx"));
   });
 
+  it("excludes **/__mocks__/** by default", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "lyse-walker-defaults-"));
+    mkdirSync(join(tmp, "src"));
+    mkdirSync(join(tmp, "tools", "github", "__mocks__"), { recursive: true });
+    writeFileSync(join(tmp, "src", "a.tsx"), "export const x = 1;");
+    writeFileSync(join(tmp, "tools", "github", "__mocks__", "AiHandler.ts"), "export class AiHandler {}");
+
+    const files = await walk(tmp);
+    const rel = files.map((f) => posixRelative(tmp, f));
+    expect(rel).toContain("src/a.tsx");
+    expect(rel).not.toContain(join("tools", "github", "__mocks__", "AiHandler.ts"));
+  });
+
+  it("excludes **/__fixtures__/** by default (the Jest double-underscore convention, distinct from **/fixtures/**)", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "lyse-walker-defaults-"));
+    mkdirSync(join(tmp, "src"));
+    mkdirSync(join(tmp, "packages", "box", "__fixtures__"), { recursive: true });
+    writeFileSync(join(tmp, "src", "a.tsx"), "export const x = 1;");
+    writeFileSync(join(tmp, "packages", "box", "__fixtures__", "CustomizableBox.tsx"), "export const C = 1;");
+
+    const files = await walk(tmp);
+    const rel = files.map((f) => posixRelative(tmp, f));
+    expect(rel).toContain("src/a.tsx");
+    expect(rel).not.toContain(join("packages", "box", "__fixtures__", "CustomizableBox.tsx"));
+  });
+
+  it("excludes component files nested under a stories/ subfolder by default (Storybook demo components, e.g. <pkg>/stories/components/*.tsx)", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "lyse-walker-defaults-"));
+    mkdirSync(join(tmp, "src"));
+    mkdirSync(join(tmp, "packages", "data-grid", "stories", "components"), { recursive: true });
+    writeFileSync(join(tmp, "src", "a.tsx"), "export const x = 1;");
+    writeFileSync(
+      join(tmp, "packages", "data-grid", "stories", "components", "DataGridDemo.tsx"),
+      "export const D = 1;",
+    );
+
+    const files = await walk(tmp);
+    const rel = files.map((f) => posixRelative(tmp, f));
+    expect(rel).toContain("src/a.tsx");
+    expect(rel).not.toContain(join("packages", "data-grid", "stories", "components", "DataGridDemo.tsx"));
+  });
+
+  it("does not over-exclude legitimately-named dirs that merely contain 'mock'/'fixture'/'stor' as a substring, not an exact segment", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "lyse-walker-defaults-"));
+    mkdirSync(join(tmp, "packages", "mock-utils", "src"), { recursive: true });
+    mkdirSync(join(tmp, "packages", "fixture-generator", "src"), { recursive: true });
+    mkdirSync(join(tmp, "packages", "app", "src", "stores"), { recursive: true });
+    mkdirSync(join(tmp, "packages", "storybook-addon", "src"), { recursive: true });
+    writeFileSync(join(tmp, "packages", "mock-utils", "src", "MockUtils.tsx"), "export const M = 1;");
+    writeFileSync(join(tmp, "packages", "fixture-generator", "src", "Generator.tsx"), "export const G = 1;");
+    writeFileSync(join(tmp, "packages", "app", "src", "stores", "UserStore.tsx"), "export const U = 1;");
+    writeFileSync(join(tmp, "packages", "storybook-addon", "src", "Addon.tsx"), "export const A = 1;");
+
+    const files = await walk(tmp);
+    const rel = files.map((f) => posixRelative(tmp, f));
+    expect(rel).toContain("packages/mock-utils/src/MockUtils.tsx");
+    expect(rel).toContain("packages/fixture-generator/src/Generator.tsx");
+    expect(rel).toContain("packages/app/src/stores/UserStore.tsx");
+    expect(rel).toContain("packages/storybook-addon/src/Addon.tsx");
+  });
+
   it("merges user excludePaths with defaults (user paths extend, not replace)", async () => {
     const tmp = mkdtempSync(join(tmpdir(), "lyse-walker-defaults-"));
     mkdirSync(join(tmp, "src"));
