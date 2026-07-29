@@ -396,7 +396,7 @@ anchors. The output is deterministic (same repo → same report).
 
 ## `lyse agents`
 
-Generate an `AGENTS.md` file that summarizes your design system rules for AI coding agents.
+Generate an `AGENTS.md` file — a Markdown design-system contract for AI coding agents, rendered from the graph-derived DS Machine Manifest.
 
 ```
 lyse agents > AGENTS.md
@@ -404,12 +404,14 @@ lyse agents > AGENTS.md
 
 The generated file:
 
-- Lists all enabled rules with one-line descriptions.
-- Names the components module from `.lyse.yaml`.
-- Includes the intent map.
-- Names the auto-fixable rules so the agent prefers them.
+- Lists real token ids and values, grouped by axis (`colors`, `spacing`, …) — not namespace placeholders.
+- Documents component contracts: module, props (including string-literal variant lists), and Storybook story coverage.
+- Surfaces extraction-degradation warnings, naming the affected extractor and a remediation step, whenever token/component/story detection is incomplete.
+- Stamps a `token_set_hash` so an agent can tell the token set has changed since the file was last generated — note this hash covers the token set only, so a component-only change doesn't move it.
 
 Commit `AGENTS.md` to your repo. Cursor, Claude Code, and similar tools read it on session start.
+
+`lyse agents` renders the DS Machine Manifest contract as Markdown — same schema, same projection code as `lyse manifest` and the MCP `get_ds_manifest` tool; see [`docs/architecture/manifest.md`](../architecture/manifest.md) for the underlying JSON contract and schema. It is not guaranteed to print an identical manifest to `lyse manifest` for the same repo, though: the two commands build the Design System Graph through different entry points and can resolve `designSystem.componentsModule` differently — see [§7](../architecture/manifest.md#7-relationship-to-other-surfaces) for the full caveat.
 
 > **Deprecated alias:** `lyse agents-md` still works but is deprecated. Use `lyse agents` going forward.
 

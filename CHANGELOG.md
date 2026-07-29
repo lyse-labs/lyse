@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`lyse agents` (`AGENTS.md`) is now graph-derived and materially richer.** The generated contract no longer lists rule namespaces from a static template — it renders the same DS Machine Manifest contract as `lyse manifest`/`get_ds_manifest` (same schema, same projection code): real token ids and values grouped by axis, component contracts (module, props with string-literal variants, Storybook story coverage), extraction-degradation warnings with a remediation step, and a `token_set_hash` staleness marker. `lyse agents` and `lyse manifest` build the graph through different entry points, though (the former honours `.lyse.yaml`'s `designSystem.componentsModule`; the latter derives it from `package.json` detection only), so the component set can genuinely differ between them — they are not guaranteed to stay in lockstep. Same command, same flags (including the deprecated `lyse agents-md` alias) — only the generated content changes. Regenerate and re-commit `AGENTS.md` after upgrading; the old and new output are not textually comparable. Bug fix folded into this same change: each component contract's `file` field is always `null` for now — no extractor yet resolves a real source path at this layer (previously it briefly held the component's entire source text, an internal mismatch caught before release).
+
 - **`tokens/no-hardcoded-color` no longer flags design-universal trivial colours**
   (pure white, pure black, fully transparent) as drift, in any representation — they
   coincide with a token by ubiquity, not by intent. This removes a class of false

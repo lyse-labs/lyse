@@ -713,16 +713,8 @@ async function agentsHandler({ args }: { args: Record<string, unknown> }): Promi
   const agentFlags: AuditFlags = {
     ...(args["static-only"] === true ? { staticOnly: true } : {}),
   };
-  const { result, tokens, componentInventory } = await runAudit(repoRoot, agentFlags);
-  const namespaces: string[] = [];
-  if (tokens) {
-    if (tokens.colors.size > 0) namespaces.push("color/*");
-    if (tokens.spacing.size > 0) namespaces.push("spacing/*");
-  }
-  const md = renderAgentsMd(result, {
-    tokenNamespaces: namespaces,
-    components: componentInventory.map((c) => c.name),
-  });
+  const { result, graph } = await runAudit(repoRoot, agentFlags);
+  const md = renderAgentsMd(buildManifest(graph, { version: VERSION }), result);
 
   if (args.output) {
     const outputPath = resolve(args.output as string);

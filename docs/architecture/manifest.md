@@ -90,7 +90,7 @@ structured content.
 |---|---|---|
 | `name` | `string` | |
 | `module` | `string` | Import specifier, e.g. `"@acme/ds"`. |
-| `file` | `string \| null` | Source file path; `null` when it can't be resolved. |
+| `file` | `string \| null` | Source file path when resolvable. **Currently always `null`** — no extractor resolves a real path at this layer yet; treat the field as reserved for a future path-resolving extractor. |
 | `exportKind` | `"named" \| "default" \| "unknown"` | |
 | `isDesignSystem` | `boolean` | Whether this is recognized as design-system-owned, as opposed to a consumer's own component. |
 | `detection` | `string` (open value set) | How Lyse identified the component. One of `module-config`, `convention`, `story-backref`, `ds-self` today — this set can grow in a minor release ([§4](#4-versioning-policy)). |
@@ -173,7 +173,7 @@ keep the artifact small on large repos ([§5](#5-guarantees)).
     {
       "name": "Button",
       "module": "@acme/ds",
-      "file": "src/Button.tsx",
+      "file": null,
       "exportKind": "named",
       "isDesignSystem": true,
       "detection": "module-config",
@@ -293,6 +293,16 @@ Lyse exposes several graph-adjacent surfaces. They are not interchangeable:
   `advisory` (surfaced, never blocks). Call it *while writing code*.
   `get_ds_manifest`, by contrast, is what you read *before* writing code,
   to know what tokens and components already exist.
+- **`lyse agents`** renders this same manifest contract as Markdown
+  (`AGENTS.md`), for agents that read repo files instead of calling tools —
+  same schema, same projection code (`buildManifest`). It is **not**
+  guaranteed to print the identical manifest `lyse manifest` would for the
+  same repo, though: `lyse agents` builds the graph through the full audit
+  pipeline, which honours `.lyse.yaml`'s `designSystem.componentsModule`,
+  while `lyse manifest` builds it via `buildGraphForRoot`, which derives that
+  module from `package.json` detection only. When a repo sets
+  `componentsModule` explicitly, the two commands' component sets (and
+  extraction warnings) can genuinely differ.
 
 See [`docs/guide/mcp-server.md`](../guide/mcp-server.md) for the full MCP
 tool reference and [`docs/architecture/mcp-server.md`](./mcp-server.md) for

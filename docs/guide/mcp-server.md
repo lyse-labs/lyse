@@ -319,14 +319,16 @@ Commit an `AGENTS.md` file to your repo:
 npx @lyse-labs/lyse agents > AGENTS.md
 ```
 
-This summarizes:
+This renders the DS Machine Manifest as Markdown — the same contract `lyse manifest` and the MCP `get_ds_manifest` tool expose, but as a repo file an agent reads on session start instead of a tool call. It summarizes:
 
-- Available rules.
-- The components module (`@your-org/ui`).
-- The intent map.
-- Which rules are auto-fixable.
+- Real token ids and values, grouped by axis.
+- Component contracts: module, props (including string-literal variant lists), detection method, and Storybook story coverage.
+- Extraction-degradation warnings, naming the affected extractor and a remediation step, when token/component/story detection is incomplete.
+- A fixed set of hard rules for AI-generated code (no hardcoded colors, prefer DS form elements, basic a11y, ship a story) and a `token_set_hash` staleness marker.
 
-Cursor / Claude Code / Codex read `AGENTS.md` on session start. Together with the MCP server, this gives the agent a complete picture: what the rules are, which to call, what's auto-fixable.
+See [`docs/architecture/manifest.md`](../architecture/manifest.md) for the full field reference.
+
+Cursor / Claude Code / Codex read `AGENTS.md` on session start. Together with the MCP server, this gives the agent the design system's current tokens and component contracts up front, without an extra tool call before its first edit.
 
 ## Latency
 
