@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lyse-labs/lyse/raw/main/packages/core/schemas/v1/lyse-manifest.json",
+  "title": "Lyse DS Machine Manifest",
+  "description": "The DS Machine Manifest (schemaVersion 1): a stable, versioned, graph-derived contract describing a design system for machine consumers (agents, MCP clients, CI). Mirrors DsManifest in packages/core/src/manifest/types.ts. Built without running an audit — never affects the Health Score. Versioning policy in docs/architecture/manifest.md.",
+  "type": "object",
+  "required": ["schemaVersion", "generator", "tokenSetHash", "tokens", "components", "zones", "usage", "extraction"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string", "format": "uri" },
+    "schemaVersion": { "const": 1 },
+    "generator": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "const": "lyse" },
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+" }
+      }
+    },
+    "tokenSetHash": {
+      "type": "string",
+      "description": "Opaque content hash covering the token set only (id + axis + value). Stable across component-only or usage-only changes — see docs/architecture/manifest.md."
+    },
+    "tokens": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "axis", "value", "source"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "axis": {
+            "type": "string",
+            "description": "Token axis. Open value space — currently known values: colors, spacing, typography, radii, shadows, motion, breakpoints, zIndex, opacity, borderWidth. A future release may add a new axis without bumping schemaVersion (docs/architecture/manifest.md §4)."
+          },
+          "value": { "type": "string" },
+          "source": {
+            "type": "string",
+            "description": "Where this token was declared. Open value space — currently known values: tailwind-v3, tailwind-v4, dtcg, css-custom-property, scss-variable, style-dictionary, tokens-studio, figma-variables, external-package. A future release may add a new source without bumping schemaVersion (docs/architecture/manifest.md §4)."
+          }
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "module", "file", "exportKind", "isDesignSystem", "detection", "usageCount", "props", "storyCount"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "module": { "type": "string" },
+          "file": { "type": ["string", "null"] },
+          "exportKind": { "type": "string", "enum": ["named", "default", "unknown"] },
+          "isDesignSystem": { "type": "boolean" },
+          "detection": {
+            "type": "string",
+            "description": "How Lyse identified the component. Open value space — currently known values: module-config, convention, story-backref, ds-self. A future release may add a new detection method without bumping schemaVersion (docs/architecture/manifest.md §4)."
+          },
+          "usageCount": { "type": "integer", "minimum": 0 },
+          "props": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "type", "optional", "default", "variants"],
+              "additionalProperties": false,
+              "properties": {
+                "name": { "type": "string" },
+                "type": { "type": ["string", "null"] },
+                "optional": { "type": "boolean" },
+                "default": { "type": ["string", "null"] },
+                "variants": {
+                  "type": ["array", "null"],
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          },
+          "storyCount": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "zones": {
+      "type": "object",
+      "description": "Per-zone-kind file counts. These 7 kinds are always present, even at 0 — an absent key would be ambiguous with a genuine zero. Open value space: a future release may add a new zone-kind key without bumping schemaVersion (docs/architecture/manifest.md §4) — any additional key must still be a non-negative integer.",
+      "required": ["ds-source", "app", "story", "test", "generated", "vendored", "config"],
+      "additionalProperties": { "type": "integer", "minimum": 0 },
+      "properties": {
+        "ds-source": { "type": "integer", "minimum": 0 },
+        "app": { "type": "integer", "minimum": 0 },
+        "story": { "type": "integer", "minimum": 0 },
+        "test": { "type": "integer", "minimum": 0 },
+        "generated": { "type": "integer", "minimum": 0 },
+        "vendored": { "type": "integer", "minimum": 0 },
+        "config": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "usage": {
+      "type": "array",
+      "description": "Aggregated by kind (files touched + total count) — never a per-file edge list.",
+      "items": {
+        "type": "object",
+        "required": ["kind", "files", "count"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "Usage edge kind. Open value space — currently the only known value is imports-ds-module. A future release may add a new kind without bumping schemaVersion (docs/architecture/manifest.md §4)."
+          },
+          "files": { "type": "integer", "minimum": 0 },
+          "count": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "extraction": {
+      "type": "object",
+      "description": "Always present. A degraded/failed extractor with its remediation is how a consumer knows the surface is thin, instead of mistaking an empty list for 'no tokens'.",
+      "required": ["entries", "conflicts"],
+      "additionalProperties": false,
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["extractor", "status", "evidence", "remediation"],
+            "additionalProperties": false,
+            "properties": {
+              "extractor": { "type": "string", "enum": ["tokens", "components", "stories", "zones"] },
+              "status": { "type": "string", "enum": ["ok", "degraded", "failed"] },
+              "evidence": {
+                "type": "object",
+                "additionalProperties": { "type": "integer", "minimum": 0 }
+              },
+              "remediation": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "conflicts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["axis", "value", "tokenIds", "sources"],
+            "additionalProperties": false,
+            "properties": {
+              "axis": {
+                "type": "string",
+                "description": "Same open token-axis value space as tokens[].axis (docs/architecture/manifest.md §4)."
+              },
+              "value": { "type": "string" },
+              "tokenIds": { "type": "array", "items": { "type": "string" } },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Same open token-source value space as tokens[].source (docs/architecture/manifest.md §4)."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -36,10 +36,18 @@ lyse init --scaffold        # generate missing AI-readiness files (llms.txt, AGE
 lyse init --migrate-tokens  # convert legacy {value,type} token JSON to DTCG ({$value,$type})
 lyse explain X    # rationale + examples for a rule
 lyse mcp setup    # wire MCP into Cursor / Claude Code / Codex
+lyse manifest     # print the versioned, graph-derived DS Machine Manifest for agents/CI
 lyse add ci-gate  # install the diff-first CI gate (.github/workflows/lyse.yml)
 lyse baseline write  # record accepted findings to .lyse/baseline.json (commit it)
 lyse share        # copy a Markdown summary to your clipboard
 ```
+
+`lyse manifest` (also served over MCP as `get_ds_manifest`) publishes a
+stable, versioned contract describing the design system — tokens,
+component contracts, zone summary, extraction status — for coding agents,
+MCP clients, and CI. Built without running an audit, so it never affects
+the Health Score. Schema and versioning policy in
+[`docs/architecture/manifest.md`](./docs/architecture/manifest.md).
 
 > **Trust boundary.** By default, `lyse handoff` launches your coding agent with its permission prompts bypassed so it can apply fixes unattended — only run it on repositories you trust. It confirms before spawning (`Continue? [y/N]`, skipped under `--yes` or non-interactively); pass `--review` to keep the agent's own per-action permission prompts instead.
 

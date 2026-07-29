@@ -23,6 +23,7 @@ Commands:
 | `lyse badge` | Print a shields.io Health Score badge for your README. |
 | `lyse explain <rule-id>` | Print rule rationale, examples, allowlist guidance. |
 | `lyse agents` | Generate an `AGENTS.md` summary for AI coding agents. |
+| `lyse manifest [path]` | Print the DS Machine Manifest — a stable, versioned, graph-derived contract for machine consumers (agents, MCP clients, CI). |
 | `lyse mcp` | Start the MCP server over stdio (called by your IDE). |
 | `lyse mcp setup` | Write the MCP config block to your IDE's config file. |
 | `lyse feedback --missed <file>:<line>` | Submit a missed-finding signal (opt-in; per-call confirmation). |
@@ -412,6 +413,39 @@ Commit `AGENTS.md` to your repo. Cursor, Claude Code, and similar tools read it 
 
 > **Deprecated alias:** `lyse agents-md` still works but is deprecated. Use `lyse agents` going forward.
 
+## `lyse manifest [path]`
+
+Print the DS Machine Manifest — a stable, versioned, graph-derived contract describing a design system's tokens, component contracts, zone summary, and extraction status, for machine consumers (coding agents, MCP clients, CI).
+
+```
+lyse manifest [path] [options]
+```
+
+`path` defaults to `.` (current directory).
+
+Unlike `lyse audit`, `lyse manifest` **runs no audit and needs no network access** — it builds the Design System Graph directly from the repository tree and projects it onto the published contract, without running the scorer or producing findings. Generating a manifest never touches your Health Score.
+
+### Options
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--output <path>` | string | stdout | Write the manifest to a file instead of stdout. Prompts before overwriting an existing file (respects `--yes` / `--no-prompt`). |
+
+### Examples
+
+```bash
+# Print the manifest for the current directory
+lyse manifest
+
+# A specific path
+lyse manifest ./apps/web
+
+# Write to a file
+lyse manifest . --output manifest.json
+```
+
+The manifest is deterministic — the same repo state produces byte-identical output (sorted keys, trailing newline) — and is served identically over MCP as `get_ds_manifest`. See [`docs/architecture/manifest.md`](../architecture/manifest.md) for the full JSON Schema and SemVer policy.
+
 ## `lyse mcp`
 
 Start the MCP server over stdio. This is normally invoked by your IDE, not directly from a terminal.
@@ -420,14 +454,15 @@ Start the MCP server over stdio. This is normally invoked by your IDE, not direc
 lyse mcp
 ```
 
-The server exposes four tools:
+The server exposes five tools:
 
 | Tool | Use case |
 |---|---|
 | `audit_file(path, content?)` | Audit a single file. `content` lets the agent pass an unsaved buffer. |
 | `suggest_fix(path, rule_id, line)` | Return a unified diff that fixes a finding. |
 | `preflight_diff(path, content)` | Validate a proposed edit *before* it lands, with a block/pass verdict. |
-| `get_design_system_graph(project_root)` | Return the reified Design System Graph (tokens, components, stories, zones, extraction report) for a project. |
+| `get_ds_manifest(project_root)` | Return the DS Machine Manifest — the stable, versioned contract for tokens, component contracts, zone summary, and extraction status. Read this before writing code. |
+| `get_design_system_graph(project_root)` | Return the reified, **internal/unstable** Design System Graph (tokens, components, stories, zones, extraction report) for a project — a debugging view; prefer `get_ds_manifest` for anything you depend on. |
 
 Configure in your IDE's MCP file (`.cursor/mcp.json`, `.mcp.json`). See [`mcp-server.md`](./mcp-server.md) for full setup.
 

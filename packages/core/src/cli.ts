@@ -66,6 +66,9 @@ import { stableRuleIds } from "./reliability/score/stable-sub-axes.js";
 import { SUB_AXES } from "./reliability/catalogue/sub-axes.js";
 import { writeGraph } from "./graph/persist.js";
 import type { DesignSystemGraph } from "./graph/types.js";
+import { buildGraphForRoot } from "./graph/build-io.js";
+import { buildManifest } from "./manifest/build.js";
+import { serializeManifest } from "./manifest/serialize.js";
 
 import type { TerminalOpts } from "./reporters/terminal-format.js";
 
@@ -787,6 +790,53 @@ const agentsMdCommand = defineCommand({
   },
 });
 
+const manifestCommand = defineCommand({
+  meta: {
+    name: "manifest",
+    description: "Print the DS Machine Manifest (versioned, graph-derived) for <path>",
+  },
+  args: {
+    root: { type: "positional", required: false, default: ".", description: "repository root" },
+    output: { type: "string", description: "Write to a file instead of stdout" },
+    ...GLOBAL_FLAGS,
+  },
+  async run({ args }) {
+    applyGlobalFlags(args);
+    const repoRoot = resolve((args.root as string) ?? ".");
+    const graph = await buildGraphForRoot(repoRoot);
+    const json = serializeManifest(buildManifest(graph, { version: VERSION }));
+
+    if (args.output) {
+      const outputPath = resolve(args.output as string);
+      let fileExists = false;
+      try {
+        await access(outputPath);
+        fileExists = true;
+      } catch {
+        // File doesn't exist — safe to write
+      }
+      if (fileExists) {
+        if (process.env.LYSE_YES === "1") {
+          // Auto-approved — overwrite silently
+        } else if (process.env.LYSE_NO_PROMPT === "1") {
+          console.error(`${outputPath} exists. Use --yes to overwrite.`);
+          process.exit(1);
+        } else {
+          const ok = await confirm(`${outputPath} exists. Overwrite?`, false);
+          if (!ok) {
+            console.log("Aborted (existing file preserved).");
+            return;
+          }
+        }
+      }
+      writeFileSync(outputPath, json);
+      console.log(`Wrote ${outputPath}`);
+    } else {
+      process.stdout.write(json);
+    }
+  },
+});
+
 const versionCommand = defineCommand({
   meta: { name: "version", description: "Print tool, rules, and schema versions" },
   args: { ...GLOBAL_FLAGS },
@@ -1246,7 +1296,7 @@ const main = defineCommand({
     "no-color": { type: "boolean", description: "Disable ANSI color output" },
     quiet: { type: "boolean", description: "Suppress informational output" },
   },
-  subCommands: { init: initCommand, audit: auditCommand, fix: fixCommand, add: addCommand, install: installCommand, share: shareCommand, badge: badgeCommand, baseline: baselineCommand, agents: agentsCommand, "agents-md": agentsMdCommand, handoff: handoffCommand, "bench-pack": benchPackCommand, version: versionCommand, explain: explainCommand, mcp: mcpCommand, feedback: feedbackCommand, telemetry: telemetryCommand },
+  subCommands: { init: initCommand, audit: auditCommand, fix: fixCommand, add: addCommand, install: installCommand, share: shareCommand, badge: badgeCommand, baseline: baselineCommand, agents: agentsCommand, "agents-md": agentsMdCommand, manifest: manifestCommand, handoff: handoffCommand, "bench-pack": benchPackCommand, version: versionCommand, explain: explainCommand, mcp: mcpCommand, feedback: feedbackCommand, telemetry: telemetryCommand },
   async run({ args, cmd, rawArgs }) {
     applyGlobalFlags(args);
 
