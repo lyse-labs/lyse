@@ -194,9 +194,9 @@ and is the same file the `$schema` URL above resolves to.
   Existing consumers keep working unmodified.
 - **Removing a field, renaming a field, or changing what a field means**
   (its type or semantics) **is major**. Once ratified (see
-  [§8](#8-status)), a major change requires an owner ADR and goes through
-  the deferred-veto channel before shipping — it is not a change an agent
-  or a single contributor can make unilaterally.
+  [§8](#8-status)), a major change requires an explicit maintainer-approved
+  ADR before shipping — it is not a change an agent or a single contributor
+  can make unilaterally.
 
 ## 5. Guarantees
 
@@ -239,9 +239,11 @@ Lyse exposes several graph-adjacent surfaces. They are not interchangeable:
   it back. It's for a human inspecting repo state, not a contract.
 - **MCP `preflight_diff`** is the **write-time prevention** tool: pass it a
   proposed post-edit file buffer and it audits that buffer before you save
-  it, returning a `pass` / `blocked` / `advisory` verdict. Call it *while
-  writing code*. `get_ds_manifest`, by contrast, is what you read *before*
-  writing code, to know what tokens and components already exist.
+  it, returning a `pass`/`blocked` verdict with findings partitioned into
+  `blocking` (only stable rules can block) and `advisory` (surfaced, never
+  blocks). Call it *while writing code*. `get_ds_manifest`, by contrast, is
+  what you read *before* writing code, to know what tokens and components
+  already exist.
 
 See [`docs/guide/mcp-server.md`](../guide/mcp-server.md) for the full MCP
 tool reference and [`docs/architecture/mcp-server.md`](./mcp-server.md) for
