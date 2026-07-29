@@ -1,12 +1,11 @@
 import { readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 import { walk, DEFAULT_EXCLUDE_PATHS } from "../walker.js";
 import { parseTs } from "../parsers/ts.js";
 import { parseCss } from "../parsers/css.js";
 import { loadStories } from "../loaders/stories.js";
-import { componentNameFromPath } from "../loaders/components.js";
 import { detectFromPackageJson } from "../detection/from-package-json.js";
-import { resolveComponentsModule, buildInventoryForMode } from "../detection/components-resolution.js";
+import { resolveComponentsModule, buildInventoryForMode, resolveComponentSources } from "../detection/components-resolution.js";
 import { posixRelative } from "../util/paths.js";
 import { buildDesignSystemGraph } from "./builder.js";
 import { loadConfig } from "../config/schema.js";
@@ -39,20 +38,13 @@ export async function buildGraphForRoot(root: string): Promise<DesignSystemGraph
   );
 
   const storyIndex = await loadStories(absoluteRoot);
-  const componentSources = new Map<string, string>();
-  // Absolute path per component — lets buildInventoryForMode's ds-self branch
-  // attribute each component to its OWN workspace package.json rather than
-  // stamping every component with the single monorepo-wide componentsModule.
-  const componentFilePaths = new Map<string, string>();
-  for (const [rel, src] of fileContents) {
-    const resolved = componentNameFromPath(rel);
-    if (resolved === null) continue;
-    if (!resolved.strong && !storyIndex?.byTitle.has(resolved.name)) continue;
-    if (!componentSources.has(resolved.name)) {
-      componentSources.set(resolved.name, src);
-      componentFilePaths.set(resolved.name, join(absoluteRoot, rel));
-    }
-  }
+  // componentFilePaths: absolute path per component — lets buildInventoryForMode's
+  // ds-self branch attribute each component to its OWN workspace package.json
+  // rather than stamping every component with the single monorepo-wide
+  // componentsModule. Name collisions across files are resolved by
+  // resolveComponentSources's deterministic canonical-preference order, not
+  // by walk order — see its doc comment.
+  const { componentSources, componentFilePaths } = resolveComponentSources(fileContents, absoluteRoot, storyIndex);
   const baseInventory = buildInventoryForMode({
     componentsModule,
     dsSelfMode,

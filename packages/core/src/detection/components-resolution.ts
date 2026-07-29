@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import type { ComponentInventoryEntry, ParsedFiles } from "../types.js";
-import { buildComponentInventory, extractComponentProps } from "../loaders/components.js";
+import type { ComponentInventoryEntry, ParsedFiles, StoryIndex } from "../types.js";
+import { buildComponentInventory, componentNameFromPath, extractComponentProps } from "../loaders/components.js";
 import type { DetectionResult } from "./types.js";
 
 /**
@@ -12,21 +12,27 @@ import type { DetectionResult } from "./types.js";
  */
 const MAX_PACKAGE_JSON_WALK_HOPS = 12;
 
+/** Nearest-ancestor `package.json` facts relevant to component resolution. */
+interface OwningPackageInfo {
+  name: string;
+  private: boolean;
+}
+
 /**
- * Resolve the `name` of the nearest-ancestor `package.json` for an absolute
- * component file path, walking up at most `MAX_PACKAGE_JSON_WALK_HOPS`
+ * Resolve the nearest-ancestor `package.json` (name + `private` flag) for an
+ * absolute component file path, walking up at most `MAX_PACKAGE_JSON_WALK_HOPS`
  * parent directories and stopping at the filesystem root. Returns null when
  * no ancestor has a `package.json` with a non-empty `name` — callers must
- * fall back to a known-good module rather than inventing one.
+ * fall back to a known-good default rather than inventing one.
  *
- * `cache` memoises directory -> resolved name (or null) so a monorepo with
+ * `cache` memoises directory -> resolved info (or null) so a monorepo with
  * hundreds of components under a handful of packages reads each
- * `package.json` at most once per `buildInventoryForMode` call.
+ * `package.json` at most once per caller.
  */
-function resolveOwningPackageName(absoluteFilePath: string, cache: Map<string, string | null>): string | null {
+function resolveOwningPackage(absoluteFilePath: string, cache: Map<string, OwningPackageInfo | null>): OwningPackageInfo | null {
   const visited: string[] = [];
   let dir = dirname(absoluteFilePath);
-  let result: string | null = null;
+  let result: OwningPackageInfo | null = null;
 
   for (let hop = 0; hop < MAX_PACKAGE_JSON_WALK_HOPS; hop++) {
     const cached = cache.get(dir);
@@ -39,9 +45,9 @@ function resolveOwningPackageName(absoluteFilePath: string, cache: Map<string, s
     const pkgJsonPath = join(dir, "package.json");
     if (existsSync(pkgJsonPath)) {
       try {
-        const pkg = JSON.parse(readFileSync(pkgJsonPath, "utf8")) as { name?: unknown };
+        const pkg = JSON.parse(readFileSync(pkgJsonPath, "utf8")) as { name?: unknown; private?: unknown };
         if (typeof pkg.name === "string" && pkg.name.length > 0) {
-          result = pkg.name;
+          result = { name: pkg.name, private: pkg.private === true };
           break;
         }
       } catch {
@@ -56,6 +62,110 @@ function resolveOwningPackageName(absoluteFilePath: string, cache: Map<string, s
 
   for (const d of visited) cache.set(d, result);
   return result;
+}
+
+/** Thin projection of `resolveOwningPackage` for callers that only need the name. */
+function resolveOwningPackageName(absoluteFilePath: string, cache: Map<string, OwningPackageInfo | null>): string | null {
+  return resolveOwningPackage(absoluteFilePath, cache)?.name ?? null;
+}
+
+/** True when `rel` (repo-relative, `/`-separated) has a `src` path segment. */
+function isUnderSrcDir(rel: string): boolean {
+  return rel.split("/").includes("src");
+}
+
+/** A component-name candidate collected while scanning a repo's file contents. */
+interface ComponentSourceCandidate {
+  rel: string;
+  absolutePath: string;
+  src: string;
+  strong: boolean;
+}
+
+/**
+ * Decide whether `candidate` should replace `existing` as the canonical
+ * source for a component name both files claim. Total, deterministic order
+ * (most to least important):
+ *
+ *   1. A strong signal (PascalCase filename, e.g. `Button.tsx`) beats a weak
+ *      one (directory-derived, e.g. `button/index.tsx`) — weak names are
+ *      only admitted at all when corroborated by a matching Storybook title,
+ *      so this just prefers the more direct signal among admitted names.
+ *   2. A file inside a non-private package (nearest-ancestor `package.json`
+ *      lacks `"private": true`) beats one inside a private package — an
+ *      internal QA/tooling package must never shadow the real component it
+ *      imports.
+ *   3. Among equals, a path under a `src/` directory beats one that isn't.
+ *   4. Among still-equals, `existing` (the first-encountered file, in walk
+ *      order) is kept — never replaced — so behaviour stays deterministic
+ *      without this function inventing a tie-break.
+ */
+function isMoreCanonical(
+  candidate: ComponentSourceCandidate,
+  existing: ComponentSourceCandidate,
+  packageInfoCache: Map<string, OwningPackageInfo | null>,
+): boolean {
+  if (candidate.strong !== existing.strong) return candidate.strong;
+
+  const candidatePrivate = resolveOwningPackage(candidate.absolutePath, packageInfoCache)?.private ?? false;
+  const existingPrivate = resolveOwningPackage(existing.absolutePath, packageInfoCache)?.private ?? false;
+  if (candidatePrivate !== existingPrivate) return existingPrivate;
+
+  const candidateUnderSrc = isUnderSrcDir(candidate.rel);
+  const existingUnderSrc = isUnderSrcDir(existing.rel);
+  if (candidateUnderSrc !== existingUnderSrc) return candidateUnderSrc;
+
+  return false;
+}
+
+export interface ComponentSourceResolution {
+  componentSources: Map<string, string>;
+  componentFilePaths: Map<string, string>;
+}
+
+/**
+ * Resolve one canonical source file per component name from a repo's full
+ * file contents (`rel path -> source text`), deduping name collisions with
+ * the deterministic preference order documented on `isMoreCanonical` instead
+ * of "whichever the walker reached first".
+ *
+ * Shared by both the `lyse manifest` graph build (`graph/build-io.ts`) and
+ * the audit pipeline (`commands/audit-pipeline.ts`) so the two paths can
+ * never resolve the same repo to different component attributions — that
+ * exact divergence was a previously-fixed bug on this branch.
+ */
+export function resolveComponentSources(
+  fileContents: Map<string, string>,
+  absoluteRoot: string,
+  storyIndex: StoryIndex | null,
+): ComponentSourceResolution {
+  const winners = new Map<string, ComponentSourceCandidate>();
+  const packageInfoCache = new Map<string, OwningPackageInfo | null>();
+
+  for (const [rel, src] of fileContents) {
+    const resolved = componentNameFromPath(rel);
+    if (resolved === null) continue;
+    if (!resolved.strong && !storyIndex?.byTitle.has(resolved.name)) continue;
+
+    const candidate: ComponentSourceCandidate = {
+      rel,
+      absolutePath: join(absoluteRoot, rel),
+      src,
+      strong: resolved.strong,
+    };
+    const existing = winners.get(resolved.name);
+    if (existing === undefined || isMoreCanonical(candidate, existing, packageInfoCache)) {
+      winners.set(resolved.name, candidate);
+    }
+  }
+
+  const componentSources = new Map<string, string>();
+  const componentFilePaths = new Map<string, string>();
+  for (const [name, candidate] of winners) {
+    componentSources.set(name, candidate.src);
+    componentFilePaths.set(name, candidate.absolutePath);
+  }
+  return { componentSources, componentFilePaths };
 }
 
 export function resolveComponentsModule(
@@ -101,7 +211,7 @@ export function buildInventoryForMode(input: {
   // via extractComponentProps so rules like stories/props-documented can fire).
   if (dsSelfMode && componentsModule) {
     const fallbackModule = componentsModule;
-    const packageNameCache = new Map<string, string | null>();
+    const packageNameCache = new Map<string, OwningPackageInfo | null>();
     return [...componentSources.entries()].map(([name, src]) => {
       const filePath = componentFilePaths?.get(name);
       const owningModule = filePath ? resolveOwningPackageName(filePath, packageNameCache) : null;

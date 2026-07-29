@@ -2,9 +2,9 @@ import { describe, it, expect } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { resolveComponentsModule, buildInventoryForMode } from "./components-resolution.js";
+import { resolveComponentsModule, buildInventoryForMode, resolveComponentSources } from "./components-resolution.js";
 import type { DetectionResult } from "./types.js";
-import type { ParsedTsFile } from "../types.js";
+import type { ParsedTsFile, StoryIndex } from "../types.js";
 
 describe("resolveComponentsModule", () => {
   it("explicit config wins over detection, and detection is not consulted for dsSelfMode", () => {
@@ -215,5 +215,140 @@ describe("buildInventoryForMode", () => {
 
       expect(result.every((e) => e.module === "@acme/ui")).toBe(true);
     });
+  });
+});
+
+describe("resolveComponentSources", () => {
+  it("prefers a non-private package over a private one, even when the private file is walked first (the Menu/token-contrast-checker shape)", () => {
+    const root = mkdtempSync(join(tmpdir(), "lyse-cr-canon-"));
+    mkdirSync(join(root, "packages", "internal-tool", "src", "components"), { recursive: true });
+    mkdirSync(join(root, "packages", "menu", "src"), { recursive: true });
+    writeFileSync(
+      join(root, "packages", "internal-tool", "package.json"),
+      JSON.stringify({ name: "@acme/internal-tool", private: true }),
+    );
+    writeFileSync(join(root, "packages", "menu", "package.json"), JSON.stringify({ name: "@acme/menu" }));
+    const fakeSrc = `export function PlainMenu() { return null; }`;
+    const realSrc = `export function Menu({ variant }: { variant: "default" }) { return null; }`;
+
+    // Walk order: the PRIVATE file is walked first — the exact real-world bug shape.
+    const fileContents = new Map<string, string>([
+      ["packages/internal-tool/src/components/Menu.tsx", fakeSrc],
+      ["packages/menu/src/Menu.tsx", realSrc],
+    ]);
+
+    const { componentSources, componentFilePaths } = resolveComponentSources(fileContents, root, null);
+
+    expect(componentSources.get("Menu")).toBe(realSrc);
+    expect(componentFilePaths.get("Menu")).toBe(join(root, "packages", "menu", "src", "Menu.tsx"));
+  });
+
+  it("still prefers non-private when the non-private file happens to be walked first (proves it's a rule, not luck)", () => {
+    const root = mkdtempSync(join(tmpdir(), "lyse-cr-canon-order2-"));
+    mkdirSync(join(root, "packages", "internal-tool", "src"), { recursive: true });
+    mkdirSync(join(root, "packages", "menu", "src"), { recursive: true });
+    writeFileSync(
+      join(root, "packages", "internal-tool", "package.json"),
+      JSON.stringify({ name: "@acme/internal-tool", private: true }),
+    );
+    writeFileSync(join(root, "packages", "menu", "package.json"), JSON.stringify({ name: "@acme/menu" }));
+    const realSrc = `export function Menu() { return null; }`;
+    const fakeSrc = `export function PlainMenu() { return null; }`;
+
+    const fileContents = new Map<string, string>([
+      ["packages/menu/src/Menu.tsx", realSrc],
+      ["packages/internal-tool/src/Menu.tsx", fakeSrc],
+    ]);
+
+    const { componentSources } = resolveComponentSources(fileContents, root, null);
+    expect(componentSources.get("Menu")).toBe(realSrc);
+  });
+
+  it("among two non-private candidates, prefers the one under a src/ directory", () => {
+    const root = mkdtempSync(join(tmpdir(), "lyse-cr-canon-src-"));
+    mkdirSync(join(root, "packages", "widget", "src"), { recursive: true });
+    mkdirSync(join(root, "packages", "widget", "dist"), { recursive: true });
+    writeFileSync(join(root, "packages", "widget", "package.json"), JSON.stringify({ name: "@acme/widget" }));
+    const distSrc = `export function Widget() { return "compiled"; }`;
+    const srcSrc = `export function Widget() { return "source"; }`;
+
+    // dist/ walked first, src/ second — src/ must still win.
+    const fileContents = new Map<string, string>([
+      ["packages/widget/dist/Widget.tsx", distSrc],
+      ["packages/widget/src/Widget.tsx", srcSrc],
+    ]);
+
+    const { componentSources } = resolveComponentSources(fileContents, root, null);
+    expect(componentSources.get("Widget")).toBe(srcSrc);
+  });
+
+  it("falls back to first-encountered (walk order) when private and src/ both tie — the genuine cross-package collision shape (Td in table/ vs data-grid/)", () => {
+    const root = mkdtempSync(join(tmpdir(), "lyse-cr-canon-tie-"));
+    mkdirSync(join(root, "packages", "table", "src"), { recursive: true });
+    mkdirSync(join(root, "packages", "data-grid", "src", "table"), { recursive: true });
+    writeFileSync(join(root, "packages", "table", "package.json"), JSON.stringify({ name: "@acme/table" }));
+    writeFileSync(join(root, "packages", "data-grid", "package.json"), JSON.stringify({ name: "@acme/data-grid" }));
+    const tableSrc = `export function Td() { return "table"; }`;
+    const gridSrc = `export function Td() { return "grid"; }`;
+
+    const fileContents = new Map<string, string>([
+      ["packages/table/src/Td.tsx", tableSrc],
+      ["packages/data-grid/src/table/Td.tsx", gridSrc],
+    ]);
+    const { componentSources } = resolveComponentSources(fileContents, root, null);
+    // Neither private nor src/ discriminate here (both non-private, both under
+    // src/) — the first-encountered file (walk/insertion order) deterministically
+    // wins, exactly as documented for the bottom tier.
+    expect(componentSources.get("Td")).toBe(tableSrc);
+
+    // Reversed insertion order flips the winner — proving the result tracks
+    // walk order, not an accidental alphabetical/path artifact.
+    const reversed = new Map<string, string>([
+      ["packages/data-grid/src/table/Td.tsx", gridSrc],
+      ["packages/table/src/Td.tsx", tableSrc],
+    ]);
+    const { componentSources: reversedSources } = resolveComponentSources(reversed, root, null);
+    expect(reversedSources.get("Td")).toBe(gridSrc);
+  });
+
+  it("a strong (PascalCase filename) candidate beats a weak (dir-derived, story-corroborated) one, regardless of walk order", () => {
+    const root = mkdtempSync(join(tmpdir(), "lyse-cr-canon-strong-"));
+    mkdirSync(join(root, "packages", "button"), { recursive: true });
+    writeFileSync(join(root, "packages", "button", "package.json"), JSON.stringify({ name: "@acme/button" }));
+    const weakSrc = `export function Button() { return "weak"; }`;
+    const strongSrc = `export function Button() { return "strong"; }`;
+    const storyIndex: StoryIndex = { byTitle: new Map([["Button", { id: "button", importPath: "x" }]]) };
+
+    // Weak (dir-derived: packages/button/button.tsx) walked first, strong second.
+    const fileContents = new Map<string, string>([
+      ["packages/button/button.tsx", weakSrc],
+      ["packages/button/Button.tsx", strongSrc],
+    ]);
+    const { componentSources } = resolveComponentSources(fileContents, root, storyIndex);
+    expect(componentSources.get("Button")).toBe(strongSrc);
+  });
+
+  it("skips a weak (dir-derived) name entirely when no Storybook title corroborates it", () => {
+    const root = mkdtempSync(join(tmpdir(), "lyse-cr-canon-weakskip-"));
+    const fileContents = new Map<string, string>([["packages/utils/index.tsx", `export function noop() {}`]]);
+    const { componentSources } = resolveComponentSources(fileContents, root, null);
+    expect(componentSources.size).toBe(0);
+  });
+
+  it("is deterministic: the same input produces byte-identical output across repeated calls", () => {
+    const root = mkdtempSync(join(tmpdir(), "lyse-cr-canon-det-"));
+    mkdirSync(join(root, "packages", "a"), { recursive: true });
+    mkdirSync(join(root, "packages", "b"), { recursive: true });
+    writeFileSync(join(root, "packages", "a", "package.json"), JSON.stringify({ name: "@acme/a", private: true }));
+    writeFileSync(join(root, "packages", "b", "package.json"), JSON.stringify({ name: "@acme/b" }));
+    const fileContents = new Map<string, string>([
+      ["packages/a/Foo.tsx", "export function Foo() { return 1; }"],
+      ["packages/b/Foo.tsx", "export function Foo() { return 2; }"],
+    ]);
+
+    const run1 = resolveComponentSources(fileContents, root, null);
+    const run2 = resolveComponentSources(fileContents, root, null);
+    expect([...run1.componentSources]).toEqual([...run2.componentSources]);
+    expect([...run1.componentFilePaths]).toEqual([...run2.componentFilePaths]);
   });
 });

@@ -19,7 +19,7 @@ import {
 import { parseFileOverrides, type FileOverrides } from "../suppression/frontmatter.js";
 import { hashDeps } from "../util/hash-deps.js";
 import { detectFromPackageJson } from "../detection/from-package-json.js";
-import { resolveComponentsModule, buildInventoryForMode } from "../detection/components-resolution.js";
+import { resolveComponentsModule, buildInventoryForMode, resolveComponentSources } from "../detection/components-resolution.js";
 import { walk, DEFAULT_EXCLUDE_PATHS } from "../walker.js";
 import { getStagedFiles, getChangedFiles, getUncommittedFiles, gitToplevel } from "../codemods/git-helpers.js";
 import { parseTs } from "../parsers/ts.js";
@@ -30,7 +30,6 @@ import { extractSfcScript } from "../parsers/sfc-script.js";
 import { loadTokens } from "../loaders/tokens.js";
 import { normalizeTokenPackages } from "../loaders/external-tokens.js";
 import { loadStories } from "../loaders/stories.js";
-import { componentNameFromPath } from "../loaders/components.js";
 import { ruleObjects } from "../rules/registry.js";
 import { loadGeneratedPack } from "../rules/pack-loader.js";
 import { buildDesignSystemGraph } from "../graph/builder.js";
@@ -374,27 +373,11 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   // PascalCase filename (`Button.tsx`) is a strong signal and is trusted; a
   // dir-derived name (`button/index.tsx`, `button/button.tsx`) is ambiguous and
   // is only admitted when a Storybook title corroborates it — so utility folders
-  // never pollute the inventory. A strong source wins over a weak one on a name
-  // collision.
-  const resolvedSources = new Map<string, { src: string; strong: boolean; rel: string }>();
-  for (const [rel, src] of fileContents) {
-    const resolved = componentNameFromPath(rel);
-    if (resolved === null) continue;
-    if (!resolved.strong && !storyIndex?.byTitle.has(resolved.name)) continue;
-    const existing = resolvedSources.get(resolved.name);
-    if (existing === undefined || (resolved.strong && !existing.strong)) {
-      resolvedSources.set(resolved.name, { src, strong: resolved.strong, rel });
-    }
-  }
-  const componentSources = new Map<string, string>(
-    [...resolvedSources].map(([name, v]) => [name, v.src]),
-  );
-  // Absolute path per component — lets buildInventoryForMode's ds-self branch
-  // attribute each component to its OWN workspace package.json rather than
-  // stamping every component with the single monorepo-wide componentsModule.
-  const componentFilePaths = new Map<string, string>(
-    [...resolvedSources].map(([name, v]) => [name, join(absoluteRoot, v.rel)]),
-  );
+  // never pollute the inventory. Name collisions are resolved by
+  // resolveComponentSources's deterministic canonical-preference order (see
+  // its doc comment) — shared with `graph/build-io.ts` so the manifest build
+  // and the audit pipeline can never attribute the same repo differently.
+  const { componentSources, componentFilePaths } = resolveComponentSources(fileContents, absoluteRoot, storyIndex);
   const componentInventory = buildInventoryForMode({
     componentsModule,
     dsSelfMode,
