@@ -6,7 +6,11 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderJson } from "../src/reporters/json.js";
 import { auditDirectory } from "../src/commands/audit-pipeline.js";
+import { buildGraphForRoot } from "../src/graph/build-io.js";
+import { buildManifest } from "../src/manifest/build.js";
+import { serializeManifest } from "../src/manifest/serialize.js";
 import type { AuditResult } from "../src/types.js";
+import type { DesignSystemGraph } from "../src/graph/types.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCHEMAS_DIR = join(__dirname, "../schemas/v1");
@@ -25,8 +29,8 @@ function makeAjv(): Ajv2020 {
 describe("JSON Schemas v1 — Draft 2020-12 validity", () => {
   const files = readdirSync(SCHEMAS_DIR);
 
-  it("ships exactly 4 schemas", () => {
-    expect(files).toHaveLength(4);
+  it("ships exactly 5 schemas", () => {
+    expect(files).toHaveLength(5);
   });
 
   it.each(files)("%s compiles without errors", (file) => {
@@ -200,5 +204,116 @@ describe("lyse-event.json validates a sample event", () => {
       audit: { duration_ms: 8341, score: 43, axes: { tokens: 31 }, violations: { error: 0, warning: 433, info: 0 } },
     };
     expect(validate(event)).toBe(true);
+  });
+});
+
+describe("lyse-manifest.json validates a DsManifest", () => {
+  const schema = JSON.parse(readFileSync(join(SCHEMAS_DIR, "lyse-manifest.json"), "utf8"));
+
+  // Exercises every field and both the populated and null/empty branch of each
+  // optional-normalized shape (ManifestProp.default/type/variants, a null
+  // component `file`, a degraded extraction entry alongside an ok one, a
+  // conflict) — not just the trivial empty-graph shape.
+  function sampleGraph(): DesignSystemGraph {
+    return {
+      schemaVersion: 1,
+      tokens: [
+        { id: "color.brand", axis: "colors", rawValue: "#3b82f6", source: "dtcg" },
+        { id: "space.4", axis: "spacing", rawValue: "16px", source: "tailwind-v4" },
+      ],
+      components: [
+        {
+          name: "Button",
+          file: "src/Button.tsx",
+          module: "@acme/ds",
+          exportKind: "named",
+          usageCount: 12,
+          props: [
+            {
+              name: "variant",
+              typeText: '"primary" | "secondary"',
+              isOptional: true,
+              isVariantUnion: true,
+              variants: ["primary", "secondary"],
+            },
+            { name: "id" },
+          ],
+          isDsComponent: true,
+          storyRefs: ["Button.stories"],
+          detection: "module-config",
+        },
+        {
+          name: "Icon",
+          file: null,
+          module: "@acme/ds",
+          exportKind: "default",
+          usageCount: 0,
+          props: [],
+          isDsComponent: false,
+          storyRefs: [],
+          detection: "ds-self",
+        },
+      ],
+      stories: [],
+      usage: [{ file: "src/App.tsx", kind: "imports-ds-module", count: 3 }],
+      zones: {
+        byFile: {
+          "src/App.tsx": "app",
+          "src/Button.tsx": "ds-source",
+          "src/Icon.stories.tsx": "story",
+        },
+      },
+      extraction: {
+        entries: [
+          { extractor: "stories", status: "degraded", evidence: { storyFiles: 1 }, remediation: "run 'lyse init'" },
+          { extractor: "tokens", status: "ok", evidence: { tokenCount: 2 }, remediation: null },
+        ],
+        conflicts: [
+          {
+            axis: "colors",
+            value: "#3b82f6",
+            tokenIds: ["color.brand", "color.primary"],
+            sources: ["dtcg", "css-custom-property"],
+          },
+        ],
+      },
+    };
+  }
+
+  it("validates a comprehensive hand-built manifest (every field, null and populated branches)", () => {
+    const validate = makeAjv().compile(schema);
+    const manifest = buildManifest(sampleGraph(), { version: "1.2.3" });
+    const rendered = JSON.parse(serializeManifest(manifest));
+    const valid = validate(rendered);
+    if (!valid) console.error(validate.errors);
+    expect(valid).toBe(true);
+  });
+
+  it("rejects a manifest carrying an unknown top-level field (additionalProperties: false)", () => {
+    const validate = makeAjv().compile(schema);
+    const manifest = buildManifest(sampleGraph(), { version: "1.2.3" });
+    const rendered = JSON.parse(serializeManifest(manifest)) as Record<string, unknown>;
+    rendered["extraTopLevelField"] = "leak";
+    expect(validate(rendered)).toBe(false);
+  });
+
+  it("rejects a token carrying an unknown axis", () => {
+    const validate = makeAjv().compile(schema);
+    const manifest = buildManifest(sampleGraph(), { version: "1.2.3" });
+    const rendered = JSON.parse(serializeManifest(manifest)) as { tokens: Array<Record<string, unknown>> };
+    const token = rendered.tokens[0];
+    if (!token) throw new Error("expected sampleGraph() to produce at least one token");
+    token["axis"] = "not-a-real-axis";
+    expect(validate(rendered)).toBe(false);
+  });
+
+  it("validates a real manifest built from fixtures/full-ds (not just a hand-built sample)", async () => {
+    const validate = makeAjv().compile(schema);
+    const realGraph = await buildGraphForRoot(FULL_DS);
+    const manifest = buildManifest(realGraph, { version: "1.2.3" });
+    const rendered = JSON.parse(serializeManifest(manifest));
+    const valid = validate(rendered);
+    if (!valid) console.error(validate.errors);
+    expect(valid).toBe(true);
   });
 });
