@@ -3,20 +3,20 @@
   "axes": [
     {
       "axis": "tokens",
-      "findings": 87,
-      "opportunities": 3903,
+      "findings": 85,
+      "opportunities": 3802,
       "score": 98
     },
     {
       "axis": "a11y",
       "findings": 265,
-      "opportunities": 1336,
+      "opportunities": 1332,
       "score": 80
     },
     {
       "axis": "components",
-      "findings": 1466,
-      "opportunities": 4251,
+      "findings": 1452,
+      "opportunities": 4231,
       "score": 66
     },
     {
@@ -39,8 +39,8 @@
     }
   ],
   "finalScore": 86,
-  "findingsCount": 1824,
-  "findingsDigest": "edfced26a206ee3d37483d0693d227debe2f8188d017ed184ae2c235600100cf",
+  "findingsCount": 1808,
+  "findingsDigest": "6afc27b25114dd521e4b35743290984222e4be37df37a964707b90637a861cfc",
   "grade": {
     "autoFailed": false,
     "grade": "A",
@@ -50,7 +50,7 @@
     "abstentions": 2,
     "coverage": {
       "configPath": null,
-      "scannedFiles": 3388
+      "scannedFiles": 3385
     },
     "extraction": {
       "conflicts": [],
@@ -75,7 +75,7 @@
         },
         {
           "evidence": {
-            "tokenNodes": 230,
+            "tokenNodes": 214,
             "tokenSources": 2
           },
           "extractor": "tokens",
@@ -84,7 +84,7 @@
         },
         {
           "evidence": {
-            "files": 3388
+            "files": 3385
           },
           "extractor": "zones",
           "remediation": null,
@@ -95,8 +95,8 @@
     "projection": {
       "top": [
         {
-          "count": 1401,
-          "files": 160,
+          "count": 1387,
+          "files": 158,
           "gain": 8,
           "key": "components/no-arbitrary-tailwind",
           "migrationScale": true,

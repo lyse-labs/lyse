@@ -9,9 +9,9 @@
     },
     {
       "axis": "a11y",
-      "findings": 21,
-      "opportunities": 975,
-      "score": 98
+      "findings": 13,
+      "opportunities": 973,
+      "score": 99
     },
     {
       "axis": "components",
@@ -39,8 +39,8 @@
     }
   ],
   "finalScore": 83,
-  "findingsCount": 233,
-  "findingsDigest": "4d1311069c3084f6e7a80cca923607fd707dd5d4881c3754008cb624bdef18a2",
+  "findingsCount": 225,
+  "findingsDigest": "3a47014d73a52c3fc774eb6d9065d562d44a672089a11fc7ee8b09565e7bb29b",
   "grade": {
     "autoFailed": false,
     "grade": "A",
@@ -50,7 +50,7 @@
     "abstentions": 0,
     "coverage": {
       "configPath": null,
-      "scannedFiles": 980
+      "scannedFiles": 959
     },
     "extraction": {
       "conflicts": [],
@@ -84,7 +84,7 @@
         },
         {
           "evidence": {
-            "files": 980
+            "files": 959
           },
           "extractor": "zones",
           "remediation": null,
@@ -119,7 +119,7 @@
           "ruleId": "versioning/deprecation-markers"
         }
       ],
-      "totalGainTop3": 11
+      "totalGainTop3": 12
     }
   },
   "repoRoot": "<REPO>/packages/react",
