@@ -118,5 +118,17 @@ export async function walk(root: string, opts: WalkOptions | string[] = {}): Pro
     dot: false,
     followSymbolicLinks: false,
   });
+  // fast-glob's directory traversal reads sibling directories concurrently
+  // for performance; the SET of matches is correct but their ORDER depends
+  // on filesystem I/O completion timing, which is not stable across runs
+  // (confirmed on a real repo: same process, repeated calls returned the
+  // same files in different orders). Every downstream consumer of this list
+  // — component-inventory construction, canonical-source tie-breaking
+  // (`resolveComponentSources`'s documented walk-order fallback), rules
+  // that iterate the inventory directly — treats "first in this array" as
+  // meaningful, so an unstable walk leaks into unstable finding order.
+  // Sorting here fixes it at the one shared source instead of re-sorting
+  // separately at each downstream call site.
+  matches.sort();
   return matches;
 }
