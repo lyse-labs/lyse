@@ -6,12 +6,13 @@ Wire Lyse into Cursor, Claude Code, Codex, or any [Model Context Protocol](https
 
 Without Lyse, your AI agent writes UI code without knowing your design system. It hallucinates components, hardcodes colors, ignores accessibility — silently, every day.
 
-With Lyse's MCP server, your agent can call four tools:
+With Lyse's MCP server, your agent can call five tools:
 
 - Audit a file it's about to save (`audit_file`).
 - Request a unified diff to fix a finding (`suggest_fix`).
-- Validate a proposed edit *before* it lands, with a block/pass verdict (`preflight_diff`).
-- Read the full reified Design System Graph before writing any code (`get_design_system_graph`).
+- Validate a proposed edit *before* it lands, with a `pass` / `blocked` / `error` verdict (`preflight_diff`).
+- Read the DS Machine Manifest — the stable, versioned contract describing your design system — before writing any code (`get_ds_manifest`, see [the manifest reference](../architecture/manifest.md)).
+- Read the full reified Design System Graph, Lyse's internal model (`get_design_system_graph` — unstable, for inspection and debugging).
 
 Result: fewer DS violations in AI-generated PRs, fewer review cycles, less drift.
 
