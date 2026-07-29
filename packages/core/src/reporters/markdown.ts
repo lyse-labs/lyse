@@ -1,10 +1,18 @@
 import type {
   DsManifest,
   ManifestComponent,
+  ManifestExtractionEntry,
   ManifestProp,
   ManifestToken,
 } from "../manifest/types.js";
 import type { AuditResult } from "../types.js";
+
+const MAX_TOKENS_PER_AXIS = 40;
+const MAX_COMPONENTS = 40;
+
+function moreLine(rest: number): string {
+  return `- … and ${rest} more — run \`lyse manifest\` for the full set.`;
+}
 
 function groupTokensByAxis(tokens: ManifestToken[]): Map<ManifestToken["axis"], ManifestToken[]> {
   const groups = new Map<ManifestToken["axis"], ManifestToken[]>();
@@ -48,6 +56,18 @@ function renderComponentBlock(component: ManifestComponent): string[] {
   return lines;
 }
 
+function renderExtractionWarnings(entries: ManifestExtractionEntry[]): string[] {
+  const unhealthy = entries.filter((e) => e.status === "degraded" || e.status === "failed");
+  if (unhealthy.length === 0) return [];
+  const lines = [`## Extraction warnings`, ``];
+  for (const entry of unhealthy) {
+    const remediation = entry.remediation !== null ? ` — ${entry.remediation}` : "";
+    lines.push(`- **${entry.extractor}**: ${entry.status}${remediation}`);
+  }
+  lines.push(``);
+  return lines;
+}
+
 export function renderAgentsMd(manifest: DsManifest, result: AuditResult): string {
   return [
     `# AGENTS.md — Design System Contract`,
@@ -56,6 +76,7 @@ export function renderAgentsMd(manifest: DsManifest, result: AuditResult): strin
     `> Token set: \`${manifest.tokenSetHash}\``,
     `> Do not hand-edit; re-run \`lyse audit\` to refresh.`,
     ``,
+    ...renderExtractionWarnings(manifest.extraction.entries),
     `## 1. Stack detected`,
     ...result.stack.map((s) => `- ${s}`),
     ``,
@@ -90,7 +111,10 @@ function renderTokensSection(tokens: ManifestToken[]): string[] {
   }
   for (const [axis, group] of groupTokensByAxis(tokens)) {
     lines.push(`### ${axis}`);
-    lines.push(...group.map((t) => `- \`${t.id}\` → \`${t.value}\``));
+    const shown = group.slice(0, MAX_TOKENS_PER_AXIS);
+    lines.push(...shown.map((t) => `- \`${t.id}\` → \`${t.value}\``));
+    const rest = group.length - shown.length;
+    if (rest > 0) lines.push(moreLine(rest));
     lines.push(``);
   }
   return lines;
@@ -102,8 +126,11 @@ function renderComponentsSection(components: ManifestComponent[]): string[] {
     lines.push(`None detected.`, ``);
     return lines;
   }
-  for (const component of components) {
+  const shown = components.slice(0, MAX_COMPONENTS);
+  for (const component of shown) {
     lines.push(...renderComponentBlock(component), ``);
   }
+  const rest = components.length - shown.length;
+  if (rest > 0) lines.push(moreLine(rest), ``);
   return lines;
 }

@@ -85,3 +85,48 @@ describe("renderAgentsMd — graph-derived", () => {
     expect(md).toContain("Hard rules");
   });
 });
+
+describe("renderAgentsMd — honesty guarantees", () => {
+  it("warns when an extractor degraded, naming it and its remediation", () => {
+    const md = renderAgentsMd(
+      manifest({
+        extraction: {
+          entries: [
+            { extractor: "components", status: "degraded", evidence: { components: 0 }, remediation: "run 'lyse init' or set components.module" },
+            { extractor: "tokens", status: "ok", evidence: { tokens: 3 }, remediation: null },
+          ],
+          conflicts: [],
+        },
+      }),
+      auditResult(),
+    );
+    expect(md).toContain("components");
+    expect(md).toContain("degraded");
+    expect(md).toContain("run 'lyse init' or set components.module");
+  });
+
+  it("emits no degradation warning when every extractor is ok", () => {
+    const md = renderAgentsMd(
+      manifest({
+        extraction: {
+          entries: [{ extractor: "tokens", status: "ok", evidence: { tokens: 3 }, remediation: null }],
+          conflicts: [],
+        },
+      }),
+      auditResult(),
+    );
+    expect(md.toLowerCase()).not.toContain("degraded");
+  });
+
+  it("discloses truncation with the exact remaining count instead of cutting silently", () => {
+    const many = Array.from({ length: 60 }, (_, i) => ({
+      id: `color.c${String(i).padStart(3, "0")}`,
+      axis: "colors" as const,
+      value: "#000000",
+      source: "dtcg" as const,
+    }));
+    const md = renderAgentsMd(manifest({ tokens: many }), auditResult());
+    expect(md).toContain("20 more");
+    expect(md).toContain("lyse manifest");
+  });
+});
