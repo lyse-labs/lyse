@@ -12,9 +12,10 @@ import { auditFileTool, runAuditFile } from "./tools/audit-file.js";
 import { suggestFixTool, runSuggestFix } from "./tools/suggest-fix.js";
 import { preflightTool, runPreflight } from "./tools/preflight.js";
 import { getDesignSystemGraphTool, runGetDesignSystemGraph } from "./tools/get-design-system-graph.js";
+import { getDsManifestTool, runGetDsManifest } from "./tools/get-ds-manifest.js";
 import { listResources, readResource } from "./resources.js";
 
-const TOOL_DEFINITIONS: Tool[] = [auditFileTool, suggestFixTool, preflightTool, getDesignSystemGraphTool];
+const TOOL_DEFINITIONS: Tool[] = [auditFileTool, suggestFixTool, preflightTool, getDesignSystemGraphTool, getDsManifestTool];
 
 export async function startMcpServer(): Promise<void> {
   const server = new Server(
@@ -77,6 +78,13 @@ export async function startMcpServer(): Promise<void> {
     }
     if (name === "get_design_system_graph") {
       const result = await runGetDesignSystemGraph(args ?? {});
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        structuredContent: result,
+      };
+    }
+    if (name === "get_ds_manifest") {
+      const result = await runGetDsManifest(args ?? {});
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         structuredContent: result,
