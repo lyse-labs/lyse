@@ -84,13 +84,23 @@ export const DEFAULT_EXCLUDE_PATHS = [
   "packages/@*/dev*/**",
   "**/build-tools/**",
 
-  // Storybook: config, plus any `stories/` subfolder. `*.stories.tsx` files
-  // co-located next to real components are scanned separately via
-  // `loadStories()`, not via this walker — but demo/example components that
-  // live INSIDE a `stories/` directory (e.g. `<pkg>/stories/components/*.tsx`,
-  // used only to compose a story) are never design-system source.
+  // Storybook: config, plus code files inside any `stories/` subfolder.
+  // `*.stories.tsx` files co-located next to real components are scanned
+  // separately via `loadStories()`, not via this walker — but demo/example
+  // components that live INSIDE a `stories/` directory (e.g.
+  // `<pkg>/stories/components/*.tsx`, used only to compose a story) are
+  // never design-system source. Scoped to code extensions only (not a
+  // blanket `**/stories/**`): stylesheets under `stories/` are a real token
+  // source on some repos (e.g. radix-ui/primitives keeps its CSS custom
+  // properties in `apps/storybook/stories/*.stories.module.css`), so `.css`
+  // and `.scss` must stay visible to the walker.
   "**/.storybook/**",
-  "**/stories/**",
+  "**/stories/**/*.ts",
+  "**/stories/**/*.tsx",
+  "**/stories/**/*.js",
+  "**/stories/**/*.jsx",
+  "**/stories/**/*.mjs",
+  "**/stories/**/*.cjs",
 ];
 
 function readGitignore(root: string): string[] {

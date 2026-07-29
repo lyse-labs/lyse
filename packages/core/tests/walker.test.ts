@@ -121,6 +121,23 @@ describe("walker default excludes", () => {
     expect(rel).not.toContain(join("packages", "data-grid", "stories", "components", "DataGridDemo.tsx"));
   });
 
+  it("keeps stylesheets nested under a stories/ subfolder (a real token source on some repos, e.g. radix-ui/primitives keeps CSS custom properties in apps/storybook/stories/*.stories.module.css) while still excluding code files in the same directory", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "lyse-walker-defaults-"));
+    mkdirSync(join(tmp, "apps", "storybook", "stories"), { recursive: true });
+    writeFileSync(
+      join(tmp, "apps", "storybook", "stories", "Button.stories.module.css"),
+      ":root { --accent: #7c3aed; }",
+    );
+    writeFileSync(join(tmp, "apps", "storybook", "stories", "Button.stories.scss"), "$accent: #7c3aed;");
+    writeFileSync(join(tmp, "apps", "storybook", "stories", "Button.stories.tsx"), "export const B = 1;");
+
+    const files = await walk(tmp);
+    const rel = files.map((f) => posixRelative(tmp, f));
+    expect(rel).toContain(join("apps", "storybook", "stories", "Button.stories.module.css"));
+    expect(rel).toContain(join("apps", "storybook", "stories", "Button.stories.scss"));
+    expect(rel).not.toContain(join("apps", "storybook", "stories", "Button.stories.tsx"));
+  });
+
   it("does not over-exclude legitimately-named dirs that merely contain 'mock'/'fixture'/'stor' as a substring, not an exact segment", async () => {
     const tmp = mkdtempSync(join(tmpdir(), "lyse-walker-defaults-"));
     mkdirSync(join(tmp, "packages", "mock-utils", "src"), { recursive: true });
