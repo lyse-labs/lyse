@@ -129,4 +129,19 @@ describe("renderAgentsMd — honesty guarantees", () => {
     expect(md).toContain("20 more");
     expect(md).toContain("lyse manifest");
   });
+
+  it("renders the 'None detected.' fallback under Design tokens when no tokens exist — never a silent empty section", () => {
+    const md = renderAgentsMd(manifest({ tokens: [] }), auditResult());
+    expect(md).toMatch(/## 2\. Design tokens\n\nNone detected\./);
+  });
+
+  it("renders the 'None detected.' fallback under Component contracts when no components exist — never a silent empty section", () => {
+    const md = renderAgentsMd(manifest({ components: [] }), auditResult());
+    expect(md).toMatch(/## 3\. Component contracts\n\nNone detected\./);
+  });
+
+  it("renders the 'None detected.' fallback under Stack detected when the stack is empty", () => {
+    const md = renderAgentsMd(manifest(), { ...auditResult(), stack: [] });
+    expect(md).toMatch(/## 1\. Stack detected\nNone detected\./);
+  });
 });

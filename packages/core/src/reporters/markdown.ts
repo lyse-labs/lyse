@@ -77,13 +77,11 @@ export function renderAgentsMd(manifest: DsManifest, result: AuditResult): strin
     `> Do not hand-edit; re-run \`lyse audit\` to refresh.`,
     ``,
     ...renderExtractionWarnings(manifest.extraction.entries),
-    `## 1. Stack detected`,
-    ...result.stack.map((s) => `- ${s}`),
-    ``,
+    ...renderStackSection(result.stack),
     ...renderTokensSection(manifest.tokens),
     ...renderComponentsSection(manifest.components),
     `## 4. Hard rules for AI-generated code`,
-    `- Never use hardcoded colors. Always use a token from the namespaces above.`,
+    `- Never use hardcoded colors. Always use one of the concrete tokens listed above.`,
     `- Never use native \`<button>\`, \`<input>\`, \`<select>\`, \`<textarea>\`, \`<a>\` when a DS equivalent exists.`,
     `- Always include \`alt\` on \`<img>\`, \`aria-label\` on icon-only buttons.`,
     `- Always ship a Storybook story with new DS components.`,
@@ -101,6 +99,17 @@ export function renderAgentsMd(manifest: DsManifest, result: AuditResult): strin
     "```",
     ``,
   ].join("\n");
+}
+
+function renderStackSection(stack: string[]): string[] {
+  const lines = [`## 1. Stack detected`];
+  if (stack.length === 0) {
+    lines.push(`None detected.`);
+  } else {
+    lines.push(...stack.map((s) => `- ${s}`));
+  }
+  lines.push(``);
+  return lines;
 }
 
 function renderTokensSection(tokens: ManifestToken[]): string[] {
