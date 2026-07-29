@@ -19,6 +19,7 @@ import {
 import { parseFileOverrides, type FileOverrides } from "../suppression/frontmatter.js";
 import { hashDeps } from "../util/hash-deps.js";
 import { detectFromPackageJson } from "../detection/from-package-json.js";
+import { resolveComponentsModule, buildInventoryForMode, resolveComponentSources } from "../detection/components-resolution.js";
 import { walk, DEFAULT_EXCLUDE_PATHS } from "../walker.js";
 import { getStagedFiles, getChangedFiles, getUncommittedFiles, gitToplevel } from "../codemods/git-helpers.js";
 import { parseTs } from "../parsers/ts.js";
@@ -29,11 +30,6 @@ import { extractSfcScript } from "../parsers/sfc-script.js";
 import { loadTokens } from "../loaders/tokens.js";
 import { normalizeTokenPackages } from "../loaders/external-tokens.js";
 import { loadStories } from "../loaders/stories.js";
-import {
-  buildComponentInventory,
-  extractComponentProps,
-  componentNameFromPath,
-} from "../loaders/components.js";
 import { ruleObjects } from "../rules/registry.js";
 import { loadGeneratedPack } from "../rules/pack-loader.js";
 import { buildDesignSystemGraph } from "../graph/builder.js";
@@ -247,13 +243,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   let dsSelfMode = false;
   if (!componentsModule) {
     const detected = await detectFromPackageJson(absoluteRoot);
-    componentsModule = detected.componentsModule.value ?? null;
-    // When detection source is "workspace DS export", the repo IS the DS itself.
-    // Rules like no-native-shadows and stories/coverage have consumer-of-DS semantics
-    // and must skip — v0.2 will add DS-self-aware rule variants.
-    if (detected.componentsModule.source.startsWith("workspace DS export")) {
-      dsSelfMode = true;
-    }
+    ({ componentsModule, dsSelfMode } = resolveComponentsModule(null, detected.componentsModule));
   }
 
   const userExcludePaths = config.designSystem?.excludePaths ?? [];
@@ -383,39 +373,18 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   // PascalCase filename (`Button.tsx`) is a strong signal and is trusted; a
   // dir-derived name (`button/index.tsx`, `button/button.tsx`) is ambiguous and
   // is only admitted when a Storybook title corroborates it — so utility folders
-  // never pollute the inventory. A strong source wins over a weak one on a name
-  // collision.
-  const resolvedSources = new Map<string, { src: string; strong: boolean }>();
-  for (const [rel, src] of fileContents) {
-    const resolved = componentNameFromPath(rel);
-    if (resolved === null) continue;
-    if (!resolved.strong && !storyIndex?.byTitle.has(resolved.name)) continue;
-    const existing = resolvedSources.get(resolved.name);
-    if (existing === undefined || (resolved.strong && !existing.strong)) {
-      resolvedSources.set(resolved.name, { src, strong: resolved.strong });
-    }
-  }
-  const componentSources = new Map<string, string>(
-    [...resolvedSources].map(([name, v]) => [name, v.src]),
-  );
-  // In dsSelfMode the DS audits its own components: they import each other via
-  // relative paths so import-counting yields nothing. Build inventory directly
-  // from the in-tree PascalCase source files instead (props are still extracted
-  // via extractComponentProps so rules like stories/props-documented can fire).
-  const componentInventory = dsSelfMode && componentsModule
-    ? [...componentSources.entries()].map(([name, src]) => {
-        const entry: ComponentInventoryEntry = {
-          name,
-          module: componentsModule as string,
-          usageCount: 0,
-        };
-        const props = extractComponentProps(name, src);
-        if (props !== undefined) entry.props = props;
-        return entry;
-      })
-    : componentsModule
-      ? buildComponentInventory(componentsModule, parsed.ts, componentSources)
-      : [];
+  // never pollute the inventory. Name collisions are resolved by
+  // resolveComponentSources's deterministic canonical-preference order (see
+  // its doc comment) — shared with `graph/build-io.ts` so the manifest build
+  // and the audit pipeline can never attribute the same repo differently.
+  const { componentSources, componentFilePaths } = resolveComponentSources(fileContents, absoluteRoot, storyIndex);
+  const componentInventory = buildInventoryForMode({
+    componentsModule,
+    dsSelfMode,
+    parsedTs: parsed.ts,
+    componentSources,
+    componentFilePaths,
+  });
 
   const graph = await buildDesignSystemGraph({
     repoRoot: absoluteRoot,

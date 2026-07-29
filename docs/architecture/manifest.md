@@ -295,14 +295,19 @@ Lyse exposes several graph-adjacent surfaces. They are not interchangeable:
   to know what tokens and components already exist.
 - **`lyse agents`** renders this same manifest contract as Markdown
   (`AGENTS.md`), for agents that read repo files instead of calling tools —
-  same schema, same projection code (`buildManifest`). It is **not**
-  guaranteed to print the identical manifest `lyse manifest` would for the
-  same repo, though: `lyse agents` builds the graph through the full audit
-  pipeline, which honours `.lyse.yaml`'s `designSystem.componentsModule`,
-  while `lyse manifest` builds it via `buildGraphForRoot`, which derives that
-  module from `package.json` detection only. When a repo sets
-  `componentsModule` explicitly, the two commands' component sets (and
-  extraction warnings) can genuinely differ.
+  same schema, same projection code (`buildManifest`). `lyse agents` builds
+  the graph through the full audit pipeline (`auditDirectory`); `lyse
+  manifest` builds it directly (`buildGraphForRoot`), without running the
+  scorer. Both now resolve `designSystem.componentsModule` — including the
+  `ds-self` case, where the repo *is* the design system — and build the
+  resulting component inventory through the same shared unit
+  (`detection/components-resolution.ts`), so a configured `componentsModule`
+  no longer makes the two commands' component sets diverge. The two entry
+  points remain otherwise independent (for example, `lyse agents` also
+  applies the audit pipeline's file-exclusion handling), so byte-identical
+  output from both surfaces on every repo still isn't a general guarantee —
+  only the componentsModule-driven divergence this section used to describe
+  is closed.
 
 See [`docs/guide/mcp-server.md`](../guide/mcp-server.md) for the full MCP
 tool reference and [`docs/architecture/mcp-server.md`](./mcp-server.md) for

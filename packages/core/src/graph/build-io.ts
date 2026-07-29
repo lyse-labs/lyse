@@ -4,8 +4,8 @@ import { walk, DEFAULT_EXCLUDE_PATHS } from "../walker.js";
 import { parseTs } from "../parsers/ts.js";
 import { parseCss } from "../parsers/css.js";
 import { loadStories } from "../loaders/stories.js";
-import { buildComponentInventory, componentNameFromPath } from "../loaders/components.js";
 import { detectFromPackageJson } from "../detection/from-package-json.js";
+import { resolveComponentsModule, buildInventoryForMode, resolveComponentSources } from "../detection/components-resolution.js";
 import { posixRelative } from "../util/paths.js";
 import { buildDesignSystemGraph } from "./builder.js";
 import { loadConfig } from "../config/schema.js";
@@ -32,20 +32,26 @@ export async function buildGraphForRoot(root: string): Promise<DesignSystemGraph
   }
 
   const detected = await detectFromPackageJson(absoluteRoot);
-  const componentsModule = detected.componentsModule.value ?? null;
-  const dsSelfMode = detected.componentsModule.source.startsWith("workspace DS export");
+  const { componentsModule, dsSelfMode } = resolveComponentsModule(
+    config.designSystem?.componentsModule ?? null,
+    detected.componentsModule,
+  );
 
   const storyIndex = await loadStories(absoluteRoot);
-  const componentSources = new Map<string, string>();
-  for (const [rel, src] of fileContents) {
-    const resolved = componentNameFromPath(rel);
-    if (resolved === null) continue;
-    if (!resolved.strong && !storyIndex?.byTitle.has(resolved.name)) continue;
-    if (!componentSources.has(resolved.name)) componentSources.set(resolved.name, src);
-  }
-  const baseInventory = componentsModule
-    ? buildComponentInventory(componentsModule, parsed.ts, componentSources)
-    : [];
+  // componentFilePaths: absolute path per component — lets buildInventoryForMode's
+  // ds-self branch attribute each component to its OWN workspace package.json
+  // rather than stamping every component with the single monorepo-wide
+  // componentsModule. Name collisions across files are resolved by
+  // resolveComponentSources's deterministic canonical-preference order, not
+  // by walk order — see its doc comment.
+  const { componentSources, componentFilePaths } = resolveComponentSources(fileContents, absoluteRoot, storyIndex);
+  const baseInventory = buildInventoryForMode({
+    componentsModule,
+    dsSelfMode,
+    parsedTs: parsed.ts,
+    componentSources,
+    componentFilePaths,
+  });
 
   return buildDesignSystemGraph({
     repoRoot: absoluteRoot,

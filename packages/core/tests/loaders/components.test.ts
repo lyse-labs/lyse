@@ -313,6 +313,137 @@ describe("extractComponentProps — arrow function components", () => {
   });
 });
 
+// ─── extractComponentProps: forwardRef / memo wrapped components ─────────────
+
+describe("extractComponentProps — forwardRef / memo", () => {
+  it("extracts props from a React.forwardRef-wrapped component", () => {
+    const source = `
+      interface ButtonProps {
+        variant?: "primary" | "ghost";
+        disabled?: boolean;
+      }
+      export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+        (props: ButtonProps, ref) => {
+          return null;
+        }
+      );
+    `;
+    const props = extractComponentProps("Button", source);
+    expect(props).toBeDefined();
+    const variant = props!.find((p) => p.name === "variant");
+    expect(variant).toBeDefined();
+    expect(variant!.isVariantUnion).toBe(true);
+    expect(variant!.variants).toEqual(["primary", "ghost"]);
+    const disabled = props!.find((p) => p.name === "disabled");
+    expect(disabled?.isOptional).toBe(true);
+  });
+
+  it("extracts props from a bare (unqualified) forwardRef import", () => {
+    const source = `
+      interface ButtonProps {
+        variant?: "primary" | "ghost";
+        disabled?: boolean;
+      }
+      export const Button = forwardRef((props: ButtonProps, ref) => {
+        return null;
+      });
+    `;
+    const props = extractComponentProps("Button", source);
+    expect(props).toBeDefined();
+    const variant = props!.find((p) => p.name === "variant");
+    expect(variant).toBeDefined();
+    expect(variant!.isVariantUnion).toBe(true);
+    expect(variant!.variants).toEqual(["primary", "ghost"]);
+  });
+
+  it("recursively unwraps React.memo(React.forwardRef(...))", () => {
+    const source = `
+      interface ButtonProps {
+        variant?: "primary" | "ghost";
+        disabled?: boolean;
+      }
+      export const Button = React.memo(
+        React.forwardRef<HTMLButtonElement, ButtonProps>((props: ButtonProps, ref) => {
+          return null;
+        })
+      );
+    `;
+    const props = extractComponentProps("Button", source);
+    expect(props).toBeDefined();
+    const variant = props!.find((p) => p.name === "variant");
+    expect(variant).toBeDefined();
+    expect(variant!.isVariantUnion).toBe(true);
+    expect(variant!.variants).toEqual(["primary", "ghost"]);
+  });
+
+  it("does NOT guess props for an unrecognized CallExpression wrapper", () => {
+    const source = `
+      export const Button = makeThing({ variant: "primary" });
+    `;
+    const props = extractComponentProps("Button", source);
+    expect(props).toBeUndefined();
+  });
+
+  it("does not confuse React hooks like useMemo with the memo HOC", () => {
+    const source = `
+      export const Button = useMemo(() => {
+        return null;
+      }, []);
+    `;
+    const props = extractComponentProps("Button", source);
+    expect(props).toBeUndefined();
+  });
+
+  it("recovers destructuring defaults from a forwardRef component with an untyped destructured param (real-world shape)", () => {
+    // Mirrors the actual Twilio Paste AcceptIcon shape: the arrow's own
+    // destructured param carries no type annotation of its own — the type
+    // comes from forwardRef's generic type arguments, which this extractor
+    // does not resolve (same documented limitation as cross-file
+    // TSTypeReference resolution). Only destructuring defaults are available
+    // without that.
+    const source = `
+      export interface AcceptIconProps {
+        as?: string;
+        display?: string;
+        element?: string;
+        size?: string;
+        color?: string;
+        title?: string;
+        decorative: boolean;
+      }
+      const AcceptIcon = React.forwardRef<HTMLElement, AcceptIconProps>(
+        ({ as, display, element = "ICON", size, color, title, decorative }, ref) => {
+          return null;
+        },
+      );
+    `;
+    const props = extractComponentProps("AcceptIcon", source);
+    expect(props).toBeDefined();
+    expect(Array.isArray(props)).toBe(true);
+    expect(props!.some((p) => p.name === "element" && p.defaultValue === "ICON")).toBe(true);
+  });
+
+  it("still extracts plain arrow and function-declaration components (no regression)", () => {
+    const arrowSource = `
+      export const Button = ({ variant }: { variant: "primary" | "secondary" }) => {
+        return null;
+      };
+    `;
+    const arrowProps = extractComponentProps("Button", arrowSource);
+    expect(arrowProps).toBeDefined();
+    expect(arrowProps!.find((p) => p.name === "variant")?.isVariantUnion).toBe(true);
+
+    const fnSource = `
+      export function Button({ variant }: { variant: "primary" | "secondary" }) {
+        return null;
+      }
+    `;
+    const fnProps = extractComponentProps("Button", fnSource);
+    expect(fnProps).toBeDefined();
+    expect(fnProps!.find((p) => p.name === "variant")?.isVariantUnion).toBe(true);
+  });
+});
+
 // ─── extractComponentProps: edge cases ───────────────────────────────────────
 
 describe("extractComponentProps — edge cases", () => {

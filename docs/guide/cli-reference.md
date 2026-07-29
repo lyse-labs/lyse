@@ -411,7 +411,7 @@ The generated file:
 
 Commit `AGENTS.md` to your repo. Cursor, Claude Code, and similar tools read it on session start.
 
-`lyse agents` renders the DS Machine Manifest contract as Markdown — same schema, same projection code as `lyse manifest` and the MCP `get_ds_manifest` tool; see [`docs/architecture/manifest.md`](../architecture/manifest.md) for the underlying JSON contract and schema. It is not guaranteed to print an identical manifest to `lyse manifest` for the same repo, though: the two commands build the Design System Graph through different entry points and can resolve `designSystem.componentsModule` differently — see [§7](../architecture/manifest.md#7-relationship-to-other-surfaces) for the full caveat.
+`lyse agents` renders the DS Machine Manifest contract as Markdown — same schema, same projection code as `lyse manifest` and the MCP `get_ds_manifest` tool; see [`docs/architecture/manifest.md`](../architecture/manifest.md) for the underlying JSON contract and schema. `lyse agents` and `lyse manifest` still build the Design System Graph through different entry points (the former via the full audit pipeline, the latter via a direct graph build), so byte-identical output between them isn't a general guarantee — but both now resolve `designSystem.componentsModule` and the component inventory the same way, so that's no longer a source of divergence — see [§7](../architecture/manifest.md#7-relationship-to-other-surfaces) for the detail.
 
 > **Deprecated alias:** `lyse agents-md` still works but is deprecated. Use `lyse agents` going forward.
 
