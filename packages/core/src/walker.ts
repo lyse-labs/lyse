@@ -47,6 +47,16 @@ export const DEFAULT_EXCLUDE_PATHS = [
   "docs-site/**",
   "website/**",
   "site/**",
+  // Nested variants — the same shapes recur as a package inside a monorepo,
+  // e.g. packages/paste-website/**, which the root-anchored globs above
+  // don't reach. Suffix-shaped patterns (*-website, *-docs) catch compound
+  // package names without matching unrelated ones like packages/website-ui/**.
+  "**/docs/**",
+  "**/docs-site/**",
+  "**/website/**",
+  "**/site/**",
+  "**/*-website/**",
+  "**/*-docs/**",
 
   // Example apps, starter templates, sandboxes
   "examples/**",

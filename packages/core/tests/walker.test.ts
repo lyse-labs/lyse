@@ -136,4 +136,36 @@ describe("walker default excludes", () => {
     expect(rel).toContain("src/a.tsx");
     expect(rel).not.toContain(join("e2e", "spec.ts"));
   });
+
+  it("excludes nested doc/demo-site packages inside a monorepo (e.g. packages/paste-website/**)", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "lyse-walker-defaults-"));
+    mkdirSync(join(tmp, "packages", "foo-website", "src"), { recursive: true });
+    mkdirSync(join(tmp, "packages", "paste-website", "src", "components"), { recursive: true });
+    mkdirSync(join(tmp, "packages", "docs-site", "src"), { recursive: true });
+    mkdirSync(join(tmp, "packages", "button", "src"), { recursive: true });
+    writeFileSync(join(tmp, "packages", "foo-website", "src", "Marketing.tsx"), "export const M = 1;");
+    writeFileSync(
+      join(tmp, "packages", "paste-website", "src", "components", "Whats.tsx"),
+      "export const W = 2;",
+    );
+    writeFileSync(join(tmp, "packages", "docs-site", "src", "X.tsx"), "export const X = 3;");
+    writeFileSync(join(tmp, "packages", "button", "src", "Button.tsx"), "export const Button = 4;");
+
+    const files = await walk(tmp);
+    const rel = files.map((f) => posixRelative(tmp, f));
+    expect(rel).not.toContain("packages/foo-website/src/Marketing.tsx");
+    expect(rel).not.toContain("packages/paste-website/src/components/Whats.tsx");
+    expect(rel).not.toContain("packages/docs-site/src/X.tsx");
+    expect(rel).toContain("packages/button/src/Button.tsx");
+  });
+
+  it("does not over-exclude legitimately-named packages that merely contain 'website' as a substring (e.g. packages/website-ui/**)", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "lyse-walker-defaults-"));
+    mkdirSync(join(tmp, "packages", "website-ui", "src"), { recursive: true });
+    writeFileSync(join(tmp, "packages", "website-ui", "src", "Card.tsx"), "export const Card = 1;");
+
+    const files = await walk(tmp);
+    const rel = files.map((f) => posixRelative(tmp, f));
+    expect(rel).toContain("packages/website-ui/src/Card.tsx");
+  });
 });
