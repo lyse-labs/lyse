@@ -293,6 +293,9 @@ Lyse exposes several graph-adjacent surfaces. They are not interchangeable:
   `advisory` (surfaced, never blocks). Call it *while writing code*.
   `get_ds_manifest`, by contrast, is what you read *before* writing code,
   to know what tokens and components already exist.
+- **`lyse agents`** is not a separate surface at all — it renders this same
+  manifest as Markdown (`AGENTS.md`) for agents that read repo files instead
+  of calling tools, so the two outputs cannot drift apart.
 
 See [`docs/guide/mcp-server.md`](../guide/mcp-server.md) for the full MCP
 tool reference and [`docs/architecture/mcp-server.md`](./mcp-server.md) for
