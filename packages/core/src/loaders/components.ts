@@ -172,6 +172,54 @@ function extractDestructuringDefaults(param: t.Node): Map<string, string> {
   return defaults;
 }
 
+// Bound recursive unwrapping of nested wrapper calls (e.g.
+// `React.memo(React.forwardRef(...))`) so a pathological/adversarial input
+// (deeply nested wrapper calls) cannot recurse unboundedly.
+const MAX_WRAPPER_UNWRAP_DEPTH = 5;
+
+/**
+ * Check whether a `CallExpression` callee is a known component-wrapping HOC —
+ * `forwardRef` or `memo` — as either a bare identifier (`forwardRef(...)`,
+ * `memo(...)`) or a member expression (`React.forwardRef(...)`, `React.memo(...)`).
+ */
+function isWrapperCallee(callee: t.Expression | t.V8IntrinsicIdentifier): boolean {
+  if (callee.type === "Identifier") {
+    return callee.name === "forwardRef" || callee.name === "memo";
+  }
+  if (callee.type === "MemberExpression" && !callee.computed && callee.property.type === "Identifier") {
+    return callee.property.name === "forwardRef" || callee.property.name === "memo";
+  }
+  return false;
+}
+
+/**
+ * Unwrap a `forwardRef(...)` / `memo(...)` call (including nested
+ * combinations like `React.memo(React.forwardRef(...))`) to find the inner
+ * arrow/function expression that declares the component's params.
+ *
+ * Returns undefined for anything that is not a recognized wrapper shape —
+ * e.g. a factory call like `makeThing({...})`, a hook like `useMemo(...)`,
+ * or a wrapper called with a bare identifier argument (`forwardRef(Inner)`).
+ * Never guesses: an unrecognized shape yields no extraction, not a partial one.
+ */
+function unwrapWrapperCall(
+  node: t.CallExpression,
+  depth: number,
+): t.ArrowFunctionExpression | t.FunctionExpression | undefined {
+  if (depth > MAX_WRAPPER_UNWRAP_DEPTH) return undefined;
+  if (!isWrapperCallee(node.callee)) return undefined;
+
+  const firstArg = node.arguments[0];
+  if (!firstArg) return undefined;
+  if (firstArg.type === "ArrowFunctionExpression" || firstArg.type === "FunctionExpression") {
+    return firstArg;
+  }
+  if (firstArg.type === "CallExpression") {
+    return unwrapWrapperCall(firstArg, depth + 1);
+  }
+  return undefined;
+}
+
 /**
  * Extract props from a component's source file.
  * Returns an array of ComponentPropEntry, or undefined if extraction fails.
@@ -296,6 +344,16 @@ export function extractComponentProps(componentName: string, source: string): Co
         if (init.type === "ArrowFunctionExpression") {
           foundProps = extractFromFunctionParam((init as t.ArrowFunctionExpression).params) ?? undefined;
           path.stop();
+          return;
+        }
+        // Wrapped component: const Button = forwardRef(...) / memo(...),
+        // including nested combinations like React.memo(React.forwardRef(...)).
+        if (init.type === "CallExpression") {
+          const inner = unwrapWrapperCall(init as t.CallExpression, 0);
+          if (inner) {
+            foundProps = extractFromFunctionParam(inner.params) ?? undefined;
+            path.stop();
+          }
         }
       },
     });
