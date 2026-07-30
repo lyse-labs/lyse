@@ -39,23 +39,52 @@ const TEST_OR_TOOLING_SUFFIXES = [
 ];
 
 /**
- * Bare, unprefixed local names that disqualify a package regardless of scope
- * — matched against the part of the name after the last `/`, so a scoped
- * `@corvu/web` is caught the same way a bare `web` would be. Verified against
- * the 26-repo bench corpus: `web` removes corvu's docs/demo site (its own
- * package.json: "corvu.dev website"); `test` removes ariakit's React
- * test-utilities package (`@ariakit/test`, one real `.tsx` file that is a
- * test helper, not a component). Candidates that removed nothing across all
- * 26 repos (`www`, `site`, `demos`, `tests`, `playground`, `storybook`) and
- * candidates that only ever removed the same package the directory-segment
- * check already removes (`app`, `demo`) were dropped — the former as
- * untested surface, the latter as redundant, unconfirmed-independently.
+ * `web`/`test`/`tests`/`docs` disqualify a package only in the two shapes
+ * they were actually derived from — a bare full-string name match, tried and
+ * reverted, was over-broad: a cross-platform design system split as
+ * `packages/native` + `packages/web`, where `@acme/web` is the real 50-file
+ * web component library, must survive; today it would be discarded by name
+ * alone.
+ *
+ * Shape 1 — bare top-level directory (`isBareTopLevelDir`): the package's
+ * ENTIRE `relDir` is one of these words as a single path segment. Verified
+ * against the 26-repo bench corpus: corvu's docs site really is at
+ * `relDir: "web"`, independent of what it happens to be named. `docs` is
+ * listed here for symmetry with `APP_OR_SITE_DIR_SEGMENTS`, which already
+ * disqualifies a `docs` segment at any depth via `app-or-site-directory`
+ * earlier in `disqualify` — so this branch is unreachable for `docs` today,
+ * not a live rule; kept in case that set ever narrows.
+ *
+ * Shape 2 — scoped local name (`isScopedTestOrDocsName`): the package name
+ * (after the last `/`) is exactly `test`, `tests` or `docs` — no real design
+ * system publishes itself as `@scope/test` (verified: this is what catches
+ * ariakit's `@ariakit/test`, one real `.tsx` file that is a test helper, not
+ * a component). Requires an actual scope — an unscoped name carries none of
+ * that signal. `web` is deliberately excluded from this shape: unlike
+ * `test`/`tests`/`docs`, `@scope/web` is a plausible name for a real,
+ * evidenced component package (the cross-platform case above).
+ *
+ * Candidates that removed nothing across all 26 repos (`www`, `site`,
+ * `demos`, `playground`, `storybook`) and candidates that only ever removed
+ * the same package the directory-segment check already removes (`app`,
+ * `demo`) were dropped — the former as untested surface, the latter as
+ * redundant, unconfirmed-independently.
  */
-const BARE_NON_DS_NAMES = new Set(["docs", "web", "test"]);
+const BARE_TOP_LEVEL_DIR_WORDS = new Set(["web", "test", "tests", "docs"]);
+const SCOPED_TEST_OR_DOCS_WORDS = new Set(["test", "tests", "docs"]);
 
 function localName(name: string): string {
   const lastSlash = name.lastIndexOf("/");
   return lastSlash === -1 ? name : name.slice(lastSlash + 1);
+}
+
+function isBareTopLevelDir(relDir: string): boolean {
+  return BARE_TOP_LEVEL_DIR_WORDS.has(relDir.toLowerCase());
+}
+
+function isScopedTestOrDocsName(name: string): boolean {
+  if (!name.includes("/")) return false;
+  return SCOPED_TEST_OR_DOCS_WORDS.has(localName(name).toLowerCase());
 }
 
 /**
@@ -67,7 +96,9 @@ function disqualify(pkg: WorkspacePackage): string | null {
   if (pkg.relDir === "") return "workspace-root";
   const segments = pkg.relDir.split("/");
   if (segments.some(s => APP_OR_SITE_DIR_SEGMENTS.has(s.toLowerCase()))) return "app-or-site-directory";
-  if (BARE_NON_DS_NAMES.has(localName(pkg.name)) || DOCS_OR_SITE_NAME_RE.test(pkg.name)) return "docs-or-site-name";
+  if (isBareTopLevelDir(pkg.relDir) || isScopedTestOrDocsName(pkg.name) || DOCS_OR_SITE_NAME_RE.test(pkg.name)) {
+    return "docs-or-site-name";
+  }
   if (TEST_OR_TOOLING_NAME_RE.test(pkg.name)) return "test-or-tooling-name";
   if (TEST_OR_TOOLING_SUFFIXES.some(suffix => pkg.name.endsWith(suffix))) return "test-or-tooling-name";
   return null;
@@ -119,16 +150,24 @@ export function identifyDsFamily(
     .map(p => ({ name: p.name, relDir: p.relDir }))
     .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 
-  return { isDesignSystem: true, members, primary: choosePrimary(survivors), evidence };
+  return { isDesignSystem: true, members, primary: choosePrimary(survivors, componentFileCounts), evidence };
 }
 
 /**
  * A total order so the label is stable, not an attempt to name "the" design
- * system: public entry first, then shallowest directory, then name.
+ * system: public entry first, then most component-file evidence, then
+ * shallowest directory, then name. The label now prefers the package with
+ * the strongest evidence, not merely the one that happens to sort first —
+ * a single-file package (e.g. a commercial add-on) must not outrank the
+ * package holding the actual components just because its name is
+ * alphabetically earlier or its directory no deeper.
  */
-function choosePrimary(candidates: WorkspacePackage[]): string {
+function choosePrimary(candidates: WorkspacePackage[], componentFileCounts: Map<string, number>): string {
   const [best] = [...candidates].sort((a, b) => {
     if (a.hasPublicEntry !== b.hasPublicEntry) return a.hasPublicEntry ? -1 : 1;
+    const filesA = componentFileCounts.get(a.name) ?? 0;
+    const filesB = componentFileCounts.get(b.name) ?? 0;
+    if (filesA !== filesB) return filesB - filesA;
     const depthA = a.relDir.split("/").length;
     const depthB = b.relDir.split("/").length;
     if (depthA !== depthB) return depthA - depthB;
