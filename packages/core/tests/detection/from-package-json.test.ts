@@ -201,3 +201,50 @@ describe("detectComponentsModule — deterministic tie-break (#Task1)", () => {
     expect(seen.size).toBe(1);
   });
 });
+
+describe("enumerateWorkspacePackages — non-object JSON in a workspace member's package.json (regression)", () => {
+  // `JSON.parse` accepts `null`, arrays, and bare scalars as valid JSON — none of
+  // them are a package.json "object". A workspace member with such content must be
+  // skipped like any other malformed member, not crash the whole audit.
+  it("skips a member whose package.json is literally `null` and still detects a healthy sibling", async () => {
+    writeFileSync(join(dir, "package.json"), JSON.stringify({
+      private: true,
+      workspaces: ["packages/*"],
+    }));
+    mkdirSync(join(dir, "packages", "broken"), { recursive: true });
+    writeFileSync(join(dir, "packages", "broken", "package.json"), "null");
+    mkdirSync(join(dir, "packages", "ui"), { recursive: true });
+    writeFileSync(join(dir, "packages", "ui", "package.json"), JSON.stringify({ name: "@acme/ui" }));
+
+    const r = await detectFromPackageJson(dir);
+    expect(r.componentsModule.value).toBe("@acme/ui");
+  });
+
+  it("skips a member whose package.json is a JSON array and still detects a healthy sibling", async () => {
+    writeFileSync(join(dir, "package.json"), JSON.stringify({
+      private: true,
+      workspaces: ["packages/*"],
+    }));
+    mkdirSync(join(dir, "packages", "broken"), { recursive: true });
+    writeFileSync(join(dir, "packages", "broken", "package.json"), "[]");
+    mkdirSync(join(dir, "packages", "ui"), { recursive: true });
+    writeFileSync(join(dir, "packages", "ui", "package.json"), JSON.stringify({ name: "@acme/ui" }));
+
+    const r = await detectFromPackageJson(dir);
+    expect(r.componentsModule.value).toBe("@acme/ui");
+  });
+
+  it("skips a member whose package.json is a bare JSON string and still detects a healthy sibling", async () => {
+    writeFileSync(join(dir, "package.json"), JSON.stringify({
+      private: true,
+      workspaces: ["packages/*"],
+    }));
+    mkdirSync(join(dir, "packages", "broken"), { recursive: true });
+    writeFileSync(join(dir, "packages", "broken", "package.json"), "\"hello\"");
+    mkdirSync(join(dir, "packages", "ui"), { recursive: true });
+    writeFileSync(join(dir, "packages", "ui", "package.json"), JSON.stringify({ name: "@acme/ui" }));
+
+    const r = await detectFromPackageJson(dir);
+    expect(r.componentsModule.value).toBe("@acme/ui");
+  });
+});

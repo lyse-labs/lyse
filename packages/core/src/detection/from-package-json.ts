@@ -173,19 +173,23 @@ export async function enumerateWorkspacePackages(pkg: PackageJson, rootDir: stri
 
   const out: WorkspacePackage[] = [];
   for (const pkgPath of pkgJsonPaths) {
-    let sub: { name?: unknown; private?: unknown; exports?: unknown; main?: unknown; module?: unknown };
+    // `JSON.parse("null")` does NOT throw — it returns null. Reading `.name`
+    // outside this try would crash the whole audit on a workspace member whose
+    // package.json is literally `null`, where the previous code skipped it.
     try {
-      sub = JSON.parse(await readFile(pkgPath, "utf8")) as typeof sub;
+      const sub = JSON.parse(await readFile(pkgPath, "utf8")) as
+        { name?: unknown; private?: unknown; exports?: unknown; main?: unknown; module?: unknown } | null;
+      if (sub === null || typeof sub !== "object") continue;
+      if (typeof sub.name !== "string" || sub.name.length === 0) continue;
+      out.push({
+        name: sub.name,
+        relDir: posixRelative(rootDir, dirname(pkgPath)),
+        private: sub.private === true,
+        hasPublicEntry: sub.exports !== undefined || sub.main !== undefined || sub.module !== undefined,
+      });
     } catch {
       continue;
     }
-    if (typeof sub.name !== "string" || sub.name.length === 0) continue;
-    out.push({
-      name: sub.name,
-      relDir: posixRelative(rootDir, dirname(pkgPath)),
-      private: sub.private === true,
-      hasPublicEntry: sub.exports !== undefined || sub.main !== undefined || sub.module !== undefined,
-    });
   }
 
   out.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
