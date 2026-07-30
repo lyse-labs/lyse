@@ -184,3 +184,20 @@ describe("detectComponentsModule — ownership guard gated on pkg.private (regre
     expect(r.componentsModule.source.startsWith("workspace DS export")).toBe(false);
   });
 });
+
+describe("detectComponentsModule — deterministic tie-break (#Task1)", () => {
+  it("returns the same componentsModule on repeated runs when several packages match", async () => {
+    writeFileSync(join(dir, "package.json"), JSON.stringify({ private: true, workspaces: ["packages/*"] }));
+    for (const name of ["@acme/react", "@acme/components", "@acme/core", "@acme/ui"]) {
+      const sub = join(dir, "packages", name.split("/")[1] ?? "x");
+      mkdirSync(sub, { recursive: true });
+      writeFileSync(join(sub, "package.json"), JSON.stringify({ name }));
+    }
+    const seen = new Set<string | null>();
+    for (let i = 0; i < 20; i++) {
+      const r = await detectFromPackageJson(dir);
+      seen.add(r.componentsModule.value);
+    }
+    expect(seen.size).toBe(1);
+  });
+});

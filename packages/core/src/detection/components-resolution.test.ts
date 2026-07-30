@@ -3,55 +3,62 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveComponentsModule, buildInventoryForMode, resolveComponentSources } from "./components-resolution.js";
-import type { DetectionResult } from "./types.js";
+import type { ComponentsModuleDetection } from "./types.js";
 import type { ParsedTsFile, StoryIndex } from "../types.js";
 
 describe("resolveComponentsModule", () => {
-  it("explicit config wins over detection, and detection is not consulted for dsSelfMode", () => {
-    const detected: DetectionResult<string> = {
-      value: "@other/ui",
-      confidence: "high",
-      source: "workspace DS export (@other/ui)",
-    };
-    expect(resolveComponentsModule("@acme/ui", detected)).toEqual({
-      componentsModule: "@acme/ui",
-      dsSelfMode: false,
-    });
-  });
-
-  it("falls back to detection and sets dsSelfMode when the source is a workspace DS export", () => {
-    const detected: DetectionResult<string> = {
+  it("uses the structured dsSelf flag, not the human-readable source text", () => {
+    const detected: ComponentsModuleDetection = {
       value: "@acme/ui",
       confidence: "high",
-      source: "workspace DS export (@acme/ui)",
+      source: "some entirely different wording",
+      dsSelf: true,
+      family: [{ name: "@acme/ui", relDir: "packages/ui" }],
     };
     expect(resolveComponentsModule(null, detected)).toEqual({
       componentsModule: "@acme/ui",
       dsSelfMode: true,
+      family: [{ name: "@acme/ui", relDir: "packages/ui" }],
     });
   });
 
-  it("falls back to detection without dsSelfMode when the source is not a workspace DS export", () => {
-    const detected: DetectionResult<string> = {
-      value: "@acme/ui",
+  it("does not set dsSelfMode when the detection is not self-DS", () => {
+    const detected: ComponentsModuleDetection = {
+      value: "@mui/material",
       confidence: "medium",
-      source: "dependency",
+      source: "common UI library: @mui/material",
+      dsSelf: false,
+      family: [],
     };
     expect(resolveComponentsModule(null, detected)).toEqual({
-      componentsModule: "@acme/ui",
+      componentsModule: "@mui/material",
       dsSelfMode: false,
+      family: [],
+    });
+  });
+
+  it("an explicit config module wins and carries no family", () => {
+    const detected: ComponentsModuleDetection = {
+      value: "@other/ui", confidence: "high", source: "workspace DS export (@other/ui)",
+      dsSelf: true, family: [{ name: "@other/ui", relDir: "packages/ui" }],
+    };
+    expect(resolveComponentsModule("@acme/ui", detected)).toEqual({
+      componentsModule: "@acme/ui", dsSelfMode: false, family: [],
     });
   });
 
   it("returns null componentsModule when neither config nor detection has a value", () => {
-    const detected: DetectionResult<string> = {
+    const detected: ComponentsModuleDetection = {
       value: null,
       confidence: "low",
       source: "no obvious componentsModule",
+      dsSelf: false,
+      family: [],
     };
     expect(resolveComponentsModule(null, detected)).toEqual({
       componentsModule: null,
       dsSelfMode: false,
+      family: [],
     });
   });
 });
