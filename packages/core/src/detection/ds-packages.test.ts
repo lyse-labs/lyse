@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { identifyDsFamily, countComponentFilesByPackage } from "./ds-packages.js";
+import { identifyDsFamily, countComponentFilesByPackage, MIN_COMPONENT_FILES } from "./ds-packages.js";
 import type { WorkspacePackage } from "./types.js";
 
 const pkg = (name: string, relDir: string, over: Partial<WorkspacePackage> = {}): WorkspacePackage => ({
@@ -26,10 +26,17 @@ describe("identifyDsFamily", () => {
     ]);
   });
 
-  it("admits a package holding exactly MIN_COMPONENT_FILES (2) and rejects one holding 1", () => {
-    const packages = [pkg("@acme/two", "packages/two"), pkg("@acme/one", "packages/one", { hasPublicEntry: false })];
-    const family = identifyDsFamily(packages, new Map([["@acme/two", 2], ["@acme/one", 1]]));
-    expect(family.members.map(m => m.name)).toEqual(["@acme/two"]);
+  it("admits a package holding exactly MIN_COMPONENT_FILES and rejects one holding one fewer", () => {
+    const packages = [
+      pkg("@acme/at-floor", "packages/at-floor"),
+      pkg("@acme/below-floor", "packages/below-floor", { hasPublicEntry: false }),
+    ];
+    const counts = new Map([
+      ["@acme/at-floor", MIN_COMPONENT_FILES],
+      ["@acme/below-floor", MIN_COMPONENT_FILES - 1],
+    ]);
+    const family = identifyDsFamily(packages, counts);
+    expect(family.members.map(m => m.name)).toEqual(["@acme/at-floor"]);
   });
 
   it("disqualifies apps, docs sites and playgrounds by directory", () => {
@@ -45,6 +52,49 @@ describe("identifyDsFamily", () => {
     const family = identifyDsFamily(packages, counts);
     expect(family.members.map(m => m.name)).toEqual(["@calcom/ui"]);
     expect(family.evidence["@calcom/web"]?.disqualifiedBy).toBe("app-or-site-directory");
+  });
+
+  it("disqualifies singular app/demo/guide/nextjs directories, not just their plural forms", () => {
+    // Real shape, ariakit + mantine (bench corpus): a demo app, a docs guide
+    // and a Next.js integration example each live at a bare, singular,
+    // top-level directory that the plural-only segment list let through.
+    const packages = [
+      pkg("@ariakit/react-components", "packages/ariakit-react-components"),
+      pkg("app", "app", { hasPublicEntry: true }),
+      pkg("guide", "guide", { hasPublicEntry: true }),
+      pkg("nextjs", "nextjs", { hasPublicEntry: true }),
+      pkg("@mantinex/demo", "packages/@mantinex/demo"),
+    ];
+    const counts = new Map([
+      ["@ariakit/react-components", 181], ["app", 99], ["guide", 6], ["nextjs", 4], ["@mantinex/demo", 17],
+    ]);
+    const family = identifyDsFamily(packages, counts);
+    expect(family.members.map(m => m.name)).toEqual(["@ariakit/react-components"]);
+    expect(family.primary).toBe("@ariakit/react-components");
+    expect(family.evidence["app"]?.disqualifiedBy).toBe("app-or-site-directory");
+    expect(family.evidence["guide"]?.disqualifiedBy).toBe("app-or-site-directory");
+    expect(family.evidence["nextjs"]?.disqualifiedBy).toBe("app-or-site-directory");
+    expect(family.evidence["@mantinex/demo"]?.disqualifiedBy).toBe("app-or-site-directory");
+  });
+
+  it("disqualifies a scoped package whose local name (after the scope) is a bare docs/tooling word", () => {
+    // Real shape, ariakit + corvu (bench corpus): corvu's docs site is
+    // scoped as `@corvu/web`, not bare `web`, and ariakit ships React test
+    // utilities as `@ariakit/test`, not bare `test` — neither is caught by
+    // full-string equality against the bare word.
+    const packages = [
+      pkg("@corvu/accordion", "packages/accordion"),
+      pkg("@corvu/web", "web", { hasPublicEntry: false }),
+      pkg("@ariakit/react-components", "packages/ariakit-react-components"),
+      pkg("@ariakit/test", "packages/ariakit-test"),
+    ];
+    const counts = new Map([
+      ["@corvu/accordion", 4], ["@corvu/web", 52], ["@ariakit/react-components", 181], ["@ariakit/test", 1],
+    ]);
+    const family = identifyDsFamily(packages, counts);
+    expect(family.members.map(m => m.name)).toEqual(["@ariakit/react-components", "@corvu/accordion"]);
+    expect(family.evidence["@corvu/web"]?.disqualifiedBy).toBe("docs-or-site-name");
+    expect(family.evidence["@ariakit/test"]?.disqualifiedBy).toBe("docs-or-site-name");
   });
 
   it("disqualifies a docs-demo package and a test package by name, even when public and huge", () => {
@@ -138,5 +188,28 @@ describe("countComponentFilesByPackage", () => {
     expect(counts.get("@acme/inner")).toBe(1);
     expect(counts.get("@acme/icons")).toBe(1);
     expect(counts.get("@acme/scripts")).toBeUndefined();
+  });
+
+  it("ignores component-shaped files under test, mock, fixture and e2e directories", async () => {
+    const root = mkdtempSync(join(tmpdir(), "lyse-dsfam-"));
+    const write = (rel: string, body = "export const X = 1;") => {
+      const abs = join(root, rel);
+      mkdirSync(join(abs, ".."), { recursive: true });
+      writeFileSync(abs, body);
+    };
+    write("packages/only-fixtures/__tests__/Button.tsx");
+    write("packages/only-fixtures/__mocks__/Card.tsx");
+    write("packages/only-fixtures/__fixtures__/Chip.tsx");
+    write("packages/only-fixtures/test/Alert.tsx");
+    write("packages/only-fixtures/tests/Badge.tsx");
+    write("packages/only-fixtures/fixtures/Tag.tsx");
+    write("packages/only-fixtures/e2e/Flow.tsx");
+    write("packages/only-fixtures/src/Real.tsx");
+
+    const packages = [
+      { name: "@acme/only-fixtures", relDir: "packages/only-fixtures", private: false, hasPublicEntry: true },
+    ];
+    const counts = await countComponentFilesByPackage(root, packages);
+    expect(counts.get("@acme/only-fixtures")).toBe(1);
   });
 });

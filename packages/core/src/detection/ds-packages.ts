@@ -2,14 +2,34 @@ import fg from "fast-glob";
 import type { DsFamily, DsFamilyMember, DsPackageEvidence, WorkspacePackage } from "./types.js";
 
 /**
- * Pinned by the benchmark corpus, not chosen: radix's real DS packages
- * (`@radix-ui/react-tabs`, `@radix-ui/react-presence`, …) each hold exactly two
- * component-shaped files. A threshold of 3 would exclude radix's whole family.
+ * Verified on disk, not assumed: the typical radix primitive package
+ * (`packages/react/tabs/src/` = `index.ts` + `tabs.tsx`) holds exactly ONE
+ * component-shaped file — `index.ts` doesn't count, `.ts` is deliberately
+ * excluded (see `COMPONENT_FILE_GLOB` below). A floor of 2 excluded ~93% of
+ * radix's ~58 real primitive packages, keeping only the handful that happen
+ * to split a hook into a second file (`presence`, `collection`, …).
+ * Precision does not come from this threshold — it comes from `disqualify()`
+ * ruling out apps, docs, tests and tooling, and from `COMPONENT_FILE_GLOB`/
+ * `COUNT_IGNORE` only counting real component-shaped source. One real
+ * component file is sufficient evidence; zero is not.
  */
-export const MIN_COMPONENT_FILES = 2;
+export const MIN_COMPONENT_FILES = 1;
 
+/**
+ * Verified against the 26-repo bench corpus (isolated per-segment measurement,
+ * every removal confirmed on disk — see `.superpowers/sdd/task-3-report.md`):
+ * `apps`'s plural-only form let three real, singular, bare top-level
+ * directories through — ariakit's own private demo app (`app`), its docs
+ * guide (`guide`, per-section `site-icon.tsx` files, not components) and its
+ * Next.js integration example (`nextjs`, a real `next dev`/`next build` app);
+ * `demo` catches mantine's `@mantinex/demo` ("Demo base components used on
+ * *.mantine.dev websites" per its own package.json). Candidates that removed
+ * nothing across all 26 repos (`demos`, `example`, `template`, `www`,
+ * `storybook`) were dropped as untested surface, not added speculatively.
+ */
 const APP_OR_SITE_DIR_SEGMENTS = new Set([
-  "apps", "docs", "site", "sites", "website", "playground", "playgrounds", "examples", "templates", "e2e",
+  "apps", "app", "docs", "site", "sites", "website", "playground", "playgrounds",
+  "examples", "templates", "e2e", "demo", "guide", "nextjs",
 ]);
 
 const DOCS_OR_SITE_NAME_RE = /(-website|-docs|-site)$|\.(com|dev|io)$|^@docs\//;
@@ -17,6 +37,26 @@ const TEST_OR_TOOLING_NAME_RE = /^@[^/]*-tests?\//;
 const TEST_OR_TOOLING_SUFFIXES = [
   "-internal", "-test-utils", "-tests", "-test", "-tooling", "-build", "-scripts", "-codemods",
 ];
+
+/**
+ * Bare, unprefixed local names that disqualify a package regardless of scope
+ * — matched against the part of the name after the last `/`, so a scoped
+ * `@corvu/web` is caught the same way a bare `web` would be. Verified against
+ * the 26-repo bench corpus: `web` removes corvu's docs/demo site (its own
+ * package.json: "corvu.dev website"); `test` removes ariakit's React
+ * test-utilities package (`@ariakit/test`, one real `.tsx` file that is a
+ * test helper, not a component). Candidates that removed nothing across all
+ * 26 repos (`www`, `site`, `demos`, `tests`, `playground`, `storybook`) and
+ * candidates that only ever removed the same package the directory-segment
+ * check already removes (`app`, `demo`) were dropped — the former as
+ * untested surface, the latter as redundant, unconfirmed-independently.
+ */
+const BARE_NON_DS_NAMES = new Set(["docs", "web", "test"]);
+
+function localName(name: string): string {
+  const lastSlash = name.lastIndexOf("/");
+  return lastSlash === -1 ? name : name.slice(lastSlash + 1);
+}
 
 /**
  * The first disqualifying rule that applies, or null. Order is part of the
@@ -27,7 +67,7 @@ function disqualify(pkg: WorkspacePackage): string | null {
   if (pkg.relDir === "") return "workspace-root";
   const segments = pkg.relDir.split("/");
   if (segments.some(s => APP_OR_SITE_DIR_SEGMENTS.has(s.toLowerCase()))) return "app-or-site-directory";
-  if (pkg.name === "docs" || DOCS_OR_SITE_NAME_RE.test(pkg.name)) return "docs-or-site-name";
+  if (BARE_NON_DS_NAMES.has(localName(pkg.name)) || DOCS_OR_SITE_NAME_RE.test(pkg.name)) return "docs-or-site-name";
   if (TEST_OR_TOOLING_NAME_RE.test(pkg.name)) return "test-or-tooling-name";
   if (TEST_OR_TOOLING_SUFFIXES.some(suffix => pkg.name.endsWith(suffix))) return "test-or-tooling-name";
   return null;
@@ -106,6 +146,8 @@ const COMPONENT_FILE_GLOB = "**/*.{tsx,jsx,vue,svelte}";
 const COUNT_IGNORE = [
   "**/node_modules/**", "**/dist/**", "**/build/**",
   "**/*.test.*", "**/*.spec.*", "**/*.stories.*", "**/*.story.*", "**/*.d.ts",
+  "**/__tests__/**", "**/__mocks__/**", "**/__fixtures__/**",
+  "**/test/**", "**/tests/**", "**/fixtures/**", "**/e2e/**",
 ];
 
 /**
