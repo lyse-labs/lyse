@@ -1,3 +1,4 @@
+import fg from "fast-glob";
 import type { DsFamily, DsFamilyMember, DsPackageEvidence, WorkspacePackage } from "./types.js";
 
 /**
@@ -46,24 +47,29 @@ export function identifyDsFamily(
   packages: WorkspacePackage[],
   componentFileCounts: Map<string, number>,
 ): DsFamily {
-  const evidence: Record<string, DsPackageEvidence> = {};
+  const evidenceEntries: [string, DsPackageEvidence][] = [];
   const survivors: WorkspacePackage[] = [];
 
   for (const pkg of packages) {
     const componentFiles = componentFileCounts.get(pkg.name) ?? 0;
     const disqualifiedBy = disqualify(pkg);
-    evidence[pkg.name] = {
+    evidenceEntries.push([pkg.name, {
       componentFiles,
       hasPublicEntry: pkg.hasPublicEntry,
       private: pkg.private,
       disqualifiedBy,
-    };
+    }]);
     if (disqualifiedBy !== null) continue;
     // Component files are the ONLY qualifying evidence. A declared public entry
     // is not enough on its own — a published utility package would otherwise
     // join the family. It contributes to `primary` selection instead.
     if (componentFiles >= MIN_COMPONENT_FILES) survivors.push(pkg);
   }
+
+  // Sorted alphabetically — CLAUDE.md's determinism rule, and this record is
+  // one JSON.stringify away from a report. Build order must not leak here.
+  evidenceEntries.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  const evidence: Record<string, DsPackageEvidence> = Object.fromEntries(evidenceEntries);
 
   if (survivors.length === 0) {
     return { isDesignSystem: false, members: [], primary: null, evidence };
@@ -89,4 +95,38 @@ function choosePrimary(candidates: WorkspacePackage[]): string {
     return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
   });
   return best?.name ?? "";
+}
+
+/**
+ * `.tsx`/`.jsx`/`.vue`/`.svelte` only: these extensions are themselves evidence
+ * of a component. `.ts`/`.js` are excluded deliberately — a package full of
+ * utilities would otherwise look like a design system.
+ */
+const COMPONENT_FILE_GLOB = "**/*.{tsx,jsx,vue,svelte}";
+const COUNT_IGNORE = [
+  "**/node_modules/**", "**/dist/**", "**/build/**",
+  "**/*.test.*", "**/*.spec.*", "**/*.stories.*", "**/*.story.*", "**/*.d.ts",
+];
+
+/**
+ * One glob over the whole repo, then longest-prefix attribution — not one glob
+ * per package. A 123-package monorepo (Twilio Paste) would otherwise pay 123
+ * filesystem walks just to decide what its design system is.
+ */
+export async function countComponentFilesByPackage(
+  rootDir: string,
+  packages: WorkspacePackage[],
+): Promise<Map<string, number>> {
+  const files = await fg([COMPONENT_FILE_GLOB], { cwd: rootDir, onlyFiles: true, ignore: COUNT_IGNORE });
+  const byDepth = [...packages]
+    .filter(p => p.relDir !== "")
+    .sort((a, b) => b.relDir.length - a.relDir.length);
+
+  const counts = new Map<string, number>();
+  for (const file of files) {
+    const owner = byDepth.find(p => file.startsWith(`${p.relDir}/`));
+    if (owner === undefined) continue;
+    counts.set(owner.name, (counts.get(owner.name) ?? 0) + 1);
+  }
+  return counts;
 }

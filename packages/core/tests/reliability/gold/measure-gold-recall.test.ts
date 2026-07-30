@@ -65,8 +65,8 @@ afterAll(() => {
 });
 
 // Second fixture: a private workspace monorepo whose root package.json
-// resolves (via `detectFromPackageJson`'s Branch 3 workspace walk) to a
-// `componentsModule.source` starting with "workspace DS export" — the ONLY
+// resolves (via `detectFromPackageJson`'s Branch 3 workspace walk, evidence-
+// based since Task 3) to a `componentsModule` with `dsSelf: true` — the ONLY
 // condition that makes `dsSelfMode` true in `audit-pipeline.ts`. Real DS repos
 // (primer/css, canvas-kit) are shaped like this; the plain-package fixture
 // above is not, so it can never exercise the zoning override at all.
@@ -88,14 +88,16 @@ beforeAll(() => {
     `${JSON.stringify({ name: "gold-ds-fixture-monorepo", private: true, workspaces: ["packages/*"] }, null, 2)}\n`,
     "utf8",
   );
-  // Workspace member name matches `DS_EXPORT_RE` in from-package-json.ts
-  // (`@<scope>/ui`) — this is what makes the detected source string start
-  // with "workspace DS export".
   writeFileSync(
     join(dir, "packages/ui/package.json"),
     `${JSON.stringify({ name: "@acme/ui", version: "0.0.0" }, null, 2)}\n`,
     "utf8",
   );
+  // Evidence-based detection (Task 3) qualifies a workspace package on
+  // component-file count, not name — packages/ui needs real `.tsx` files to
+  // join the DS family. A `.css` file alone (below) is not component evidence.
+  writeFileSync(join(dir, "packages/ui/src/components/Card.tsx"), "export function Card() {\n  return null;\n}\n", "utf8");
+  writeFileSync(join(dir, "packages/ui/src/components/Button.tsx"), "export function Button() {\n  return null;\n}\n", "utf8");
 
   writeFileSync(join(dir, DS_UI_CSS_PATH), `.card {\n  color: ${DS_LITERAL};\n}\n`, "utf8");
   runIn(["add", "."]);
@@ -181,11 +183,12 @@ describe("gold/measure-gold-recall measureGoldRecall", () => {
 // real-DS-shaped repo (unlike the plain-package fixture above, where
 // `dsSelfMode` is already false with no package.json at all — see review).
 describe("gold/measure-gold-recall app-zoning override (dsSelfMode ablation)", () => {
-  it("fixture is DS-shaped: detectFromPackageJson reports a workspace DS export", async () => {
+  it("fixture is DS-shaped: detectFromPackageJson reports a workspace DS family", async () => {
     execFileSync("git", ["checkout", "-q", dsRepo.parent], { cwd: dsRepo.dir });
     try {
       const detected = await detectFromPackageJson(dsRepo.dir);
-      expect(detected.componentsModule.source.startsWith("workspace DS export")).toBe(true);
+      // The structured flag, not source-text sniffing — see components-resolution.ts.
+      expect(detected.componentsModule.dsSelf).toBe(true);
     } finally {
       execFileSync("git", ["checkout", "-q", dsRepo.branch], { cwd: dsRepo.dir });
     }
