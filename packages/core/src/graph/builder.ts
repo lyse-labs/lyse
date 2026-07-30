@@ -17,8 +17,9 @@ export interface GraphInputs {
   componentsModule: string | null;
   /**
    * The design-system family. When present, usage counts imports of ANY member.
-   * Counting one arbitrarily-chosen member made the number swing 5x between
-   * identical runs on a real monorepo.
+   * A monorepo DS can have many packages — Twilio Paste has 116 — and counting
+   * only one arbitrarily-chosen member undercounts badly: paste reported 1 file
+   * of usage where the real number, counting the whole family, is 818.
    */
   dsFamily?: DsFamilyMember[];
   dsSelfMode: boolean;

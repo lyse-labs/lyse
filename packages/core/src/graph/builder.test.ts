@@ -91,4 +91,26 @@ describe("computeUsage — design-system family", () => {
     });
     expect(graph.usage.map((u) => u.file)).toEqual(["a.ts"]);
   });
+
+  it("falls back to the single module when dsFamily is explicitly [] — the shape production actually sends, not just omitted", async () => {
+    // build-io.ts always passes a non-optional array and audit-pipeline.ts
+    // initialises dsFamily = []; neither ever omits the field or passes
+    // undefined. This pins that shape so a future guard rewrite (e.g.
+    // `family.length > 0` -> `inputs.dsFamily !== undefined`) cannot silently
+    // zero out usage for every repo with a configured or detected single
+    // componentsModule while the "no family" test above keeps passing.
+    const graph = await buildDesignSystemGraph({
+      repoRoot: process.cwd(),
+      parsed: { ts: [tsFile("a.ts", "@mui/material"), tsFile("b.ts", "@acme/icons")], css: [], cssInJs: [] },
+      fileContents: new Map(),
+      componentsModule: "@mui/material",
+      dsFamily: [],
+      dsSelfMode: false,
+      storyIndex: null,
+      excludePaths: [],
+      baseInventory: [],
+      componentFiles: new Map(),
+    });
+    expect(graph.usage.map((u) => u.file)).toEqual(["a.ts"]);
+  });
 });
