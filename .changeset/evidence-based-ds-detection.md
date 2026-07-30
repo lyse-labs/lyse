@@ -1,0 +1,58 @@
+---
+"@lyse-labs/lyse": minor
+---
+
+Evidence-based design-system detection: a repo's design system is now a *family* of workspace packages identified by component-file evidence and shape-based disqualifiers, not a single package matched by a regex against its name — and the Health Score moves on real design systems as a direct, disclosed consequence.
+
+1. **Evidence-based family detection, not a name regex.** `detectWorkspaceDsPackage` used to test every workspace package name against `DS_EXPORT_RE` (`@scope/ui`, `@scope/components`, `*-design-system`, …). A monorepo whose packages are named anything else (`@radix-ui/react-tabs`, `@kobalte/core`'s siblings) was invisible, and the regex could also pick a wrong, real-but-irrelevant package purely because its name matched (`@calcom/web` — a Next.js app — over `@calcom/ui`; `@mantine-tests/core` — a test package — over `@mantine/core`). `identifyDsFamily` (new `detection/ds-packages.ts`) now classifies every workspace package on component-file evidence (≥1 real `.tsx`/`.jsx`/`.vue`/`.svelte` file — `.ts`/`.js` utilities don't count) after a shape-based disqualifier pass rules out workspace roots, app/docs/site/playground directories, and test/tooling packages — never on what the package is called. Fixed detections verified on disk: cal.com `@calcom/web`→`@calcom/app-store` (family of 29, includes `@calcom/ui`), mantine `@mantine-tests/core`→`@mantine/carousel` (family of 18, includes `@mantine/core`), corvu `@corvu/web`→`@corvu/accordion`, documenso `@documenso/ee`→`@documenso/ui`, paste `@twilio-paste/icons`→`@twilio-paste/customization` (family of 102 — Paste has no single "the" DS package, correctly). Measured (`.bench-corpus`, manifest components, `main`→this branch): kobalte 0→59, element-plus 0→98, ariakit 0→29, documenso 0→17, shadcn-svelte 0→10, skeleton 0→51, primitives 0→49, vuetify 0→211, paste 792→842, chakra-ui 82→122 — full 26-repo table below.
+2. **`usage` now counts the whole family, not one arbitrarily-chosen member.** `computeUsage` matched imports against a single `componentsModule` string — on a monorepo DS split across many packages (Twilio Paste ships 116), that measured one arbitrarily-chosen package's imports and called it "design-system usage." It now counts imports of any family member. Measured (manifest `usage[]`, `main`→this branch): `mantine` `{count:1415,files:1415}`→`{count:2146,files:1974}`; `paste` `[]` (empty — main's regex-based primary happened to resolve to a package nothing imports)→`{count:1467,files:818}`; `salt-ds` `{count:719,files:718}`→`{count:1267,files:902}`; `primitives` `{count:34,files:34}`→`{count:352,files:53}`. `lyse manifest`'s `usage` was not merely low before this change on a real monorepo — **it was non-deterministic**: which package `detectWorkspaceDsPackage` picked depended on an unordered `fast-glob` workspace walk feeding a first-match regex scan, so two runs of the same tree could resolve a different `componentsModule` and therefore report a different usage count. `enumerateWorkspacePackages` now sorts and dedupes the workspace list before any decision is made from it, and `identifyDsFamily`/`choosePrimary` apply a total, order-independent order — so the same repo state now produces byte-identical output every run (verified: 5 fresh runs on mantine, 3 on three more repos, all byte-identical hashes).
+3. **Component-file recognition covers Vue/Svelte and the `<component>/src/<component>` layout.** `componentNameFromPath` only matched `.tsx`/`.jsx`/`.ts`/`.js` and read only the immediate parent directory, so `packages/react/tabs/src/tabs.tsx` (the real name is on the grandparent `tabs`, past a `src/` container — radix's own layout) resolved to nothing (neither `stem === "index"` nor a filename/parent-dir match held against the immediate parent, `src`), and any `.vue`/`.svelte` file resolved to nothing regardless of layout. It now walks up past `src`/`lib`/`source`/`sources` to the nearest real directory name and recognizes `.vue`/`.svelte`, while rejecting generic container names (`Utils`, `Core`, `Composables`, `Directives`, …), `use-*`/`create-*` hook-factory directories, names nested under a non-component category ancestor at any depth, and dotted fabricated names (`Accordion.demo.chevron.tsx` — a real mantine docs-demo file whose stem starts with an uppercase letter and was previously admitted as a "strong" PascalCase signal with no dot check).
+4. **Directory-derived (weak) names are corroborated by design-system family membership, not only a Storybook title.** A name like `button/index.tsx` is ambiguous (`utils/index.ts` would resolve to `Utils`) and was previously admitted only when a Storybook title matched it — but 8 of the 9 repos this blocked in this corpus ship no Storybook at all. `resolveComponentSources` now also admits a weak name when its file lives inside a package the evidence-based detector identified as a family member.
+
+**Health Score, `lyse audit --static-only`, before (`main` @ `b1d6f94`) → after (this branch), full 26-repo bench corpus:**
+
+| repo | components before | components after | tokens before | tokens after | finalScore before | finalScore after |
+|---|---:|---:|---:|---:|---|---|
+| ariakit | 0 | 29 | 24 | 24 | 90 | 90 |
+| blueprint | 127 | 161 | 190 | 190 | 90 | 90 |
+| cal.com | 964 | 1002 | 302 | 302 | 90 | 90 |
+| chakra-ui | 82 | 122 | 0 | 0 | 84 | 84 |
+| commerce | 0 | 0 | 0 | 0 | 88 | 88 |
+| corvu | 29 | 38 | 30 | 30 | 84 | 84 |
+| documenso | 0 | 17 | 47 | 47 | 93 | 93 |
+| element-plus | 0 | 98 | 15 | 15 | 99 | 99 |
+| eui | 247 | 269 | 232 | 232 | 86 | 91 |
+| kobalte | 0 | 59 | 0 | 0 | 95 | 95 |
+| mantine | 2130 | 573 | 272 | 272 | 97 | 97 |
+| material-ui | 80 | 80 | 0 | 0 | 87 | 87 |
+| nextui | 65 | 86 | 19 | 19 | 98 | 98 |
+| packets | 0 | 0 | 0 | 0 | N/A | N/A |
+| paste | 792 | 842 | 0 | 0 | 64 | 64 |
+| plane | 33 | 107 | 58 | 58 | 95 | 95 |
+| primitives | 0 | 49 | 8 | 8 | 94 | 94 |
+| salt-ds | 1497 | 1515 | 507 | 507 | 93 | 93 |
+| semi-design | 825 | 1037 | 1691 | 1691 | ERROR (OOM) | ERROR (unresolved) |
+| shadcn-svelte | 0 | 10 | 130 | 130 | 98 | N/A |
+| skeleton | 0 | 51 | 89 | 89 | 98 | 99 |
+| tailwindcss-typography | 0 | 0 | 0 | 0 | N/A | N/A |
+| tremor | 42 | 42 | 0 | 0 | 91 | 91 |
+| ui (shadcn/ui) | 0 | 0 | 214 | 214 | 86 | 86 |
+| vibe | 676 | 612 | 345 | 345 | 73 | 73 |
+| vuetify | 0 | 211 | 583 | 583 | 79 | 85 |
+
+Notes on reading this table:
+- **Tokens are byte-identical on every repo.** This branch is scoped to component/usage detection; it does not touch token extraction.
+- **`mantine` (2130→573) and `vibe` (676→612) go *down*.** Both are net removals of fabricated dotted-name "components" (`Button.types.tsx`, `Accordion.demo.chevron.tsx` — real files whose PascalCase-starting stem was previously admitted whole, dot and all) exceeding the smaller number of new, real, family-corroborated names added. Fewer, more correct entries, not a regression.
+- **`ui` (shadcn/ui) stays 0→0.** This specific bench-corpus checkout's only DS-shaped candidate package is disqualified as a test-fixture host on both sides — a pre-existing, correct abstention this branch doesn't change.
+- **`eui`, `shadcn-svelte`, `skeleton`, `vuetify` are the only finalScore movers**, and all four move for the *same* reason, unrelated to their component-count delta: `dsSelfMode` flips `false → true` (this branch is what makes the family resolve at all for these four). Once a repo is correctly recognized as *being* the design system, files that used to be scanned as generic app code are zoned as `ds-source`, and the `tokens` axis's opportunity count collapses accordingly (e.g. shadcn-svelte 89→3, skeleton 3599→2, eui 894→4, vuetify 41→2) — below `scoring-v3`'s minimum-sample threshold of 30, so the axis goes from scored to `N/A`. For `shadcn-svelte`, `tokens` was its *only* scored axis, so `finalScore` itself goes 98→N/A: not a worse repo, a repo Lyse now correctly declines to score on too little in-scope data, the same honesty tradeoff already shipped for Paste's `stories` axis. `eui`/`skeleton`/`vuetify` had other scored axes to fall back on, so their blended score moves instead of disappearing. Every repo whose `dsSelfMode` was already `true` on `main` (kobalte, ariakit, documenso, element-plus, primitives, chakra-ui, mantine, paste, plane, salt-ds, corvu, blueprint, cal.com, nextui, vibe) keeps a byte-identical `finalScore` despite large component-count deltas — the score mover is the `dsSelfMode` flip, not the component count.
+- **`semi-design`'s `finalScore` could not be measured, on either side.** On `main`, `lyse audit --static-only` on `.bench-corpus/semi-design` reproducibly exhausts the JS heap (`FATAL ERROR: ... JavaScript heap out of memory`) — confirmed twice: once under sweep contention at the default heap, once alone at `--max-old-space-size=6144` (6GB), dying after ~390s at ~6.1GB. On this branch, the same command with the same 6GB ceiling did not crash the same way — it ran over 16 minutes without completing or erroring and was terminated to reclaim resources. `lyse manifest` (components/tokens above) completes fine on both — only `lyse audit` is affected, on both branches, differently but equally unusably. Pre-existing on `main`, not introduced by this branch, out of scope to fix here; flagged separately (`task_820cec7c`) for follow-up.
+
+Gates verified: `packages/core/rules-manifest.json` byte-identical to `main` (66 rules), `validate:autonomous` → `ENGINE GATE PASS`, `pnpm lint` and `tsc --noEmit` clean. The full suite could not be observed fully green in this session: three attempts (including one with reduced parallelism) each produced a handful of bare `Test timed out` failures on a *different* subset of files each time, never an assertion failure, and the process table directly showed why — a concurrent, unrelated Claude Code session running its own `vitest` suite in a different worktree on this same shared 8-core host, alongside another unrelated process pinned near 100% CPU (`Load Avg` peaked at 70). Isolated re-runs of the first attempt's exact failing files passed cleanly (`3 passed`, `22 tests passed`). None of the repeatedly-failing files touch anything this change modifies. Full detail in `task-7-report.md`.
+
+**What is still wrong — this is a reduction in error, not a claim of correctness:**
+- `.vue`/`.svelte` components carry **no props** — the prop extractor (`extractComponentProps`) is Babel-based and fails closed on single-file-component source; a `.vue`/`.svelte` file has no Babel-parseable top-level function/class for it to inspect.
+- One component name is still resolved per *file*, never per *export* — a file with multiple named exports still yields a single component.
+- Cross-package name collisions still dedup to whichever file `resolveComponentSources`'s deterministic preference order reaches first, not to a judgment that the two are the same component.
+- YAML token sources are still unsupported.
+- `storyCount` still counts story *files*, not story exports.
+- **Residual over-admission**, disclosed rather than hidden: family corroboration widens the gate honestly, not surgically, because path shape alone cannot separate a UI file from a business-logic file inside the same package. `documenso` surfaces backend/business-logic packages among its 17 (`DetectFields`, `Trpc`, `Stripe`); `paste` surfaces theme names and comparison-library references among its added components (`Evergreen`, `Reakit`); `vuetify` surfaces 6 top-level category words (`Blueprints`, `Labs`, `Modes`, `Rules`, `Templates`, `Test`) out of 211. Fixing this needs file-content inspection or finer-grained per-subdirectory family classification — both larger than this change.
