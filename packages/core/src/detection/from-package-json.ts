@@ -154,10 +154,11 @@ export async function enumerateWorkspacePackages(pkg: PackageJson, rootDir: stri
   );
 
   // `fast-glob` returns absolute paths, so `relDir` must be measured against an
-  // absolute root too. A caller passing a relative path would otherwise get
-  // `relDir` values escaping the repo (`../../Users/...`), which silently match
-  // no component file and no disqualifier — detection would report "no design
-  // system" for a repo that plainly has one.
+  // absolute root too. `posixRelative` returns its second argument unchanged
+  // when the first is not a prefix of it, so a relative root yields `relDir`
+  // values that are still absolute — matching no component file and no
+  // disqualifier, which makes detection report "no design system" for a repo
+  // that plainly has one.
   const absoluteRoot = resolve(rootDir);
 
   const out: WorkspacePackage[] = [];
