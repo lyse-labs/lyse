@@ -358,4 +358,38 @@ describe("resolveComponentSources", () => {
     expect([...run1.componentSources]).toEqual([...run2.componentSources]);
     expect([...run1.componentFilePaths]).toEqual([...run2.componentFilePaths]);
   });
+
+  describe("dsFamily corroboration", () => {
+    it("admits a directory-derived name when the file lives in a design-system package", () => {
+      const contents = new Map([
+        ["packages/react/tabs/src/tabs.tsx", "export const Tabs = () => null;"],
+        ["packages/cli/src/index.ts", "export const run = () => null;"],
+      ]);
+      const { componentSources } = resolveComponentSources(
+        contents, "/repo", null,
+        [{ name: "@acme/tabs", relDir: "packages/react/tabs" }],
+      );
+      expect([...componentSources.keys()]).toEqual(["Tabs"]);
+    });
+
+    it("still requires corroboration: no family and no story means no weak name", () => {
+      const contents = new Map([["packages/react/tabs/src/tabs.tsx", "export const Tabs = () => null;"]]);
+      const { componentSources } = resolveComponentSources(contents, "/repo", null);
+      expect([...componentSources.keys()]).toEqual([]);
+    });
+
+    it("keeps admitting a weak name corroborated only by a Storybook title", () => {
+      const contents = new Map([["src/button/button.tsx", "export const Button = () => null;"]]);
+      const storyIndex: StoryIndex = { byTitle: new Map([["Button", { id: "button", importPath: "src/button/button.stories.tsx" }]]) };
+      const { componentSources } = resolveComponentSources(contents, "/repo", storyIndex);
+      expect([...componentSources.keys()]).toEqual(["Button"]);
+    });
+
+    it("omitting dsFamily entirely reproduces today's story-only behaviour (default-param equivalence)", () => {
+      const contents = new Map([["packages/react/tabs/src/tabs.tsx", "export const Tabs = () => null;"]]);
+      const withoutFamilyArg = resolveComponentSources(contents, "/repo", null);
+      const withEmptyFamily = resolveComponentSources(contents, "/repo", null, []);
+      expect([...withoutFamilyArg.componentSources]).toEqual([...withEmptyFamily.componentSources]);
+    });
+  });
 });

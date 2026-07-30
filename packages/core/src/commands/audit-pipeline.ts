@@ -374,12 +374,13 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   // Resolve component source files by name, following DS file conventions. A
   // PascalCase filename (`Button.tsx`) is a strong signal and is trusted; a
   // dir-derived name (`button/index.tsx`, `button/button.tsx`) is ambiguous and
-  // is only admitted when a Storybook title corroborates it — so utility folders
-  // never pollute the inventory. Name collisions are resolved by
-  // resolveComponentSources's deterministic canonical-preference order (see
-  // its doc comment) — shared with `graph/build-io.ts` so the manifest build
-  // and the audit pipeline can never attribute the same repo differently.
-  const { componentSources, componentFilePaths } = resolveComponentSources(fileContents, absoluteRoot, storyIndex);
+  // is only admitted when corroborated by a Storybook title or membership of a
+  // dsFamily package — so utility folders never pollute the inventory. Name
+  // collisions are resolved by resolveComponentSources's deterministic
+  // canonical-preference order (see its doc comment) — shared with
+  // `graph/build-io.ts` so the manifest build and the audit pipeline can never
+  // attribute the same repo differently.
+  const { componentSources, componentFilePaths } = resolveComponentSources(fileContents, absoluteRoot, storyIndex, dsFamily);
   const componentInventory = buildInventoryForMode({
     componentsModule,
     dsSelfMode,

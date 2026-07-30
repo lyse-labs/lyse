@@ -138,14 +138,22 @@ export function resolveComponentSources(
   fileContents: Map<string, string>,
   absoluteRoot: string,
   storyIndex: StoryIndex | null,
+  dsFamily: DsFamilyMember[] = [],
 ): ComponentSourceResolution {
   const winners = new Map<string, ComponentSourceCandidate>();
   const packageInfoCache = new Map<string, OwningPackageInfo | null>();
+  const familyDirs = dsFamily.map((m) => m.relDir).filter((d) => d.length > 0);
 
   for (const [rel, src] of fileContents) {
     const resolved = componentNameFromPath(rel);
     if (resolved === null) continue;
-    if (!resolved.strong && !storyIndex?.byTitle.has(resolved.name)) continue;
+    // A weak (directory-derived) name needs corroboration before it can enter
+    // the inventory: either a Storybook title, or membership of a package the
+    // evidence-based detector identified as design system. Most real design
+    // systems ship no Storybook at all, so the story gate alone excluded them.
+    if (!resolved.strong
+      && !storyIndex?.byTitle.has(resolved.name)
+      && !familyDirs.some((dir) => rel.startsWith(`${dir}/`))) continue;
 
     const candidate: ComponentSourceCandidate = {
       rel,
