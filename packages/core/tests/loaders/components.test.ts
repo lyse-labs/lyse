@@ -61,6 +61,34 @@ describe("componentNameFromPath", () => {
   });
 });
 
+describe("componentNameFromPath — real design-system layouts", () => {
+  it("resolves a component whose directory is the grandparent (radix, element-plus, kobalte)", () => {
+    expect(componentNameFromPath("packages/react/tabs/src/tabs.tsx")).toEqual({ name: "Tabs", strong: false });
+    expect(componentNameFromPath("packages/components/badge/src/badge.vue")).toEqual({ name: "Badge", strong: false });
+    expect(componentNameFromPath("packages/react/tabs/src/index.tsx")).toEqual({ name: "Tabs", strong: false });
+  });
+
+  it("recognises Vue and Svelte single-file components", () => {
+    expect(componentNameFromPath("src/components/VBtn.vue")).toEqual({ name: "VBtn", strong: true });
+    expect(componentNameFromPath("src/lib/Accordion.svelte")).toEqual({ name: "Accordion", strong: true });
+  });
+
+  it("rejects generic derived names instead of shipping a component called Src", () => {
+    expect(componentNameFromPath("packages/core/src/index.ts")).toBeNull();
+    expect(componentNameFromPath("src/index.ts")).toBeNull();
+    expect(componentNameFromPath("packages/utils/src/utils.ts")).toBeNull();
+  });
+
+  it("keeps every shape it already accepted", () => {
+    expect(componentNameFromPath("src/Button.tsx")).toEqual({ name: "Button", strong: true });
+    expect(componentNameFromPath("src/button/button.tsx")).toEqual({ name: "Button", strong: false });
+    expect(componentNameFromPath("src/button/index.tsx")).toEqual({ name: "Button", strong: false });
+    expect(componentNameFromPath("src/Button.test.tsx")).toBeNull();
+    expect(componentNameFromPath("src/Button.stories.tsx")).toBeNull();
+    expect(componentNameFromPath("README.md")).toBeNull();
+  });
+});
+
 const file = (path: string, imports: { module: string; named: string[] }[]): ParsedTsFile => ({
   path, source: "", ast: null,
   imports: imports.map((i) => ({ module: i.module, named: i.named, default: null, line: 1 })),

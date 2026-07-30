@@ -12,9 +12,24 @@ const traverse = (
   (_traverse as unknown as TraverseFn)
 );
 
-const COMPONENT_EXT = /\.(tsx|jsx|ts|js)$/;
+const COMPONENT_EXT = /\.(tsx|jsx|ts|js|vue|svelte)$/;
 // Files that have a component-ish name but are not components.
 const NON_COMPONENT_SUFFIX = /\.(test|spec|stories|story|cy|d)$/;
+
+/** Path segments that name a container, never a component. */
+const GENERIC_DIR_SEGMENTS = new Set(["src", "lib", "source", "sources"]);
+
+/**
+ * Derived names that are a directory convention, not a component. Includes
+ * "Core" alongside the sibling infra-package words (Utils, Types, Hooks, ...) —
+ * `packages/core/src/index.ts` is this repo's own entry point (the dogfood
+ * regression case) and, like `packages/utils`, is a generic package name, not
+ * a component.
+ */
+const GENERIC_COMPONENT_NAMES = new Set([
+  "Src", "Lib", "Source", "Sources", "Index", "Dist", "Build",
+  "Packages", "Components", "Utils", "Utilities", "Types", "Hooks", "Helpers", "Styles", "Core",
+]);
 
 function pascalCase(segment: string): string {
   return segment
@@ -25,32 +40,55 @@ function pascalCase(segment: string): string {
 }
 
 /**
+ * The nearest ancestor directory that names something. Real design systems put
+ * the component name on the directory ABOVE `src`
+ * (`packages/react/tabs/src/tabs.tsx`), so stopping at the immediate parent
+ * reads the container instead of the component.
+ */
+function nearestMeaningfulDir(segments: string[]): string | null {
+  for (let i = segments.length - 2; i >= 0; i--) {
+    const segment = segments[i];
+    if (segment === undefined || segment === "") continue;
+    if (GENERIC_DIR_SEGMENTS.has(segment.toLowerCase())) continue;
+    return segment;
+  }
+  return null;
+}
+
+/**
  * Resolve the canonical PascalCase component name for a source file, following
  * common design-system file conventions, or null when the path is not a
  * component-file shape.
  *
  * `strong` is true when the signal is a PascalCase filename (`Button.tsx`,
- * `Button/Button.tsx`) — a trustworthy component marker. It is false for names
- * derived from a directory (`button/index.tsx`, `button/button.tsx`), which are
- * ambiguous (a `utils/index.ts` would map to `Utils`) and should be corroborated
- * by another signal (e.g. a matching Storybook title) before use.
+ * `Button/Button.tsx`, `VBtn.vue`, `Accordion.svelte`) — a trustworthy
+ * component marker. It is false for names derived from a directory
+ * (`button/index.tsx`, `button/button.tsx`, or the grandparent layout
+ * `tabs/src/tabs.tsx`), which are ambiguous (a `utils/index.ts` would map to
+ * `Utils`) and should be corroborated by another signal (e.g. a matching
+ * Storybook title) before use. Directory-derived names that land on a known
+ * container word (`Src`, `Utils`, `Core`, ...) are rejected outright rather
+ * than shipped as a fabricated component.
  */
 export function componentNameFromPath(
   relPath: string,
 ): { name: string; strong: boolean } | null {
   if (!COMPONENT_EXT.test(relPath)) return null;
   const segments = relPath.split("/");
-  const fileName = segments[segments.length - 1]!;
+  const fileName = segments[segments.length - 1];
+  if (fileName === undefined) return null;
   const stem = fileName.replace(COMPONENT_EXT, "");
   if (NON_COMPONENT_SUFFIX.test(stem)) return null;
 
   if (/^[A-Z]/.test(stem)) return { name: stem, strong: true };
 
-  const dir = segments.length >= 2 ? segments[segments.length - 2]! : "";
-  if (dir === "") return null;
+  const dir = nearestMeaningfulDir(segments);
+  if (dir === null) return null;
 
   if (stem === "index" || stem.toLowerCase() === dir.toLowerCase()) {
-    return { name: pascalCase(dir), strong: false };
+    const name = pascalCase(dir);
+    if (GENERIC_COMPONENT_NAMES.has(name)) return null;
+    return { name, strong: false };
   }
   return null;
 }
