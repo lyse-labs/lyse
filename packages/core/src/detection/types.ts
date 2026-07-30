@@ -40,6 +40,27 @@ export interface DsFamilyMember {
   relDir: string;
 }
 
+export interface DsPackageEvidence {
+  componentFiles: number;
+  hasPublicEntry: boolean;
+  private: boolean;
+  /** Non-null when the package was ruled out; names the first rule that fired. */
+  disqualifiedBy: string | null;
+}
+
+export interface DsFamily {
+  isDesignSystem: boolean;
+  /** Sorted by name. Empty when `isDesignSystem` is false. */
+  members: DsFamilyMember[];
+  /**
+   * A stable LABEL for the family, used only as a fallback module string.
+   * It is NOT "the design system" — on radix, corvu and paste no single
+   * package is. Never branch on this value.
+   */
+  primary: string | null;
+  evidence: Record<string, DsPackageEvidence>;
+}
+
 export interface ComponentsModuleDetection extends DetectionResult<string> {
   /**
    * True when the repo IS the design system (the module was resolved from its
