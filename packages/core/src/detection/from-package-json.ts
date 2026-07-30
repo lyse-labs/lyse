@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import fg from "fast-glob";
 import type { ComponentsModuleDetection, Detected, DetectionResult, WorkspacePackage } from "./types.js";
@@ -153,6 +153,13 @@ export async function enumerateWorkspacePackages(pkg: PackageJson, rootDir: stri
     { cwd: rootDir, absolute: true, onlyFiles: true },
   );
 
+  // `fast-glob` returns absolute paths, so `relDir` must be measured against an
+  // absolute root too. A caller passing a relative path would otherwise get
+  // `relDir` values escaping the repo (`../../Users/...`), which silently match
+  // no component file and no disqualifier — detection would report "no design
+  // system" for a repo that plainly has one.
+  const absoluteRoot = resolve(rootDir);
+
   const out: WorkspacePackage[] = [];
   for (const pkgPath of pkgJsonPaths) {
     // `JSON.parse("null")` does NOT throw — it returns null. Reading `.name`
@@ -165,7 +172,7 @@ export async function enumerateWorkspacePackages(pkg: PackageJson, rootDir: stri
       if (typeof sub.name !== "string" || sub.name.length === 0) continue;
       out.push({
         name: sub.name,
-        relDir: posixRelative(rootDir, dirname(pkgPath)),
+        relDir: posixRelative(absoluteRoot, dirname(pkgPath)),
         private: sub.private === true,
         hasPublicEntry: sub.exports !== undefined || sub.main !== undefined || sub.module !== undefined,
       });

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { detectFromPackageJson, enumerateWorkspacePackages } from "../../src/detection/from-package-json.js";
 
@@ -334,5 +334,33 @@ describe("detectComponentsModule — evidence-based DS family (Task 3)", () => {
     expect(r.componentsModule.value).toBeNull();
     expect(r.componentsModule.dsSelf).toBe(false);
     expect(r.componentsModule.family).toEqual([]);
+  });
+
+  it("gives the same answer whether the repo path is absolute or relative", async () => {
+    writeFileSync(join(dir, "package.json"), JSON.stringify({ private: true, workspaces: ["packages/*"] }));
+    const sub = join(dir, "packages", "ui");
+    mkdirSync(join(sub, "src"), { recursive: true });
+    writeFileSync(join(sub, "package.json"), JSON.stringify({ name: "@acme/ui", main: "index.js" }));
+    writeFileSync(join(sub, "src", "Button.tsx"), "export const Button = () => null;");
+    writeFileSync(join(sub, "src", "Card.tsx"), "export const Card = () => null;");
+
+    const fromAbsolute = await detectFromPackageJson(dir);
+    const fromRelative = await detectFromPackageJson(relative(process.cwd(), dir));
+
+    expect(fromAbsolute.componentsModule.value).toBe("@acme/ui");
+    expect(fromRelative.componentsModule.value).toBe(fromAbsolute.componentsModule.value);
+    expect(fromRelative.componentsModule.family).toEqual(fromAbsolute.componentsModule.family);
+  });
+
+  it("reports workspace directories relative to the repo root even for a relative root", async () => {
+    writeFileSync(join(dir, "package.json"), JSON.stringify({ private: true, workspaces: ["packages/*"] }));
+    const sub = join(dir, "packages", "ui");
+    mkdirSync(sub, { recursive: true });
+    writeFileSync(join(sub, "package.json"), JSON.stringify({ name: "@acme/ui" }));
+
+    const pkg = { private: true, workspaces: ["packages/*"] };
+    const found = await enumerateWorkspacePackages(pkg, relative(process.cwd(), dir));
+
+    expect(found.map(p => p.relDir)).toEqual(["packages/ui"]);
   });
 });
