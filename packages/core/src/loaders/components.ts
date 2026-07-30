@@ -24,12 +24,58 @@ const GENERIC_DIR_SEGMENTS = new Set(["src", "lib", "source", "sources"]);
  * "Core" alongside the sibling infra-package words (Utils, Types, Hooks, ...) —
  * `packages/core/src/index.ts` is this repo's own entry point (the dogfood
  * regression case) and, like `packages/utils`, is a generic package name, not
- * a component.
+ * a component. "Composables" (Vue's name for the hooks convention), "Directives"
+ * and "Locale" were added from disk-verified false positives on vuetify
+ * (`src/composables/index.ts`, `src/directives/index.ts`, `src/locale/index.ts`)
+ * once family corroboration (Task 6) started admitting weak names outside
+ * Storybook-covered repos — "Util" is the same word as "Utils" in its singular
+ * form, also observed there. "Dev" is a top-level dev-playground directory,
+ * confirmed independently on both vuetify (`packages/vuetify/dev`) and
+ * kobalte — the walker's `packages/dev/**` exclusion is root-anchored and
+ * only reaches a workspace root, not a nested monorepo member's own `dev/`,
+ * so this is the narrow, contained mitigation pending that broader fix.
  */
 const GENERIC_COMPONENT_NAMES = new Set([
   "Src", "Lib", "Source", "Sources", "Index", "Dist", "Build",
   "Packages", "Components", "Utils", "Utilities", "Types", "Hooks", "Helpers", "Styles", "Core",
+  "Composables", "Directives", "Locale", "Util", "Dev",
 ]);
+
+/**
+ * Suffixes that mark a resolved weak name as a container of many things
+ * rather than one component, even when the full name isn't itself in
+ * `GENERIC_COMPONENT_NAMES` — e.g. a monorepo's own root package
+ * (`packages/ariakit-react-components`) resolves to `AriakitReactComponents`,
+ * a plural container leaking its own package name, not a single component.
+ * Disk-verified on ariakit's `ariakit-react-components` / `ariakit-solid-utils`.
+ */
+const GENERIC_COMPONENT_NAME_SUFFIXES = ["Components", "Utils", "Utilities", "Hooks", "Helpers", "Types"];
+
+/**
+ * Kebab-case directory prefixes that mark a React/Solid/Vue hook or factory
+ * primitive, never a component — `use-*` (React/Solid/Preact hooks) and
+ * `create-*` (Solid.js factory primitives, e.g. `createCollection`). Disk-verified
+ * on radix primitives (`packages/react/use-size`, `use-callback-ref`, ...) and
+ * kobalte (`packages/core/src/primitives/create-collection`, ...). The hyphen
+ * anchors the match so `user-profile` or `created-at` (real component-ish
+ * names that merely start with the same letters) are never caught.
+ */
+const HOOK_DIR_PREFIX = /^(use|create)-/i;
+
+/**
+ * Category words that mean "this entire subtree is non-component
+ * infrastructure", checked against EVERY ancestor directory segment rather
+ * than only the resolved name. Deliberately narrower than
+ * `GENERIC_COMPONENT_NAMES`, which also contains structural container words
+ * like "Components"/"Packages"/"Src" that legitimately hold many real,
+ * differently-named component directories underneath them (rejecting those
+ * as ancestors would break the ordinary `packages/components/badge/src/badge.vue`
+ * shape). Disk-verified on vuetify, which nests one subdirectory per concept
+ * under each of these (`composables/date`, `directives/click-outside`, ...) —
+ * each subdirectory independently satisfies the dir-derived shape and would
+ * otherwise slip past a check on the immediate resolved name alone.
+ */
+const GENERIC_ANCESTOR_WORDS = new Set(["Composables", "Directives", "Locale", "Hooks", "Utils", "Utilities", "Helpers"]);
 
 function pascalCase(segment: string): string {
   return segment
@@ -55,6 +101,11 @@ function nearestMeaningfulDir(segments: string[]): string | null {
   return null;
 }
 
+/** True when any directory segment (excluding the filename) is a `GENERIC_ANCESTOR_WORDS` category. */
+function hasGenericAncestor(segments: string[]): boolean {
+  return segments.slice(0, -1).some((segment) => GENERIC_ANCESTOR_WORDS.has(pascalCase(segment)));
+}
+
 /**
  * Resolve the canonical PascalCase component name for a source file, following
  * common design-system file conventions, or null when the path is not a
@@ -67,8 +118,15 @@ function nearestMeaningfulDir(segments: string[]): string | null {
  * `tabs/src/tabs.tsx`), which are ambiguous (a `utils/index.ts` would map to
  * `Utils`) and should be corroborated by another signal (e.g. a matching
  * Storybook title) before use. Directory-derived names that land on a known
- * container word (`Src`, `Utils`, `Core`, ...) are rejected outright rather
- * than shipped as a fabricated component.
+ * container word (`Src`, `Utils`, `Core`, ...), end in a known container
+ * suffix (`Components`, `Utils`, ..., e.g. a monorepo's own root package
+ * `ariakit-react-components`), sit in a `use-*`/`create-*` hook-factory
+ * directory (`use-size`, `create-collection`), or nest under a non-component
+ * category ancestor at any depth (`composables/date`, `directives/click-outside`)
+ * are rejected outright rather than shipped as a fabricated component. A
+ * resolved name still carrying a `.` (e.g. a dev-fixture file like
+ * `Playground.datatable.vue`, where only the trailing extension is stripped)
+ * is never a valid component name and is rejected the same way.
  */
 export function componentNameFromPath(
   relPath: string,
@@ -80,14 +138,17 @@ export function componentNameFromPath(
   const stem = fileName.replace(COMPONENT_EXT, "");
   if (NON_COMPONENT_SUFFIX.test(stem)) return null;
 
-  if (/^[A-Z]/.test(stem)) return { name: stem, strong: true };
+  if (/^[A-Z]/.test(stem)) return stem.includes(".") ? null : { name: stem, strong: true };
 
   const dir = nearestMeaningfulDir(segments);
   if (dir === null) return null;
 
   if (stem === "index" || stem.toLowerCase() === dir.toLowerCase()) {
+    if (HOOK_DIR_PREFIX.test(dir) || hasGenericAncestor(segments)) return null;
     const name = pascalCase(dir);
-    if (GENERIC_COMPONENT_NAMES.has(name)) return null;
+    if (GENERIC_COMPONENT_NAMES.has(name)
+      || GENERIC_COMPONENT_NAME_SUFFIXES.some((suffix) => name.endsWith(suffix))
+      || name.includes(".")) return null;
     return { name, strong: false };
   }
   return null;
