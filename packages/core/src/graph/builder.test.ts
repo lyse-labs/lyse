@@ -1,6 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { buildDesignSystemGraph } from "./builder.js";
-import type { ParsedFiles, StoryIndex } from "../types.js";
+import type { ParsedFiles, ParsedTsFile, StoryIndex } from "../types.js";
+import type { DsFamilyMember } from "../detection/types.js";
+
+function tsFile(path: string, moduleName: string): ParsedTsFile {
+  return {
+    path,
+    ast: null,
+    source: "",
+    imports: [{ module: moduleName, named: [], default: null, line: 1 }],
+  };
+}
 
 const parsed: ParsedFiles = { ts: [], css: [], cssInJs: [] };
 
@@ -40,5 +50,45 @@ describe("buildDesignSystemGraph", () => {
     const a = await buildDesignSystemGraph(input);
     const b = await buildDesignSystemGraph(input);
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+});
+
+describe("computeUsage — design-system family", () => {
+  it("counts imports of every design-system family member, not just the primary", async () => {
+    const dsFamily: DsFamilyMember[] = [
+      { name: "@acme/core", relDir: "packages/core" },
+      { name: "@acme/icons", relDir: "packages/icons" },
+    ];
+    const graph = await buildDesignSystemGraph({
+      repoRoot: process.cwd(),
+      parsed: { ts: [tsFile("a.ts", "@acme/core"), tsFile("b.ts", "@acme/icons")], css: [], cssInJs: [] },
+      fileContents: new Map(),
+      componentsModule: "@acme/core",
+      dsFamily,
+      dsSelfMode: true,
+      storyIndex: null,
+      excludePaths: [],
+      baseInventory: [],
+      componentFiles: new Map(),
+    });
+    expect(graph.usage).toEqual([
+      { file: "a.ts", kind: "imports-ds-module", count: 1 },
+      { file: "b.ts", kind: "imports-ds-module", count: 1 },
+    ]);
+  });
+
+  it("falls back to the single module when there is no family", async () => {
+    const graph = await buildDesignSystemGraph({
+      repoRoot: process.cwd(),
+      parsed: { ts: [tsFile("a.ts", "@mui/material"), tsFile("b.ts", "@acme/icons")], css: [], cssInJs: [] },
+      fileContents: new Map(),
+      componentsModule: "@mui/material",
+      dsSelfMode: false,
+      storyIndex: null,
+      excludePaths: [],
+      baseInventory: [],
+      componentFiles: new Map(),
+    });
+    expect(graph.usage.map((u) => u.file)).toEqual(["a.ts"]);
   });
 });

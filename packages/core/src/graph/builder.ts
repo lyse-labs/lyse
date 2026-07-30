@@ -4,6 +4,7 @@ import { extractStories } from "./extract/stories.js";
 import { buildZoneMap } from "./zones.js";
 import type { ParsedFiles, ComponentInventoryEntry, StoryIndex } from "../types.js";
 import type { ExternalTokenPackage } from "../loaders/external-tokens.js";
+import type { DsFamilyMember } from "../detection/types.js";
 import type {
   DesignSystemGraph, ComponentNode, StoryNode, UsageEdgeAggregate,
   ExtractionReportEntry, ExtractionReport,
@@ -14,6 +15,12 @@ export interface GraphInputs {
   parsed: ParsedFiles;
   fileContents: Map<string, string>;
   componentsModule: string | null;
+  /**
+   * The design-system family. When present, usage counts imports of ANY member.
+   * Counting one arbitrarily-chosen member made the number swing 5x between
+   * identical runs on a real monorepo.
+   */
+  dsFamily?: DsFamilyMember[];
   dsSelfMode: boolean;
   storyIndex: StoryIndex | null;
   excludePaths: string[];
@@ -87,11 +94,15 @@ export async function buildDesignSystemGraph(inputs: GraphInputs): Promise<Desig
 }
 
 function computeUsage(inputs: GraphInputs): UsageEdgeAggregate[] {
-  if (inputs.componentsModule === null) return [];
-  const mod = inputs.componentsModule;
+  const family = inputs.dsFamily ?? [];
+  const modules = new Set(family.length > 0
+    ? family.map((m) => m.name)
+    : inputs.componentsModule === null ? [] : [inputs.componentsModule]);
+  if (modules.size === 0) return [];
+
   const out: UsageEdgeAggregate[] = [];
   for (const f of inputs.parsed.ts) {
-    const count = f.imports.filter((i) => i.module === mod).length;
+    const count = f.imports.filter((i) => modules.has(i.module)).length;
     if (count > 0) out.push({ file: f.path, kind: "imports-ds-module", count });
   }
   return out;

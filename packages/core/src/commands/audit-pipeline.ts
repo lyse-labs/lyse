@@ -67,6 +67,7 @@ import type {
   TokenMap,
   ComponentInventoryEntry,
 } from "../types.js";
+import type { DsFamilyMember } from "../detection/types.js";
 
 // Import for local use within this module (function signatures).
 import { RefuseToRunError, ScopeError, type AuditFlags } from "./audit-flags.js";
@@ -241,9 +242,10 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   // so DS monorepos (workspace-walk branch) get scored without needing lyse init.
   let componentsModule = config.designSystem?.componentsModule ?? null;
   let dsSelfMode = false;
+  let dsFamily: DsFamilyMember[] = [];
   if (!componentsModule) {
     const detected = await detectFromPackageJson(absoluteRoot);
-    ({ componentsModule, dsSelfMode } = resolveComponentsModule(null, detected.componentsModule));
+    ({ componentsModule, dsSelfMode, family: dsFamily } = resolveComponentsModule(null, detected.componentsModule));
   }
 
   const userExcludePaths = config.designSystem?.excludePaths ?? [];
@@ -391,6 +393,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     parsed,
     fileContents,
     componentsModule,
+    dsFamily,
     dsSelfMode,
     storyIndex,
     excludePaths,
