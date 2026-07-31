@@ -67,6 +67,7 @@ import type {
   TokenMap,
   ComponentInventoryEntry,
 } from "../types.js";
+import type { DsFamilyMember } from "../detection/types.js";
 
 // Import for local use within this module (function signatures).
 import { RefuseToRunError, ScopeError, type AuditFlags } from "./audit-flags.js";
@@ -241,9 +242,10 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   // so DS monorepos (workspace-walk branch) get scored without needing lyse init.
   let componentsModule = config.designSystem?.componentsModule ?? null;
   let dsSelfMode = false;
+  let dsFamily: DsFamilyMember[] = [];
   if (!componentsModule) {
     const detected = await detectFromPackageJson(absoluteRoot);
-    ({ componentsModule, dsSelfMode } = resolveComponentsModule(null, detected.componentsModule));
+    ({ componentsModule, dsSelfMode, family: dsFamily } = resolveComponentsModule(null, detected.componentsModule));
   }
 
   const userExcludePaths = config.designSystem?.excludePaths ?? [];
@@ -372,12 +374,13 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   // Resolve component source files by name, following DS file conventions. A
   // PascalCase filename (`Button.tsx`) is a strong signal and is trusted; a
   // dir-derived name (`button/index.tsx`, `button/button.tsx`) is ambiguous and
-  // is only admitted when a Storybook title corroborates it — so utility folders
-  // never pollute the inventory. Name collisions are resolved by
-  // resolveComponentSources's deterministic canonical-preference order (see
-  // its doc comment) — shared with `graph/build-io.ts` so the manifest build
-  // and the audit pipeline can never attribute the same repo differently.
-  const { componentSources, componentFilePaths } = resolveComponentSources(fileContents, absoluteRoot, storyIndex);
+  // is only admitted when corroborated by a Storybook title or membership of a
+  // dsFamily package — so utility folders never pollute the inventory. Name
+  // collisions are resolved by resolveComponentSources's deterministic
+  // canonical-preference order (see its doc comment) — shared with
+  // `graph/build-io.ts` so the manifest build and the audit pipeline can never
+  // attribute the same repo differently.
+  const { componentSources, componentFilePaths } = resolveComponentSources(fileContents, absoluteRoot, storyIndex, dsFamily);
   const componentInventory = buildInventoryForMode({
     componentsModule,
     dsSelfMode,
@@ -391,6 +394,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     parsed,
     fileContents,
     componentsModule,
+    dsFamily,
     dsSelfMode,
     storyIndex,
     excludePaths,

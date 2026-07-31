@@ -61,6 +61,109 @@ describe("componentNameFromPath", () => {
   });
 });
 
+describe("componentNameFromPath — real design-system layouts", () => {
+  it("resolves a component whose directory is the grandparent (radix, element-plus, kobalte)", () => {
+    expect(componentNameFromPath("packages/react/tabs/src/tabs.tsx")).toEqual({ name: "Tabs", strong: false });
+    expect(componentNameFromPath("packages/components/badge/src/badge.vue")).toEqual({ name: "Badge", strong: false });
+    expect(componentNameFromPath("packages/react/tabs/src/index.tsx")).toEqual({ name: "Tabs", strong: false });
+  });
+
+  it("recognises Vue and Svelte single-file components", () => {
+    expect(componentNameFromPath("src/components/VBtn.vue")).toEqual({ name: "VBtn", strong: true });
+    expect(componentNameFromPath("src/lib/Accordion.svelte")).toEqual({ name: "Accordion", strong: true });
+  });
+
+  it("rejects generic derived names instead of shipping a component called Src", () => {
+    expect(componentNameFromPath("packages/core/src/index.ts")).toBeNull();
+    expect(componentNameFromPath("src/index.ts")).toBeNull();
+    expect(componentNameFromPath("packages/utils/src/utils.ts")).toBeNull();
+  });
+
+  it("keeps every shape it already accepted", () => {
+    expect(componentNameFromPath("src/Button.tsx")).toEqual({ name: "Button", strong: true });
+    expect(componentNameFromPath("src/button/button.tsx")).toEqual({ name: "Button", strong: false });
+    expect(componentNameFromPath("src/button/index.tsx")).toEqual({ name: "Button", strong: false });
+    expect(componentNameFromPath("src/Button.test.tsx")).toBeNull();
+    expect(componentNameFromPath("src/Button.stories.tsx")).toBeNull();
+    expect(componentNameFromPath("README.md")).toBeNull();
+  });
+});
+
+describe("componentNameFromPath — dotted filenames are never valid component names", () => {
+  it("rejects a PascalCase filename with an embedded dot (vuetify Playground.datatable.vue dev-fixture shape)", () => {
+    expect(componentNameFromPath("packages/vuetify/playgrounds/Playground.datatable.vue")).toBeNull();
+    expect(componentNameFromPath("Playground.items.vue")).toBeNull();
+  });
+
+  it("rejects a directory-derived name that would resolve with an embedded dot", () => {
+    expect(componentNameFromPath("packages/date.picker/date.picker.tsx")).toBeNull();
+  });
+
+  it("still rejects test/spec/stories/story/cy files via NON_COMPONENT_SUFFIX, unaffected by the dot rejection", () => {
+    expect(componentNameFromPath("src/components/button/Button.test.tsx")).toBeNull();
+    expect(componentNameFromPath("src/components/button/Button.stories.tsx")).toBeNull();
+    expect(componentNameFromPath("src/components/Dialog.cy.tsx")).toBeNull();
+    expect(componentNameFromPath("src/components/Button.spec.tsx")).toBeNull();
+  });
+
+  it("does not reject legitimate dot-free names, strong or weak", () => {
+    expect(componentNameFromPath("src/Button.tsx")).toEqual({ name: "Button", strong: true });
+    expect(componentNameFromPath("packages/react/tabs/src/tabs.tsx")).toEqual({ name: "Tabs", strong: false });
+  });
+});
+
+describe("componentNameFromPath — hook/infra-container weak names are never components", () => {
+  it("rejects use-*/create-* hook-factory directories (kobalte create-collection, radix react-use-size shape)", () => {
+    expect(componentNameFromPath("packages/react/use-size/src/use-size.tsx")).toBeNull();
+    expect(componentNameFromPath("packages/react/use-size/src/index.ts")).toBeNull();
+    expect(componentNameFromPath("packages/core/src/primitives/create-collection/create-collection.ts")).toBeNull();
+    expect(componentNameFromPath("packages/core/src/primitives/create-collection/index.ts")).toBeNull();
+  });
+
+  it("does not reject a directory that merely starts with the letters use/create without the hook-convention hyphen", () => {
+    expect(componentNameFromPath("src/user-profile/user-profile.tsx")).toEqual({ name: "UserProfile", strong: false });
+    expect(componentNameFromPath("src/created-at/created-at.tsx")).toEqual({ name: "CreatedAt", strong: false });
+  });
+
+  it("rejects Vue-convention infra directories (vuetify composables/directives/locale/util)", () => {
+    expect(componentNameFromPath("packages/vuetify/src/composables/index.ts")).toBeNull();
+    expect(componentNameFromPath("packages/vuetify/src/directives/index.ts")).toBeNull();
+    expect(componentNameFromPath("packages/vuetify/src/locale/index.ts")).toBeNull();
+    expect(componentNameFromPath("packages/vuetify/src/util/index.ts")).toBeNull();
+  });
+
+  it("rejects a compound weak name ending in a known container suffix (ariakit-react-components package-self-name leak)", () => {
+    expect(componentNameFromPath("packages/ariakit-react-components/src/index.ts")).toBeNull();
+    expect(componentNameFromPath("packages/ariakit-solid-utils/src/index.ts")).toBeNull();
+  });
+
+  it("keeps admitting real single-word component names unaffected by the new filters", () => {
+    expect(componentNameFromPath("packages/components/badge/src/badge.vue")).toEqual({ name: "Badge", strong: false });
+    expect(componentNameFromPath("src/menu/menu.tsx")).toEqual({ name: "Menu", strong: false });
+  });
+
+  it("rejects a per-concept subdirectory nested inside a known non-component category, not just the category's own index file (vuetify composables/date, directives/click-outside)", () => {
+    expect(componentNameFromPath("packages/vuetify/src/composables/date/index.ts")).toBeNull();
+    expect(componentNameFromPath("packages/vuetify/src/composables/mask/mask.ts")).toBeNull();
+    expect(componentNameFromPath("packages/vuetify/src/directives/click-outside/index.ts")).toBeNull();
+    expect(componentNameFromPath("packages/vuetify/src/directives/ripple/ripple.ts")).toBeNull();
+  });
+
+  it("rejects a top-level dev-playground directory (vuetify packages/vuetify/dev, kobalte's own dev dir — cross-repo confirmed)", () => {
+    expect(componentNameFromPath("packages/vuetify/dev/index.ts")).toBeNull();
+    expect(componentNameFromPath("packages/core/src/dev/index.ts")).toBeNull();
+  });
+
+  it("does not extend the ancestor check to structural/organisational words that legitimately contain many real components (components/, packages/)", () => {
+    // A category ancestor literally named "components" (or "packages") is the
+    // normal, expected shape for a real per-component directory underneath it
+    // — only categories that mean "non-component infrastructure" poison their
+    // whole subtree.
+    expect(componentNameFromPath("packages/components/badge/src/badge.vue")).toEqual({ name: "Badge", strong: false });
+    expect(componentNameFromPath("packages/packages/tabs/src/tabs.tsx")).toEqual({ name: "Tabs", strong: false });
+  });
+});
+
 const file = (path: string, imports: { module: string; named: string[] }[]): ParsedTsFile => ({
   path, source: "", ast: null,
   imports: imports.map((i) => ({ module: i.module, named: i.named, default: null, line: 1 })),

@@ -12,7 +12,8 @@
 // and reconciled against a live run (see harness.test.ts).
 //
 // Re-pin via PR when bumping a SHA (record any status flip). SHAs resolved
-// 2026-07-19 from each repo's default branch.
+// 2026-07-19 from each repo's default branch, except vuetify and
+// shadcn-svelte (added 2026-07-30 — see their own pin comment below).
 import type { GoldenRepo } from "../golden/corpus.js";
 
 export type Dimension =
@@ -58,7 +59,7 @@ export const GENERALIZATION_CORPUS: GenRepo[] = [
     ".",
     "element-plus",
     ["vue", "self-ds", "tokens-scss"],
-    { H2: "enforced", H3: "enforced", C1: "enforced", C2: "known-gap" },
+    { H2: "enforced", H3: "enforced", C1: "enforced", C2: "enforced" },
   ),
   pin(
     "chakra-ui/chakra-ui",
@@ -82,7 +83,7 @@ export const GENERALIZATION_CORPUS: GenRepo[] = [
     ".",
     "radix",
     ["react", "self-ds"],
-    { H2: "enforced", C1: "enforced", C2: "known-gap" },
+    { H2: "enforced", C1: "enforced", C2: "enforced" },
   ),
   pin(
     "twbs/bootstrap",
@@ -115,5 +116,27 @@ export const GENERALIZATION_CORPUS: GenRepo[] = [
     "tailwind-dashboard",
     ["consumer"],
     { H2: "enforced" },
+  ),
+  // Added Task 7 (evidence-based-ds-detection, 2026-07-30). SHAs resolved from
+  // each repo's default branch that day. All four declared checks probed
+  // against a live run before pinning as "enforced" (see harness.test.ts's
+  // [harness] scorecard output) — evidence-based family detection (this
+  // branch) is what makes vuetify and shadcn-svelte resolve a DS family at
+  // all; on `main` both report zero components.
+  pin(
+    "vuetifyjs/vuetify",
+    "f23af8a11a74e1a7aadfd8bbcdc8ef674ad6314d",
+    ".",
+    "vuetify",
+    ["vue", "self-ds", "tokens-scss"],
+    { C1: "enforced", C2: "enforced", H2: "enforced", H3: "enforced" },
+  ),
+  pin(
+    "huntabyte/shadcn-svelte",
+    "58d7b9c2aa727963ab127b0ce7d63cf488cf8ef4",
+    ".",
+    "shadcn-svelte",
+    ["svelte", "self-ds", "tokens-css-vars"],
+    { C1: "enforced", C2: "enforced", H2: "enforced", H3: "enforced" },
   ),
 ];

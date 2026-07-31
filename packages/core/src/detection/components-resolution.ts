@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { ComponentInventoryEntry, ParsedFiles, StoryIndex } from "../types.js";
 import { buildComponentInventory, componentNameFromPath, extractComponentProps } from "../loaders/components.js";
-import type { DetectionResult } from "./types.js";
+import type { ComponentsModuleDetection, DsFamilyMember } from "./types.js";
 
 /**
  * Max parent-directory hops to walk looking for an ancestor `package.json`.
@@ -138,14 +138,22 @@ export function resolveComponentSources(
   fileContents: Map<string, string>,
   absoluteRoot: string,
   storyIndex: StoryIndex | null,
+  dsFamily: DsFamilyMember[] = [],
 ): ComponentSourceResolution {
   const winners = new Map<string, ComponentSourceCandidate>();
   const packageInfoCache = new Map<string, OwningPackageInfo | null>();
+  const familyDirs = dsFamily.map((m) => m.relDir).filter((d) => d.length > 0);
 
   for (const [rel, src] of fileContents) {
     const resolved = componentNameFromPath(rel);
     if (resolved === null) continue;
-    if (!resolved.strong && !storyIndex?.byTitle.has(resolved.name)) continue;
+    // A weak (directory-derived) name needs corroboration before it can enter
+    // the inventory: either a Storybook title, or membership of a package the
+    // evidence-based detector identified as design system. Most real design
+    // systems ship no Storybook at all, so the story gate alone excluded them.
+    if (!resolved.strong
+      && !storyIndex?.byTitle.has(resolved.name)
+      && !familyDirs.some((dir) => rel.startsWith(`${dir}/`))) continue;
 
     const candidate: ComponentSourceCandidate = {
       rel,
@@ -170,21 +178,17 @@ export function resolveComponentSources(
 
 export function resolveComponentsModule(
   configured: string | null,
-  detected: DetectionResult<string>,
-): { componentsModule: string | null; dsSelfMode: boolean } {
-  let componentsModule = configured;
-  let dsSelfMode = false;
-  if (!componentsModule) {
-    componentsModule = detected.value ?? null;
-    // When detection source is "workspace DS export", the repo IS the DS itself.
-    // Rules like no-native-shadows and stories/coverage have consumer-of-DS semantics
-    // and must skip — v0.2 will add DS-self-aware rule variants.
-    if (detected.source.startsWith("workspace DS export")) {
-      dsSelfMode = true;
-    }
-  }
-
-  return { componentsModule, dsSelfMode };
+  detected: ComponentsModuleDetection,
+): { componentsModule: string | null; dsSelfMode: boolean; family: DsFamilyMember[] } {
+  if (configured) return { componentsModule: configured, dsSelfMode: false, family: [] };
+  // When the repo IS the DS itself (structural dsSelf flag, not source text),
+  // rules like no-native-shadows and stories/coverage have consumer-of-DS
+  // semantics and must skip — v0.2 will add DS-self-aware rule variants.
+  return {
+    componentsModule: detected.value ?? null,
+    dsSelfMode: detected.dsSelf,
+    family: detected.family,
+  };
 }
 
 export function buildInventoryForMode(input: {

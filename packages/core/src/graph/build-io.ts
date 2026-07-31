@@ -32,7 +32,7 @@ export async function buildGraphForRoot(root: string): Promise<DesignSystemGraph
   }
 
   const detected = await detectFromPackageJson(absoluteRoot);
-  const { componentsModule, dsSelfMode } = resolveComponentsModule(
+  const { componentsModule, dsSelfMode, family } = resolveComponentsModule(
     config.designSystem?.componentsModule ?? null,
     detected.componentsModule,
   );
@@ -44,7 +44,7 @@ export async function buildGraphForRoot(root: string): Promise<DesignSystemGraph
   // componentsModule. Name collisions across files are resolved by
   // resolveComponentSources's deterministic canonical-preference order, not
   // by walk order — see its doc comment.
-  const { componentSources, componentFilePaths } = resolveComponentSources(fileContents, absoluteRoot, storyIndex);
+  const { componentSources, componentFilePaths } = resolveComponentSources(fileContents, absoluteRoot, storyIndex, family);
   const baseInventory = buildInventoryForMode({
     componentsModule,
     dsSelfMode,
@@ -58,6 +58,7 @@ export async function buildGraphForRoot(root: string): Promise<DesignSystemGraph
     parsed,
     fileContents,
     componentsModule,
+    dsFamily: family,
     dsSelfMode,
     storyIndex,
     excludePaths: [...DEFAULT_EXCLUDE_PATHS],

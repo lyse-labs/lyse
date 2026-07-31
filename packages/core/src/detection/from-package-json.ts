@@ -1,8 +1,10 @@
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import fg from "fast-glob";
-import type { Detected, DetectionResult } from "./types.js";
+import type { ComponentsModuleDetection, Detected, DetectionResult, WorkspacePackage } from "./types.js";
+import { posixRelative } from "../util/paths.js";
+import { countComponentFilesByPackage, identifyDsFamily } from "./ds-packages.js";
 
 interface PackageJson {
   name?: string;
@@ -35,29 +37,6 @@ const DENYLIST_PREFIXES = [
   "@vercel/",
   "@vitejs/",
   "@nx/",
-];
-
-/**
- * DS-export pattern used in workspace-walk (branch 3).
- * Matches the sub-package scoped names that typically ship a DS:
- *   @org/ui  @org/components  @org/react  @org/core  @org/primitives
- *   @org/design-system  @org/kit  @org/themes
- * Also matches bare names ending in -ui / -components / -design-system.
- */
-const DS_EXPORT_RE =
-  /^(@[^/]+\/(ui|components|react|core|primitives|design-system|kit|themes|material|icons|web|tokens|styles)$)|([a-z0-9-]+-(ui|components|design-system)$)/;
-
-/**
- * Internal sub-packages that should be excluded from workspace DS detection.
- * These are tooling / test utilities that happen to live in the monorepo.
- */
-const WORKSPACE_EXCLUDE_SUFFIXES = [
-  "-internal",
-  "-test-utils",
-  "-tooling",
-  "-build",
-  "-scripts",
-  "-codemods",
 ];
 
 export async function detectFromPackageJson(rootDir: string): Promise<Pick<Detected,
@@ -98,7 +77,7 @@ async function detectComponentsModule(
   deps: Record<string, string>,
   pkg: PackageJson,
   rootDir: string,
-): Promise<DetectionResult<string>> {
+): Promise<ComponentsModuleDetection> {
   const names = Object.keys(deps);
 
   // Branch 1 — internal-named UI package in deps (consumer apps / app repos).
@@ -114,19 +93,19 @@ async function detectComponentsModule(
     const ownedByWorkspace = (pkg.private ?? false) && ((version?.startsWith("workspace:") ?? false) || workspaceNames.has(n));
     return !ownedByWorkspace;
   });
-  if (internal) return { value: internal, confidence: "high", source: "internal-named UI package" };
+  if (internal) return { value: internal, confidence: "high", source: "internal-named UI package", dsSelf: false, family: [] };
 
   // Branch 2 — known public component libraries in deps.
   const knownLibs = ["@mui/material", "@chakra-ui/react", "@mantine/core", "antd", "@radix-ui/themes"];
   const lib = names.find(n => knownLibs.includes(n));
-  if (lib) return { value: lib, confidence: "medium", source: `common UI library: ${lib}` };
+  if (lib) return { value: lib, confidence: "medium", source: `common UI library: ${lib}`, dsSelf: false, family: [] };
 
   // Branch 3 — workspace DS-self detection.
   // Applies when this IS the DS monorepo (private + workspaces at root).
   const wsResult = await detectWorkspaceDsPackage(pkg, rootDir);
   if (wsResult) return wsResult;
 
-  return { value: null, confidence: "low", source: "no obvious componentsModule" };
+  return { value: null, confidence: "low", source: "no obvious componentsModule", dsSelf: false, family: [] };
 }
 
 /**
@@ -147,13 +126,19 @@ async function readPnpmWorkspaceGlobs(rootDir: string): Promise<string[] | null>
 }
 
 /**
- * Resolve workspace globs (package.json `"workspaces"` or pnpm-workspace.yaml)
- * to the set of package `name`s owned by this monorepo. Used both to skip
- * workspace-owned deps in Branch 1 and to walk sub-packages in Branch 3.
+ * Enumerate every workspace package (package.json `"workspaces"` or
+ * pnpm-workspace.yaml `packages:`) owned by this monorepo, sorted by name and
+ * deduplicated by name (two members declaring the same `"name"` — a
+ * copy-pasted template, an in-progress rename — collapse to the one with the
+ * lexicographically smallest `relDir`).
+ *
+ * `fast-glob` does not guarantee match order, so every downstream decision
+ * that depends on this list's order or uniqueness — Branch 3's DS-family
+ * resolution, most of all — was previously unstable across repeated runs on
+ * the same repo. Sorting and deduping here is what makes those decisions
+ * reproducible.
  */
-async function resolveWorkspacePackageNames(pkg: PackageJson, rootDir: string): Promise<Set<string>> {
-  const names = new Set<string>();
-
+export async function enumerateWorkspacePackages(pkg: PackageJson, rootDir: string): Promise<WorkspacePackage[]> {
   let globs: string[] | null = null;
   if (pkg.workspaces) {
     // Normalise workspaces to a string array (Yarn classic uses { packages: [] })
@@ -161,28 +146,77 @@ async function resolveWorkspacePackageNames(pkg: PackageJson, rootDir: string): 
   } else {
     globs = await readPnpmWorkspaceGlobs(rootDir);
   }
-  if (!globs || globs.length === 0) return names;
+  if (!globs || globs.length === 0) return [];
 
   const pkgJsonPaths = await fg(
     globs.map(g => `${g}/package.json`),
     { cwd: rootDir, absolute: true, onlyFiles: true },
   );
 
+  // `fast-glob` returns absolute paths, so `relDir` must be measured against an
+  // absolute root too. `posixRelative` returns its second argument unchanged
+  // when the first is not a prefix of it, so a relative root yields `relDir`
+  // values that are still absolute — matching no component file and no
+  // disqualifier, which makes detection report "no design system" for a repo
+  // that plainly has one.
+  const absoluteRoot = resolve(rootDir);
+
+  const out: WorkspacePackage[] = [];
   for (const pkgPath of pkgJsonPaths) {
+    // `JSON.parse("null")` does NOT throw — it returns null. Reading `.name`
+    // outside this try would crash the whole audit on a workspace member whose
+    // package.json is literally `null`, where the previous code skipped it.
     try {
-      const sub = JSON.parse(await readFile(pkgPath, "utf8")) as { name?: string };
-      if (sub.name) names.add(sub.name);
+      const sub = JSON.parse(await readFile(pkgPath, "utf8")) as
+        { name?: unknown; private?: unknown; exports?: unknown; main?: unknown; module?: unknown } | null;
+      if (sub === null || typeof sub !== "object") continue;
+      if (typeof sub.name !== "string" || sub.name.length === 0) continue;
+      out.push({
+        name: sub.name,
+        relDir: posixRelative(absoluteRoot, dirname(pkgPath)),
+        private: sub.private === true,
+        hasPublicEntry: sub.exports !== undefined || sub.main !== undefined || sub.module !== undefined,
+      });
     } catch {
-      // skip unreadable
+      continue;
     }
   }
 
-  return names;
+  // Sort by (name, relDir): the compound key makes the order fully deterministic
+  // even before dedup, independent of `fast-glob`'s unspecified return order.
+  out.sort((a, b) => {
+    if (a.name !== b.name) return a.name < b.name ? -1 : 1;
+    return a.relDir < b.relDir ? -1 : a.relDir > b.relDir ? 1 : 0;
+  });
+
+  // Two workspace members can declare the same `"name"` (a copy-pasted
+  // template, an in-progress rename). Keep the first occurrence for a given
+  // name — thanks to the sort above, that is deterministically the one with
+  // the lexicographically smallest `relDir`, never whichever `fast-glob`
+  // happened to return first.
+  const deduped: WorkspacePackage[] = [];
+  let lastName: string | null = null;
+  for (const p of out) {
+    if (p.name === lastName) continue;
+    deduped.push(p);
+    lastName = p.name;
+  }
+  return deduped;
 }
 
 /**
- * Walk workspace sub-packages and look for one whose `name` matches the
- * DS-export pattern.  Returns a DetectionResult or null if nothing found.
+ * Resolve workspace globs to the set of package `name`s owned by this
+ * monorepo. Used to skip workspace-owned deps in Branch 1.
+ */
+async function resolveWorkspacePackageNames(pkg: PackageJson, rootDir: string): Promise<Set<string>> {
+  return new Set((await enumerateWorkspacePackages(pkg, rootDir)).map(p => p.name));
+}
+
+/**
+ * Resolve this monorepo's design-system family from evidence — component-file
+ * counts, not package names (see `ds-packages.ts#identifyDsFamily`) — and
+ * return its `primary` as the componentsModule. Returns null when this repo
+ * is not a private workspace root, or when no package has DS evidence.
  *
  * Supports:
  *   - package.json `"workspaces"` (npm/Yarn)
@@ -191,21 +225,23 @@ async function resolveWorkspacePackageNames(pkg: PackageJson, rootDir: string): 
 async function detectWorkspaceDsPackage(
   pkg: PackageJson,
   rootDir: string,
-): Promise<DetectionResult<string> | null> {
+): Promise<ComponentsModuleDetection | null> {
   if (!pkg.private) return null;
 
-  const names = await resolveWorkspacePackageNames(pkg, rootDir);
+  const packages = await enumerateWorkspacePackages(pkg, rootDir);
+  if (packages.length === 0) return null;
 
-  for (const name of names) {
-    // Skip known internal/tooling packages
-    if (WORKSPACE_EXCLUDE_SUFFIXES.some(suffix => name.endsWith(suffix))) continue;
+  const counts = await countComponentFilesByPackage(rootDir, packages);
+  const family = identifyDsFamily(packages, counts);
+  if (!family.isDesignSystem || family.primary === null) return null;
 
-    if (DS_EXPORT_RE.test(name)) {
-      return { value: name, confidence: "high", source: `workspace DS export (${name})` };
-    }
-  }
-
-  return null;
+  return {
+    value: family.primary,
+    confidence: "high",
+    source: `workspace DS family (${family.members.length} package${family.members.length === 1 ? "" : "s"}, primary ${family.primary})`,
+    dsSelf: true,
+    family: family.members,
+  };
 }
 
 function detectStorybook(deps: Record<string, string>, pkg: PackageJson): DetectionResult<boolean> {
@@ -233,7 +269,7 @@ function absentResult(): Pick<Detected, "framework" | "hasTypeScript" | "compone
   return {
     framework: absent<Framework>(null),
     hasTypeScript: absent<boolean>(null),
-    componentsModule: absent<string>(null),
+    componentsModule: { ...absent<string>(null), dsSelf: false, family: [] },
     storybook: absent<boolean>(null),
     packageManager: absent<PackageManager>(null),
   };
