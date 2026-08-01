@@ -22,7 +22,8 @@
     "measure:recall": "tsx scripts/measure-recall.ts",
     "mine:recall": "tsx scripts/mine-gold-recall.ts",
     "gold:fetch-pins": "tsx scripts/gold-corpus/fetch-pins.ts",
-    "docs:reliability:rules": "tsx scripts/generate-rule-docs-reliability.ts"
+    "docs:reliability:rules": "tsx scripts/generate-rule-docs-reliability.ts",
+    "measure:oracle": "tsx scripts/measure-oracle.ts"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",

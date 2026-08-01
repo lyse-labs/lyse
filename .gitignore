@@ -77,3 +77,6 @@ lyse-golden-corpus/
 # the dir itself (see packages/core/src/util/lyse-gitignore.ts for the same gotcha).
 !scripts/gold-corpus/pins/
 !scripts/gold-corpus/pins/**/dist/
+
+# Real-repo checkouts for `pnpm measure:oracle` (hundreds of MB, never committed)
+.oracle-corpus/
