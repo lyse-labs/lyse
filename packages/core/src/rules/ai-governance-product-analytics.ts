@@ -71,10 +71,17 @@ const evaluate = async (ctx: RuleContext, _files: ParsedFiles): Promise<RuleEval
   }
   componentFiles.sort();
 
+  // Findings can only fire on AI-marked files, so counting every component file
+  // as an opportunity made a repo with no AI score 100% adoption — a perfect
+  // mark for not having the thing being measured. The sibling rules
+  // (ai-content-live-region, ai-loading-error-states) already return 0 here.
+  let hasAiSurface = false;
+
   for (const rel of componentFiles) {
     const source = safeReadText(join(ctx.repoRoot, rel));
     if (!source) continue;
     if (!fileHasAiMarker(source, rel, ctx.repoRoot)) continue;
+    hasAiSurface = true;
 
     const handlers = detectInteractionHandlers(source);
     if (handlers.length === 0) continue;
@@ -94,7 +101,7 @@ const evaluate = async (ctx: RuleContext, _files: ParsedFiles): Promise<RuleEval
     });
   }
 
-  return { findings, opportunities: componentFiles.length };
+  return { findings, opportunities: hasAiSurface ? componentFiles.length : 0 };
 };
 
 export const rule: Rule = createLyseRule({

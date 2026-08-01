@@ -91,4 +91,27 @@ describe("rule ai-governance/product-analytics", () => {
     const res = await rule.evaluate(makeCtx(tmp), emptyParsed);
     expect(res.findings).toHaveLength(0);
   });
+
+  // The rule counted one opportunity per component file whatever the repo
+  // contained, while its two siblings (ai-content-live-region,
+  // ai-loading-error-states) return 0 without an AI surface. Findings can only
+  // fire on AI-marked files, so on a repo with no AI every opportunity was
+  // clean by construction and the ai-governance axis read 100% adoption —
+  // element-plus n=965, mantine n=3138, primer-react n=666, none of which ship
+  // an AI feature. A perfect score for not having the thing being measured.
+  describe("opportunities require an AI surface, like the sibling rules", () => {
+    it("reports zero opportunities when no file carries an AI marker", async () => {
+      writeComp("src/Button.tsx", "export const Button = () => <button onAccept={a} />;\n");
+      writeComp("src/Card.tsx", "export const Card = () => <div />;\n");
+      const res = await rule.evaluate(makeCtx(tmp), emptyParsed);
+      expect(res.opportunities).toBe(0);
+    });
+
+    it("still reports opportunities once the repo has an AI surface", async () => {
+      writeComp("src/AiSuggestion.tsx", "export const AILabel = () => null;\nexport const Row = () => <div onAccept={a} />;\n");
+      writeComp("src/Card.tsx", "export const Card = () => <div />;\n");
+      const res = await rule.evaluate(makeCtx(tmp), emptyParsed);
+      expect(res.opportunities).toBeGreaterThan(0);
+    });
+  });
 });
