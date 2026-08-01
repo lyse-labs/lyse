@@ -1,5 +1,7 @@
 import type { AxisName, AxisScore, Finding, GradeResult, PerRuleOpportunity } from "./types.js";
 import { computeGrade } from "./reliability/grade.js";
+import { SUB_AXES } from "./reliability/catalogue/sub-axes.js";
+import { stableRuleIds } from "./reliability/score/stable-sub-axes.js";
 import { SCORING_V2_LEGACY, SCORING_V3 } from "./reliability/score/version-pin.js";
 import { scoreV3 } from "./scorer-v3.js";
 import { scoreFromFindings } from "./scorer-v2-legacy.js";
@@ -81,7 +83,15 @@ export function scoreAudit(
     opportunitiesByAxis: Record<AxisName, number>;
     perRuleOpportunities: PerRuleOpportunity[];
   },
-  opts: { minSampleSize?: number; aiGovernanceGrace?: number } = {},
+  opts: {
+    minSampleSize?: number;
+    aiGovernanceGrace?: number;
+    filterRan?: boolean;
+    degradedAxes?: ReadonlySet<AxisName>;
+    /** Internal escape hatch. Deliberately not readable from .lyse.yaml — a repo
+     * must not be able to lower the bar at which Lyse claims to know something. */
+    minScoredAxes?: number;
+  } = {},
 ): AuditScoreBundle {
   if (model === "v2") {
     const r = scoreFromFindings(
@@ -99,11 +109,12 @@ export function scoreAudit(
     };
   }
 
-  const r = scoreV3(
-    run.findings,
-    run.perRuleOpportunities,
-    opts.minSampleSize !== undefined ? { minSampleSize: opts.minSampleSize } : {},
-  );
+  const r = scoreV3(run.findings, run.perRuleOpportunities, {
+    ...(opts.minSampleSize !== undefined ? { minSampleSize: opts.minSampleSize } : {}),
+    ...(opts.degradedAxes !== undefined ? { degradedAxes: opts.degradedAxes } : {}),
+    ...(opts.minScoredAxes !== undefined ? { minScoredAxes: opts.minScoredAxes } : {}),
+    scoreContributingRuleIds: stableRuleIds(SUB_AXES, { filterRan: opts.filterRan ?? false }),
+  });
   return {
     schemaVersion: 3,
     scoringVersion: SCORING_V3,

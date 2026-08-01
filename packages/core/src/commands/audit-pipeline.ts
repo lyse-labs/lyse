@@ -46,6 +46,7 @@ import { VERSION } from "../index.js";
 import { RULES_VERSION } from "../rules/manifest.js";
 import { runLayer4Stage } from "../llm/layer4-stage.js";
 import { runFilterStage } from "../llm/filter-stage.js";
+import { axesWithDegradedExtraction } from "../reliability/score/coverage.js";
 import { isSuppressed } from "../suppression/inline.js";
 import { loadLyseIgnore } from "../suppression/lyseignore.js";
 import fg from "fast-glob";
@@ -235,6 +236,12 @@ function detectStack(repoRoot: string): string[] {
  */
 export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Promise<AuditPipelineResult> {
   const absoluteRoot = resolve(repoRoot);
+  // Without this, a missing path walks zero files and still emits repo-level
+  // findings ("No structured CHANGELOG found") about a directory that is not
+  // there — with exit 0, which is worse than useless in CI.
+  if (!existsSync(absoluteRoot) || !statSync(absoluteRoot).isDirectory()) {
+    throw new ScopeError(`no such directory: ${absoluteRoot}`);
+  }
   const t0 = Date.now();
   const config = loadConfig(absoluteRoot);
 
@@ -653,6 +660,8 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   const scoreOpts = {
     ...(config.scoring?.minSampleSize !== undefined ? { minSampleSize: config.scoring.minSampleSize } : {}),
     aiGovernanceGrace,
+    filterRan: filter.meta.filterRan,
+    degradedAxes: axesWithDegradedExtraction(graph.extraction),
   };
   const bundle = scoreAudit(scoreModel, runResult, scoreOpts);
 
