@@ -180,7 +180,18 @@ export function resolveComponentsModule(
   configured: string | null,
   detected: ComponentsModuleDetection,
 ): { componentsModule: string | null; dsSelfMode: boolean; family: DsFamilyMember[] } {
-  if (configured) return { componentsModule: configured, dsSelfMode: false, family: [] };
+  if (configured) {
+    // Naming the design system this repo already resolved to is a label for the
+    // same thing, not evidence that the repo merely consumes it. `lyse init`
+    // writes back exactly the detected module, so reading it the other way made
+    // the setup command collapse a design system's own inventory to zero.
+    const namesDetectedDs =
+      detected.dsSelf &&
+      (configured === detected.value || detected.family.some((m) => m.name === configured));
+    return namesDetectedDs
+      ? { componentsModule: configured, dsSelfMode: true, family: detected.family }
+      : { componentsModule: configured, dsSelfMode: false, family: [] };
+  }
   // When the repo IS the DS itself (structural dsSelf flag, not source text),
   // rules like no-native-shadows and stories/coverage have consumer-of-DS
   // semantics and must skip — v0.2 will add DS-self-aware rule variants.

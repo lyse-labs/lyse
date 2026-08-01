@@ -205,6 +205,7 @@ const GLOBAL_FLAGS = {
 const AUDIT_ARGS = {
     root: { type: "positional", required: false, default: ".", description: "repository root (defaults to current working directory)" },
     output: { type: "string", description: "output directory (default: stdout)" },
+    json: { type: "boolean", default: false, description: "shorthand for --format=json" },
     format: { type: "string", description: "json | text | table | tsv | eslint | legacy | sarif | html (default: text for tty, json otherwise)" },
     "include-timestamps": { type: "boolean", default: false, description: "include timestamp in JSON output (breaks determinism)" },
     quiet: { type: "boolean", default: false, description: "suppress all stdout except score" },
@@ -432,7 +433,7 @@ const auditCommand = defineCommand({
     // the post-audit logic below (TTY → "text", else "json") so we suppress
     // the spinner whenever stdout receives machine-readable output.
     const isTTYForSpinner = process.stdout.isTTY ?? false;
-    const formatForSpinner = args.format ?? (isTTYForSpinner ? "text" : "json");
+    const formatForSpinner = args.json === true ? "json" : (args.format ?? (isTTYForSpinner ? "text" : "json"));
     const isQuiet = args.quiet === true;
     const isMachineFormatForSpinner =
       formatForSpinner === "json" || formatForSpinner === "sarif" || formatForSpinner === "html" || formatForSpinner === "tsv";
@@ -541,7 +542,7 @@ const auditCommand = defineCommand({
     }
 
     const isTTY = process.stdout.isTTY ?? false;
-    const format = args.format ?? (isTTY ? "text" : "json");
+    const format = args.json === true ? "json" : (args.format ?? (isTTY ? "text" : "json"));
 
     // Resolve --limit for text/eslint/legacy output. JSON/SARIF intentionally
     // ignore the flag (machine consumers want the full report, always). When

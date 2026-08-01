@@ -87,7 +87,7 @@ export function scoreAudit(
     minSampleSize?: number;
     aiGovernanceGrace?: number;
     filterRan?: boolean;
-    degradedAxes?: ReadonlySet<AxisName>;
+    blockedRuleIds?: ReadonlySet<string>;
     /** Internal escape hatch. Deliberately not readable from .lyse.yaml — a repo
      * must not be able to lower the bar at which Lyse claims to know something. */
     minScoredAxes?: number;
@@ -111,7 +111,7 @@ export function scoreAudit(
 
   const r = scoreV3(run.findings, run.perRuleOpportunities, {
     ...(opts.minSampleSize !== undefined ? { minSampleSize: opts.minSampleSize } : {}),
-    ...(opts.degradedAxes !== undefined ? { degradedAxes: opts.degradedAxes } : {}),
+    ...(opts.blockedRuleIds !== undefined ? { blockedRuleIds: opts.blockedRuleIds } : {}),
     ...(opts.minScoredAxes !== undefined ? { minScoredAxes: opts.minScoredAxes } : {}),
     scoreContributingRuleIds: stableRuleIds(SUB_AXES, { filterRan: opts.filterRan ?? false }),
   });

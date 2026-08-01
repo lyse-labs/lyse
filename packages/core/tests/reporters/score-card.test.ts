@@ -148,3 +148,43 @@ describe("renderScoreCard — projection line", () => {
     expect(projLine).toContain("^ fix the top 3 drift groups -> +100 pts");
   });
 });
+
+// A perfect axis score printed next to a list of that axis's own findings reads
+// as a straight contradiction. The score is right — the bare number is not.
+describe("axes carrying findings the score ignores", () => {
+  const withUnscored = {
+    ...result,
+    axes: [
+      { axis: "tokens", score: "N/A", findings: 0, opportunities: 2, unscoredFindings: 0 },
+      { axis: "a11y", score: 100, findings: 0, opportunities: 36, unscoredFindings: 15 },
+      { axis: "components", score: 88, findings: 4, opportunities: 40, unscoredFindings: 0 },
+      { axis: "stories", score: "N/A", findings: 0, opportunities: 0, unscoredFindings: 0 },
+      { axis: "ai-surface", score: "N/A", findings: 0, opportunities: 8, unscoredFindings: 2 },
+      { axis: "ai-governance", score: 100, findings: 0, opportunities: 84, unscoredFindings: 0 },
+    ],
+  } as unknown as AuditResult;
+
+  it("never prints a bare 100 for an axis with unscored findings", () => {
+    const lines = renderScoreCard(withUnscored, { ...opts });
+    const a11y = lines.find((l) => l.includes("a11y"))!;
+    expect(a11y).toContain("100");
+    expect(a11y).toContain("15");
+  });
+
+  it("leaves axes whose findings all count untouched", () => {
+    const lines = renderScoreCard(withUnscored, { ...opts });
+    expect(lines.find((l) => l.includes("components"))).not.toMatch(/\+\d+/);
+  });
+
+  it("marks abstaining axes too — N/A plus hidden findings is the same lie", () => {
+    const lines = renderScoreCard(withUnscored, { ...opts });
+    expect(lines.find((l) => l.includes("ai-surface"))).toContain("2");
+  });
+
+  it("keeps the box square at the narrowest supported width", () => {
+    const lines = renderScoreCard(withUnscored, { ...opts, width: 44 });
+    const w = lines[0]!.length;
+    for (const l of lines) expect(l.length).toBe(w);
+    expect(lines.find((l) => l.includes("a11y"))).toContain("15");
+  });
+});

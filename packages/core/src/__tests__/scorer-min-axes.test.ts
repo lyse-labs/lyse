@@ -30,12 +30,12 @@ describe("scoreV3 — minimum scored axes", () => {
   });
 
   it("counts only axes that actually scored, not axes that merely have opportunities", () => {
-    // stories has opportunities but its extractor degraded, so it does not count
-    // toward the floor and the headline abstains on 2 scored axes.
+    // the stories rule is blocked by a degraded extractor, so its axis falls to
+    // zero opportunities, does not count toward the floor, and the headline abstains.
     const r = scoreV3(
       [],
       [opp("tokens/r", "tokens"), opp("a11y/r", "a11y"), opp("stories/r", "stories")],
-      { degradedAxes: new Set<AxisName>(["stories"]) },
+      { blockedRuleIds: new Set(["stories/r"]) },
     );
     expect(r.axes.filter((a) => a.score !== "N/A")).toHaveLength(2);
     expect(r.finalScore).toBe("N/A");

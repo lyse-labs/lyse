@@ -16,36 +16,46 @@ function finding(ruleId: string, axis: AxisName): Finding {
   };
 }
 
-describe("scoreV3 — coverage precondition", () => {
-  const opportunities = [opp("tokens/r", "tokens", 100), opp("a11y/r", "a11y", 100)];
+describe("scoreV3 — rules blocked by degraded extraction", () => {
+  const opportunities = [
+    opp("needs-inventory", "components", 100),
+    opp("reads-source", "components", 100),
+  ];
 
-  it("abstains on an axis whose extractor degraded, however clean it looks", () => {
-    const r = scoreV3([], opportunities, { degradedAxes: new Set<AxisName>(["tokens"]), minScoredAxes: 1 });
-    const tokens = r.axes.find((a) => a.axis === "tokens");
-    expect(tokens?.score).toBe("N/A");
-    expect(tokens?.opportunities).toBe(100);
-  });
-
-  it("keeps the degraded axis out of the final mean", () => {
-    const withTokens = scoreV3([finding("a11y/r", "a11y")], opportunities, { minScoredAxes: 1 });
-    const withoutTokens = scoreV3([finding("a11y/r", "a11y")], opportunities, {
-      degradedAxes: new Set<AxisName>(["tokens"]),
+  it("drops a blocked rule from both sides of the ratio", () => {
+    const r = scoreV3([finding("needs-inventory", "components")], opportunities, {
+      blockedRuleIds: new Set(["needs-inventory"]),
       minScoredAxes: 1,
     });
-    expect(withTokens.finalScore).toBe(100); // (100 + 99) / 2 rounded
-    expect(withoutTokens.finalScore).toBe(99); // a11y alone
+    const axis = r.axes.find((a) => a.axis === "components");
+    expect(axis?.opportunities).toBe(100);
+    expect(axis?.findings).toBe(0);
+    expect(axis?.score).toBe(100);
   });
 
-  it("returns N/A overall when every activated axis is degraded", () => {
-    const r = scoreV3([], opportunities, {
-      degradedAxes: new Set<AxisName>(["tokens", "a11y"]),
+  it("leaves rules that read source directly scoring on the same axis", () => {
+    const r = scoreV3([finding("reads-source", "components")], opportunities, {
+      blockedRuleIds: new Set(["needs-inventory"]),
+      minScoredAxes: 1,
     });
-    expect(r.finalScore).toBe("N/A");
-    expect(r.tier).toBe("N/A");
+    expect(r.axes.find((a) => a.axis === "components")?.score).toBe(99);
   });
 
-  it("does not affect axes whose extractor is healthy", () => {
-    const r = scoreV3([], opportunities, { degradedAxes: new Set<AxisName>(["tokens"]), minScoredAxes: 1 });
-    expect(r.axes.find((a) => a.axis === "a11y")?.score).toBe(100);
+  it("abstains only when the exclusion leaves the axis below the sample floor", () => {
+    const r = scoreV3([], [opp("needs-inventory", "components", 100), opp("reads-source", "components", 5)], {
+      blockedRuleIds: new Set(["needs-inventory"]),
+      minSampleSize: 30,
+      minScoredAxes: 1,
+    });
+    expect(r.axes.find((a) => a.axis === "components")?.score).toBe("N/A");
+  });
+
+  it("composes with the reliability catalogue filter", () => {
+    const r = scoreV3([], opportunities, {
+      scoreContributingRuleIds: new Set(["needs-inventory", "reads-source"]),
+      blockedRuleIds: new Set(["needs-inventory"]),
+      minScoredAxes: 1,
+    });
+    expect(r.axes.find((a) => a.axis === "components")?.opportunities).toBe(100);
   });
 });

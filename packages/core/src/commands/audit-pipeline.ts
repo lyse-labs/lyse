@@ -46,7 +46,7 @@ import { VERSION } from "../index.js";
 import { RULES_VERSION } from "../rules/manifest.js";
 import { runLayer4Stage } from "../llm/layer4-stage.js";
 import { runFilterStage } from "../llm/filter-stage.js";
-import { axesWithDegradedExtraction } from "../reliability/score/coverage.js";
+import { rulesBlockedByDegradedExtraction } from "../reliability/score/coverage.js";
 import { isSuppressed } from "../suppression/inline.js";
 import { loadLyseIgnore } from "../suppression/lyseignore.js";
 import fg from "fast-glob";
@@ -245,15 +245,15 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   const t0 = Date.now();
   const config = loadConfig(absoluteRoot);
 
-  // Resolve componentsModule: prefer explicit config, fall back to auto-detection
-  // so DS monorepos (workspace-walk branch) get scored without needing lyse init.
-  let componentsModule = config.designSystem?.componentsModule ?? null;
-  let dsSelfMode = false;
-  let dsFamily: DsFamilyMember[] = [];
-  if (!componentsModule) {
-    const detected = await detectFromPackageJson(absoluteRoot);
-    ({ componentsModule, dsSelfMode, family: dsFamily } = resolveComponentsModule(null, detected.componentsModule));
-  }
+  // Resolve componentsModule: an explicit config name wins, but detection still
+  // runs, because ds-self mode and the DS family are structural facts about the
+  // repo that a name in .lyse.yaml does not change. Short-circuiting detection
+  // here is what made `lyse init` (which writes that name) break the audit.
+  const detected = await detectFromPackageJson(absoluteRoot);
+  const { componentsModule, dsSelfMode, family: dsFamily } = resolveComponentsModule(
+    config.designSystem?.componentsModule ?? null,
+    detected.componentsModule,
+  );
 
   const userExcludePaths = config.designSystem?.excludePaths ?? [];
   // `.lyseignore` patterns (loaded once at repo root) — same gitignore-style
@@ -661,7 +661,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     ...(config.scoring?.minSampleSize !== undefined ? { minSampleSize: config.scoring.minSampleSize } : {}),
     aiGovernanceGrace,
     filterRan: filter.meta.filterRan,
-    degradedAxes: axesWithDegradedExtraction(graph.extraction),
+    blockedRuleIds: rulesBlockedByDegradedExtraction(graph.extraction),
   };
   const bundle = scoreAudit(scoreModel, runResult, scoreOpts);
 

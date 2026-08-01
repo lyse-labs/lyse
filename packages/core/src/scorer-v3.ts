@@ -17,6 +17,13 @@ export interface AxisScoreV3 {
   score: number | "N/A";
   findings: number;
   opportunities: number;
+  /**
+   * Findings Lyse reported on this axis that the score deliberately ignores —
+   * experimental sub-axes, and rules silenced by degraded extraction. Without
+   * this, an axis whose only problems come from such rules renders as a bare
+   * `100` on the same screen that lists them.
+   */
+  unscoredFindings: number;
 }
 
 export interface ScoreV3Result {
@@ -31,7 +38,7 @@ export function scoreV3(
   opts: {
     minSampleSize?: number;
     scoreContributingRuleIds?: ReadonlySet<string>;
-    degradedAxes?: ReadonlySet<AxisName>;
+    blockedRuleIds?: ReadonlySet<string>;
     minScoredAxes?: number;
   } = {},
 ): ScoreV3Result {
@@ -41,10 +48,17 @@ export function scoreV3(
   // the ratio are filtered: leaving an experimental rule's opportunities in the
   // denominator would dilute the penalty of the rules that do count.
   const scored = opts.scoreContributingRuleIds;
-  const countedFindings = scored ? findings.filter((f) => scored.has(f.ruleId)) : findings;
-  const countedOpportunities = scored
-    ? perRuleOpportunities.filter((r) => scored.has(r.ruleId))
-    : perRuleOpportunities;
+  const blocked = opts.blockedRuleIds;
+  const counts = (ruleId: string): boolean =>
+    (scored === undefined || scored.has(ruleId)) && blocked?.has(ruleId) !== true;
+  const countedFindings = findings.filter((f) => counts(f.ruleId));
+  const countedOpportunities = perRuleOpportunities.filter((r) => counts(r.ruleId));
+
+  const unscoredByAxis = new Map<AxisName, number>();
+  for (const f of findings) {
+    if (counts(f.ruleId)) continue;
+    unscoredByAxis.set(f.axis, (unscoredByAxis.get(f.axis) ?? 0) + 1);
+  }
 
   // findings count per ruleId (only rules that recorded opportunities contribute)
   const findingsByRule = new Map<string, number>();
@@ -67,15 +81,16 @@ export function scoreV3(
   for (const axis of AXIS_ORDER) {
     const opp = oppByAxis.get(axis) ?? 0;
     const fnd = findByAxis.get(axis) ?? 0;
-    // Abstain when the evidence was never read: a ratio over a surface the
-    // extractor failed on measures the extractor, not the design system.
-    if (opp < minN || opts.degradedAxes?.has(axis) === true) {
-      axes.push({ axis, score: "N/A", findings: fnd, opportunities: opp });
+    const unscoredFindings = unscoredByAxis.get(axis) ?? 0;
+    // An axis left below its sample floor by the blocked-rule exclusion abstains
+    // here, on its own — no separate axis-level silencing is needed.
+    if (opp < minN) {
+      axes.push({ axis, score: "N/A", findings: fnd, opportunities: opp, unscoredFindings });
       continue;
     }
     const clean = cleanByAxis.get(axis) ?? 0;
     const s = clean > 0 ? Math.max(1, Math.round((100 * clean) / opp)) : 0;
-    axes.push({ axis, score: s, findings: fnd, opportunities: opp });
+    axes.push({ axis, score: s, findings: fnd, opportunities: opp, unscoredFindings });
     activated.push(s);
   }
 

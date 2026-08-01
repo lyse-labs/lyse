@@ -326,6 +326,12 @@ export interface AxisScore {
   score: number | "N/A";
   findings: number;
   opportunities: number;
+  /**
+   * Findings reported on this axis that the score deliberately ignores
+   * (experimental sub-axes, rules silenced by degraded extraction). Optional:
+   * the legacy v2 scorer does not compute it.
+   */
+  unscoredFindings?: number;
 }
 
 export interface Layer4Meta {

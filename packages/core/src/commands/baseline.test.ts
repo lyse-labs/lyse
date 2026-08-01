@@ -1,3 +1,4 @@
+import { CURRENT_BASELINE_SCHEMA } from "../diff/baseline.js";
 import { describe, it, expect } from "vitest";
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -37,7 +38,7 @@ describe("runBaselineWrite", () => {
       expect(a).not.toMatch(/timestamp|createdAt/);
       const parsed = JSON.parse(a);
       expect(parsed.graphHash).toMatch(/^sha256:/);
-      expect(parsed.schemaVersion).toBe(1);
+      expect(parsed.schemaVersion).toBe(CURRENT_BASELINE_SCHEMA);
     } finally { rmSync(dir, { recursive: true, force: true }); }
   }, 30_000);
 });
