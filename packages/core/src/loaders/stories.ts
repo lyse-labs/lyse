@@ -257,25 +257,36 @@ export async function loadStories(root: string): Promise<StoryIndex | null> {
     } catch { /* fall through */ }
   }
 
-  const files = await fg(["**/*.stories.{ts,tsx,js,jsx}"], { cwd: root, absolute: true, ignore: ["**/node_modules/**"] });
+  // `*.story.*` (singular) is as common as the plural — Mantine names all 455 of
+  // its story files that way, and matching only the plural made the largest
+  // story surface in the panel index zero.
+  const files = await fg(["**/*.{story,stories}.{ts,tsx,js,jsx}"], { cwd: root, absolute: true, ignore: ["**/node_modules/**"] });
   if (files.length === 0) return null;
   const byTitle = new Map<string, StoryEntry>();
   for (const f of files) {
     const src = readFileSync(f, "utf8");
+    const parsed = parseStoryFile(src);
     const titleMatch = src.match(/title\s*:\s*["'`]([^"'`]+)["'`]/);
-    if (!titleMatch || !titleMatch[1]) continue;
-    const leaf = (titleMatch[1].split("/").pop() ?? titleMatch[1]).trim();
+    const leaf = titleMatch?.[1] ? (titleMatch[1].split("/").pop() ?? titleMatch[1]).trim() : undefined;
+
+    // Every consumer of this index looks up a COMPONENT name
+    // (`byTitle.get(component.name)`), so the CSF `component:` identifier is the
+    // key when the file declares one. Keying on the title's last segment made
+    // `Components/RadioGroup/Features` and `Components/SubNav/Features` collide
+    // on "Features", and requiring a title at all skipped every CSF3 file using
+    // auto-titling — 77 of Polaris's 87 story files.
+    const key = parsed?.componentName ?? leaf;
+    if (key === undefined) continue;
+
     // Normalize to a posix-style import path: fast-glob returns "/" paths but
     // `root` uses the OS separator, so a naive `replace(root + "/")` leaves the
     // path absolute on Windows. `relative` + "/"-join is cross-platform.
     const importPath = relative(root, f).split(/[\\/]/).join("/");
     const storyEntry: StoryEntry = {
-      id: leaf.toLowerCase(),
+      id: (leaf ?? key).toLowerCase(),
       importPath,
     };
 
-    // Parse CSF v3 exports from source
-    const parsed = parseStoryFile(src);
     if (parsed) {
       if (parsed.componentName !== undefined) {
         storyEntry.componentName = parsed.componentName;
@@ -287,7 +298,22 @@ export async function loadStories(root: string): Promise<StoryIndex | null> {
       storyEntry.hasArgs = parsed.hasArgs;
     }
 
-    byTitle.set(leaf, storyEntry);
+    // A component is routinely documented across several files (Button.stories,
+    // Button.features.stories). Overwriting lost every story but the last one
+    // the walker happened to reach, which also made the result walk-order
+    // dependent.
+    const existing = byTitle.get(key);
+    if (existing) {
+      const stories = [...(existing.stories ?? []), ...(storyEntry.stories ?? [])];
+      if (stories.length > 0) existing.stories = stories;
+      existing.hasArgTypes = existing.hasArgTypes === true || storyEntry.hasArgTypes === true;
+      existing.hasArgs = existing.hasArgs === true || storyEntry.hasArgs === true;
+      if (existing.componentName === undefined && storyEntry.componentName !== undefined) {
+        existing.componentName = storyEntry.componentName;
+      }
+      continue;
+    }
+    byTitle.set(key, storyEntry);
   }
   return byTitle.size > 0 ? { byTitle } : null;
 }
