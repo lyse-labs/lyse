@@ -24,6 +24,11 @@ describe("unknownFlags", () => {
     expect(unknownFlags({ "no-quiet": true }, DECLARED)).toEqual([]);
   });
 
+  it("accepts citty's normalisation of a declared no- flag: --no-color arrives as `color`", () => {
+    const declared = { "no-color": {}, "no-prompt": {}, "no-telemetry": {} };
+    expect(unknownFlags({ color: false, prompt: false, telemetry: false }, declared)).toEqual([]);
+  });
+
   it("reports several unknown flags, sorted, without duplicates", () => {
     expect(unknownFlags({ zzz: 1, aaa: 2, zzz2: 3 }, DECLARED)).toEqual(["aaa", "zzz", "zzz2"]);
   });

@@ -20,8 +20,16 @@ export function unknownFlags(
   for (const key of Object.keys(declared)) {
     allowed.add(key);
     allowed.add(camel(key));
+    // citty normalises `--no-x` to `x: false`, so a declared `no-color` arrives
+    // as `color` and a declared `color` passed as `--no-color` arrives as
+    // `color` too. Accept both directions or valid invocations are rejected.
     allowed.add(`no-${key}`);
     allowed.add(camel(`no-${key}`));
+    if (key.startsWith("no-")) {
+      const positive = key.slice(3);
+      allowed.add(positive);
+      allowed.add(camel(positive));
+    }
   }
   const out = new Set<string>();
   for (const key of Object.keys(args)) {
