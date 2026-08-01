@@ -30,7 +30,7 @@ interface Expectation {
   name: string;
   git: string;
   heldOut: boolean;
-  componentsDir: string;
+  sourceRoot: string;
   components: number;
   storyFiles: number;
   framework: string;

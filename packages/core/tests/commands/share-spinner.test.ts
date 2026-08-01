@@ -92,3 +92,48 @@ describe("runShare: spinner integration", () => {
     expect(all).not.toMatch(/Discovering files/);
   });
 });
+
+// `lyse share > summary.md` produced an empty file. The markdown only reached
+// stdout in the clipboard-FAILURE branch; on success it went to the clipboard
+// and the confirmation went to a stderr spinner. Redirecting stdout — the one
+// thing a "share" command exists for — captured nothing, and in CI the command
+// wrote zero bytes and exited 0.
+describe("runShare: stdout", () => {
+  it("writes the markdown to stdout when stdout is redirected", async () => {
+    const dir = makeFixture();
+    const out: string[] = [];
+    const origWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write = ((chunk: unknown) => {
+      out.push(typeof chunk === "string" ? chunk : String(chunk));
+      return true;
+    }) as typeof process.stdout.write;
+    const origIsTTY = process.stdout.isTTY;
+    (process.stdout as { isTTY?: boolean }).isTTY = false;
+    try {
+      await runShare(dir, {});
+    } finally {
+      process.stdout.write = origWrite;
+      (process.stdout as { isTTY?: boolean }).isTTY = origIsTTY;
+    }
+    expect(out.join("")).toContain("Lyse");
+  });
+
+  it("keeps the terminal clean when stdout is a TTY (clipboard is the payload there)", async () => {
+    const dir = makeFixture();
+    const out: string[] = [];
+    const origWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write = ((chunk: unknown) => {
+      out.push(typeof chunk === "string" ? chunk : String(chunk));
+      return true;
+    }) as typeof process.stdout.write;
+    const origIsTTY = process.stdout.isTTY;
+    (process.stdout as { isTTY?: boolean }).isTTY = true;
+    try {
+      await runShare(dir, {});
+    } finally {
+      process.stdout.write = origWrite;
+      (process.stdout as { isTTY?: boolean }).isTTY = origIsTTY;
+    }
+    expect(out.join("")).toBe("");
+  });
+});

@@ -1,31 +1,33 @@
 {
   "$comment": [
-    "Ground truth established by reading each repository directly — counting the",
-    "directories the project itself uses to organise its components — WITHOUT",
-    "running Lyse. This is the number a design-system engineer would give if asked",
-    "'how many components does this library ship?'. It is the only thing in the",
-    "repo that Lyse's own output was not used to produce, which is what makes it",
-    "an oracle rather than a snapshot.",
+    "Ground truth established by reading each repository directly, WITHOUT running",
+    "Lyse. This is the only reference in the repo that Lyse's own output was not",
+    "used to produce, which is what makes it an oracle rather than a snapshot.",
+    "",
+    "`components` counts COMPONENT FILES, not top-level component directories. An",
+    "earlier revision of this file counted directories and reported mantine as a",
+    "3.7x over-count; measured against files it is 1.44x. Lyse's inventory is",
+    "file-based and compound sub-components (Accordion.Item, Accordion.Control)",
+    "are real components, so directories are the wrong yardstick. Getting this",
+    "wrong makes the harness cry wolf, and a harness that cries wolf gets ignored.",
     "",
     "`heldOut: true` means the repo is NOT in .bench-corpus, so it took no part in",
     "rule calibration. Regressions caught on a held-out repo are real; regressions",
-    "caught on an in-corpus repo may be train-on-test artefacts.",
-    "",
-    "Tolerance is deliberately loose. A design system's component count is not a",
-    "single well-defined integer (sub-components, compound exports, internal",
-    "primitives), so this harness answers 'is Lyse in the right order of",
-    "magnitude, and did that change?' — not 'is Lyse exactly right'. Zero where",
-    "there should be hundreds is the failure mode it exists to catch."
+    "caught on an in-corpus repo may be train-on-test artefacts."
   ],
   "establishedOn": "2026-08-02",
-  "method": "ls -d <repo>/<canonical components dir>/*/ | wc -l",
+  "method": {
+    "react": "distinct PascalCase *.tsx/*.jsx basenames under the DS source root, excluding .test/.spec/.story/.stories/.demo/.pure/.e2e",
+    "vue": "component directories under packages/components — Vue SFC filenames are lowercase, so a PascalCase filename count returns zero",
+    "none": "0 — the repo ships no design system"
+  },
   "repos": [
     {
       "name": "primer-react",
       "git": "https://github.com/primer/react.git",
       "heldOut": true,
-      "componentsDir": "packages/react/src/<Pascal>/",
-      "components": 74,
+      "sourceRoot": "packages/react/src",
+      "components": 193,
       "storyFiles": 334,
       "framework": "react",
       "isDesignSystem": true
@@ -34,8 +36,8 @@
       "name": "polaris",
       "git": "https://github.com/Shopify/polaris.git",
       "heldOut": true,
-      "componentsDir": "polaris-react/src/components/*/",
-      "components": 121,
+      "sourceRoot": "polaris-react/src",
+      "components": 189,
       "storyFiles": 87,
       "framework": "react",
       "isDesignSystem": true
@@ -44,8 +46,8 @@
       "name": "mantine",
       "git": "https://github.com/mantinedev/mantine.git",
       "heldOut": false,
-      "componentsDir": "packages/@mantine/*/src/components/*/",
-      "components": 153,
+      "sourceRoot": "packages/@mantine",
+      "components": 399,
       "storyFiles": 869,
       "framework": "react",
       "isDesignSystem": true
@@ -54,7 +56,7 @@
       "name": "element-plus",
       "git": "https://github.com/element-plus/element-plus.git",
       "heldOut": false,
-      "componentsDir": "packages/components/*/",
+      "sourceRoot": "packages/components",
       "components": 122,
       "storyFiles": 0,
       "framework": "vue",
@@ -64,8 +66,8 @@
       "name": "tremor",
       "git": "https://github.com/tremorlabs/tremor.git",
       "heldOut": false,
-      "componentsDir": "src/components/*/",
-      "components": 39,
+      "sourceRoot": "src",
+      "components": 40,
       "storyFiles": 42,
       "framework": "react",
       "isDesignSystem": true
@@ -74,7 +76,7 @@
       "name": "bad-app",
       "git": "https://github.com/gothinkster/react-redux-realworld-example-app.git",
       "heldOut": true,
-      "componentsDir": "(none — a CRA tutorial app styled with Bootstrap classes)",
+      "sourceRoot": "src",
       "components": 0,
       "storyFiles": 0,
       "framework": "react",
@@ -82,9 +84,9 @@
     }
   ],
   "tolerance": {
-    "$comment": "A reported count is accepted when it lands within [components / factorLow, components * factorHigh]. Over-counting is the more forgivable direction: a design system legitimately exposes sub-components the canonical directory listing does not.",
+    "$comment": "Accepted when the reported count lands in [components / factorLow, components * factorHigh]. Measured 2026-08-02, every repo sits between 0.80x and 1.44x, so this band is roughly 2x looser than current behaviour in both directions — wide enough not to fire on ordinary drift, narrow enough that zero-where-there-should-be-hundreds cannot pass.",
     "factorLow": 2.0,
-    "factorHigh": 3.0,
+    "factorHigh": 2.0,
     "notADesignSystemMax": 5
   }
 }

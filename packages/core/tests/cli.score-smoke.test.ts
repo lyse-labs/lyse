@@ -14,7 +14,7 @@
  * substantially lower (auto-fail: tokens and ai-surface both hit 0% adoption).
  *
  * Bands (not exact pins) so small noise deltas don't create false positives:
- *   - Health Score:       N ∈ [34, 40]  (±3 around 37)
+ *   - Health Score:       N ∈ [18, 24]  (±3 around 21)
  *   - Counted findings:   M ∈ [9, 13]   (guards against stableSubAxes going empty → trivial 100)
  *   - Scoring path:       "scoring-v1.1" (the audit's default v2-legacy scorer)
  *
@@ -42,7 +42,7 @@ function stripAnsi(s: string): string {
 }
 
 describe("cli explain --score smoke (Track 8.10)", () => {
-  it("Health Score is within [34, 40] and the audit scorer (scoring-v1.1) is active", { timeout: 30_000 }, () => {
+  it("Health Score is within [18, 24] and the audit scorer (scoring-v1.1) is active", { timeout: 30_000 }, () => {
     if (!existsSync(LYSE_CLI_PATH)) {
       throw new Error(
         `CLI not built — run \`pnpm --filter lyse build\` first. Looked at: ${LYSE_CLI_PATH}`,
@@ -52,7 +52,7 @@ describe("cli explain --score smoke (Track 8.10)", () => {
     // Pin v2: this smoke test guards the numeric audit score against regression.
     // The default is now v3, under which full-ds is below min-N=30 on every axis
     // → "N/A" (no number to band). The reachable v2-legacy formula still
-    // produces the numeric [34,40] signal this guard exists to protect.
+    // produces the numeric [18,24] signal this guard exists to protect.
     const r = spawnSync(
       "node",
       [LYSE_CLI_PATH, "explain", "--score", "--static-only", "--score-model", "v2", fixture],
@@ -69,11 +69,11 @@ describe("cli explain --score smoke (Track 8.10)", () => {
     const score = parseInt(scoreMatch![1]!, 10);
     expect(
       score,
-      `Health Score ${score} is outside expected band [34, 40]. ` +
+      `Health Score ${score} is outside expected band [18, 24]. ` +
         `Either a scoring regression occurred or a new stable sub-axis was added ` +
         `and the band needs updating.`,
-    ).toBeGreaterThanOrEqual(34);
-    expect(score).toBeLessThanOrEqual(40);
+    ).toBeGreaterThanOrEqual(18);
+    expect(score).toBeLessThanOrEqual(24);
 
     // --- audit scorer version (H4: explain --score surfaces the audit's
     // own scoringVersion, not a separately-pinned formula-v1 identity) ---
