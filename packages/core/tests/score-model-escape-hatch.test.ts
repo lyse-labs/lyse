@@ -38,7 +38,9 @@ describe("--score-model v2 escape hatch — byte-for-byte scoring-v1.1 reproduct
       { axis: "components", score: 50 },
       { axis: "stories", score: "N/A" },
       { axis: "ai-surface", score: 0 },
-      { axis: "ai-governance", score: 100 },
+      // Was 100. This fixture ships no AI surface, so the axis now abstains
+      // rather than scoring a perfect mark for the absence of what it measures.
+      { axis: "ai-governance", score: "N/A" },
     ]);
 
     // v2 axes carry the legacy penalty fields — distinct from v3's 4-field
