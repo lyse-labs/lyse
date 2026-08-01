@@ -68,7 +68,6 @@ import type {
   TokenMap,
   ComponentInventoryEntry,
 } from "../types.js";
-import type { DsFamilyMember } from "../detection/types.js";
 
 // Import for local use within this module (function signatures).
 import { RefuseToRunError, ScopeError, type AuditFlags } from "./audit-flags.js";
