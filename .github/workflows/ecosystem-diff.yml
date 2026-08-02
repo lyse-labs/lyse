@@ -8,7 +8,7 @@
 #
 # It complements `bench-golden` rather than replacing it. A committed snapshot
 # is an artefact that goes stale, and whoever's PR turns it red is the person
-# who regenerates it — reviewable at four repos, a rubber stamp at fourteen.
+# who regenerates it — reviewable at four repos, a rubber stamp at thirteen.
 # This has no artefact to regenerate: the only way to make the diff empty is to
 # not change behaviour.
 name: Ecosystem diff
