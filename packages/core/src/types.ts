@@ -554,6 +554,13 @@ export interface LyseConfig {
    */
   handoff?: {
     review?: boolean;
+    /**
+     * Run the agent against a throwaway checkout of HEAD instead of this
+     * working tree. Off by default — `handoff` exists so you can review the
+     * agent's work with `git diff` where you are sitting. For unattended runs,
+     * which want a blast radius they can delete. Refused on a dirty tree.
+     */
+    isolate?: boolean;
   };
 }
 

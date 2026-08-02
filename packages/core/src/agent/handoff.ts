@@ -7,6 +7,7 @@ import { launchArgs, copyToClipboard } from "./launch.js";
 import { transcriptPath, openTranscript } from "./transcript.js";
 import { spawnGuarded } from "./spawn-guarded.js";
 import { resolveTimeoutMs, TIMEOUT_EXIT_CODE } from "./timeout.js";
+import { createIsolatedTree, isolationRefusal, readTreeState, removeIsolatedTree } from "./isolate.js";
 import { isCommandAvailable, detectAgents } from "./registry.js";
 import { buildHandoffPayload, serializeTokenMap } from "./payload.js";
 import { installLyseSkill } from "./skill.js";
@@ -16,6 +17,13 @@ import { confirmBypass } from "../menu/prompts.js";
 /** Passed through to `deps.launch` so it can build the right argv (`--review` omits the permission-bypass flag). */
 export interface LaunchOpts {
   reviewMode?: boolean;
+  /**
+   * Where the transcript is written, when that is not the agent's cwd. Under
+   * `--isolate` the agent runs in a throwaway tree that is deleted on timeout —
+   * and a timeout is exactly when the log matters — so the record stays in the
+   * real repository.
+   */
+  transcriptRoot?: string;
 }
 
 export interface HandoffDeps {
@@ -48,6 +56,12 @@ export interface HandoffInput {
    * net in this mode. Default `false`.
    */
   reviewMode?: boolean;
+  /**
+   * `--isolate` / `LYSE_HANDOFF_ISOLATE=1` / `.lyse.yaml` `handoff.isolate`:
+   * run the agent against a throwaway checkout of HEAD. Refused, loudly, on a
+   * dirty tree — see `isolate.ts#isolationRefusal`.
+   */
+  isolate?: boolean;
 }
 
 type HandoffAction = "launched" | "copied" | "copy-failed" | "skipped" | "none";
@@ -63,6 +77,10 @@ export interface HandoffResult {
    * it as a clean launch is a gate that fails open.
    */
   timedOut?: true;
+  /** Where the agent's edits landed under `--isolate`; absent when it timed out. */
+  isolatedTree?: string;
+  /** Why `--isolate` was asked for and not honoured. The run continues without it. */
+  isolationRefused?: string;
 }
 
 const HANDOFF_DIR_NAME = join(".lyse", "handoff");
@@ -108,6 +126,13 @@ export async function runHandoff(input: HandoffInput, deps: HandoffDeps): Promis
   if (findings.length === 0) {
     return { action: "none" };
   }
+
+  // Read the tree BEFORE writing anything. `writeArtifacts` drops
+  // `.lyse/handoff/*.json` into the repo, and on a repo without a `.lyse`
+  // gitignore entry that is enough to make the tree look dirty — so checking
+  // later meant `--isolate` refused because Lyse had dirtied the tree itself.
+  const isolationBlockedBy =
+    input.isolate === true ? isolationRefusal(readTreeState(root)) : null;
 
   const handoffDir = join(root, HANDOFF_DIR_NAME);
   writeArtifacts(handoffDir, findings, tokens);
@@ -174,11 +199,33 @@ export async function runHandoff(input: HandoffInput, deps: HandoffDeps): Promis
     deps.targetFilePath ?? join(homedir(), ".lyse", "handoff-target.json");
   persistTarget(targetFilePath, agentId);
 
-  const exitCode = await deps.launch(agentId, payload, root, { reviewMode });
+  let isolated: { dir: string } | null = null;
+  let refused: string | null = isolationBlockedBy;
+  if (input.isolate === true && refused === null) {
+    isolated = createIsolatedTree(root);
+    if (isolated === null) refused = "isolation failed: git could not create a worktree here.";
+  }
 
-  return exitCode === TIMEOUT_EXIT_CODE
-    ? { action: "launched", agentId, timedOut: true }
-    : { action: "launched", agentId };
+  const cwd = isolated?.dir ?? root;
+  if (isolated !== null) writeArtifacts(join(cwd, HANDOFF_DIR_NAME), findings, tokens);
+
+  const exitCode = await deps.launch(agentId, payload, cwd, {
+    reviewMode,
+    ...(isolated !== null ? { transcriptRoot: root } : {}),
+  });
+
+  const timedOut = exitCode === TIMEOUT_EXIT_CODE;
+  // The rollback: a run that had to be killed leaves nothing behind. A run that
+  // finished keeps its tree, because the edits are the deliverable.
+  if (isolated !== null && timedOut) removeIsolatedTree(root, isolated.dir);
+
+  return {
+    action: "launched",
+    agentId,
+    ...(timedOut ? { timedOut: true as const } : {}),
+    ...(isolated !== null && !timedOut ? { isolatedTree: isolated.dir } : {}),
+    ...(refused !== null ? { isolationRefused: refused } : {}),
+  };
 }
 
 export async function spawnAgentLauncher(
@@ -190,7 +237,7 @@ export async function spawnAgentLauncher(
   const args = launchArgs(agentId, opts?.reviewMode ?? false);
   if (!args.launchSupported) return 1;
   const { binary, bypassFlags } = args;
-  const log = openTranscript(transcriptPath(cwd));
+  const log = openTranscript(transcriptPath(opts?.transcriptRoot ?? cwd));
   const exitCode = await spawnGuarded(binary, [...bypassFlags, prompt], cwd, {
     timeoutMs: resolveTimeoutMs(process.env),
     log,

@@ -2,6 +2,7 @@ import { basename } from "node:path";
 import { auditDirectory, RefuseToRunError } from "./audit-pipeline.js";
 import { runHandoff, spawnAgentLauncher } from "../agent/handoff.js";
 import { TIMEOUT_EXIT_CODE } from "../agent/timeout.js";
+import { resolveIsolate } from "../agent/isolate.js";
 import { choice } from "../menu/prompts.js";
 import type { HandoffResult, LaunchOpts } from "../agent/handoff.js";
 
@@ -64,6 +65,11 @@ export async function runHandoffCommand(root: string, deps?: HandoffDeps): Promi
   // Precedence: `--review` (via LYSE_HANDOFF_REVIEW, set by the CLI flag) >
   // `.lyse.yaml` `handoff.review` > default false.
   const reviewMode = process.env.LYSE_HANDOFF_REVIEW === "1" || config.handoff?.review === true;
+  const isolate = resolveIsolate({
+    flag: undefined,
+    env: process.env,
+    config: config.handoff?.isolate,
+  });
 
   const handoffResult: HandoffResult = await runHandoff(
     {
@@ -72,6 +78,7 @@ export async function runHandoffCommand(root: string, deps?: HandoffDeps): Promi
       root,
       projectName,
       reviewMode,
+      isolate,
       ...(config.advisory?.migrationScaleFileCount !== undefined
         ? { migrationScaleFileCount: config.advisory.migrationScaleFileCount }
         : {}),
@@ -82,6 +89,15 @@ export async function runHandoffCommand(root: string, deps?: HandoffDeps): Promi
   switch (handoffResult.action) {
     case "launched":
       process.stdout.write(`Agent launched: ${handoffResult.agentId ?? "unknown"}\n`);
+      if (handoffResult.isolationRefused !== undefined) {
+        process.stderr.write(`[lyse] ${handoffResult.isolationRefused}\n`);
+      }
+      if (handoffResult.isolatedTree !== undefined) {
+        process.stdout.write(
+          `Edits landed in an isolated tree, not this one:\n  ${handoffResult.isolatedTree}\n` +
+            `Review with: git -C ${handoffResult.isolatedTree} diff\n`,
+        );
+      }
       if (handoffResult.timedOut === true) {
         process.stderr.write(
           "[lyse] the agent was terminated on its timeout — review the working tree with `git diff` " +

@@ -111,6 +111,7 @@ The agent edits the **working tree only** — it never commits or opens a PR, so
 | Flag | Type | Default | Description |
 |---|---|---|---|
 | `--review` | boolean | `false` | Launch the agent under its own default permissions (it prompts you per-action) instead of bypassing its permission prompts. Skips the pre-spawn confirmation — the agent's own prompts are the safety net in this mode. Also settable via `LYSE_HANDOFF_REVIEW=1` or `.lyse.yaml` `handoff.review: true`. |
+| `--isolate` | boolean | `false` | Run the agent against a throwaway checkout of HEAD instead of this working tree. Removed on timeout — that is the rollback. **Refused on a dirty tree**, loudly, and the handoff continues without it: an isolated tree is checked out from HEAD, so with uncommitted work the agent would fix a version of the repository you cannot see. Also settable via `LYSE_HANDOFF_ISOLATE=1` or `.lyse.yaml` `handoff.isolate: true`. |
 | `--yes` | boolean | `false` | Accept all defaults: auto-picks the first prompted option (agent, or clipboard-copy if none are launchable) and skips the pre-spawn confirmation (proceeds as if you'd confirmed). Also lets `handoff` run without a real TTY. |
 
 ### The spawned agent
@@ -119,6 +120,11 @@ Everything the agent writes to stdout and stderr is streamed to your terminal
 *and* recorded in `.lyse/handoff/agent-transcript.log` (truncated per run,
 gitignored). The default mode launches it with its permission prompts disabled,
 so this log is the only record of what it did.
+
+Under `--isolate` the transcript stays in *this* repository, not in the isolated
+tree — the tree is deleted on a timeout, which is exactly when the log matters.
+When the agent finishes, the isolated tree is kept and its path printed; review
+it with `git -C <path> diff`.
 
 The agent is terminated after **30 minutes** by default. Set
 `LYSE_HANDOFF_TIMEOUT_MS` to change the limit, or `0` to wait indefinitely — an
