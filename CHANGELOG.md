@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **An abstaining axis now says why.** `tokens N/A n=1` is true and useless: it does not say whether the repository has nothing to measure, whether Lyse could not read it, or whether the checks that count never ran — three situations calling for three different responses. `AxisScore.abstentionReason` carries a sentence. On chakra the tokens axis now reads *"not scored: 1 thing measured, and 30 are needed before a ratio means anything"*, and the stories axis adds *"the stories extractor did not complete, so the checks that read what it produces were excluded from the score"*. The extractor is named **only on the axes whose rules it actually blocked** (`blockedExtractorsByAxis`) — a flat list appended "the stories extractor did not complete" to the tokens and a11y reasons, where it is globally true, causally irrelevant, and points the user at the wrong thing. Investigating [#264](https://github.com/lyse-labs/lyse/issues/264) is what surfaced the need: the tokens axis abstains on every design system in the corpus because its only volume-producing scored rules read DTCG `*.tokens.json` files and essentially no shipped design system publishes one — a fact no user could possibly infer from `N/A`.
+
 ### Fixed
 
 - **The ecosystem diff was calling repositories "unchanged" while their golden snapshots recorded a change.** It compared each extractor's ok/degraded *status* but not its evidence numbers, and per-rule finding *counts* but not finding identity — so `tokenNodes 78 -> 79` on polaris and `214 -> 222` on shadcn were invisible, as was a polaris finding that moved with every count equal. The summary now carries `extraction.<extractor>.<evidence>` and a digest over (rule, file, line). On the change that exposed it the report went from **2 of 13 repositories moved to 5 of 13**. A report that says "nothing moved" when something did is worse than no report, and this one was going to be an agent's oracle.

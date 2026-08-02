@@ -2,6 +2,7 @@
   "$schema": "https://github.com/lyse-labs/lyse/raw/main/schemas/v3/lyse-result.json",
   "axes": [
     {
+      "abstentionReason": "not scored: 11 things measured, and 30 are needed before a ratio means anything. The components extractor did not complete, so the checks that read what it produces were excluded from the score.",
       "axis": "tokens",
       "findings": 9,
       "opportunities": 11,
@@ -23,6 +24,7 @@
       "unscoredFindings": 19
     },
     {
+      "abstentionReason": "not scored: no scored check was able to measure anything on this axis. That is not the same as finding nothing wrong — nothing was examined. The components extractor did not complete, so the checks that read what it produces were excluded from the score.",
       "axis": "stories",
       "findings": 0,
       "opportunities": 0,
@@ -30,6 +32,7 @@
       "unscoredFindings": 0
     },
     {
+      "abstentionReason": "not scored: 8 things measured, and 30 are needed before a ratio means anything.",
       "axis": "ai-surface",
       "findings": 6,
       "opportunities": 8,
@@ -37,6 +40,7 @@
       "unscoredFindings": 0
     },
     {
+      "abstentionReason": "not scored: no scored check was able to measure anything on this axis. That is not the same as finding nothing wrong — nothing was examined.",
       "axis": "ai-governance",
       "findings": 0,
       "opportunities": 0,

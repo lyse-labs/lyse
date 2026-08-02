@@ -332,6 +332,14 @@ export interface AxisScore {
    * the legacy v2 scorer does not compute it.
    */
   unscoredFindings?: number;
+  /**
+   * Why this axis was not scored, in a sentence. Present only when
+   * `score === "N/A"`. `tokens N/A n=1` is true and useless: it does not say
+   * whether the repo has no tokens, whether Lyse could not read them, or
+   * whether the checks that count never ran — three situations needing three
+   * different responses from the user.
+   */
+  abstentionReason?: string;
 }
 
 export interface Layer4Meta {
