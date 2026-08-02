@@ -203,9 +203,9 @@ lyse audit [path] [options]
 
 | Flag | Type | Default | Description |
 |---|---|---|---|
-| `--format <name>` | `text` \| `json` \| `sarif` \| `html` | `text` | Output format. `html` emits a self-contained, shareable report. |
+| `--format <name>` | `text` \| `legacy` \| `eslint` \| `table` \| `tsv` \| `json` \| `sarif` \| `html` | `text` on a TTY, `json` otherwise | Output format. `html` emits a self-contained, shareable report. Any other value exits `64`. |
 | `--output <path>` | string | stdout | Write output to a file. |
-| `--limit <n>` | integer \| `all` | `10` | Max findings printed by the text/eslint/legacy output. Use `all` or `0` to show every finding. Ignored by `--format=json|sarif` (machine consumers always receive the full report). |
+| `--limit <n>` | integer \| `all` | per-format — see below | Max findings printed. Use `all` or `0` to show every finding. |
 | `--threshold <n>` | integer 0–100 | (none) | Exit code 1 if Health Score is below this value. |
 | `--scope <mode>` | `changed` \| `staged` \| `uncommitted` \| `new` | (whole tree) | Limit the audit. `changed` = committed vs `--base` (PR review); `staged` = files in the index (pre-commit); `uncommitted` = working-tree edits + untracked (verify an agent's uncommitted fixes); `new` = diff-first — report and gate only findings absent from the committed `.lyse/baseline.json` (see [`lyse baseline write`](#lyse-baseline-write-path)), regardless of which files changed. |
 | `--staged` | boolean | `false` | Shortcut for `--scope=staged` (audit only staged files — ideal for pre-commit hooks). |
@@ -223,6 +223,19 @@ lyse audit [path] [options]
 | `--llm-provider <name>` | string | (config) | Override the LLM provider (`anthropic` \| `openai` \| `openai-compat` \| `ollama`). |
 | `--llm-model <name>` | string | (config) | Override the LLM model. |
 | `--include-timestamps` | boolean | `false` | Include a timestamp in JSON output. Breaks byte-for-byte determinism. |
+
+#### How much `--limit` truncates, by format
+
+There is no single default: each format shows what makes sense for how it is
+read.
+
+| Format | Shown without `--limit` | Honours `--limit` |
+|---|---|---|
+| `text`, `legacy` | the top **5** fix groups | yes |
+| `eslint`, `table` | every finding | yes |
+| `json`, `sarif`, `tsv` | every finding | no — machine consumers always receive the full report |
+
+`--verbose` is equivalent to `--limit=all` for the formats that truncate.
 
 Every `lyse audit` run also writes the reified Design System Graph to
 `.lyse/graph.json` (tokens, components, stories, zones, extraction report).
