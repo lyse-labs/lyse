@@ -119,6 +119,27 @@ internal working documents. Never commit them to this public repo; archive
 anything worth keeping to `lyse-labs/lyse-internal`
 (`internal/superpowers-archive/`).
 
+## The night investigator
+
+`.claude/agents/lyse-investigator.md` is a **read-only** agent for unattended
+runs. It hunts one class of defect — a claim Lyse cannot back up — and reports
+each with a command that reproduces it in thirty seconds. It has no write
+access, opens nothing public, and discards its own hypotheses when it cannot
+name a check that would have falsified them.
+
+Read-only on purpose, and the reason is measured rather than cautious: the
+ecosystem diff sees behaviour *changes*, never whether a change was *right*.
+Three defects in one day's own PRs were caught by re-reading after CI was green
+— `lyse handoff` exiting 0 on timeout, an extractor named on axes it had not
+blocked, and the ecosystem diff's own blind spot. An agent has no fresh eyes on
+its own work, and an issue costs thirty seconds to verify where a diff costs
+twenty minutes.
+
+**Graduation criterion, fixed in advance:** after 5 nights, if ≥70% of its
+findings reproduce and are judged real, it earns write access on a narrow class
+— one fix per PR, measured on both corpora, never auto-merged. Below that, the
+harness is what needs work, not the permissions.
+
 ## Operating principles
 
 - **Local-first by default.** New features should run on the user's machine unless they fundamentally cannot.
