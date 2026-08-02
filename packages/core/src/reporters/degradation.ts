@@ -20,7 +20,14 @@ export function buildDegradationLines(result: AuditResult): string[] {
     const entry = extractor ? byExtractor.get(extractor) : undefined;
 
     if (a.score === "N/A") {
-      if (a.opportunities > 0) {
+      // An axis can hold thousands of opportunities and still abstain because
+      // its evidence was never read. Reporting that as "insufficient sample
+      // (n=1114)" against a floor of 30 is a false sentence, and it hides the
+      // only actionable remediation — so degraded extraction wins this branch.
+      if (entry && entry.status !== "ok" && a.opportunities > 0) {
+        const hint = entry.remediation ? ` ${entry.remediation}` : "";
+        lines.push(`${a.axis}: not scored — extraction ${entry.status}.${hint}`);
+      } else if (a.opportunities > 0) {
         lines.push(`${a.axis}: insufficient sample (n=${a.opportunities}) — not scored.`);
       } else if (entry?.remediation) {
         lines.push(`${a.axis}: ${entry.remediation}`);

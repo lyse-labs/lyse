@@ -13,11 +13,27 @@ interface Borders { tl: string; tr: string; bl: string; br: string; h: string; v
 const UNICODE_BORDERS: Borders = { tl: "╭", tr: "╮", bl: "╰", br: "╯", h: "─", v: "│" };
 const ASCII_BORDERS: Borders = { tl: "+", tr: "+", bl: "+", br: "+", h: "-", v: "|" };
 
-function axisRow(a: AxisScore, opts: TerminalOpts, barCells: number): string {
+/**
+ * Two annotations travel with every axis, and neither is ever dropped to save
+ * columns — the bar shrinks instead.
+ *
+ * `n=` is how much was measured. On the polaris sub-path the components axis
+ * reads 92 under one build and 16 under another, while the denominator goes
+ * 1494 → 134: the number did not fall, the measured surface did. A bare 16
+ * misleads exactly as much as a vacuous 100.
+ *
+ * `+N` counts findings reported on this axis that the score ignores, so
+ * `a11y 100` can never appear alone above a list of fifteen a11y findings.
+ */
+function axisRow(a: AxisScore, opts: TerminalOpts, barCells: number, maxWidth: number): string {
   const gly = statusGlyph(a.score, { color: opts.color, unicode: opts.unicode });
   const name = visiblePad(a.axis, 14);
   const scoreText = visiblePad(a.score === "N/A" ? "N/A" : String(a.score), 4, "left");
-  return `${gly} ${name} ${scoreText}  ${bar(a.score, opts, barCells)}`;
+  const head = `${gly} ${name} ${scoreText}  `;
+  const unscored = a.unscoredFindings ?? 0;
+  const note = ` n=${a.opportunities}${unscored > 0 ? ` +${unscored}` : ""}`;
+  const cells = Math.max(0, Math.min(barCells, maxWidth - visibleWidth(head) - note.length));
+  return `${head}${bar(a.score, opts, cells)}${dim(note, opts)}`;
 }
 
 /**
@@ -94,7 +110,7 @@ export function renderScoreCard(
     blank,
     // Every scored axis renders, N/A included — ai-surface/ai-governance were
     // invisible pre-card while still moving the score; do not "clean up" N/A rows.
-    ...result.axes.map((a) => wrap(axisRow(a, opts, barCells))),
+    ...result.axes.map((a) => wrap(axisRow(a, opts, barCells, inner - (EDGE - 1)))),
     blank,
     `${b.bl}${b.h.repeat(inner)}${b.br}`,
   ];

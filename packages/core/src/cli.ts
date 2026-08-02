@@ -28,6 +28,7 @@ import { runExplain } from "./commands/explain.js";
 import { runExplainScore } from "./commands/explain-score.js";
 import { feedbackMissed } from "./commands/feedback.js";
 import { auditDirectory, RefuseToRunError, ScopeError } from "./commands/audit-pipeline.js";
+import { assertKnownFlags } from "./cli/unknown-flags.js";
 import type { AuditFlags } from "./commands/audit-pipeline.js";
 import { resolveScoreModel } from "./scorer.js";
 import { runShare } from "./commands/share.js";
@@ -201,11 +202,10 @@ const GLOBAL_FLAGS = {
 // Subcommands
 // ---------------------------------------------------------------------------
 
-const auditCommand = defineCommand({
-  meta: { name: "audit", description: "Audit a repository's design system" },
-  args: {
+const AUDIT_ARGS = {
     root: { type: "positional", required: false, default: ".", description: "repository root (defaults to current working directory)" },
     output: { type: "string", description: "output directory (default: stdout)" },
+    json: { type: "boolean", default: false, description: "shorthand for --format=json" },
     format: { type: "string", description: "json | text | table | tsv | eslint | legacy | sarif | html (default: text for tty, json otherwise)" },
     "include-timestamps": { type: "boolean", default: false, description: "include timestamp in JSON output (breaks determinism)" },
     quiet: { type: "boolean", default: false, description: "suppress all stdout except score" },
@@ -302,8 +302,18 @@ const auditCommand = defineCommand({
     },
     yes: GLOBAL_FLAGS.yes,
     "no-prompt": GLOBAL_FLAGS["no-prompt"],
-  },
+} as const;
+
+const auditCommand = defineCommand({
+  meta: { name: "audit", description: "Audit a repository's design system" },
+  args: AUDIT_ARGS,
   async run({ args }) {
+    try {
+      assertKnownFlags(args, AUDIT_ARGS, "audit");
+    } catch (err) {
+      console.error(`[lyse] ${(err as Error).message}`);
+      process.exit(64);
+    }
     applyGlobalFlags(args);
     const startTime = Date.now();
     const repoRoot = resolve(args.root);
@@ -423,7 +433,7 @@ const auditCommand = defineCommand({
     // the post-audit logic below (TTY → "text", else "json") so we suppress
     // the spinner whenever stdout receives machine-readable output.
     const isTTYForSpinner = process.stdout.isTTY ?? false;
-    const formatForSpinner = args.format ?? (isTTYForSpinner ? "text" : "json");
+    const formatForSpinner = args.json === true ? "json" : (args.format ?? (isTTYForSpinner ? "text" : "json"));
     const isQuiet = args.quiet === true;
     const isMachineFormatForSpinner =
       formatForSpinner === "json" || formatForSpinner === "sarif" || formatForSpinner === "html" || formatForSpinner === "tsv";
@@ -507,10 +517,17 @@ const auditCommand = defineCommand({
       }
       const { newFindings, staleGraph } = selectNew(result.findings, baseline, graph);
       if (staleGraph) {
+        // Fail closed. A stale baseline no longer describes this design system,
+        // so "no new findings" is not a pass — it is an answer to a question
+        // about a different repository. Warning-and-continuing let a deleted
+        // design system sail through the gate with exit 0.
         console.error(
-          "[lyse] baseline may be stale: the design-system graph changed since it was written. Re-run `lyse baseline write`.",
+          "[lyse] gate: baseline is stale — the design-system graph changed since it was written. Re-run `lyse baseline write`.",
         );
       }
+      const staleReasons = staleGraph
+        ? ["baseline is stale: the design-system graph changed since it was written"]
+        : [];
       const currentScores: Partial<Record<import("./types.js").AxisName, number>> = {};
       for (const a of result.axes) if (typeof a.score === "number") currentScores[a.axis] = a.score;
       const gate = evaluateGate({
@@ -519,13 +536,13 @@ const auditCommand = defineCommand({
         baseline,
         scoreContributingRuleIds: stableRuleIds(SUB_AXES, { filterRan: false }),
       });
-      newScopeGateFail = gate.fail;
-      newScopeGateReasons = gate.reasons;
+      newScopeGateFail = gate.fail || staleGraph;
+      newScopeGateReasons = [...staleReasons, ...gate.reasons];
       result.findings = newFindings;
     }
 
     const isTTY = process.stdout.isTTY ?? false;
-    const format = args.format ?? (isTTY ? "text" : "json");
+    const format = args.json === true ? "json" : (args.format ?? (isTTY ? "text" : "json"));
 
     // Resolve --limit for text/eslint/legacy output. JSON/SARIF intentionally
     // ignore the flag (machine consumers want the full report, always). When
@@ -670,7 +687,12 @@ const auditCommand = defineCommand({
 
     // Emit command_invoked metric (opt-in, only when consent has been accepted).
     // Per ADR 0012, suppress on the run that just requested consent.
-    const didFail = typeof result.finalScore === "number" && result.finalScore < threshold;
+    // A threshold gate asks "is the score at least N?". When Lyse cannot produce
+    // a score the answer is not "yes" — it is unknown, and an unknown must not
+    // pass a gate the user set on purpose. Fail closed.
+    const didFail =
+      threshold > 0 &&
+      (result.finalScore === "N/A" || (result.finalScore as number) < threshold);
     await appendCommandInvokedEvent(repoRoot, "audit", didFail ? "error" : "success", Date.now() - startTime, {
       suppress: consent.justAsked,
     });

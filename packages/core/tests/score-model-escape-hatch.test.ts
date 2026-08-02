@@ -12,13 +12,20 @@ const FULL_DS = join(import.meta.dirname, "..", "fixtures", "full-ds");
 // end-to-end byte-for-byte reproduction of the OLD v2 scores, the env-var
 // path, and determinism — not a re-test of precedence itself.
 
+// The locked value moved 37 -> 21 on 2026-08-02. Not a formula change: this
+// fixture ships no AI, and ai-governance/product-analytics stopped counting an
+// opportunity per component file on repos with no AI surface, so the axis now
+// abstains instead of contributing a free 100 to the mean. The old 37 was
+// inflated by exactly that. `scoringVersion` is unchanged because the formula
+// is unchanged — what moved is a rule's denominator, which `rulesVersion`
+// tracks.
 describe("--score-model v2 escape hatch — byte-for-byte scoring-v1.1 reproduction", () => {
   it("reproduces the locked legacy shape on fixtures/full-ds via the flag", async () => {
     const { result } = await auditDirectory(FULL_DS, { staticOnly: true, scoreModel: "v2" });
 
     expect(result.schemaVersion).toBe(2);
     expect(result.scoringVersion).toBe("scoring-v1.1");
-    expect(result.finalScore).toBe(37);
+    expect(result.finalScore).toBe(21);
     expect(result.tier).toBe("Managed");
     expect(result.grade).toEqual({
       grade: "Fail",
@@ -31,7 +38,9 @@ describe("--score-model v2 escape hatch — byte-for-byte scoring-v1.1 reproduct
       { axis: "components", score: 50 },
       { axis: "stories", score: "N/A" },
       { axis: "ai-surface", score: 0 },
-      { axis: "ai-governance", score: 100 },
+      // Was 100. This fixture ships no AI surface, so the axis now abstains
+      // rather than scoring a perfect mark for the absence of what it measures.
+      { axis: "ai-governance", score: "N/A" },
     ]);
 
     // v2 axes carry the legacy penalty fields — distinct from v3's 4-field
@@ -63,7 +72,7 @@ describe("--score-model v2 escape hatch — byte-for-byte scoring-v1.1 reproduct
         const { result } = await auditDirectory(FULL_DS, { staticOnly: true });
         expect(result.schemaVersion).toBe(2);
         expect(result.scoringVersion).toBe("scoring-v1.1");
-        expect(result.finalScore).toBe(37);
+        expect(result.finalScore).toBe(21);
       } finally {
         delete process.env.LYSE_SCORE_MODEL;
       }

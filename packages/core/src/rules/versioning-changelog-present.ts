@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { Rule, RuleContext, ParsedFiles, RuleEvalResult, Finding } from "../types.js";
 import { createLyseRule } from "./_rule-module.js";
@@ -46,9 +46,30 @@ function isAllowlisted(repoRoot: string): boolean {
   return false;
 }
 
+/**
+ * Repo-root entries whose name begins CHANGELOG, in stable order. Element Plus
+ * ships `CHANGELOG.en-US.md` and the fixed candidate list did not name it, so a
+ * scored rule reported "No structured CHANGELOG found" on a repo that has one.
+ * Localised and dated suffixes are common enough that enumerating them is a
+ * losing game; a prefix scan of the root is not.
+ */
+function changelogVariantsAtRoot(repoRoot: string): string[] {
+  try {
+    return readdirSync(repoRoot)
+      .filter((name) => /^CHANGELOG[.-]/i.test(name))
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
 /** Returns the first changelog file that exists AND has version-structured entries. */
 function findStructuredChangelog(repoRoot: string): string | null {
-  for (const candidate of CHANGELOG_CANDIDATES) {
+  const candidates = [...CHANGELOG_CANDIDATES, ...changelogVariantsAtRoot(repoRoot)];
+  const seen = new Set<string>();
+  for (const candidate of candidates) {
+    if (seen.has(candidate)) continue;
+    seen.add(candidate);
     const content = readFileIfSmall(join(repoRoot, candidate));
     if (content !== null && hasVersionEntries(content)) return candidate;
   }

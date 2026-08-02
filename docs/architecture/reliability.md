@@ -30,6 +30,15 @@ Every Lyse PR runs `pnpm test:recall` in CI; the build blocks if any `stable` su
 
 The separate `measure:recall` seeded-drift harness (`packages/core/rules-recall.json`, `recallSource: "seeded"`) is a narrower, non-gating CI regression net and candidate recall estimate — distinct from the antivirus/gold-set recall system described above.
 
+#### The oracle — claims that must never be true
+
+Everything above measures whether Lyse *finds* things. The oracle measures whether what Lyse *says* is true, and it is the only layer whose reference values were not produced by Lyse.
+
+- **`packages/core/tests/oracle/must-never-be-true.test.ts`** runs in CI on synthetic repositories built in temp dirs. Each case encodes a statement a release actually published and that was false — a repo of 40 stub components and 40 unreferenced tokens graded **A**, `ai-governance` scoring 100 on a repo with no AI, `lyse init` emptying the inventory it had just detected. These are not locked values (`tests/scoring-contract.test.ts` holds those): a characterization test tells you the number moved, an oracle tells you the number is *wrong*. Only the second kind can drive an unattended fix-and-rerun loop, because only the second kind knows what "correct" means without a human reading the diff. **Before adding a case, verify it fails against the code that had the bug** — a guard that cannot go red guards nothing.
+- **`pnpm measure:oracle`** checks reported component counts on six real repositories against counts established by reading those repositories (`scripts/oracle-expectations.json`), three of them held out of `.bench-corpus` and therefore untouched by rule calibration. Not gate-eligible — it needs multi-hundred-megabyte checkouts, so it runs locally or nightly. `--clone` fetches what is missing; `ORACLE_DIR` points at existing checkouts. Repos it could not measure are named in the output: silence about what was *not* measured is the failure this harness exists to prevent.
+
+Tolerance is deliberately loose (½× to 3× the canonical count). A design system's component count is not a well-defined integer — sub-components and compound exports make over-counting legitimate. The failure mode being caught is zero where there should be hundreds.
+
 #### Label provenance — git-mined conditional recall
 
 A third, independent recall source: `pnpm mine:recall` (`scripts/mine-gold-recall.ts`,

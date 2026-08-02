@@ -103,3 +103,35 @@ describe("buildDegradationLines — caveats on numeric axes (P0)", () => {
     expect(buildDegradationLines(r)).toEqual([]);
   });
 });
+
+describe("degraded extraction beats the sample-size explanation", () => {
+  it("does not claim 'insufficient sample' for an axis with thousands of opportunities", () => {
+    const lines = buildDegradationLines({
+      axes: [{ axis: "components", score: "N/A", findings: 113, opportunities: 1114 }],
+      meta: {
+        extraction: {
+          conflicts: [],
+          entries: [
+            {
+              extractor: "components",
+              status: "degraded",
+              evidence: { components: 0 },
+              remediation: "No component inventory — set `designSystem.componentsModule`.",
+            },
+          ],
+        },
+      },
+    } as unknown as Parameters<typeof buildDegradationLines>[0]);
+    expect(lines[0]).not.toMatch(/insufficient sample/);
+    expect(lines[0]).toMatch(/extraction degraded/);
+    expect(lines[0]).toMatch(/componentsModule/);
+  });
+
+  it("still explains a genuinely thin sample when extraction was fine", () => {
+    const lines = buildDegradationLines({
+      axes: [{ axis: "a11y", score: "N/A", findings: 0, opportunities: 12 }],
+      meta: { extraction: { conflicts: [], entries: [] } },
+    } as unknown as Parameters<typeof buildDegradationLines>[0]);
+    expect(lines[0]).toMatch(/insufficient sample \(n=12\)/);
+  });
+});

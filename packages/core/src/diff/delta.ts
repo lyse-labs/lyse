@@ -1,6 +1,6 @@
 import { anchorKey } from "./anchor.js";
 import { computeGraphHash } from "./graph-hash.js";
-import type { Baseline } from "./baseline.js";
+import { graphHashComparable, type Baseline } from "./baseline.js";
 import type { Finding } from "../types.js";
 import type { DesignSystemGraph } from "../graph/types.js";
 
@@ -37,7 +37,9 @@ export function selectNew(
   }
   newFindings.sort(byLineColRule);
 
-  return { newFindings, staleGraph: computeGraphHash(graph) !== baseline.graphHash };
+  const staleGraph =
+    graphHashComparable(baseline) && computeGraphHash(graph) !== baseline.graphHash;
+  return { newFindings, staleGraph };
 }
 
 function byLineCol(a: Finding, b: Finding): number {

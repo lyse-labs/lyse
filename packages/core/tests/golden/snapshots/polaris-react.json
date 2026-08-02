@@ -3,75 +3,82 @@
   "axes": [
     {
       "axis": "tokens",
-      "findings": 104,
-      "opportunities": 2392,
-      "score": 96
+      "findings": 1,
+      "opportunities": 2,
+      "score": "N/A",
+      "unscoredFindings": 0
     },
     {
       "axis": "a11y",
-      "findings": 85,
-      "opportunities": 395,
-      "score": 78
+      "findings": 22,
+      "opportunities": 135,
+      "score": 84,
+      "unscoredFindings": 6
     },
     {
       "axis": "components",
-      "findings": 114,
-      "opportunities": 1494,
-      "score": 92
+      "findings": 112,
+      "opportunities": 1113,
+      "score": 90,
+      "unscoredFindings": 1
     },
     {
       "axis": "stories",
-      "findings": 1,
-      "opportunities": 18,
-      "score": "N/A"
+      "findings": 0,
+      "opportunities": 0,
+      "score": "N/A",
+      "unscoredFindings": 68
     },
     {
       "axis": "ai-surface",
       "findings": 6,
       "opportunities": 39,
-      "score": 85
+      "score": 85,
+      "unscoredFindings": 0
     },
     {
       "axis": "ai-governance",
       "findings": 10,
-      "opportunities": 598,
-      "score": 98
+      "opportunities": 11,
+      "score": "N/A",
+      "unscoredFindings": 0
     }
   ],
-  "finalScore": 90,
-  "findingsCount": 320,
-  "findingsDigest": "3674400547362abceb57d56a610a16c7288b0910d1b3e1cb7365e280fb362f7a",
+  "finalScore": 86,
+  "findingsCount": 226,
+  "findingsDigest": "e9e0913ec799ebf402fd7d4d59c6669726068112c91e95499250ea147e40b0f0",
   "grade": {
     "autoFailed": false,
     "grade": "A",
     "reasons": []
   },
   "meta": {
-    "abstentions": 5,
+    "abstentions": 0,
     "coverage": {
       "configPath": null,
       "scannedFiles": 1170
     },
+    "dsSelfMode": true,
     "extraction": {
       "conflicts": [],
       "entries": [
         {
           "evidence": {
-            "components": 0,
-            "storySeeded": 9
+            "components": 191,
+            "storySeeded": 0
           },
           "extractor": "components",
-          "remediation": "No component inventory — set `designSystem.componentsModule` in .lyse.yaml or run `lyse init` (docs/guide/configuration.md).",
-          "status": "degraded"
+          "remediation": null,
+          "status": "ok"
         },
         {
           "evidence": {
-            "linked": 9,
-            "storyFiles": 9
+            "linked": 0,
+            "storyFiles": 87
           },
           "extractor": "stories",
-          "remediation": null,
-          "status": "ok"
+          "remediation": "DS-self mode: story analysis is skipped in v0.x — the stories axis reports N/A by design.",
+          "status": "degraded"
         },
         {
           "evidence": {
@@ -95,31 +102,31 @@
     "projection": {
       "top": [
         {
-          "count": 62,
-          "files": 16,
-          "gain": 3,
-          "key": "a11y/interactive-role-name",
+          "count": 20,
+          "files": 14,
+          "gain": 5,
+          "key": "a11y/semantic-html",
           "migrationScale": false,
-          "ruleId": "a11y/interactive-role-name"
+          "ruleId": "a11y/semantic-html"
         },
         {
           "count": 102,
           "files": 102,
-          "gain": 1,
+          "gain": 3,
           "key": "components/doc-comments",
           "migrationScale": true,
           "ruleId": "components/doc-comments"
         },
         {
-          "count": 20,
-          "files": 14,
+          "count": 8,
+          "files": 5,
           "gain": 1,
-          "key": "a11y/semantic-html",
+          "key": "components/icon-decorative-aria",
           "migrationScale": false,
-          "ruleId": "a11y/semantic-html"
+          "ruleId": "components/icon-decorative-aria"
         }
       ],
-      "totalGainTop3": 5
+      "totalGainTop3": 9
     }
   },
   "repoRoot": "<REPO>/polaris-react",

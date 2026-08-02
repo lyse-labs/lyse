@@ -37,13 +37,58 @@ describe("resolveComponentsModule", () => {
     });
   });
 
-  it("an explicit config module wins and carries no family", () => {
+  it("an explicit config module naming an UNRELATED library wins and carries no family", () => {
     const detected: ComponentsModuleDetection = {
       value: "@other/ui", confidence: "high", source: "workspace DS export (@other/ui)",
       dsSelf: true, family: [{ name: "@other/ui", relDir: "packages/ui" }],
     };
     expect(resolveComponentsModule("@acme/ui", detected)).toEqual({
       componentsModule: "@acme/ui", dsSelfMode: false, family: [],
+    });
+  });
+
+  // `lyse init` writes back exactly the module detection just resolved. Reading
+  // that as "this repo merely consumes @acme/ui" dropped ds-self mode, and the
+  // inventory of a design system auditing itself collapsed to zero — so running
+  // the setup command broke the tool on its own primary target.
+  it("keeps ds-self mode when the configured module is the one detection resolved", () => {
+    const detected: ComponentsModuleDetection = {
+      value: "@acme/ui", confidence: "high", source: "workspace DS export (@acme/ui)",
+      dsSelf: true, family: [{ name: "@acme/ui", relDir: "packages/ui" }],
+    };
+    expect(resolveComponentsModule("@acme/ui", detected)).toEqual({
+      componentsModule: "@acme/ui",
+      dsSelfMode: true,
+      family: [{ name: "@acme/ui", relDir: "packages/ui" }],
+    });
+  });
+
+  it("keeps ds-self mode when the configured module names any member of the detected family", () => {
+    const detected: ComponentsModuleDetection = {
+      value: "@acme/core", confidence: "high", source: "workspace DS export (@acme/core)",
+      dsSelf: true,
+      family: [
+        { name: "@acme/core", relDir: "packages/core" },
+        { name: "@acme/icons", relDir: "packages/icons" },
+      ],
+    };
+    expect(resolveComponentsModule("@acme/icons", detected)).toEqual({
+      componentsModule: "@acme/icons",
+      dsSelfMode: true,
+      family: [
+        { name: "@acme/core", relDir: "packages/core" },
+        { name: "@acme/icons", relDir: "packages/icons" },
+      ],
+    });
+  });
+
+  it("does not invent ds-self mode when detection never found a design system", () => {
+    const detected: ComponentsModuleDetection = {
+      value: "@mui/material", confidence: "medium", source: "common UI library: @mui/material",
+      dsSelf: false, family: [],
+    };
+    expect(resolveComponentsModule("@mui/material", detected)).toEqual({
+      componentsModule: "@mui/material", dsSelfMode: false, family: [],
     });
   });
 

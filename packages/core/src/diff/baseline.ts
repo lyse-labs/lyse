@@ -8,11 +8,27 @@ import type { DesignSystemGraph } from "../graph/types.js";
 
 export type BaselineFindings = Record<string, Record<string, Record<string, number>>>;
 
+/**
+ * Bumped whenever `computeGraphHash` changes what it covers. A baseline written
+ * under an older schema carries a hash from a different formula, so comparing
+ * the two says nothing about the repository — see `graphHashComparable`.
+ */
+export const CURRENT_BASELINE_SCHEMA = 2;
+
 export interface Baseline {
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   graphHash: string;
   scores: Partial<Record<AxisName, number>>;
   findings: BaselineFindings;
+}
+
+/**
+ * Only a baseline written under the current schema can be checked for staleness.
+ * Without this, widening the hash would mark every committed baseline stale and
+ * turn a green CI red on upgrade, on a tree nobody touched.
+ */
+export function graphHashComparable(b: Baseline): boolean {
+  return b.schemaVersion === CURRENT_BASELINE_SCHEMA;
 }
 
 export class BaselineError extends Error {
@@ -29,7 +45,7 @@ export function buildBaseline(result: AuditResult, graph: DesignSystemGraph): Ba
   }
   const scores: Partial<Record<AxisName, number>> = {};
   for (const a of result.axes) if (typeof a.score === "number") scores[a.axis] = a.score;
-  return { schemaVersion: 1, graphHash: computeGraphHash(graph), scores, findings };
+  return { schemaVersion: CURRENT_BASELINE_SCHEMA, graphHash: computeGraphHash(graph), scores, findings };
 }
 
 export function serializeBaseline(b: Baseline): string {
@@ -66,7 +82,7 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 function isValidBaselineShape(v: unknown): v is Baseline {
   if (!isPlainObject(v)) return false;
   return (
-    v["schemaVersion"] === 1 &&
+    (v["schemaVersion"] === 1 || v["schemaVersion"] === 2) &&
     isPlainObject(v["findings"]) &&
     typeof v["graphHash"] === "string" &&
     isPlainObject(v["scores"])

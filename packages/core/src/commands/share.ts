@@ -55,11 +55,19 @@ export async function runShare(cwd: string, opts: ShareOptions = {}): Promise<vo
 
   const md = formatShareMarkdown(audit.result.finalScore, axes, topRules, repo);
 
+  // Redirected stdout is the whole point of `lyse share > summary.md` and of
+  // running it in CI. Printing the markdown only in the clipboard-failure
+  // branch meant both produced zero bytes and exited 0. On a TTY the clipboard
+  // is the payload, so the terminal stays clean.
+  if (process.stdout.isTTY !== true) {
+    process.stdout.write(`${md}\n`);
+  }
+
   try {
     await copyToClipboard(md);
     spinner.succeed(`Summary copied · score ${audit.result.finalScore}/100 · paste into Slack / Notion / email`);
   } catch {
-    spinner.fail("Clipboard unavailable — printing summary below");
-    console.log(md);
+    spinner.fail("Clipboard unavailable");
+    if (process.stdout.isTTY === true) console.log(md);
   }
 }

@@ -32,4 +32,28 @@ describe("evaluateGate", () => {
     const r = evaluateGate({ newFindings: [], currentScores: { tokens: 70 }, baseline: { scores: { tokens: 60 } }, scoreContributingRuleIds: SCORED });
     expect(r.fail).toBe(false);
   });
+  it("red: an axis that was scored at baseline is no longer scored at all", () => {
+    // The laundering path. `cli.ts` drops non-numeric scores when building
+    // `currentScores`, so an axis that N/A'd out arrives here as `undefined`.
+    // The old `typeof cur === "number"` guard skipped it and the gate went
+    // green while the headline score ROSE — measured on real repos: cruip
+    // 80 → 92, shadcn 86 → 93 after deleting enough of the design system to
+    // push the axis under the minimum-sample guard.
+    const r = evaluateGate({ newFindings: [], currentScores: {}, baseline: { scores: { tokens: 84 } }, scoreContributingRuleIds: SCORED });
+    expect(r.fail).toBe(true);
+    expect(r.reasons.join(" ")).toContain("tokens");
+  });
+  it("red: no tolerance can excuse an axis that stopped being scored", () => {
+    const r = evaluateGate({ newFindings: [], currentScores: {}, baseline: { scores: { tokens: 84 } }, scoreContributingRuleIds: SCORED, scoreTolerance: 100 });
+    expect(r.fail).toBe(true);
+  });
+  it("red: names every axis that stopped being scored, not just the first", () => {
+    const r = evaluateGate({ newFindings: [], currentScores: { tokens: 84 }, baseline: { scores: { tokens: 84, components: 70, a11y: 60 } }, scoreContributingRuleIds: SCORED });
+    expect(r.reasons.join(" ")).toContain("components");
+    expect(r.reasons.join(" ")).toContain("a11y");
+  });
+  it("green: an axis absent from the baseline and absent today is not a regression", () => {
+    const r = evaluateGate({ newFindings: [], currentScores: { tokens: 84 }, baseline: { scores: { tokens: 84 } }, scoreContributingRuleIds: SCORED });
+    expect(r).toEqual({ fail: false, reasons: [] });
+  });
 });

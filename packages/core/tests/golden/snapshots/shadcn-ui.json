@@ -3,47 +3,53 @@
   "axes": [
     {
       "axis": "tokens",
-      "findings": 85,
-      "opportunities": 3802,
-      "score": 98
+      "findings": 3,
+      "opportunities": 5,
+      "score": "N/A",
+      "unscoredFindings": 82
     },
     {
       "axis": "a11y",
-      "findings": 265,
-      "opportunities": 1332,
-      "score": 80
+      "findings": 81,
+      "opportunities": 424,
+      "score": 81,
+      "unscoredFindings": 50
     },
     {
       "axis": "components",
-      "findings": 1452,
-      "opportunities": 4231,
-      "score": 66
+      "findings": 63,
+      "opportunities": 175,
+      "score": 64,
+      "unscoredFindings": 1389
     },
     {
       "axis": "stories",
       "findings": 0,
       "opportunities": 0,
-      "score": "N/A"
+      "score": "N/A",
+      "unscoredFindings": 0
     },
     {
       "axis": "ai-surface",
       "findings": 6,
       "opportunities": 12,
-      "score": "N/A"
+      "score": "N/A",
+      "unscoredFindings": 0
     },
     {
       "axis": "ai-governance",
       "findings": 0,
-      "opportunities": 3119,
-      "score": 100
+      "opportunities": 0,
+      "score": "N/A",
+      "unscoredFindings": 0
     }
   ],
-  "finalScore": 86,
-  "findingsCount": 1808,
-  "findingsDigest": "6afc27b25114dd521e4b35743290984222e4be37df37a964707b90637a861cfc",
+  "finalScore": "N/A",
+  "findingsCount": 1674,
+  "findingsDigest": "9a74762cde1be8cff194ba54be0e468dad2e12ff7ec627a81b776cac3819c9ca",
   "grade": {
     "autoFailed": false,
-    "grade": "A",
+    "grade": "N/A",
     "reasons": []
   },
   "meta": {
@@ -91,35 +97,6 @@
           "status": "ok"
         }
       ]
-    },
-    "projection": {
-      "top": [
-        {
-          "count": 1387,
-          "files": 158,
-          "gain": 8,
-          "key": "components/no-arbitrary-tailwind",
-          "migrationScale": true,
-          "ruleId": "components/no-arbitrary-tailwind"
-        },
-        {
-          "count": 136,
-          "files": 91,
-          "gain": 3,
-          "key": "a11y/essentials",
-          "migrationScale": true,
-          "ruleId": "a11y/essentials"
-        },
-        {
-          "count": 121,
-          "files": 68,
-          "gain": 2,
-          "key": "a11y/interactive-role-name",
-          "migrationScale": true,
-          "ruleId": "a11y/interactive-role-name"
-        }
-      ],
-      "totalGainTop3": 13
     }
   },
   "repoRoot": "<REPO>",
@@ -130,7 +107,7 @@
     "react",
     "tailwind"
   ],
-  "tier": "Autonomous",
+  "tier": "N/A",
   "timestamp": "",
   "toolVersion": ""
 }

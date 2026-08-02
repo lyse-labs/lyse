@@ -7,6 +7,7 @@ import {
 } from "../rules/_skip-context.js";
 import { isPathExcluded } from "../rules/_exclude.js";
 import type { ZoneKind, ZoneMap } from "./types.js";
+import type { ParsedFiles } from "../types.js";
 
 export interface ZoneInputs {
   excludePaths: string[];
@@ -50,4 +51,31 @@ export function buildZoneMap(
     byFile[f.rel] = classifyZone(f.rel, f.source, opts);
   }
   return { byFile };
+}
+
+/**
+ * Drop every parsed file whose zone is in `kinds`, before the rules engine sees
+ * it. Filtering findings after the fact would be wrong: `PerRuleOpportunity`
+ * carries no file attribution, so removing a finding without its opportunity
+ * inflates the clean rate. Removing the file removes both sides together.
+ *
+ * Measured on two held-out repositories, 19% of findings landed in files this
+ * classifier had already labelled `test` — and on primer-react the largest
+ * score-contributing penalty group, `components/svg-viewbox` x17, was 15/17
+ * inside test files, flagging `vi.fn(() => <svg aria-hidden="true" />)` mocks.
+ */
+export function excludeZones(
+  parsed: ParsedFiles,
+  zones: ZoneMap,
+  kinds: ReadonlySet<ZoneKind>,
+): ParsedFiles {
+  const keep = (path: string): boolean => {
+    const zone = zones.byFile[path];
+    return zone === undefined || !kinds.has(zone);
+  };
+  return {
+    ts: parsed.ts.filter((f) => keep(f.path)),
+    css: parsed.css.filter((f) => keep(f.path)),
+    cssInJs: parsed.cssInJs.filter((f) => keep(f.path)),
+  };
 }

@@ -1,0 +1,92 @@
+{
+  "$comment": [
+    "Ground truth established by reading each repository directly, WITHOUT running",
+    "Lyse. This is the only reference in the repo that Lyse's own output was not",
+    "used to produce, which is what makes it an oracle rather than a snapshot.",
+    "",
+    "`components` counts COMPONENT FILES, not top-level component directories. An",
+    "earlier revision of this file counted directories and reported mantine as a",
+    "3.7x over-count; measured against files it is 1.44x. Lyse's inventory is",
+    "file-based and compound sub-components (Accordion.Item, Accordion.Control)",
+    "are real components, so directories are the wrong yardstick. Getting this",
+    "wrong makes the harness cry wolf, and a harness that cries wolf gets ignored.",
+    "",
+    "`heldOut: true` means the repo is NOT in .bench-corpus, so it took no part in",
+    "rule calibration. Regressions caught on a held-out repo are real; regressions",
+    "caught on an in-corpus repo may be train-on-test artefacts."
+  ],
+  "establishedOn": "2026-08-02",
+  "method": {
+    "react": "distinct PascalCase *.tsx/*.jsx basenames under the DS source root, excluding .test/.spec/.story/.stories/.demo/.pure/.e2e",
+    "vue": "component directories under packages/components — Vue SFC filenames are lowercase, so a PascalCase filename count returns zero",
+    "none": "0 — the repo ships no design system"
+  },
+  "repos": [
+    {
+      "name": "primer-react",
+      "git": "https://github.com/primer/react.git",
+      "heldOut": true,
+      "sourceRoot": "packages/react/src",
+      "components": 193,
+      "storyFiles": 334,
+      "framework": "react",
+      "isDesignSystem": true
+    },
+    {
+      "name": "polaris",
+      "git": "https://github.com/Shopify/polaris.git",
+      "heldOut": true,
+      "sourceRoot": "polaris-react/src",
+      "components": 189,
+      "storyFiles": 87,
+      "framework": "react",
+      "isDesignSystem": true
+    },
+    {
+      "name": "mantine",
+      "git": "https://github.com/mantinedev/mantine.git",
+      "heldOut": false,
+      "sourceRoot": "packages/@mantine",
+      "components": 399,
+      "storyFiles": 869,
+      "framework": "react",
+      "isDesignSystem": true
+    },
+    {
+      "name": "element-plus",
+      "git": "https://github.com/element-plus/element-plus.git",
+      "heldOut": false,
+      "sourceRoot": "packages/components",
+      "components": 122,
+      "storyFiles": 0,
+      "framework": "vue",
+      "isDesignSystem": true
+    },
+    {
+      "name": "tremor",
+      "git": "https://github.com/tremorlabs/tremor.git",
+      "heldOut": false,
+      "sourceRoot": "src",
+      "components": 40,
+      "storyFiles": 42,
+      "framework": "react",
+      "isDesignSystem": true
+    },
+    {
+      "name": "bad-app",
+      "git": "https://github.com/gothinkster/react-redux-realworld-example-app.git",
+      "heldOut": true,
+      "sourceRoot": "src",
+      "components": 0,
+      "storyFiles": 0,
+      "framework": "react",
+      "isDesignSystem": false
+    }
+  ],
+  "tolerance": {
+    "$comment": "Accepted when the reported count lands in [components / factorLow, components * factorHigh]. Measured 2026-08-02, every repo sits between 0.80x and 1.44x, so this band is roughly 2x looser than current behaviour in both directions — wide enough not to fire on ordinary drift, narrow enough that zero-where-there-should-be-hundreds cannot pass.",
+    "factorLow": 2.0,
+    "factorHigh": 2.0,
+    "notADesignSystemMax": 5
+  }
+}

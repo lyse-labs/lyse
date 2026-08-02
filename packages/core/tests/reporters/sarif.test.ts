@@ -82,9 +82,14 @@ describe("renderSarif", () => {
     expect(sarif.runs[0].results[0].locations[0].physicalLocation.region.startColumn).toBe(1);
   });
 
-  it("includes finding.suggestion as a fix description when present", () => {
+  // Was: "includes finding.suggestion as a fix description". A SARIF `fix`
+  // requires `artifactChanges`, so a description-only fix made the document
+  // fail validation against the schema Lyse names in its own `$schema`. Prose
+  // advice belongs in the free-form property bag, which claims nothing.
+  it("carries finding.suggestion in the property bag, not as a fix", () => {
     const sarif = JSON.parse(renderSarif(sample));
-    expect(sarif.runs[0].results[0].fixes[0].description.text).toContain("color.action.primary");
+    expect(sarif.runs[0].results[0].properties.suggestion).toContain("color.action.primary");
+    expect(sarif.runs[0].results[0].fixes).toBeUndefined();
   });
 
   it("omits timestamp from invocations by default", () => {

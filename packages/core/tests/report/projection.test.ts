@@ -16,7 +16,7 @@ function finding(
 // lowered to 5 so these small hand-computed fixtures activate their axes
 // (production min-N is 30; real repos clear it).
 const MIN = 5;
-const OPTS = { minSampleSize: MIN };
+const OPTS = { minSampleSize: MIN, minScoredAxes: 1 };
 
 /**
  * Hand-computed against the v3 scorer formula (scorer-v3.ts):
@@ -45,20 +45,20 @@ const OPPORTUNITIES: Record<AxisName, number> = {
 };
 
 const PER_RULE: PerRuleOpportunity[] = [
-  { ruleId: "tokens/ruleA", axis: "tokens", opportunities: 10 },
-  { ruleId: "tokens/ruleB", axis: "tokens", opportunities: 10 },
-  { ruleId: "a11y/ruleC", axis: "a11y", opportunities: 10 },
-  { ruleId: "components/ruleD", axis: "components", opportunities: 10 },
+  { ruleId: "tokens/no-hardcoded-spacing", axis: "tokens", opportunities: 10 },
+  { ruleId: "tokens/dtcg-conformance", axis: "tokens", opportunities: 10 },
+  { ruleId: "a11y/prefers-reduced-motion", axis: "a11y", opportunities: 10 },
+  { ruleId: "components/no-icon-fonts", axis: "components", opportunities: 10 },
 ];
 
 const RUN: ProjectionRun = { opportunitiesByAxis: OPPORTUNITIES, perRuleOpportunities: PER_RULE };
 
 function mainFixture(): Finding[] {
   const fs: Finding[] = [];
-  for (let i = 0; i < 4; i++) fs.push(finding("tokens/ruleA", "tokens", "error", `src/a${i}.tsx`));
-  for (let i = 0; i < 4; i++) fs.push(finding("tokens/ruleB", "tokens", "error", `src/b${i}.tsx`));
-  for (let i = 0; i < 2; i++) fs.push(finding("a11y/ruleC", "a11y", "error", `src/c${i}.tsx`));
-  fs.push(finding("components/ruleD", "components", "info", "src/d1.tsx"));
+  for (let i = 0; i < 4; i++) fs.push(finding("tokens/no-hardcoded-spacing", "tokens", "error", `src/a${i}.tsx`));
+  for (let i = 0; i < 4; i++) fs.push(finding("tokens/dtcg-conformance", "tokens", "error", `src/b${i}.tsx`));
+  for (let i = 0; i < 2; i++) fs.push(finding("a11y/prefers-reduced-motion", "a11y", "error", `src/c${i}.tsx`));
+  fs.push(finding("components/no-icon-fonts", "components", "info", "src/d1.tsx"));
   return fs;
 }
 
@@ -72,31 +72,32 @@ describe("computeProjection — hand-computed fixture (v3)", () => {
     const projection = computeProjection(groups, findings, RUN, "v3", OPTS, baseline.finalScore);
 
     expect(projection).toBeDefined();
-    // Each of tokens/ruleA, tokens/ruleB, a11y/ruleC lifts finalScore by 6;
-    // components/ruleD only gains 3 and is dropped by the cap.
+    // Each of the two tokens rules and the a11y rule lifts finalScore by 6;
+    // components/no-icon-fonts only gains 3 and is dropped by the cap.
+    // Equal gains tie-break on key.localeCompare, hence dtcg before no-hardcoded.
     expect(projection?.top.map((e) => e.key)).toEqual([
-      "tokens/ruleA",
-      "tokens/ruleB",
-      "a11y/ruleC",
+      "tokens/dtcg-conformance",
+      "tokens/no-hardcoded-spacing",
+      "a11y/prefers-reduced-motion",
     ]);
     expect(projection?.top[0]).toMatchObject({
-      key: "tokens/ruleA",
-      ruleId: "tokens/ruleA",
+      key: "tokens/dtcg-conformance",
+      ruleId: "tokens/dtcg-conformance",
       count: 4,
       files: 4,
       gain: 6,
       migrationScale: false,
     });
     expect(projection?.top[1]).toMatchObject({
-      key: "tokens/ruleB",
-      ruleId: "tokens/ruleB",
+      key: "tokens/no-hardcoded-spacing",
+      ruleId: "tokens/no-hardcoded-spacing",
       count: 4,
       files: 4,
       gain: 6,
     });
     expect(projection?.top[2]).toMatchObject({
-      key: "a11y/ruleC",
-      ruleId: "a11y/ruleC",
+      key: "a11y/prefers-reduced-motion",
+      ruleId: "a11y/prefers-reduced-motion",
       count: 2,
       files: 2,
       gain: 6,
@@ -129,18 +130,18 @@ describe("computeProjection — cap (v3)", () => {
       "ai-governance": 0,
     };
     const perRule: PerRuleOpportunity[] = [
-      { ruleId: "tokens/ruleA", axis: "tokens", opportunities: 10 },
-      { ruleId: "a11y/ruleB", axis: "a11y", opportunities: 10 },
-      { ruleId: "components/ruleC", axis: "components", opportunities: 10 },
-      { ruleId: "stories/ruleD", axis: "stories", opportunities: 10 },
+      { ruleId: "tokens/no-hardcoded-spacing", axis: "tokens", opportunities: 10 },
+      { ruleId: "a11y/essentials", axis: "a11y", opportunities: 10 },
+      { ruleId: "components/no-native-shadows", axis: "components", opportunities: 10 },
+      { ruleId: "stories/coverage", axis: "stories", opportunities: 10 },
     ];
     // tokens 4 findings -> 60 -> fix gains 10; a11y 3 -> 70 -> gains 8;
     // components 2 -> 80 -> gains 5; stories 1 -> 90 -> gains 3 (dropped by cap).
     const findings: Finding[] = [
-      ...Array.from({ length: 4 }, (_, i) => finding("tokens/ruleA", "tokens", "error", `src/t${i}.tsx`)),
-      ...Array.from({ length: 3 }, (_, i) => finding("a11y/ruleB", "a11y", "error", `src/a${i}.tsx`)),
-      ...Array.from({ length: 2 }, (_, i) => finding("components/ruleC", "components", "error", `src/c${i}.tsx`)),
-      finding("stories/ruleD", "stories", "warning", "src/s1.tsx"),
+      ...Array.from({ length: 4 }, (_, i) => finding("tokens/no-hardcoded-spacing", "tokens", "error", `src/t${i}.tsx`)),
+      ...Array.from({ length: 3 }, (_, i) => finding("a11y/essentials", "a11y", "error", `src/a${i}.tsx`)),
+      ...Array.from({ length: 2 }, (_, i) => finding("components/no-native-shadows", "components", "error", `src/c${i}.tsx`)),
+      finding("stories/coverage", "stories", "warning", "src/s1.tsx"),
     ];
     const run: ProjectionRun = { opportunitiesByAxis: opportunities, perRuleOpportunities: perRule };
 
@@ -152,12 +153,12 @@ describe("computeProjection — cap (v3)", () => {
 
     expect(projection?.top).toHaveLength(3);
     expect(projection?.top.map((e) => ({ key: e.key, gain: e.gain }))).toEqual([
-      { key: "tokens/ruleA", gain: 10 },
-      { key: "a11y/ruleB", gain: 8 },
-      { key: "components/ruleC", gain: 5 },
+      { key: "tokens/no-hardcoded-spacing", gain: 10 },
+      { key: "a11y/essentials", gain: 8 },
+      { key: "components/no-native-shadows", gain: 5 },
     ]);
     // stories/ruleD has a positive gain (3) but is dropped by the cap.
-    expect(projection?.top.some((e) => e.key === "stories/ruleD")).toBe(false);
+    expect(projection?.top.some((e) => e.key === "stories/coverage")).toBe(false);
   });
 });
 
@@ -178,16 +179,19 @@ describe("computeProjection — edge cases (v3)", () => {
       "ai-governance": 0,
     };
     const perRule: PerRuleOpportunity[] = [
-      { ruleId: "tokens/rule", axis: "tokens", opportunities: 1000 },
+      { ruleId: "tokens/description-coverage", axis: "tokens", opportunities: 1000 },
     ];
     // clean 999 / opp 1000 -> round(99.9) = 100 both before and after removal
     // (clean 1000 -> 100) -> gain 0. opp 1000 >= default MIN_SAMPLE_SIZE (30).
-    const findings: Finding[] = [finding("tokens/rule", "tokens", "info", "src/only.tsx")];
+    const findings: Finding[] = [finding("tokens/description-coverage", "tokens", "info", "src/only.tsx")];
     const run: ProjectionRun = { opportunitiesByAxis: opportunities, perRuleOpportunities: perRule };
-    const baseline = scoreAudit("v3", { findings, ...run }, {});
+    const oneAxis = { minScoredAxes: 1 };
+    const baseline = scoreAudit("v3", { findings, ...run }, oneAxis);
     expect(baseline.finalScore).toBe(100);
 
     const groups = groupFindings(findings, 40);
-    expect(computeProjection(groups, findings, run, "v3", {}, baseline.finalScore)).toBeUndefined();
+    expect(
+      computeProjection(groups, findings, run, "v3", oneAxis, baseline.finalScore),
+    ).toBeUndefined();
   });
 });

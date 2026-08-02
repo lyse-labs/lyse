@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildBaseline, serializeBaseline, readBaseline, writeBaseline, BaselineError } from "./baseline.js";
+import { buildBaseline, serializeBaseline, readBaseline, writeBaseline, BaselineError , CURRENT_BASELINE_SCHEMA } from "./baseline.js";
 import type { AuditResult, Finding } from "../types.js";
 import type { DesignSystemGraph } from "../graph/types.js";
 
@@ -31,7 +31,7 @@ describe("buildBaseline", () => {
     const b = buildBaseline(result([color("#3b82f6", 10), color("#3b82f6", 20), color("#fff", 30)]), graph());
     expect(b.findings["src/Button.tsx"]!["tokens/no-hardcoded-color"]).toEqual({ "#3b82f6": 2, "#fff": 1 });
     expect(b.scores).toEqual({ tokens: 62 }); // "N/A" axis omitted
-    expect(b.schemaVersion).toBe(1);
+    expect(b.schemaVersion).toBe(CURRENT_BASELINE_SCHEMA);
     expect(b.graphHash).toMatch(/^sha256:/);
   });
 });

@@ -75,12 +75,13 @@ function findingToResult(finding: Finding, ids: Map<Finding, string>, suppressed
       "lyseFindingId/v1": ids.get(finding) ?? "",
     },
   };
+  // A prose suggestion is not a SARIF `fix`: the schema requires
+  // `artifactChanges` on every fix, and nothing at this layer can produce one —
+  // the codemods run elsewhere. Emitting it as a fix made Lyse's own output fail
+  // validation against the schema it names in `$schema`. The property bag is
+  // free-form and carries the same text without the false claim.
   if (finding.suggestion) {
-    result["fixes"] = [
-      {
-        description: { text: finding.suggestion },
-      },
-    ];
+    result["properties"] = { suggestion: finding.suggestion };
   }
   // Inline `lyse-disable` directives map to SARIF in-source suppressions so
   // GitHub code-scanning shows the finding as dismissed (kept for trend data)

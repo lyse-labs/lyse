@@ -326,3 +326,75 @@ export const Default = {};`
     expect(idx!.byTitle.get("Card")!.hasArgTypes).toBe(false);
   });
 });
+
+// The index is consumed as "component name -> its stories" (stories/coverage,
+// stories/props-documented, stories/usage-examples all call byTitle.get(c.name)),
+// but it was BUILT from the story title's last path segment. Two consequences,
+// both measured on real repositories:
+//
+//   Shopify Polaris   87 story files -> 9 indexed. 77 declare no `title:` at
+//                     all (CSF3 auto-titling, the modern default) and were
+//                     skipped outright; all 87 declare `component:`.
+//   GitHub Primer     246 story files -> 108 indexed. Titles are
+//                     `Components/RadioGroup/Features`, so the leaf is
+//                     "Features" or "Dev" — a category word shared across
+//                     components, and last writer won.
+//
+// The stories axis reported N/A on every repository in a nine-repo panel,
+// including one with 869 story files.
+describe("loadStories — indexes by the component a story documents", () => {
+  it("indexes a CSF3 file that declares component: but no title:", async () => {
+    const root = makeTempDir();
+    writeSrcFile(root, "Button.stories.tsx",
+      "import { Button } from './Button';\nexport default { component: Button };\nexport const Primary = {};\n");
+    const idx = await loadStories(root);
+    expect(idx).not.toBeNull();
+    expect(idx!.byTitle.has("Button")).toBe(true);
+  });
+
+  it("keys on the component, not on a shared title category", async () => {
+    const root = makeTempDir();
+    writeSrcFile(root, "RadioGroup.stories.tsx",
+      "import { RadioGroup } from './RadioGroup';\nexport default { title: 'Components/RadioGroup/Features', component: RadioGroup };\nexport const A = {};\n");
+    writeSrcFile(root, "SubNav.stories.tsx",
+      "import { SubNav } from './SubNav';\nexport default { title: 'Components/SubNav/Features', component: SubNav };\nexport const B = {};\n");
+    const idx = await loadStories(root);
+    expect(idx!.byTitle.has("RadioGroup")).toBe(true);
+    expect(idx!.byTitle.has("SubNav")).toBe(true);
+  });
+
+  it("still indexes by title leaf when no component: is declared", async () => {
+    const root = makeTempDir();
+    writeSrcFile(root, "Legacy.stories.tsx",
+      "export default { title: 'Components/Legacy' };\nexport const Default = {};\n");
+    const idx = await loadStories(root);
+    expect(idx!.byTitle.has("Legacy")).toBe(true);
+  });
+
+  it("merges story exports when two files document the same component", async () => {
+    const root = makeTempDir();
+    writeSrcFile(root, "Card.stories.tsx",
+      "import { Card } from './Card';\nexport default { component: Card };\nexport const One = {};\n");
+    writeSrcFile(root, "Card.features.stories.tsx",
+      "import { Card } from './Card';\nexport default { component: Card };\nexport const Two = {};\nexport const Three = {};\n");
+    const idx = await loadStories(root);
+    const entry = idx!.byTitle.get("Card");
+    expect(entry).toBeDefined();
+    expect((entry!.stories ?? []).length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+// Mantine names its story files `Button.story.tsx` — singular — for all 455 of
+// them. The glob matched only `*.stories.*`, so a design system with more story
+// files than any other repo in the panel indexed zero and its stories axis
+// reported N/A.
+describe("loadStories — singular .story. naming", () => {
+  it("finds Button.story.tsx as well as Button.stories.tsx", async () => {
+    const root = makeTempDir();
+    writeSrcFile(root, "Button.story.tsx",
+      "import { Button } from './Button';\nexport default { component: Button };\nexport const Primary = {};\n");
+    const idx = await loadStories(root);
+    expect(idx).not.toBeNull();
+    expect(idx!.byTitle.has("Button")).toBe(true);
+  });
+});

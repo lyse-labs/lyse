@@ -36,7 +36,7 @@ describe("scoreV3 — adoption ratios", () => {
   it("min-N: axis with total opportunities < MIN_SAMPLE_SIZE is N/A and excluded from the mean", () => {
     const opps = [O("A", "tokens", 100), O("B", "ai-surface", 13)];
     const finds = [F("B", "ai-surface")];
-    const r = scoreV3(finds, opps);
+    const r = scoreV3(finds, opps, { minScoredAxes: 1 });
     expect(r.axes.find((a) => a.axis === "ai-surface")!.score).toBe("N/A");
     expect(r.axes.find((a) => a.axis === "ai-surface")!.opportunities).toBe(13); // reporter derives "insufficient sample (n=13)"
     expect(r.finalScore).toBe(100); // tokens only

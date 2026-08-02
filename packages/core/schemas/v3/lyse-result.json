@@ -35,7 +35,12 @@
             ]
           },
           "findings": { "type": "integer", "minimum": 0 },
-          "opportunities": { "type": "integer", "minimum": 0 }
+          "opportunities": { "type": "integer", "minimum": 0 },
+          "unscoredFindings": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Findings reported on this axis that the score deliberately ignores (experimental sub-axes, rules silenced by degraded extraction). A non-zero value means `score` was computed from a subset of this axis's checks."
+          }
         }
       }
     },

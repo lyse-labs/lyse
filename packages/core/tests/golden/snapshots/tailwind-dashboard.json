@@ -3,47 +3,53 @@
   "axes": [
     {
       "axis": "tokens",
-      "findings": 20,
-      "opportunities": 2018,
-      "score": 99
+      "findings": 9,
+      "opportunities": 11,
+      "score": "N/A",
+      "unscoredFindings": 11
     },
     {
       "axis": "a11y",
-      "findings": 33,
-      "opportunities": 137,
-      "score": 76
+      "findings": 2,
+      "opportunities": 75,
+      "score": 97,
+      "unscoredFindings": 31
     },
     {
       "axis": "components",
-      "findings": 96,
-      "opportunities": 176,
-      "score": 45
+      "findings": 77,
+      "opportunities": 153,
+      "score": 50,
+      "unscoredFindings": 19
     },
     {
       "axis": "stories",
       "findings": 0,
       "opportunities": 0,
-      "score": "N/A"
+      "score": "N/A",
+      "unscoredFindings": 0
     },
     {
       "axis": "ai-surface",
       "findings": 6,
       "opportunities": 8,
-      "score": "N/A"
+      "score": "N/A",
+      "unscoredFindings": 0
     },
     {
       "axis": "ai-governance",
       "findings": 0,
-      "opportunities": 43,
-      "score": 100
+      "opportunities": 0,
+      "score": "N/A",
+      "unscoredFindings": 0
     }
   ],
-  "finalScore": 80,
+  "finalScore": "N/A",
   "findingsCount": 155,
   "findingsDigest": "f2fa4a9139afc612d0ded75893ad4bd9fe1259fd3f38681b0fd0595ee88fc5dd",
   "grade": {
     "autoFailed": false,
-    "grade": "A",
+    "grade": "N/A",
     "reasons": []
   },
   "meta": {
@@ -91,35 +97,6 @@
           "status": "ok"
         }
       ]
-    },
-    "projection": {
-      "top": [
-        {
-          "count": 76,
-          "files": 19,
-          "gain": 11,
-          "key": "components/icon-decorative-aria",
-          "migrationScale": false,
-          "ruleId": "components/icon-decorative-aria"
-        },
-        {
-          "count": 31,
-          "files": 14,
-          "gain": 6,
-          "key": "a11y/interactive-role-name",
-          "migrationScale": false,
-          "ruleId": "a11y/interactive-role-name"
-        },
-        {
-          "count": 19,
-          "files": 7,
-          "gain": 3,
-          "key": "components/no-arbitrary-tailwind",
-          "migrationScale": false,
-          "ruleId": "components/no-arbitrary-tailwind"
-        }
-      ],
-      "totalGainTop3": 19
     }
   },
   "repoRoot": "<REPO>",
@@ -130,7 +107,7 @@
     "react",
     "tailwind"
   ],
-  "tier": "Autonomous",
+  "tier": "N/A",
   "timestamp": "",
   "toolVersion": ""
 }
