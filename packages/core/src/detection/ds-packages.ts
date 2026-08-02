@@ -1,4 +1,5 @@
 import fg from "fast-glob";
+import { fileBelongsToOwner } from "./nested-packages.js";
 import type { DsFamily, DsFamilyMember, DsPackageEvidence, WorkspacePackage } from "./types.js";
 
 /**
@@ -198,7 +199,11 @@ export async function countComponentFilesByPackage(
   rootDir: string,
   packages: WorkspacePackage[],
 ): Promise<Map<string, number>> {
-  const files = await fg([COMPONENT_FILE_GLOB], { cwd: rootDir, onlyFiles: true, ignore: COUNT_IGNORE });
+  const [files, packageJsons] = await Promise.all([
+    fg([COMPONENT_FILE_GLOB], { cwd: rootDir, onlyFiles: true, ignore: COUNT_IGNORE }),
+    fg(["**/package.json"], { cwd: rootDir, onlyFiles: true, ignore: ["**/node_modules/**"] }),
+  ]);
+  const packageJsonPaths = new Set(packageJsons);
   const byDepth = [...packages]
     .filter(p => p.relDir !== "")
     .sort((a, b) => b.relDir.length - a.relDir.length);
@@ -207,6 +212,10 @@ export async function countComponentFilesByPackage(
   for (const file of files) {
     const owner = byDepth.find(p => file.startsWith(`${p.relDir}/`));
     if (owner === undefined) continue;
+    // A `package.json` between the owner and the file marks a boundary the
+    // longest-prefix walk went straight past: scaffolding templates, vendored
+    // copies, example projects. Those files are not the owner's source.
+    if (!fileBelongsToOwner(file, owner.relDir, packageJsonPaths)) continue;
     counts.set(owner.name, (counts.get(owner.name) ?? 0) + 1);
   }
   return counts;

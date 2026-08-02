@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A file inside a nested package is no longer counted as its parent's source.** `vitejs/vite` — a build tool — was reported as a design system, its 24 "component files" every one a project *template* that `create-vite` copies into new repositories. Each template carries its own `package.json`, so those files are not create-vite's source at all; they belong to a package that is not a workspace member and should count for nobody. `countComponentFilesByPackage` attributed by longest directory prefix and walked straight past that boundary. A `package.json` strictly between the owning package's directory and the file now ends the attribution — structural, not a name match, and it rules out scaffolding templates, vendored copies and example projects in one stroke without anyone maintaining a list of what such directories tend to be called. Measured on **both** corpora as [#269](https://github.com/lyse-labs/lyse/issues/269) requires: the 26-repo positive corpus is unchanged, every verdict, primary and member count identical; the negative corpus goes from **3 false positives of 4 to 2** (`vite` fixed; `bruno` and `nx` remain, for different reasons recorded in the issue).
+
+### Fixed
+
 - **The ecosystem diff was calling repositories "unchanged" while their golden snapshots recorded a change.** It compared each extractor's ok/degraded *status* but not its evidence numbers, and per-rule finding *counts* but not finding identity — so `tokenNodes 78 -> 79` on polaris and `214 -> 222` on shadcn were invisible, as was a polaris finding that moved with every count equal. The summary now carries `extraction.<extractor>.<evidence>` and a digest over (rule, file, line). On the change that exposed it the report went from **2 of 13 repositories moved to 5 of 13**. A report that says "nothing moved" when something did is worse than no report, and this one was going to be an agent's oracle.
 
 ### Added
