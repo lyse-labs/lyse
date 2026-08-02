@@ -107,6 +107,7 @@ export const LyseConfigSchema = z.object({
   handoff: z
     .object({
       review: z.boolean().optional(),
+      isolate: z.boolean().optional(),
     })
     .optional(),
 });

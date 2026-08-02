@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { mkdtempSync, mkdirSync, readFileSync, existsSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Finding, TokenMap } from "../../src/types.js";
@@ -219,6 +220,64 @@ describe("spawnAgentLauncher — unsupported agent guard", () => {
     const result = await spawnAgentLauncher("opencode", "fix these issues", "/tmp/fake-cwd");
     expect(result).toBe(1);
   });
+});
+
+describe("runHandoff — isolation", () => {
+  it("refuses to isolate outside a git repository, says why, and still runs", () => {
+    // Refusing loudly and continuing beats isolating anyway: an isolated tree is
+    // a checkout of HEAD, and there is no HEAD here.
+    const root = makeTempRoot();
+    mkdirSync(join(root, ".cursor"), { recursive: true });
+    const fakeHome = mkdtempSync(join(tmpdir(), "lyse-home-"));
+    const launch = vi.fn().mockResolvedValue(0);
+    return runHandoff(
+      { findings: baseFindings, tokens: null, root, projectName: "acme", isolate: true },
+      makeDeps({
+        prompt: vi.fn().mockResolvedValue("cursor"),
+        launch,
+        targetFilePath: join(fakeHome, ".lyse", "handoff-target.json"),
+      }),
+    ).then((result) => {
+      expect(result.action).toBe("launched");
+      expect(result.isolationRefused).toContain("git");
+      expect(result.isolatedTree).toBeUndefined();
+      // The agent still ran, in the real tree.
+      expect(launch.mock.calls[0]?.[2]).toBe(root);
+    });
+  });
+
+  it("runs the agent in a throwaway checkout when the tree is clean", async () => {
+    const root = mkdtempSync(join(tmpdir(), "lyse-iso-repo-"));
+    const git = (...a: string[]) =>
+      execFileSync("git", a, { cwd: root, stdio: "ignore", env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null" } });
+    git("init", "-q", "-b", "main");
+    git("config", "user.email", "t@example.com");
+    git("config", "user.name", "T");
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(root, "src", "Button.tsx"), "export const Button = () => null;\n");
+    mkdirSync(join(root, ".cursor"), { recursive: true });
+    git("add", "-A");
+    git("commit", "-q", "-m", "init");
+
+    const fakeHome = mkdtempSync(join(tmpdir(), "lyse-home-"));
+    const launch = vi.fn().mockResolvedValue(0);
+    const result = await runHandoff(
+      { findings: baseFindings, tokens: null, root, projectName: "acme", isolate: true },
+      makeDeps({
+        prompt: vi.fn().mockResolvedValue("cursor"),
+        launch,
+        targetFilePath: join(fakeHome, ".lyse", "handoff-target.json"),
+      }),
+    );
+    expect(result.isolationRefused).toBeUndefined();
+    expect(result.isolatedTree).toBeDefined();
+    expect(launch.mock.calls[0]?.[2]).toBe(result.isolatedTree);
+    expect(launch.mock.calls[0]?.[2]).not.toBe(root);
+    // The transcript stays in the REAL repo: the isolated tree is deleted on a
+    // timeout, which is exactly when the log matters.
+    expect(launch.mock.calls[0]?.[3]).toMatchObject({ transcriptRoot: root });
+    expect(existsSync(join(result.isolatedTree!, "src", "Button.tsx"))).toBe(true);
+  }, 30_000);
 });
 
 describe("runHandoff — a timed-out agent must not read as success", () => {

@@ -1270,11 +1270,18 @@ const handoffCommand = defineCommand({
       description:
         "Launch the agent under its own default permissions (it prompts you per-action) instead of bypassing its permission prompts. Also settable via LYSE_HANDOFF_REVIEW=1 or .lyse.yaml `handoff.review`.",
     },
+    isolate: {
+      type: "boolean",
+      default: false,
+      description:
+        "Run the agent against a throwaway checkout of HEAD instead of this working tree, removed on timeout. For unattended runs; refused on a dirty tree. Also settable via LYSE_HANDOFF_ISOLATE=1 or .lyse.yaml `handoff.isolate`.",
+    },
     ...GLOBAL_FLAGS,
   },
   async run({ args }) {
     applyGlobalFlags(args);
     if (args.review === true) process.env.LYSE_HANDOFF_REVIEW = "1";
+    if (args.isolate === true) process.env.LYSE_HANDOFF_ISOLATE = "1";
     const dir = resolve(typeof args.directory === "string" ? args.directory : ".");
     await runHandoffCommand(dir);
   },
