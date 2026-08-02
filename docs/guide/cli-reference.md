@@ -113,10 +113,26 @@ The agent edits the **working tree only** — it never commits or opens a PR, so
 | `--review` | boolean | `false` | Launch the agent under its own default permissions (it prompts you per-action) instead of bypassing its permission prompts. Skips the pre-spawn confirmation — the agent's own prompts are the safety net in this mode. Also settable via `LYSE_HANDOFF_REVIEW=1` or `.lyse.yaml` `handoff.review: true`. |
 | `--yes` | boolean | `false` | Accept all defaults: auto-picks the first prompted option (agent, or clipboard-copy if none are launchable) and skips the pre-spawn confirmation (proceeds as if you'd confirmed). Also lets `handoff` run without a real TTY. |
 
+### The spawned agent
+
+Everything the agent writes to stdout and stderr is streamed to your terminal
+*and* recorded in `.lyse/handoff/agent-transcript.log` (truncated per run,
+gitignored). The default mode launches it with its permission prompts disabled,
+so this log is the only record of what it did.
+
+The agent is terminated after **30 minutes** by default. Set
+`LYSE_HANDOFF_TIMEOUT_MS` to change the limit, or `0` to wait indefinitely — an
+unattended run wants a bound; a human watching the terminal may not. A timeout
+sends `SIGTERM`, then `SIGKILL` after five seconds, and is recorded in the
+transcript. **Edits the agent had already written to your working tree are left
+in place** — the timeout bounds the run, it does not roll it back. Review with
+`git diff`.
+
 ### Exit codes
 
 - `0` — Audit completed; payload written and the agent launched, prompt copied, or handoff skipped.
 - `1` — The audit refused to run (no LLM connector when one was required).
+- `124` — The spawned agent exceeded its timeout and was terminated (the conventional `timeout(1)` status).
 
 ## `lyse share`
 

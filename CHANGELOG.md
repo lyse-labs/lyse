@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`lyse handoff` bounds how long the agent it spawns may run.** `spawnAgentLauncher` resolved only when the child closed, and nothing else bounded it — an agent that hangs held the handoff open forever. Interactively that is visible and a human hits Ctrl-C; unattended it is a silent stall on a process started with its permission prompts disabled, which is the one failure an overnight run cannot recover from on its own. Default 30 minutes, overridable with `LYSE_HANDOFF_TIMEOUT_MS` (`0` waits indefinitely); anything unparseable falls back to the default rather than to no timeout, because a typo must not silently remove the only bound on an unattended run. A timeout sends `SIGTERM`, then `SIGKILL` after five seconds, records the reason in `.lyse/handoff/agent-transcript.log`, and exits `124` (the conventional `timeout(1)` status). Edits already written to the working tree are left in place — this bounds the run, it does not roll it back. The timeout propagates: `runHandoff` used to discard the launcher's exit code, so a killed agent still reported a clean launch and `lyse handoff` exited 0. Only the timeout is special-cased — an ordinary non-zero agent exit keeps today's behaviour, because turning every one of those into a failing status would break users whose agent exits 1 for benign reasons.
+
 ### Fixed
 
 - **Every axis now shows how much was measured.** The score card renders `n=<opportunities>` beside each axis, scored or abstaining, so `components 90 n=1307` and `components 16 n=134` can no longer be read as the same kind of statement — on one polaris checkout those are the same repository under two builds, and what changed was the denominator, not the quality. An abstaining axis explains itself too: `tokens N/A n=3` says the axis was not scored because almost nothing was measurable, not because the repo has no tokens, and `stories N/A n=0 +68` says nothing was measured while sixty-eight findings were reported.
