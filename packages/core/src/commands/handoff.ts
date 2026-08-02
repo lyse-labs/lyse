@@ -1,6 +1,7 @@
 import { basename } from "node:path";
 import { auditDirectory, RefuseToRunError } from "./audit-pipeline.js";
 import { runHandoff, spawnAgentLauncher } from "../agent/handoff.js";
+import { TIMEOUT_EXIT_CODE } from "../agent/timeout.js";
 import { choice } from "../menu/prompts.js";
 import type { HandoffResult, LaunchOpts } from "../agent/handoff.js";
 
@@ -81,6 +82,13 @@ export async function runHandoffCommand(root: string, deps?: HandoffDeps): Promi
   switch (handoffResult.action) {
     case "launched":
       process.stdout.write(`Agent launched: ${handoffResult.agentId ?? "unknown"}\n`);
+      if (handoffResult.timedOut === true) {
+        process.stderr.write(
+          "[lyse] the agent was terminated on its timeout — review the working tree with `git diff` " +
+            "and see .lyse/handoff/agent-transcript.log.\n",
+        );
+        process.exitCode = TIMEOUT_EXIT_CODE;
+      }
       break;
     case "copied":
       process.stdout.write("Prompt copied to clipboard.\n");

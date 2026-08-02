@@ -9,3 +9,5 @@
 Default limit 30 minutes, overridable with `LYSE_HANDOFF_TIMEOUT_MS` (`0` waits indefinitely). Anything unparseable falls back to the default rather than to no timeout — a typo must not silently remove the only thing bounding an unattended run. A timeout sends `SIGTERM`, then `SIGKILL` after five seconds, records the reason in `.lyse/handoff/agent-transcript.log`, and exits `124` (the conventional `timeout(1)` status).
 
 Edits the agent had already written to the working tree are deliberately left in place: this bounds the run, it does not roll it back, and the notice says so.
+
+Only the timeout changes `lyse handoff`'s exit status; an ordinary non-zero agent exit keeps today's behaviour.

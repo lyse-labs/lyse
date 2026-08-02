@@ -221,6 +221,49 @@ describe("spawnAgentLauncher — unsupported agent guard", () => {
   });
 });
 
+describe("runHandoff — a timed-out agent must not read as success", () => {
+  it("surfaces the timeout on the result instead of discarding the launcher's exit code", async () => {
+    // `runHandoff` did `await deps.launch(...)` and threw the code away, so a
+    // handoff whose agent was killed on the timeout returned
+    // `{ action: "launched" }` and `lyse handoff` exited 0 — while the docs
+    // promised exit 124. A gate that cannot tell a killed agent from a
+    // finished one fails open, which is the whole class of defect this
+    // release exists to close.
+    const root = makeTempRoot();
+    mkdirSync(join(root, ".cursor"), { recursive: true });
+    const fakeHome = mkdtempSync(join(tmpdir(), "lyse-home-"));
+    const deps = makeDeps({
+      prompt: vi.fn().mockResolvedValue("cursor"),
+      launch: vi.fn().mockResolvedValue(124),
+      targetFilePath: join(fakeHome, ".lyse", "handoff-target.json"),
+    });
+    const result = await runHandoff(
+      { findings: baseFindings, tokens: null, root, projectName: "acme" },
+      deps,
+    );
+    expect(result.action).toBe("launched");
+    expect(result.timedOut).toBe(true);
+  });
+
+  it("leaves an ordinary non-zero agent exit alone — only the timeout is special", async () => {
+    // Changing `lyse handoff`'s exit code for every non-zero agent status would
+    // break users whose agent exits 1 for benign reasons. Narrow on purpose.
+    const root = makeTempRoot();
+    mkdirSync(join(root, ".cursor"), { recursive: true });
+    const fakeHome = mkdtempSync(join(tmpdir(), "lyse-home-"));
+    const deps = makeDeps({
+      prompt: vi.fn().mockResolvedValue("cursor"),
+      launch: vi.fn().mockResolvedValue(1),
+      targetFilePath: join(fakeHome, ".lyse", "handoff-target.json"),
+    });
+    const result = await runHandoff(
+      { findings: baseFindings, tokens: null, root, projectName: "acme" },
+      deps,
+    );
+    expect(result.timedOut).toBeUndefined();
+  });
+});
+
 describe("runHandoff — agent launch", () => {
   it("installs skill, persists target, calls launch, returns { action: 'launched', agentId }", async () => {
     const root = makeTempRoot();

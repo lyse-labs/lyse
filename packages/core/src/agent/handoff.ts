@@ -6,7 +6,7 @@ import type { AgentId } from "./registry.js";
 import { launchArgs, copyToClipboard } from "./launch.js";
 import { transcriptPath, openTranscript } from "./transcript.js";
 import { spawnGuarded } from "./spawn-guarded.js";
-import { resolveTimeoutMs } from "./timeout.js";
+import { resolveTimeoutMs, TIMEOUT_EXIT_CODE } from "./timeout.js";
 import { isCommandAvailable, detectAgents } from "./registry.js";
 import { buildHandoffPayload, serializeTokenMap } from "./payload.js";
 import { installLyseSkill } from "./skill.js";
@@ -55,6 +55,14 @@ type HandoffAction = "launched" | "copied" | "copy-failed" | "skipped" | "none";
 export interface HandoffResult {
   action: HandoffAction;
   agentId?: AgentId;
+  /**
+   * The spawned agent hit its timeout and was killed. Narrow on purpose: an
+   * ordinary non-zero agent exit is NOT reported here, because turning every
+   * one of those into a non-zero `lyse handoff` status would break users whose
+   * agent exits 1 for benign reasons. A killed agent is different — reporting
+   * it as a clean launch is a gate that fails open.
+   */
+  timedOut?: true;
 }
 
 const HANDOFF_DIR_NAME = join(".lyse", "handoff");
@@ -166,9 +174,11 @@ export async function runHandoff(input: HandoffInput, deps: HandoffDeps): Promis
     deps.targetFilePath ?? join(homedir(), ".lyse", "handoff-target.json");
   persistTarget(targetFilePath, agentId);
 
-  await deps.launch(agentId, payload, root, { reviewMode });
+  const exitCode = await deps.launch(agentId, payload, root, { reviewMode });
 
-  return { action: "launched", agentId };
+  return exitCode === TIMEOUT_EXIT_CODE
+    ? { action: "launched", agentId, timedOut: true }
+    : { action: "launched", agentId };
 }
 
 export async function spawnAgentLauncher(
