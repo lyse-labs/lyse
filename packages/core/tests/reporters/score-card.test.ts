@@ -188,3 +188,38 @@ describe("axes carrying findings the score ignores", () => {
     expect(lines.find((l) => l.includes("a11y"))).toContain("15");
   });
 });
+
+// On the polaris sub-path the golden harness audits, the components axis reads
+// 92 on main and 16 on this branch — but the denominator went 1494 -> 134. The
+// number did not drop; the measured surface did. A bare 16 where there used to
+// be 92 misleads exactly as much as the vacuous 100 did, so how much was
+// measured travels with the score.
+describe("an axis score carries the size of what was measured", () => {
+  const withCounts = {
+    ...result,
+    axes: [
+      { axis: "tokens", score: "N/A", findings: 0, opportunities: 4, unscoredFindings: 0 },
+      { axis: "a11y", score: 88, findings: 26, opportunities: 219, unscoredFindings: 0 },
+      { axis: "components", score: 16, findings: 112, opportunities: 134, unscoredFindings: 0 },
+      { axis: "stories", score: "N/A", findings: 0, opportunities: 0, unscoredFindings: 0 },
+      { axis: "ai-surface", score: 85, findings: 6, opportunities: 39, unscoredFindings: 0 },
+      { axis: "ai-governance", score: "N/A", findings: 0, opportunities: 11, unscoredFindings: 0 },
+    ],
+  } as unknown as AuditResult;
+
+  it("shows the opportunity count next to a scored axis", () => {
+    const lines = renderScoreCard(withCounts, { ...opts });
+    expect(lines.find((l) => l.includes("components"))).toContain("134");
+  });
+
+  it("shows it for abstaining axes too — n=4 is why tokens is N/A", () => {
+    const lines = renderScoreCard(withCounts, { ...opts });
+    expect(lines.find((l) => l.includes("tokens"))).toContain("4");
+  });
+
+  it("keeps the box square", () => {
+    const lines = renderScoreCard(withCounts, { ...opts });
+    const w = lines[0]!.length;
+    for (const l of lines) expect(l.length).toBe(w);
+  });
+});

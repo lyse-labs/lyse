@@ -14,10 +14,16 @@ const UNICODE_BORDERS: Borders = { tl: "╭", tr: "╮", bl: "╰", br: "╯", h
 const ASCII_BORDERS: Borders = { tl: "+", tr: "+", bl: "+", br: "+", h: "-", v: "|" };
 
 /**
- * `+N` after the bar counts findings Lyse reported on this axis that the score
- * ignores. Printing `a11y 100` alone, on the same screen that lists fifteen a11y
- * findings, reads as a contradiction — so the marker is never dropped to save
- * columns; the bar shrinks instead.
+ * Two annotations travel with every axis, and neither is ever dropped to save
+ * columns — the bar shrinks instead.
+ *
+ * `n=` is how much was measured. On the polaris sub-path the components axis
+ * reads 92 under one build and 16 under another, while the denominator goes
+ * 1494 → 134: the number did not fall, the measured surface did. A bare 16
+ * misleads exactly as much as a vacuous 100.
+ *
+ * `+N` counts findings reported on this axis that the score ignores, so
+ * `a11y 100` can never appear alone above a list of fifteen a11y findings.
  */
 function axisRow(a: AxisScore, opts: TerminalOpts, barCells: number, maxWidth: number): string {
   const gly = statusGlyph(a.score, { color: opts.color, unicode: opts.unicode });
@@ -25,8 +31,7 @@ function axisRow(a: AxisScore, opts: TerminalOpts, barCells: number, maxWidth: n
   const scoreText = visiblePad(a.score === "N/A" ? "N/A" : String(a.score), 4, "left");
   const head = `${gly} ${name} ${scoreText}  `;
   const unscored = a.unscoredFindings ?? 0;
-  if (unscored === 0) return `${head}${bar(a.score, opts, barCells)}`;
-  const note = ` +${unscored}`;
+  const note = ` n=${a.opportunities}${unscored > 0 ? ` +${unscored}` : ""}`;
   const cells = Math.max(0, Math.min(barCells, maxWidth - visibleWidth(head) - note.length));
   return `${head}${bar(a.score, opts, cells)}${dim(note, opts)}`;
 }
