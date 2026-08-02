@@ -1,11 +1,27 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runAuditTest, LYSE_CLI_PATH } from "./_helpers/cli.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const fixture = join(__dirname, "../fixtures/full-ds");
+
+// A near-empty repo: what is under test is argument validation, which happens
+// before any audit work. Auditing `fixtures/full-ds` eight times over costs
+// ~12s per spawn and blew the 15s default timeout in CI; this costs ~1.5s.
+let tiny: string;
+beforeAll(() => {
+  tiny = mkdtempSync(join(tmpdir(), "lyse-enum-flags-"));
+  writeFileSync(
+    join(tiny, "package.json"),
+    JSON.stringify({ name: "tiny", version: "1.0.0", private: true }),
+  );
+});
+afterAll(() => {
+  rmSync(tiny, { recursive: true, force: true });
+});
 
 /**
  * #276. `--scope New` audited the whole tree, never reached `evaluateGate`,
@@ -17,7 +33,7 @@ const fixture = join(__dirname, "../fixtures/full-ds");
 describe("audit rejects an unaccepted enum value (#276)", () => {
   for (const scope of ["New", "NEW", "nw", "scope-typo"]) {
     it(`exits 64 on --scope=${scope}`, () => {
-      const r = runAuditTest({ path: fixture, extraArgs: [`--scope=${scope}`] });
+      const r = runAuditTest({ path: tiny, extraArgs: [`--scope=${scope}`] });
       expect(r.status).toBe(64);
       expect(r.stderr).toMatch(/invalid value --scope=/);
       expect(r.stderr).toMatch(/changed, staged, uncommitted, new/);
@@ -25,36 +41,38 @@ describe("audit rejects an unaccepted enum value (#276)", () => {
   }
 
   it("suggests the right spelling when only the case is wrong", () => {
-    const r = runAuditTest({ path: fixture, extraArgs: ["--scope=New"] });
+    const r = runAuditTest({ path: tiny, extraArgs: ["--scope=New"] });
     expect(r.stderr).toMatch(/did you mean `new`/);
   });
 
   for (const format of ["Sarif", "sarrif", "html5"]) {
     it(`exits 64 on --format=${format}`, () => {
-      const r = runAuditTest({ path: fixture, extraArgs: [`--format=${format}`] });
+      const r = runAuditTest({ path: tiny, extraArgs: [`--format=${format}`] });
       expect(r.status).toBe(64);
       expect(r.stderr).toMatch(/invalid value --format=/);
     });
   }
 
   // Asserted on the message, not the status: `--scope=new` legitimately exits
-  // 64 here because the fixture has no committed baseline. Both refusals share
-  // an exit code, only one of them is this validator.
-  it("still accepts every scope the CLI implements", () => {
-    for (const scope of ["changed", "staged", "uncommitted", "new"]) {
-      const r = runAuditTest({ path: fixture, extraArgs: [`--scope=${scope}`] });
+  // 64 here because there is no committed baseline. Both refusals share an exit
+  // code, only one of them is this validator.
+  it.each(["changed", "staged", "uncommitted", "new"])(
+    "still accepts --scope=%s",
+    (scope) => {
+      const r = runAuditTest({ path: tiny, extraArgs: [`--scope=${scope}`] });
       expect(r.stderr, `--scope=${scope} rejected by the enum validator`).not.toMatch(
         /invalid value --scope=/,
       );
-    }
-  });
+    },
+  );
 
-  it("still accepts every format the CLI implements", () => {
-    for (const format of ["json", "text", "table", "tsv", "eslint", "legacy", "sarif", "html"]) {
-      const r = runAuditTest({ path: fixture, extraArgs: [`--format=${format}`] });
+  it.each(["json", "text", "table", "tsv", "eslint", "legacy", "sarif", "html"])(
+    "still accepts --format=%s",
+    (format) => {
+      const r = runAuditTest({ path: tiny, extraArgs: [`--format=${format}`] });
       expect(r.status, `--format=${format} rejected as a usage error`).not.toBe(64);
-    }
-  });
+    },
+  );
 });
 
 describe("explain rejects an unaccepted --format (#276)", () => {
