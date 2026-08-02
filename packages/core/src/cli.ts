@@ -14,6 +14,7 @@ import { renderTerminal } from "./reporters/terminal.js";
 import { formatCoverageFooter } from "./reporters/coverage-footer.js";
 import { renderAgentsMd } from "./reporters/markdown.js";
 import { renderEslintStyle, fromLegacyFinding } from "./cli/output/eslint-style.js";
+import { countedFindingPredicate } from "./cli/output/counted.js";
 import { renderScoreGauge } from "./cli/output/score-gauge.js";
 import { resolveLimit } from "./cli/output/limit.js";
 import { CURRENT_SCORING_VERSION } from "./reliability/score/version-pin.js";
@@ -103,9 +104,14 @@ function computeTerminalOpts(
 // ---------------------------------------------------------------------------
 
 function renderEslintStyleAudit(result: AuditResult, limit: number | null | undefined): string {
-  const eslintFindings = result.findings.map(fromLegacyFinding);
-  const experimental = eslintFindings.filter((f) => f.confidence === "low").length;
-  const counted = eslintFindings.length - experimental;
+  // Both numbers under the score are the scorer's own partition. Partitioning
+  // on `Finding.confidence` — a codemod-safety field assigned after the score
+  // exists, which neither scorer reads — told users that 107 of 108 findings
+  // did not affect a 59 that 76 of them had produced (#277).
+  const isCounted = countedFindingPredicate(result);
+  const eslintFindings = result.findings.map((f) => fromLegacyFinding(f, isCounted(f)));
+  const counted = eslintFindings.filter((f) => f.counted).length;
+  const experimental = eslintFindings.length - counted;
   const sections: string[] = [];
   const findingsBlock = renderEslintStyle({
     findings: eslintFindings,
