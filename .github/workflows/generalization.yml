@@ -4,8 +4,8 @@
 # (never vendored). Asserts only the ENFORCED (repo × invariant) statuses —
 # a regression on a shipped honesty property fails here. KNOWN-GAP statuses
 # are logged (the `[harness]` lines = the internal scorecard's input), not
-# asserted. NOT a required status check yet — the owner promotes it to
-# required. Skips on PRs that don't touch packages/core/**.
+# asserted. Required status check. The job always runs so the check always
+# reports; only its steps are skipped on PRs that don't touch packages/core/**.
 name: Generalization harness
 on:
   pull_request:

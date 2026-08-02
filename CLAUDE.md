@@ -70,7 +70,10 @@ its place by being load-bearing for review.
 
 `main` is protected. Settings as of 2026-06-06:
 
-- **Required checks:** `test`, `perf`, `Check markdown links`
+- **Required checks:** `test`, `perf`, `Check markdown links`, `bench-golden`,
+  `generalization` — the last two are the only checks that run Lyse against
+  real third-party design systems. Promoted 2026-08-02; before that, no
+  required check ran Lyse on a real repository at all.
 - **Linear history** required — rebase against `main` before merge if behind
 - **No merge commits** — use `gh pr merge --squash` or `gh pr merge --rebase`
 - **Conversation resolution** required — all review threads must be

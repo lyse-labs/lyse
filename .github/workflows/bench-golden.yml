@@ -1,8 +1,8 @@
 # Golden-corpus snapshot job. Runs the golden suite against pinned
 # third-party repos fetched via codeload at test time (never vendored).
-# NOT a required status check yet — the owner promotes it to required
-# after P0 lands (LYSE-MISSION §4.1). Skips on PRs that don't touch
-# packages/core/** (this workflow file itself always counts as relevant).
+# Required status check. The job always runs so the check always reports;
+# only its steps are skipped on PRs that don't touch packages/core/**
+# (this workflow file itself always counts as relevant).
 name: Bench golden
 on:
   pull_request:
