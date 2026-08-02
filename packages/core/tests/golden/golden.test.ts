@@ -45,26 +45,50 @@ const snap = (label: string) =>
   JSON.parse(readFileSync(join(SNAP_DIR, `${label}.json`), "utf8")) as { axes: Axis[] };
 const axis = (label: string, name: string) => snap(label).axes.find((a) => a.axis === name)!;
 
-describe("expected-to-change: known-wrong audit numbers photographed as expected-to-change", () => {
-  // P2 (zone-aware token/component rules) fixed these two — see CHANGELOG "Fixed" entry for the
-  // exact before/after numbers (Carbon tokens 0 → 54, shadcn components 0 → 31). Bands stay loose
-  // (floors, not equalities) so future rule tuning doesn't require touching this file every time.
-  // The stories case below was P1's fix (Appendix-A story-title seeding). Snapshots are now scored
-  // by the v3 default model — axes with < 30 opportunities N/A out by design (min-N sample guard).
-  it("Carbon: tokens axis now scored meaningfully above the old zone-blind floor", () => {
-    expect(axis("carbon-react", "tokens").score).toBeGreaterThan(40);
+describe("coverage the snapshots record: where Lyse now declines to answer", () => {
+  // These used to assert the opposite. The reliability catalogue is now honoured
+  // on both sides of the adoption ratio, so an axis is scored over its validated
+  // rules only — and on the golden corpus that leaves several axes under the
+  // min-N=30 sample floor. The numbers below are losses of coverage, not gains,
+  // and they are pinned here rather than deleted so that regaining them is
+  // visible as a failing test rather than as a snapshot that quietly moved.
+  // Measured on this corpus, main → this branch (opportunities in parentheses):
+  //   carbon    83 → 78    tokens 78 (82) → N/A (2)     components 88 (451) → 29 (69)
+  //   polaris   90 → 62    tokens 96 (2392) → N/A (26)  components 92 (1494) → 16 (133)
+  //   shadcn    86 → N/A   tokens 98 (3802) → N/A (5)   components 66 (4231) → 64 (175)
+  //   tailwind  80 → N/A   tokens 99 (2018) → N/A (11)  components 45 (176) → 50 (153)
+  it("tokens abstains on every repository in the corpus", () => {
+    // css-custom-property-export was demoted to non-scoring (its 0.90+ bound came
+    // from fixtures that write their variables out literally; element-plus composes
+    // --el-* at Sass compile time). What is left of the tokens axis is under the
+    // sample floor everywhere. Lyse currently says nothing about anyone's tokens.
+    for (const label of ["carbon-react", "polaris-react", "shadcn-ui", "tailwind-dashboard"]) {
+      expect(axis(label, "tokens").score, label).toBe("N/A");
+    }
   });
-  it("shadcn: components axis now scored above 0 (ds-source zone findings no longer counted)", () => {
-    expect(axis("shadcn-ui", "components").score).toBeGreaterThan(0);
+  it("stories reports nothing on repositories that ARE design systems", () => {
+    // The P1 story-title fix did land — the loader indexes Polaris's 87 CSF3 files
+    // and Mantine's 455 `.story.` files. But storybook-coverage.ts:18 and
+    // stories-usage-examples.ts:23 both open with
+    // `if (ctx.dsSelfMode) return { findings, opportunities: 0 }`, and detection now
+    // resolves dsSelfMode correctly on real design systems for the first time. So the
+    // axis is dark on exactly the repositories it exists to measure.
+    expect(axis("carbon-react", "stories").opportunities).toBe(0);
+    expect(axis("polaris-react", "stories").opportunities).toBe(0);
   });
-  it("Carbon & Polaris: stories axis is now populated (P1 Appendix-A fix — no more silent N/A)", () => {
-    // Carbon clears v3 min-N (222 story opportunities) so it scores.
-    expect(axis("carbon-react", "stories").score).not.toBe("N/A");
-    expect(axis("carbon-react", "stories").opportunities).toBeGreaterThan(0);
-    // Polaris's stories ARE seeded (opportunities > 0 — the P1 fix), but under
-    // the v3 default they fall below min-N=30 (o=18) so the axis N/A's by design.
-    // This asserts the seeding fix; the N/A is v3's small-sample guard, not a
-    // regression to the old silent-N/A bug (which had 0 opportunities).
-    expect(axis("polaris-react", "stories").opportunities).toBeGreaterThan(0);
+  it("components still scores everywhere — the catalogue narrowed it, it did not blank it", () => {
+    for (const label of ["carbon-react", "polaris-react", "shadcn-ui", "tailwind-dashboard"]) {
+      expect(axis(label, "components").score, label).not.toBe("N/A");
+    }
+  });
+  it("two of four repositories no longer get a headline score at all", () => {
+    // Below MIN_SCORED_AXES (3), `finalScore` is "N/A" by design. shadcn and
+    // tailwind are left with two scored axes each (a11y, components).
+    const scored = (label: string) =>
+      snap(label).axes.filter((a) => a.score !== "N/A").length;
+    expect(scored("shadcn-ui")).toBeLessThan(3);
+    expect(scored("tailwind-dashboard")).toBeLessThan(3);
+    expect(scored("carbon-react")).toBeGreaterThanOrEqual(3);
+    expect(scored("polaris-react")).toBeGreaterThanOrEqual(3);
   });
 });

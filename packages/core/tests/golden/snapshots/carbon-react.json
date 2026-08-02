@@ -3,47 +3,53 @@
   "axes": [
     {
       "axis": "tokens",
-      "findings": 18,
-      "opportunities": 82,
-      "score": 78
+      "findings": 2,
+      "opportunities": 2,
+      "score": "N/A",
+      "unscoredFindings": 16
     },
     {
       "axis": "a11y",
-      "findings": 13,
-      "opportunities": 973,
-      "score": 99
+      "findings": 6,
+      "opportunities": 440,
+      "score": 99,
+      "unscoredFindings": 6
     },
     {
       "axis": "components",
-      "findings": 56,
-      "opportunities": 451,
-      "score": 88
+      "findings": 49,
+      "opportunities": 69,
+      "score": 29,
+      "unscoredFindings": 3
     },
     {
       "axis": "stories",
-      "findings": 109,
-      "opportunities": 222,
-      "score": 51
+      "findings": 0,
+      "opportunities": 0,
+      "score": "N/A",
+      "unscoredFindings": 100
     },
     {
       "axis": "ai-surface",
       "findings": 19,
-      "opportunities": 117,
-      "score": 84
+      "opportunities": 116,
+      "score": 84,
+      "unscoredFindings": 0
     },
     {
       "axis": "ai-governance",
       "findings": 10,
       "opportunities": 1165,
-      "score": 99
+      "score": 99,
+      "unscoredFindings": 0
     }
   ],
-  "finalScore": 83,
-  "findingsCount": 225,
-  "findingsDigest": "3a47014d73a52c3fc774eb6d9065d562d44a672089a11fc7ee8b09565e7bb29b",
+  "finalScore": 78,
+  "findingsCount": 211,
+  "findingsDigest": "d7aa5fb308ff69ae32e8132b3ccd7447b659ed98af01b2b2cefef02d9c2bf3c7",
   "grade": {
     "autoFailed": false,
-    "grade": "A",
+    "grade": "B",
     "reasons": []
   },
   "meta": {
@@ -58,7 +64,7 @@
         {
           "evidence": {
             "components": 0,
-            "storySeeded": 111
+            "storySeeded": 103
           },
           "extractor": "components",
           "remediation": "No component inventory — set `designSystem.componentsModule` in .lyse.yaml or run `lyse init` (docs/guide/configuration.md).",
@@ -66,8 +72,8 @@
         },
         {
           "evidence": {
-            "linked": 111,
-            "storyFiles": 111
+            "linked": 103,
+            "storyFiles": 103
           },
           "extractor": "stories",
           "remediation": null,
@@ -95,17 +101,9 @@
     "projection": {
       "top": [
         {
-          "count": 109,
-          "files": 1,
-          "gain": 8,
-          "key": "stories/usage-examples",
-          "migrationScale": false,
-          "ruleId": "stories/usage-examples"
-        },
-        {
           "count": 48,
           "files": 30,
-          "gain": 2,
+          "gain": 17,
           "key": "components/doc-comments",
           "migrationScale": false,
           "ruleId": "components/doc-comments"
@@ -119,7 +117,7 @@
           "ruleId": "versioning/deprecation-markers"
         }
       ],
-      "totalGainTop3": 12
+      "totalGainTop3": 20
     }
   },
   "repoRoot": "<REPO>/packages/react",
@@ -130,7 +128,7 @@
     "react",
     "storybook"
   ],
-  "tier": "Autonomous",
+  "tier": "Quantitative",
   "timestamp": "",
   "toolVersion": ""
 }

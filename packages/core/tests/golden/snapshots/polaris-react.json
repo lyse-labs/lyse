@@ -3,47 +3,53 @@
   "axes": [
     {
       "axis": "tokens",
-      "findings": 104,
-      "opportunities": 2392,
-      "score": 96
+      "findings": 22,
+      "opportunities": 26,
+      "score": "N/A",
+      "unscoredFindings": 82
     },
     {
       "axis": "a11y",
-      "findings": 85,
-      "opportunities": 395,
-      "score": 78
+      "findings": 22,
+      "opportunities": 135,
+      "score": 84,
+      "unscoredFindings": 6
     },
     {
       "axis": "components",
-      "findings": 114,
-      "opportunities": 1494,
-      "score": 92
+      "findings": 112,
+      "opportunities": 133,
+      "score": 16,
+      "unscoredFindings": 3
     },
     {
       "axis": "stories",
-      "findings": 1,
-      "opportunities": 18,
-      "score": "N/A"
+      "findings": 0,
+      "opportunities": 0,
+      "score": "N/A",
+      "unscoredFindings": 5
     },
     {
       "axis": "ai-surface",
       "findings": 6,
       "opportunities": 39,
-      "score": 85
+      "score": 85,
+      "unscoredFindings": 0
     },
     {
       "axis": "ai-governance",
       "findings": 10,
-      "opportunities": 598,
-      "score": 98
+      "opportunities": 11,
+      "score": "N/A",
+      "unscoredFindings": 0
     }
   ],
-  "finalScore": 90,
-  "findingsCount": 320,
-  "findingsDigest": "3674400547362abceb57d56a610a16c7288b0910d1b3e1cb7365e280fb362f7a",
+  "finalScore": 62,
+  "findingsCount": 268,
+  "findingsDigest": "a92eeee4acb9e36e899743247e2e908046bea87f852a1ad7346c135d2f130cbe",
   "grade": {
     "autoFailed": false,
-    "grade": "A",
+    "grade": "B",
     "reasons": []
   },
   "meta": {
@@ -58,7 +64,7 @@
         {
           "evidence": {
             "components": 0,
-            "storySeeded": 9
+            "storySeeded": 87
           },
           "extractor": "components",
           "remediation": "No component inventory — set `designSystem.componentsModule` in .lyse.yaml or run `lyse init` (docs/guide/configuration.md).",
@@ -66,8 +72,8 @@
         },
         {
           "evidence": {
-            "linked": 9,
-            "storyFiles": 9
+            "linked": 87,
+            "storyFiles": 87
           },
           "extractor": "stories",
           "remediation": null,
@@ -95,17 +101,9 @@
     "projection": {
       "top": [
         {
-          "count": 62,
-          "files": 16,
-          "gain": 3,
-          "key": "a11y/interactive-role-name",
-          "migrationScale": false,
-          "ruleId": "a11y/interactive-role-name"
-        },
-        {
           "count": 102,
           "files": 102,
-          "gain": 1,
+          "gain": 25,
           "key": "components/doc-comments",
           "migrationScale": true,
           "ruleId": "components/doc-comments"
@@ -113,13 +111,21 @@
         {
           "count": 20,
           "files": 14,
-          "gain": 1,
+          "gain": 5,
           "key": "a11y/semantic-html",
           "migrationScale": false,
           "ruleId": "a11y/semantic-html"
+        },
+        {
+          "count": 8,
+          "files": 5,
+          "gain": 2,
+          "key": "components/icon-decorative-aria",
+          "migrationScale": false,
+          "ruleId": "components/icon-decorative-aria"
         }
       ],
-      "totalGainTop3": 5
+      "totalGainTop3": 32
     }
   },
   "repoRoot": "<REPO>/polaris-react",
@@ -130,7 +136,7 @@
     "react",
     "storybook"
   ],
-  "tier": "Autonomous",
+  "tier": "Quantitative",
   "timestamp": "",
   "toolVersion": ""
 }
