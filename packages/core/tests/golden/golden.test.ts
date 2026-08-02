@@ -53,10 +53,15 @@ describe("coverage the snapshots record: where Lyse now declines to answer", () 
   // and they are pinned here rather than deleted so that regaining them is
   // visible as a failing test rather than as a snapshot that quietly moved.
   // Measured on this corpus, main → this branch (opportunities in parentheses):
-  //   carbon    83 → 78    tokens 78 (82) → N/A (2)     components 88 (451) → 29 (69)
-  //   polaris   90 → 62    tokens 96 (2392) → N/A (26)  components 92 (1494) → 16 (133)
+  //   carbon    83 → 90    tokens 78 (82) → N/A (1)     components 88 (451) → 77 (213)
+  //   polaris   90 → 86    tokens 96 (2392) → N/A (2)   components 92 (1494) → 90 (1113)
   //   shadcn    86 → N/A   tokens 98 (3802) → N/A (5)   components 66 (4231) → 64 (175)
   //   tailwind  80 → N/A   tokens 99 (2018) → N/A (11)  components 45 (176) → 50 (153)
+  // carbon and polaris are audited at a package subpath, so they also carry the
+  // workspace-ancestor detection fix: their component inventories go 0 → 281 and
+  // 0 → 191. shadcn's components live inside `apps/www` (disqualified as an app
+  // directory) and tailwind-dashboard is a template, not a design system —
+  // neither is a subpath case, so neither moves.
   it("tokens abstains on every repository in the corpus", () => {
     // css-custom-property-export was demoted to non-scoring (its 0.90+ bound came
     // from fixtures that write their variables out literally; element-plus composes
@@ -79,6 +84,25 @@ describe("coverage the snapshots record: where Lyse now declines to answer", () 
   it("components still scores everywhere — the catalogue narrowed it, it did not blank it", () => {
     for (const label of ["carbon-react", "polaris-react", "shadcn-ui", "tailwind-dashboard"]) {
       expect(axis(label, "components").score, label).not.toBe("N/A");
+    }
+  });
+  it("a design system audited at its own package directory has a real component inventory", () => {
+    // carbon is audited at `packages/react` and polaris at `polaris-react` —
+    // package directories, not the monorepo root. Detection required
+    // `private: true` AND a `workspaces` field, both of which live on the root,
+    // so it returned null there and `buildInventoryForMode` returned `[]`. Both
+    // repos reported `components: 0, extraction degraded` while their components
+    // axis published 88 and 92 — a score over an inventory that did not exist.
+    // The inventory was in fact seeded from the stories, which is why story
+    // linkage then read "103 of 103": the two sides were the same list.
+    for (const [label, floor] of [["carbon-react", 200], ["polaris-react", 150]] as const) {
+      const meta = JSON.parse(readFileSync(join(SNAP_DIR, `${label}.json`), "utf8")) as {
+        meta: { extraction: { entries: { extractor: string; status: string; evidence: Record<string, number> }[] } };
+      };
+      const components = meta.meta.extraction.entries.find((e) => e.extractor === "components")!;
+      expect(components.status, `${label} components extraction`).toBe("ok");
+      expect(components.evidence["components"], `${label} inventory size`).toBeGreaterThan(floor);
+      expect(components.evidence["storySeeded"], `${label} story-seeded`).toBe(0);
     }
   });
   it("two of four repositories no longer get a headline score at all", () => {

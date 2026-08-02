@@ -1,8 +1,8 @@
-import { readFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { readFile, stat } from "node:fs/promises";
+import { dirname, join, resolve, sep } from "node:path";
 import { parse as parseYaml } from "yaml";
 import fg from "fast-glob";
-import type { ComponentsModuleDetection, Detected, DetectionResult, WorkspacePackage } from "./types.js";
+import type { ComponentsModuleDetection, Detected, DetectionResult, DsFamilyMember, WorkspacePackage } from "./types.js";
 import { posixRelative } from "../util/paths.js";
 import { countComponentFilesByPackage, identifyDsFamily } from "./ds-packages.js";
 
@@ -105,7 +105,113 @@ async function detectComponentsModule(
   const wsResult = await detectWorkspaceDsPackage(pkg, rootDir);
   if (wsResult) return wsResult;
 
+  // Branch 4 — the audited directory sits INSIDE a workspace whose root is
+  // above it. Branch 3 needs `private: true` and a `workspaces` field, both of
+  // which live on the monorepo root, so `cd packages/ui && lyse audit` reached
+  // it with neither and detection returned null.
+  const fromAncestor = await detectFromWorkspaceAncestor(rootDir);
+  if (fromAncestor) return fromAncestor;
+
   return { value: null, confidence: "low", source: "no obvious componentsModule", dsSelf: false, family: [] };
+}
+
+/** Ancestors examined before giving up. Deeper than any real package nesting. */
+const MAX_ANCESTOR_DEPTH = 12;
+
+async function isDirectory(path: string): Promise<boolean> {
+  try {
+    return (await stat(path)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The nearest ancestor of `startDir` that declares a workspace, or null.
+ *
+ * The search stops at a directory holding `.git` — checked *after* that
+ * directory itself, so a normal `cd packages/ui` inside a repository still
+ * finds the repository root. Without the boundary, auditing anything would
+ * keep climbing and could adopt an unrelated monorepo further up as context.
+ */
+async function findWorkspaceAncestor(
+  startDir: string,
+): Promise<{ dir: string; pkg: PackageJson } | null> {
+  let dir = resolve(startDir);
+  if (await isDirectory(join(dir, ".git"))) return null;
+
+  for (let depth = 0; depth < MAX_ANCESTOR_DEPTH; depth++) {
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+
+    let pkg: PackageJson | null = null;
+    try {
+      pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8")) as PackageJson;
+    } catch {
+      pkg = null;
+    }
+    if (pkg !== null && typeof pkg === "object") {
+      const declaresWorkspaces =
+        pkg.workspaces !== undefined || (await readPnpmWorkspaceGlobs(dir)) !== null;
+      if (declaresWorkspaces) return { dir, pkg };
+    }
+
+    if (await isDirectory(join(dir, ".git"))) return null;
+  }
+  return null;
+}
+
+/**
+ * Resolve the design system from a workspace root above the audited directory,
+ * then express the answer in the audited directory's own terms.
+ *
+ * Deliberately narrow: this fires only when the audited directory IS a family
+ * member's own root, never when it merely sits somewhere underneath one. An
+ * earlier version accepted any descendant, and `packages/core/fixtures/svelte-ds`
+ * — a test fixture two levels inside this repo's own package — was then audited
+ * in ds-self mode, which reclassifies its zones and silenced the token rules
+ * that fixture exists to exercise. A directory inside a package is not that
+ * package, and nothing structural distinguishes a vendored fixture from real
+ * source. Everything else keeps its previous answer.
+ *
+ * `value` is the member that owns the audited directory, not the workspace
+ * family's `primary`: inside `packages/icons` the answer is `@acme/icons`,
+ * whatever label the monorepo as a whole would carry. `family[].relDir` is
+ * measured from the audited directory, because `resolveComponentSources`
+ * matches those directories against paths relative to the audit root; a member
+ * outside the audited tree is dropped, since none of its files are present.
+ */
+async function detectFromWorkspaceAncestor(
+  rootDir: string,
+): Promise<ComponentsModuleDetection | null> {
+  const ancestor = await findWorkspaceAncestor(rootDir);
+  if (ancestor === null) return null;
+
+  const detected = await detectWorkspaceDsPackage(ancestor.pkg, ancestor.dir);
+  if (detected === null) return null;
+
+  const absoluteRoot = resolve(rootDir);
+  let owner: string | null = null;
+  const family: DsFamilyMember[] = [];
+  for (const member of detected.family) {
+    const memberDir = resolve(ancestor.dir, member.relDir);
+    if (memberDir === absoluteRoot) {
+      owner = member.name;
+      family.push({ name: member.name, relDir: "" });
+    } else if (memberDir.startsWith(`${absoluteRoot}${sep}`)) {
+      family.push({ name: member.name, relDir: posixRelative(absoluteRoot, memberDir) });
+    }
+  }
+  if (owner === null) return null;
+
+  return {
+    value: owner,
+    confidence: "high",
+    source: `workspace DS family rooted at ${posixRelative(absoluteRoot, ancestor.dir) || ".."} (this package: ${owner})`,
+    dsSelf: true,
+    family,
+  };
 }
 
 /**

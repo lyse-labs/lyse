@@ -3,10 +3,10 @@
   "axes": [
     {
       "axis": "tokens",
-      "findings": 2,
-      "opportunities": 2,
+      "findings": 1,
+      "opportunities": 1,
       "score": "N/A",
-      "unscoredFindings": 16
+      "unscoredFindings": 0
     },
     {
       "axis": "a11y",
@@ -18,16 +18,16 @@
     {
       "axis": "components",
       "findings": 49,
-      "opportunities": 69,
-      "score": 29,
-      "unscoredFindings": 3
+      "opportunities": 213,
+      "score": 77,
+      "unscoredFindings": 1
     },
     {
       "axis": "stories",
       "findings": 0,
       "opportunities": 0,
       "score": "N/A",
-      "unscoredFindings": 100
+      "unscoredFindings": 49
     },
     {
       "axis": "ai-surface",
@@ -44,12 +44,12 @@
       "unscoredFindings": 0
     }
   ],
-  "finalScore": 78,
-  "findingsCount": 211,
-  "findingsDigest": "d7aa5fb308ff69ae32e8132b3ccd7447b659ed98af01b2b2cefef02d9c2bf3c7",
+  "finalScore": 90,
+  "findingsCount": 141,
+  "findingsDigest": "7c41e10ea853bf8a96c8357f6c2d08b1f0e7d8814c9b2fa9b58d3e5359a5458c",
   "grade": {
     "autoFailed": false,
-    "grade": "B",
+    "grade": "A",
     "reasons": []
   },
   "meta": {
@@ -58,26 +58,27 @@
       "configPath": null,
       "scannedFiles": 959
     },
+    "dsSelfMode": true,
     "extraction": {
       "conflicts": [],
       "entries": [
         {
           "evidence": {
-            "components": 0,
-            "storySeeded": 103
+            "components": 281,
+            "storySeeded": 0
           },
           "extractor": "components",
-          "remediation": "No component inventory — set `designSystem.componentsModule` in .lyse.yaml or run `lyse init` (docs/guide/configuration.md).",
-          "status": "degraded"
+          "remediation": null,
+          "status": "ok"
         },
         {
           "evidence": {
-            "linked": 103,
+            "linked": 0,
             "storyFiles": 103
           },
           "extractor": "stories",
-          "remediation": null,
-          "status": "ok"
+          "remediation": "DS-self mode: story analysis is skipped in v0.x — the stories axis reports N/A by design.",
+          "status": "degraded"
         },
         {
           "evidence": {
@@ -103,7 +104,7 @@
         {
           "count": 48,
           "files": 30,
-          "gain": 17,
+          "gain": 6,
           "key": "components/doc-comments",
           "migrationScale": false,
           "ruleId": "components/doc-comments"
@@ -117,7 +118,7 @@
           "ruleId": "versioning/deprecation-markers"
         }
       ],
-      "totalGainTop3": 20
+      "totalGainTop3": 8
     }
   },
   "repoRoot": "<REPO>/packages/react",
@@ -128,7 +129,7 @@
     "react",
     "storybook"
   ],
-  "tier": "Quantitative",
+  "tier": "Autonomous",
   "timestamp": "",
   "toolVersion": ""
 }
