@@ -10,7 +10,7 @@
   "packageManager": "pnpm@9.12.0",
   "scripts": {
     "build": "pnpm -r build",
-    "test": "pnpm -r test",
+    "test": "vitest run && pnpm -r test",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "changeset": "changeset",
@@ -21,6 +21,7 @@
     "measure:ledger": "tsx scripts/measure-ledger.ts",
     "measure:recall": "tsx scripts/measure-recall.ts",
     "measure:ds-detection": "tsx scripts/measure-ds-detection.ts",
+    "ecosystem:diff": "tsx scripts/ecosystem-diff/run.ts",
     "mine:recall": "tsx scripts/mine-gold-recall.ts",
     "gold:fetch-pins": "tsx scripts/gold-corpus/fetch-pins.ts",
     "docs:reliability:rules": "tsx scripts/generate-rule-docs-reliability.ts",
