@@ -235,7 +235,8 @@ read.
 | `eslint`, `table` | every finding | yes |
 | `json`, `sarif`, `tsv` | every finding | no — machine consumers always receive the full report |
 
-`--verbose` is equivalent to `--limit=all` for the formats that truncate.
+`--verbose` is equivalent to `--limit=all` for the formats that truncate. An
+explicit `--limit` wins over it, so `--limit=3 --verbose` shows three.
 
 Every `lyse audit` run also writes the reified Design System Graph to
 `.lyse/graph.json` (tokens, components, stories, zones, extraction report).
