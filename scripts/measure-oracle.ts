@@ -11,16 +11,18 @@
  *   pnpm measure:oracle --clone          # clone anything missing first
  *   ORACLE_DIR=/path pnpm measure:oracle # look for checkouts elsewhere
  *
- * Exit code 1 when any repo's reported component count falls outside tolerance,
- * so an unattended loop can use it as a signal. A skipped repo (not on disk) is
- * reported and does not fail the run — silence about what was NOT measured is
- * the failure mode this whole harness exists to prevent.
+ * Exit code 1 when any repo falls outside tolerance, when any repo could not be
+ * measured, or when nothing was evaluated at all. Not measured is NOT a pass:
+ * the first version exited 0 after measuring zero repositories, so a flaky clone
+ * would have passed every candidate all night without checking anything. See
+ * `oracle-verdict.ts` for the reasoning and the tests that pin it.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { auditDirectory } from "../packages/core/src/commands/audit-pipeline.js";
+import { decideOutcome } from "./oracle-verdict.js";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const CHECKOUT_DIR = process.env["ORACLE_DIR"] ?? join(REPO_ROOT, ".oracle-corpus");
@@ -137,10 +139,10 @@ async function main(): Promise<void> {
   process.stdout.write(
     `\n${rows.length - failed.length - skipped.length} within tolerance · ${failed.length} out · ${skipped.length} not measured\n`,
   );
-  if (skipped.length > 0) {
-    process.stdout.write(`NOT MEASURED: ${skipped.map((r) => r.name).join(", ")}\n`);
-  }
-  process.exitCode = failed.length > 0 ? 1 : 0;
+
+  const outcome = decideOutcome(rows);
+  for (const reason of outcome.reasons) process.stdout.write(`FAIL: ${reason}\n`);
+  process.exitCode = outcome.exitCode;
 }
 
 await main();
