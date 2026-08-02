@@ -265,7 +265,7 @@ lyse audit --scope new
 - `0` — Audit completed; score met threshold (if specified). Under `--scope new`, no new score-contributing finding and no axis-score regression.
 - `1` — Audit completed; score below threshold. Under `--scope new`, at least one new score-contributing finding or an axis-score regression (reasons printed to stderr).
 - `2` — Audit could not run (invalid config, unreadable files, internal error).
-- `64` — Invalid arguments. Under `--scope new`, also: no `.lyse/baseline.json` found (run `lyse baseline write` first) or the baseline file is malformed.
+- `64` — Invalid arguments: an undeclared flag, or a value `--scope` / `--format` does not accept (the accepted values are printed). Under `--scope new`, also: no `.lyse/baseline.json` found (run `lyse baseline write` first) or the baseline file is malformed.
 
 ### JSON output: `meta.coverage`
 

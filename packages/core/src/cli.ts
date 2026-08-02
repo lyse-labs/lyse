@@ -29,6 +29,7 @@ import { runExplainScore } from "./commands/explain-score.js";
 import { feedbackMissed } from "./commands/feedback.js";
 import { auditDirectory, RefuseToRunError, ScopeError } from "./commands/audit-pipeline.js";
 import { assertKnownFlags } from "./cli/unknown-flags.js";
+import { assertEnumValues, AUDIT_ENUM_FLAGS, EXPLAIN_ENUM_FLAGS } from "./cli/enum-flags.js";
 import type { AuditFlags } from "./commands/audit-pipeline.js";
 import { resolveScoreModel } from "./scorer.js";
 import { runShare } from "./commands/share.js";
@@ -310,6 +311,7 @@ const auditCommand = defineCommand({
   async run({ args }) {
     try {
       assertKnownFlags(args, AUDIT_ARGS, "audit");
+      assertEnumValues(args, AUDIT_ENUM_FLAGS, "audit");
     } catch (err) {
       console.error(`[lyse] ${(err as Error).message}`);
       process.exit(64);
@@ -882,6 +884,12 @@ const explainCommand = defineCommand({
     ...GLOBAL_FLAGS,
   },
   async run({ args }) {
+    try {
+      assertEnumValues(args, EXPLAIN_ENUM_FLAGS, "explain");
+    } catch (err) {
+      console.error(`[lyse] ${(err as Error).message}`);
+      process.exit(64);
+    }
     applyGlobalFlags(args);
     if (args.score === true) {
       // Validate --score-model / LYSE_SCORE_MODEL at the boundary so a bad value
