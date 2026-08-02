@@ -27,7 +27,7 @@ export type Dimension =
   | "self-ds"
   | "consumer";
 
-export type InvariantId = "C1" | "C2" | "H2" | "H3";
+export type InvariantId = "C1" | "C2" | "H2" | "H3" | "H4";
 export type CheckStatus = "enforced" | "known-gap";
 
 export interface GenRepo extends GoldenRepo {
@@ -59,7 +59,7 @@ export const GENERALIZATION_CORPUS: GenRepo[] = [
     ".",
     "element-plus",
     ["vue", "self-ds", "tokens-scss"],
-    { H2: "enforced", H3: "enforced", C1: "enforced", C2: "enforced" },
+    { H2: "enforced", H3: "enforced", C1: "enforced", C2: "enforced", H4: "enforced" },
   ),
   pin(
     "chakra-ui/chakra-ui",
@@ -67,7 +67,7 @@ export const GENERALIZATION_CORPUS: GenRepo[] = [
     ".",
     "chakra",
     ["react", "self-ds", "tokens-js-theme"],
-    { H2: "enforced", C2: "enforced", C1: "known-gap" },
+    { H2: "enforced", C2: "enforced", C1: "known-gap", H4: "enforced" },
   ),
   pin(
     "mantinedev/mantine",
@@ -75,7 +75,7 @@ export const GENERALIZATION_CORPUS: GenRepo[] = [
     ".",
     "mantine",
     ["react", "self-ds", "tokens-css-vars"],
-    { H2: "enforced", C1: "enforced", C2: "enforced" },
+    { H2: "enforced", C1: "enforced", C2: "enforced", H4: "enforced" },
   ),
   pin(
     "radix-ui/primitives",
@@ -83,7 +83,7 @@ export const GENERALIZATION_CORPUS: GenRepo[] = [
     ".",
     "radix",
     ["react", "self-ds"],
-    { H2: "enforced", C1: "enforced", C2: "enforced" },
+    { H2: "enforced", C1: "enforced", C2: "enforced", H4: "enforced" },
   ),
   pin(
     "twbs/bootstrap",
@@ -91,7 +91,7 @@ export const GENERALIZATION_CORPUS: GenRepo[] = [
     ".",
     "bootstrap",
     ["self-ds", "css-class", "tokens-scss"],
-    { C1: "enforced", C2: "known-gap", H2: "known-gap" },
+    { C1: "enforced", C2: "known-gap", H2: "known-gap", H4: "enforced" },
   ),
   pin(
     "saadeghi/daisyui",
@@ -99,7 +99,7 @@ export const GENERALIZATION_CORPUS: GenRepo[] = [
     ".",
     "daisyui",
     ["self-ds", "css-class", "tokens-css-vars"],
-    { C1: "enforced", C2: "known-gap", H2: "known-gap" },
+    { C1: "enforced", C2: "known-gap", H2: "known-gap", H4: "enforced" },
   ),
   pin(
     "carbon-design-system/carbon-components-svelte",
@@ -107,7 +107,7 @@ export const GENERALIZATION_CORPUS: GenRepo[] = [
     ".",
     "carbon-svelte",
     ["svelte", "self-ds"],
-    { H3: "enforced", C2: "known-gap" },
+    { H3: "enforced", C2: "known-gap", H4: "enforced" },
   ),
   pin(
     "cruip/tailwind-dashboard-template",
@@ -115,7 +115,7 @@ export const GENERALIZATION_CORPUS: GenRepo[] = [
     ".",
     "tailwind-dashboard",
     ["consumer"],
-    { H2: "enforced" },
+    { H2: "enforced", H4: "enforced" },
   ),
   // Added Task 7 (evidence-based-ds-detection, 2026-07-30). SHAs resolved from
   // each repo's default branch that day. All four declared checks probed
@@ -129,7 +129,7 @@ export const GENERALIZATION_CORPUS: GenRepo[] = [
     ".",
     "vuetify",
     ["vue", "self-ds", "tokens-scss"],
-    { C1: "enforced", C2: "enforced", H2: "enforced", H3: "enforced" },
+    { C1: "enforced", C2: "enforced", H2: "enforced", H3: "enforced", H4: "enforced" },
   ),
   pin(
     "huntabyte/shadcn-svelte",
@@ -137,6 +137,6 @@ export const GENERALIZATION_CORPUS: GenRepo[] = [
     ".",
     "shadcn-svelte",
     ["svelte", "self-ds", "tokens-css-vars"],
-    { C1: "enforced", C2: "enforced", H2: "enforced", H3: "enforced" },
+    { C1: "enforced", C2: "enforced", H2: "enforced", H3: "enforced", H4: "enforced" },
   ),
 ];

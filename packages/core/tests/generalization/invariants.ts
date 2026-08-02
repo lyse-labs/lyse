@@ -4,6 +4,7 @@
 import type { AuditResult } from "../../src/types.js";
 import type { DesignSystemGraph } from "../../src/graph/types.js";
 import type { GenRepo, InvariantId } from "./corpus.js";
+import { countedFindingPredicate, countedFromAxes } from "../../src/cli/output/counted.js";
 
 export interface AuditObservation {
   result: AuditResult;
@@ -49,6 +50,18 @@ export const INVARIANTS: Invariant[] = [
         return { pass: !flagged, detail: `dsSelfMode=${flagged} (expected false — consumer)` };
       }
       return { pass: flagged, detail: `dsSelfMode=${flagged} (expected true — self-DS)` };
+    },
+  },
+  {
+    id: "H4",
+    title: "the findings the reporters call counted are the findings the axes counted",
+    check({ result }) {
+      const fromFindings = result.findings.filter(countedFindingPredicate(result)).length;
+      const fromAxes = countedFromAxes(result);
+      return {
+        pass: fromFindings === fromAxes,
+        detail: `perFinding=${fromFindings} perAxis=${fromAxes}`,
+      };
     },
   },
   {

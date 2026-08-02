@@ -20,7 +20,7 @@ export function renderScoreGauge(
       : "";
   const countedLine =
     experimental > 0
-      ? `${counted} stable findings  ·  ${experimental} experimental (not counted)`
+      ? `${counted} findings counted in score  ·  ${experimental} not counted`
       : `${counted} findings counted in score`;
   return [
     sep,

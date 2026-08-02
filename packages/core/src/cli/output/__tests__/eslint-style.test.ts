@@ -25,7 +25,9 @@ describe("renderEslintStyle", () => {
     expect(out).toContain("literal #fff");
   });
 
-  it("emits EXP tag for low-confidence findings", () => {
+  // EXP means "did not move the score", not "no safe autofix". Keying it on
+  // `confidence` displayed score-driving errors as EXP (#277).
+  it("emits EXP tag for a finding that did not count toward the score", () => {
     const out = renderEslintStyle({
       findings: [
         {
@@ -36,6 +38,7 @@ describe("renderEslintStyle", () => {
           line: 7,
           column: 1,
           confidence: "low",
+          counted: false,
         },
       ],
       counted: 0,
@@ -43,6 +46,27 @@ describe("renderEslintStyle", () => {
     });
     expect(out).toContain("EXP");
     expect(out).not.toContain("WARNING");
+  });
+
+  it("shows the severity of a counted finding even when its confidence is low", () => {
+    const out = renderEslintStyle({
+      findings: [
+        {
+          ruleId: "a11y/interactive-role-name",
+          severity: "warning",
+          message: "no accessible name",
+          file: "src/widgets/Card.tsx",
+          line: 7,
+          column: 1,
+          confidence: "low",
+          counted: true,
+        },
+      ],
+      counted: 1,
+      experimental: 0,
+    });
+    expect(out).toContain("WARNING");
+    expect(out).not.toContain("EXP");
   });
 
   it("pads file location so the severity column aligns", () => {
@@ -197,14 +221,23 @@ describe("renderScoreGauge", () => {
     const out = renderScoreGauge(87, "scoring-v1", 12, 5);
     expect(out).toContain("Health Score: 87 / 100");
     expect(out).toContain("scoring-v1");
-    expect(out).toContain("12 stable findings");
-    expect(out).toContain("5 experimental (not counted)");
+    expect(out).toContain("12 findings counted in score");
+    expect(out).toContain("5 not counted");
   });
 
-  it("omits the experimental count when there are no experimental findings", () => {
+  // "stable / experimental" named the reliability catalogue's rule tiers, which
+  // is not the partition this line reports — a finding on a stable rule does
+  // not count if its axis abstained (#277).
+  it("says counted and not counted, not stable and experimental", () => {
+    const out = renderScoreGauge(87, "scoring-v1", 12, 5);
+    expect(out).not.toContain("stable");
+    expect(out).not.toContain("experimental");
+  });
+
+  it("omits the second number when every finding counted", () => {
     const out = renderScoreGauge(100, "scoring-v1", 0, 0);
     expect(out).toContain("0 findings counted in score");
-    expect(out).not.toContain("experimental");
+    expect(out).not.toContain("not counted");
   });
 
   it("supports an N/A score for repos with no opportunities", () => {

@@ -8,6 +8,12 @@ export interface EslintStyleFinding {
   line: number | null;
   column?: number | null;
   confidence?: "high" | "medium" | "low";
+  /**
+   * Whether this finding moved the Health Score. Drives the `EXP` tag, which
+   * used to be driven by `confidence === "low"` — a codemod-safety field the
+   * scorer never reads, so score-driving errors were displayed as `EXP` (#277).
+   */
+  counted?: boolean;
 }
 
 export interface RenderInput {
@@ -25,7 +31,7 @@ function normalizeSeverity(s: string): string {
   return s;
 }
 
-export function fromLegacyFinding(f: LegacyFinding): EslintStyleFinding {
+export function fromLegacyFinding(f: LegacyFinding, counted?: boolean): EslintStyleFinding {
   const out: EslintStyleFinding = {
     ruleId: f.ruleId,
     severity: f.severity,
@@ -35,6 +41,7 @@ export function fromLegacyFinding(f: LegacyFinding): EslintStyleFinding {
     column: f.location.column,
   };
   if (f.confidence !== undefined) out.confidence = f.confidence;
+  if (counted !== undefined) out.counted = counted;
   return out;
 }
 
@@ -48,7 +55,7 @@ export function renderEslintStyle(input: RenderInput): string {
   const lines: string[] = [];
   for (const f of shown) {
     const loc = `${f.file}:${f.line ?? "?"}:${f.column ?? "?"}`;
-    const tag = f.confidence === "low" ? "EXP" : normalizeSeverity(f.severity).toUpperCase();
+    const tag = f.counted === false ? "EXP" : normalizeSeverity(f.severity).toUpperCase();
     lines.push(`  ${loc.padEnd(LOC_WIDTH)} ${tag.padEnd(TAG_WIDTH)} ${f.ruleId}`);
     if (f.message) lines.push(`    ${f.message}`);
   }
