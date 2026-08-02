@@ -70,10 +70,12 @@ its place by being load-bearing for review.
 
 `main` is protected. Settings as of 2026-06-06:
 
-- **Required checks:** `test`, `perf`, `Check markdown links`, `bench-golden`,
-  `generalization` — the last two are the only checks that run Lyse against
-  real third-party design systems. Promoted 2026-08-02; before that, no
-  required check ran Lyse on a real repository at all.
+- **Required checks:** `test`, `test-windows`, `perf`, `Check markdown links`,
+  `bench-golden`, `generalization`. The last two are the only checks that run
+  Lyse against real third-party design systems — promoted 2026-08-02; before
+  that, no required check ran Lyse on a real repository at all. `test-windows`
+  was promoted the same day: it hard-fails but was not required, so a Windows
+  break merged in silence (it did, on #263).
 - **Linear history** required — rebase against `main` before merge if behind
 - **No merge commits** — use `gh pr merge --squash` or `gh pr merge --rebase`
 - **Conversation resolution** required — all review threads must be
