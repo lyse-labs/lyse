@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runAuditTest, LYSE_CLI_PATH } from "./_helpers/cli.js";
@@ -18,7 +19,9 @@ describe("cli --format=sarif", () => {
   });
 
   it("writes lyse.sarif when --output given", () => {
-    const tmp = `/tmp/lyse-sarif-${Date.now()}`;
+    // Use the real OS temp dir, not a hardcoded "/tmp": on Windows that resolves
+    // to D:\tmp, which need not exist, and the write fails with ENOENT.
+    const tmp = mkdtempSync(join(tmpdir(), "lyse-sarif-"));
     execSync(`node ${cli} audit ${fixture} --static-only --format sarif --output ${tmp}`, { stdio: "inherit" });
     const file = join(tmp, "lyse.sarif");
     expect(existsSync(file)).toBe(true);
