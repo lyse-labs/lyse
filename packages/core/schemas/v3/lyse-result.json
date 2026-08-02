@@ -40,6 +40,10 @@
             "type": "integer",
             "minimum": 0,
             "description": "Findings reported on this axis that the score deliberately ignores (experimental sub-axes, rules silenced by degraded extraction). A non-zero value means `score` was computed from a subset of this axis's checks."
+          },
+          "abstentionReason": {
+            "type": "string",
+            "description": "Why this axis was not scored, in a sentence. Present only when `score` is \"N/A\". `N/A` alone does not say whether the repository has nothing to measure, whether Lyse could not read it, or whether the checks that count never ran — three situations needing three different responses."
           }
         }
       }

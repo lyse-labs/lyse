@@ -1,3 +1,4 @@
+import { abstentionReason } from "./reliability/score/abstention.js";
 import type { AxisName, Finding, PerRuleOpportunity } from "./types.js";
 import { scoreTotier, type MaturityTier } from "./scorer.js";
 
@@ -40,6 +41,12 @@ export function scoreV3(
     scoreContributingRuleIds?: ReadonlySet<string>;
     blockedRuleIds?: ReadonlySet<string>;
     minScoredAxes?: number;
+    /**
+     * Degraded extractors grouped by the axis whose rules they blocked. Naming
+     * an extractor on an axis it did not affect points the user at the wrong
+     * thing, so this is per-axis, never a flat list.
+     */
+    degradedExtractorsByAxis?: ReadonlyMap<string, readonly string[]>;
   } = {},
 ): ScoreV3Result {
   const minN = Math.max(1, opts.minSampleSize ?? MIN_SAMPLE_SIZE);
@@ -85,7 +92,15 @@ export function scoreV3(
     // An axis left below its sample floor by the blocked-rule exclusion abstains
     // here, on its own — no separate axis-level silencing is needed.
     if (opp < minN) {
-      axes.push({ axis, score: "N/A", findings: fnd, opportunities: opp, unscoredFindings });
+      const why = abstentionReason({
+        opportunities: opp,
+        minSampleSize: minN,
+        blockedExtractors: opts.degradedExtractorsByAxis?.get(axis) ?? [],
+      });
+      axes.push({
+        axis, score: "N/A", findings: fnd, opportunities: opp, unscoredFindings,
+        ...(why !== null ? { abstentionReason: why } : {}),
+      });
       continue;
     }
     const clean = cleanByAxis.get(axis) ?? 0;

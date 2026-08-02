@@ -48,7 +48,7 @@ import { VERSION } from "../index.js";
 import { RULES_VERSION } from "../rules/manifest.js";
 import { runLayer4Stage } from "../llm/layer4-stage.js";
 import { runFilterStage } from "../llm/filter-stage.js";
-import { rulesBlockedByDegradedExtraction } from "../reliability/score/coverage.js";
+import { blockedExtractorsByAxis, rulesBlockedByDegradedExtraction } from "../reliability/score/coverage.js";
 import { isSuppressed } from "../suppression/inline.js";
 import { loadLyseIgnore } from "../suppression/lyseignore.js";
 import fg from "fast-glob";
@@ -677,6 +677,7 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
     aiGovernanceGrace,
     filterRan: filter.meta.filterRan,
     blockedRuleIds: rulesBlockedByDegradedExtraction(graph.extraction),
+    degradedExtractorsByAxis: blockedExtractorsByAxis(graph.extraction),
   };
   const bundle = scoreAudit(scoreModel, runResult, scoreOpts);
 
