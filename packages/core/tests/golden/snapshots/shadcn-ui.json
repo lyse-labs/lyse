@@ -46,7 +46,7 @@
   ],
   "finalScore": "N/A",
   "findingsCount": 1674,
-  "findingsDigest": "9a74762cde1be8cff194ba54be0e468dad2e12ff7ec627a81b776cac3819c9ca",
+  "findingsDigest": "a26c5f72cecc3557da1f39bf8446bb91ed1205c51415e3db31ff92140f6d2e30",
   "grade": {
     "autoFailed": false,
     "grade": "N/A",
@@ -81,8 +81,8 @@
         },
         {
           "evidence": {
-            "tokenNodes": 214,
-            "tokenSources": 2
+            "tokenNodes": 222,
+            "tokenSources": 3
           },
           "extractor": "tokens",
           "remediation": null,

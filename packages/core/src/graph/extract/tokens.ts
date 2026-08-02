@@ -2,6 +2,7 @@ import {
   fromTailwindV3, fromTailwindV4, fromDtcg, fromValueTypeTokens,
 } from "../../loaders/tokens.js";
 import { fromExternalPackages, type ExternalTokenPackage } from "../../loaders/external-tokens.js";
+import { jsTokenDeclsFromContents } from "./js-tokens.js";
 import { normalizeToDtcg } from "../../tokens/normalizer.js";
 import { isDtcgToken } from "../../tokens/dtcg-model.js";
 import { dimensionAxisForPath, numberAxisForPath } from "../../tokens/axis-heuristics.js";
@@ -209,6 +210,9 @@ export async function extractTokens(
     for (const n of ns) { nodes.push(n); sources.add(n.source); }
   }
   for (const n of declsToNodes(cssCustomPropDeclsFromParsed(parsed), "css-custom-property")) {
+    nodes.push(n); sources.add(n.source);
+  }
+  for (const n of declsToNodes(jsTokenDeclsFromContents(fileContents), "js-module")) {
     nodes.push(n); sources.add(n.source);
   }
   for (const n of declsToNodes(scssVarDeclsFromContents(fileContents), "scss-variable")) {

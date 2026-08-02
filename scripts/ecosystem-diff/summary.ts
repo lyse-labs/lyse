@@ -16,6 +16,8 @@
  * is dropped here, so a diff means a behaviour change and nothing else.
  */
 
+import { createHash } from "node:crypto";
+
 export type Score = number | "N/A" | "(no result)";
 
 export interface RepoSummary {
@@ -24,15 +26,28 @@ export interface RepoSummary {
   axes: Record<string, { score: Score; findings: number; opportunities: number }>;
   findingsByRule: Record<string, number>;
   extraction: Record<string, string>;
+  /**
+   * The extractors' evidence numbers, not just their ok/degraded status.
+   * Tracking only the status missed `tokenNodes 78 -> 79` on polaris and
+   * `214 -> 222` on shadcn — real behaviour changes this report called
+   * "unchanged" while the golden snapshots recorded them.
+   */
+  extractionEvidence: Record<string, number>;
+  /**
+   * A digest over finding identity (rule, file, line), so a finding that MOVES
+   * or changes shape is visible even when the per-rule counts are identical.
+   * polaris's findingsDigest changed with every rule count equal.
+   */
+  findingsDigest: string;
 }
 
 interface AuditIsh {
   finalScore?: unknown;
   score?: unknown;
   axes?: { axis?: unknown; score?: unknown; findings?: unknown; opportunities?: unknown }[];
-  findings?: { ruleId?: unknown }[];
-  meta?: { extraction?: { entries?: { extractor?: unknown; status?: unknown }[] } };
-  extraction?: { entries?: { extractor?: unknown; status?: unknown }[] };
+  findings?: { ruleId?: unknown; location?: { file?: unknown; line?: unknown } }[];
+  meta?: { extraction?: { entries?: { extractor?: unknown; status?: unknown; evidence?: Record<string, unknown> }[] } };
+  extraction?: { entries?: { extractor?: unknown; status?: unknown; evidence?: Record<string, unknown> }[] };
 }
 
 const asScore = (v: unknown): Score =>
@@ -55,11 +70,22 @@ export function summarize(repo: string, audit: unknown): RepoSummary {
     findingsByRule[f.ruleId] = (findingsByRule[f.ruleId] ?? 0) + 1;
   }
   const extraction: Record<string, string> = {};
+  const extractionEvidence: Record<string, number> = {};
   for (const e of a.meta?.extraction?.entries ?? a.extraction?.entries ?? []) {
     if (typeof e.extractor !== "string" || typeof e.status !== "string") continue;
     extraction[e.extractor] = e.status;
+    for (const [k, v] of Object.entries(e.evidence ?? {})) {
+      if (typeof v === "number") extractionEvidence[`${e.extractor}.${k}`] = v;
+    }
   }
-  return { repo, score: asScore(a.finalScore ?? a.score), axes, findingsByRule, extraction };
+  const identities = (a.findings ?? [])
+    .map((f) => `${String(f.ruleId)}|${String(f.location?.file)}|${String(f.location?.line)}`)
+    .sort();
+  const findingsDigest = createHash("sha256").update(identities.join("\n")).digest("hex").slice(0, 12);
+  return {
+    repo, score: asScore(a.finalScore ?? a.score), axes, findingsByRule,
+    extraction, extractionEvidence, findingsDigest,
+  };
 }
 
 const keys = (...records: Record<string, unknown>[]): string[] =>
@@ -94,6 +120,19 @@ export function diffSummaries(before: RepoSummary, after: RepoSummary): string[]
     const b = before.extraction[extractor] ?? "(absent)";
     const a = after.extraction[extractor] ?? "(absent)";
     if (b !== a) lines.push(`extraction ${extractor} ${b} -> ${a}`);
+  }
+
+  for (const key of keys(before.extractionEvidence, after.extractionEvidence)) {
+    const b = before.extractionEvidence[key];
+    const a = after.extractionEvidence[key];
+    if (b !== a) lines.push(`evidence ${key} ${b ?? "(absent)"} -> ${a ?? "(absent)"}`);
+  }
+
+  if (before.findingsDigest !== after.findingsDigest) {
+    lines.push(
+      `finding identities changed (digest ${before.findingsDigest} -> ${after.findingsDigest})` +
+        (lines.length === 0 ? " — with every count equal, so something moved or was reworded" : ""),
+    );
   }
 
   return lines;

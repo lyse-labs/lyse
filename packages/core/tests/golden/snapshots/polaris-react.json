@@ -82,8 +82,8 @@
         },
         {
           "evidence": {
-            "tokenNodes": 78,
-            "tokenSources": 1
+            "tokenNodes": 79,
+            "tokenSources": 2
           },
           "extractor": "tokens",
           "remediation": null,
