@@ -49,6 +49,7 @@ packages/core/fixtures/**/.lyse/
 # Local agent state
 .claude/*
 !.claude/skills/
+!.claude/agents/
 .claude/settings.local.json
 .worktrees/
 
