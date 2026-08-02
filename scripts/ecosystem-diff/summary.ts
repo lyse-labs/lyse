@@ -127,7 +127,8 @@ export function renderReport(diffs: readonly RepoDiff[], baselineRef = "origin/m
   }
 
   if (moved.length === 0) {
-    out.push(`No behavioural change on any of the ${compared.length} repositories compared.`);
+    const plural = compared.length === 1 ? "repository" : `${compared.length} repositories`;
+    out.push(`No behavioural change on ${compared.length === 1 ? "the one" : "any of the"} ${plural} compared.`);
     out.push("");
     out.push(`<sub>Compared: ${compared.map((d) => d.repo).join(", ")}</sub>`);
     return out.join("\n");

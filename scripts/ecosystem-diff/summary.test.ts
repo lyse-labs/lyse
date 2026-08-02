@@ -111,6 +111,9 @@ describe("renderReport", () => {
   it("says so explicitly when nothing changed anywhere", () => {
     const report = renderReport([{ repo: "carbon", lines: [] }]);
     expect(report).toContain("No behavioural change");
+    expect(report).toContain("the one repository");
+    expect(renderReport([{ repo: "a", lines: [] }, { repo: "b", lines: [] }]))
+      .toContain("any of the 2 repositories");
   });
 
   it("names the baseline it compared against, not a hardcoded one", () => {

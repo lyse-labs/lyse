@@ -60,6 +60,16 @@ function buildBaseline(): string {
   mkdirSync(WORK_DIR, { recursive: true });
 
   log(`building baseline from ${BASELINE_REF}…`);
+  // A run killed between `add` and `remove` leaves the path registered in git's
+  // worktree list even after the directory is gone, and the next `add` then
+  // fails with "already registered". Pruning first makes the script re-runnable
+  // after an interrupted run, which on CI is the difference between a retry
+  // that works and a job that is red until someone clears state by hand.
+  try {
+    execFileSync("git", ["worktree", "prune"], { cwd: REPO_ROOT, stdio: "ignore" });
+  } catch {
+    // Nothing to prune, or git is unhappy for a reason `add` will report better.
+  }
   execFileSync("git", ["worktree", "add", "--detach", dir, BASELINE_REF], {
     cwd: REPO_ROOT,
     stdio: "inherit",
@@ -115,28 +125,38 @@ async function main(): Promise<void> {
   }
 
   const diffs: RepoDiff[] = [];
-  for (const repo of repos) {
-    log(`  ${repo.label}…`);
-    const root = await fetchGoldenRepo(repo);
-    if (root === null) {
-      diffs.push({ repo: repo.label, lines: [], failed: "checkout could not be fetched" });
-      continue;
+  try {
+    for (const repo of repos) {
+      log(`  ${repo.label}…`);
+      let root: string | null = null;
+      try {
+        root = await fetchGoldenRepo(repo);
+      } catch (err) {
+        diffs.push({ repo: repo.label, lines: [], failed: `fetch threw: ${(err as Error).message}` });
+        continue;
+      }
+      if (root === null) {
+        diffs.push({ repo: repo.label, lines: [], failed: "checkout could not be fetched" });
+        continue;
+      }
+      const target = repo.auditSubpath === "." ? root : join(root, repo.auditSubpath);
+      const before = audit(baselineCli, target);
+      const after = audit(currentCli, target);
+      if (before === null || after === null) {
+        const which = before === null && after === null ? "both binaries" : before === null ? "the baseline" : "this branch";
+        diffs.push({ repo: repo.label, lines: [], failed: `audit produced no parseable JSON on ${which}` });
+        continue;
+      }
+      diffs.push({
+        repo: repo.label,
+        lines: diffSummaries(summarize(repo.label, before), summarize(repo.label, after)),
+      });
     }
-    const target = repo.auditSubpath === "." ? root : join(root, repo.auditSubpath);
-    const before = audit(baselineCli, target);
-    const after = audit(currentCli, target);
-    if (before === null || after === null) {
-      const which = before === null && after === null ? "both binaries" : before === null ? "the baseline" : "this branch";
-      diffs.push({ repo: repo.label, lines: [], failed: `audit produced no parseable JSON on ${which}` });
-      continue;
-    }
-    diffs.push({
-      repo: repo.label,
-      lines: diffSummaries(summarize(repo.label, before), summarize(repo.label, after)),
-    });
+  } finally {
+    // Always: a leaked worktree makes the NEXT run fail, and a diff harness
+    // that breaks the run after it is worse than no harness.
+    cleanupBaseline();
   }
-
-  cleanupBaseline();
 
   const report = renderReport(diffs, BASELINE_REF);
   process.stdout.write(AS_MARKDOWN ? `${report}\n` : `\n${report}\n`);
