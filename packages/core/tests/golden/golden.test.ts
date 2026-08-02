@@ -6,6 +6,7 @@ import { auditDirectory } from "../../src/commands/audit-pipeline.js";
 import { GOLDEN_CORPUS, type GoldenRepo } from "./corpus.js";
 import { fetchGoldenRepo } from "./fetch.js";
 import { compactGolden } from "./normalization.js";
+import { snapshotAction, missingSnapshotMessage } from "./snapshot-policy.js";
 
 const NET = process.env.LYSE_GOLDEN === "1";
 const UPDATE = process.env.UPDATE_GOLDEN === "1";
@@ -26,7 +27,9 @@ describe.runIf(NET)("golden corpus snapshots", () => {
       const first = await auditRepo(repo);
       expect(first, "fetch failed under LYSE_GOLDEN=1").not.toBeNull();
       const snapPath = join(SNAP_DIR, `${repo.label}.json`);
-      if (UPDATE || !existsSync(snapPath)) {
+      const action = snapshotAction({ exists: existsSync(snapPath), update: UPDATE });
+      if (action === "fail") throw new Error(missingSnapshotMessage(repo.label));
+      if (action === "write") {
         mkdirSync(SNAP_DIR, { recursive: true });
         writeFileSync(snapPath, first!.json);
       }
