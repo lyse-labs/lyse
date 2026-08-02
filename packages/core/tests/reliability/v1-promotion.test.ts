@@ -48,12 +48,23 @@ const PROMOTED_2026_06_20 = [
   "tokens.media-query",
   "a11y.forced-colors",
   "ai-governance.product-analytics",
-  "tokens.css-custom-property-export",
   "tokens.container-query",
   "a11y.html-lang",
   "a11y.semantic-html",
   "components.icon-decorative-aria",
 ];
+
+/**
+ * Demoted 2026-08-02 with a reproduced false positive, so it is no longer part
+ * of the batch this file guards. `tokens/css-custom-property-export` reports
+ * that element-plus "exports no CSS custom properties"; `--el-*` is the most
+ * widely consumed CSS variable set in the Vue ecosystem, but the names are
+ * assembled at Sass compile time and exist nowhere as literals for a text scan.
+ * Its 0.90+ bounds came from the synthetic recall suite, where every fixture
+ * writes its variables out literally — the population the rule fails on was not
+ * in the sample.
+ */
+const DEMOTED_SINCE_2026_06_20 = ["tokens.css-custom-property-export"];
 
 // Demoted back to experimental after corpus precision-validation (2026-06-20):
 // `tokens.gradient` fires on functional gradients (alpha-checkerboards).
@@ -83,7 +94,8 @@ describe("v1 promotion of the 2026-06-20 deterministic coverage batch", () => {
   it("the trusted stable set now includes the batch (≥ 52 total)", () => {
     const v1 = resolveStableSubAxes(SUB_AXES, { filterRan: false });
     for (const id of PROMOTED_2026_06_20) expect(v1.has(id)).toBe(true);
-    expect(v1.size).toBeGreaterThanOrEqual(52);
+    for (const id of DEMOTED_SINCE_2026_06_20) expect(v1.has(id)).toBe(false);
+    expect(v1.size).toBeGreaterThanOrEqual(51);
   });
 
   it("the re-promoted #77 public-API doc-comments sub-axis is stable + scored with both LBs >= 0.90", () => {

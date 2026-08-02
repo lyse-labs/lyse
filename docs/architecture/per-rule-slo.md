@@ -15,7 +15,6 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 | `tokens/no-hardcoded-border-radius` | `tokens.border-radius` | 0.958 | 0.916 | 0 | 2026-06-18 |
 | `tokens/no-hardcoded-border-width` | `tokens.border-width` | 0.974 | 0.916 | 0 | 2026-06-18 |
 | `tokens/container-query` | `tokens.container-query` | 0.912 | 0.901 | 0 | 2026-06-20 |
-| `tokens/css-custom-property-export` | `tokens.css-custom-property-export` | 0.904 | 0.901 | 0 | 2026-06-20 |
 | `tokens/deprecated-token-usage` | `tokens.deprecated-token-usage` | 0.901 | 0.904 | 0 | 2026-06-15 |
 | `tokens/description-coverage` | `tokens.description-coverage` | 0.901 | 0.901 | 0 | 2026-06-17 |
 | `tokens/dtcg-conformance` | `tokens.dtcg-conformance` | 0.901 | 0.901 | 0 | 2026-06-15 |
@@ -44,7 +43,7 @@ An empty table means no sub-axis has crossed the promotion gate yet. The reliabi
 | `stories/coverage` | `stories.coverage` | 0.901 | 0.901 | 0 | 2026-06-17 |
 | `ai-surface/agent-instruction-files` | `ai-surface.agent-instruction-files` | 0.901 | 0.901 | 0 | 2026-06-15 |
 | `ai-surface/agents-md-quality` | `ai-surface.agents-md-quality` | 0.901 | 0.901 | 0 | 2026-06-17 |
-| `versioning/changelog-present` | `ai-surface.changelog-present` | 0.901 | 0.904 | 0 | 2026-06-15 |
+| `versioning/changelog-present` | `ai-surface.changelog-present` | — | 0.904 | 0 | 2026-06-15 |
 | `ai-surface/component-manifest-json` | `ai-surface.component-manifest-json` | 0.901 | 0.901 | 0 | 2026-06-15 |
 | `versioning/deprecation-markers` | `ai-surface.deprecation-markers` | 0.901 | 0.904 | 0 | 2026-06-17 |
 | `ai-surface/ds-index-exported` | `ai-surface.ds-index-exported` | 0.901 | 0.901 | 0 | 2026-06-15 |
