@@ -81,6 +81,35 @@ describe("diffSummaries", () => {
     expect(text).toContain("a11y/semantic-html 0 -> 1");
   });
 
+  it("reports an extraction evidence number even when the status is unchanged", () => {
+    // The gap this closes: tracking only ok/degraded, this report called polaris
+    // and shadcn "unchanged" while their golden snapshots recorded
+    // `tokenNodes 78 -> 79` and `214 -> 222`. A summary that misses a real
+    // behaviour change is worse than no summary — it says "nothing moved".
+    const after = summarize("carbon", audit({
+      meta: { extraction: { entries: [
+        { extractor: "components", status: "ok", evidence: { components: 999 } },
+        { extractor: "stories", status: "degraded", evidence: { linked: 0, storyFiles: 103 } },
+      ] } },
+    }));
+    expect(diffSummaries(before, after).join(" ")).toContain("evidence components.components 281 -> 999");
+  });
+
+  it("reports a finding that moved, even when every per-rule count is identical", () => {
+    // polaris's findingsDigest changed with all counts equal: something was
+    // reworded or relocated. Counts alone cannot see that.
+    const after = summarize("carbon", audit({
+      findings: [
+        { ruleId: "components/doc-comments", axis: "components", location: { file: "src/A.tsx", line: 3 } },
+        { ruleId: "components/doc-comments", axis: "components", location: { file: "src/MOVED.tsx", line: 9 } },
+        { ruleId: "tokens/no-hardcoded-spacing", axis: "tokens", location: { file: "src/A.tsx", line: 5 } },
+      ],
+    }));
+    const lines = diffSummaries(before, after);
+    expect(lines.join(" ")).toContain("finding identities changed");
+    expect(lines.join(" ")).toContain("every count equal");
+  });
+
   it("reports an extraction status flip", () => {
     const after = summarize("carbon", audit({
       meta: { extraction: { entries: [
