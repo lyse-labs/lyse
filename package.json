@@ -20,6 +20,7 @@
     "measure:rules": "tsx scripts/measure-rules.ts",
     "measure:ledger": "tsx scripts/measure-ledger.ts",
     "measure:recall": "tsx scripts/measure-recall.ts",
+    "measure:ds-detection": "tsx scripts/measure-ds-detection.ts",
     "mine:recall": "tsx scripts/mine-gold-recall.ts",
     "gold:fetch-pins": "tsx scripts/gold-corpus/fetch-pins.ts",
     "docs:reliability:rules": "tsx scripts/generate-rule-docs-reliability.ts",
