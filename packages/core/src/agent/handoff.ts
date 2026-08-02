@@ -1,11 +1,12 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { spawn } from "node:child_process";
 import type { Finding, TokenMap } from "../types.js";
 import type { AgentId } from "./registry.js";
 import { launchArgs, copyToClipboard } from "./launch.js";
 import { transcriptPath, openTranscript } from "./transcript.js";
+import { spawnGuarded } from "./spawn-guarded.js";
+import { resolveTimeoutMs } from "./timeout.js";
 import { isCommandAvailable, detectAgents } from "./registry.js";
 import { buildHandoffPayload, serializeTokenMap } from "./payload.js";
 import { installLyseSkill } from "./skill.js";
@@ -180,21 +181,9 @@ export async function spawnAgentLauncher(
   if (!args.launchSupported) return 1;
   const { binary, bypassFlags } = args;
   const log = openTranscript(transcriptPath(cwd));
-  const exitCode = await new Promise<number>((resolve) => {
-    // stdin stays inherited so `--review` mode can still prompt; stdout and
-    // stderr are piped and teed, because the default mode disables the agent's
-    // permission prompts and nothing else records what it did.
-    const proc = spawn(binary, [...bypassFlags, prompt], { stdio: ["inherit", "pipe", "pipe"], cwd });
-    const tee = (from: NodeJS.ReadableStream | null, to: NodeJS.WriteStream) => {
-      from?.on("data", (chunk: Buffer) => {
-        to.write(chunk);
-        log.write(chunk);
-      });
-    };
-    tee(proc.stdout, process.stdout);
-    tee(proc.stderr, process.stderr);
-    proc.on("error", () => resolve(1));
-    proc.on("close", (code) => resolve(code ?? 1));
+  const exitCode = await spawnGuarded(binary, [...bypassFlags, prompt], cwd, {
+    timeoutMs: resolveTimeoutMs(process.env),
+    log,
   });
   await log.close();
   return exitCode;
