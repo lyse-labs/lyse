@@ -80,3 +80,4 @@ lyse-golden-corpus/
 
 # Real-repo checkouts for `pnpm measure:oracle` (hundreds of MB, never committed)
 .oracle-corpus/
+.ecosystem-diff/
