@@ -27,6 +27,8 @@ import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { GOLDEN_CORPUS, type GoldenRepo } from "../packages/core/tests/golden/corpus.js";
 import { GENERALIZATION_CORPUS } from "../packages/core/tests/generalization/corpus.js";
+import { NEGATIVE_CORPUS } from "../packages/core/tests/generalization/negatives.js";
+import { jsTokenDeclsFromContents } from "../packages/core/src/graph/extract/js-tokens.js";
 import { fetchGoldenRepo } from "../packages/core/tests/golden/fetch.js";
 
 const CLI = resolve(
@@ -115,12 +117,15 @@ interface Row {
   declaredSass: number;
   declaredCssVar: number;
   declaredJs: number;
+  /** Distinct names the JS/TS reader would add, and whether this repo is a DS. */
+  jsReaderWouldAdd: number;
+  isDesignSystem: boolean;
 }
 
 function corpus(): GoldenRepo[] {
   const seen = new Set<string>();
   const out: GoldenRepo[] = [];
-  for (const r of [...GOLDEN_CORPUS, ...GENERALIZATION_CORPUS]) {
+  for (const r of [...GOLDEN_CORPUS, ...GENERALIZATION_CORPUS, ...NEGATIVE_CORPUS]) {
     if (seen.has(r.label)) continue;
     seen.add(r.label);
     out.push(r);
@@ -128,6 +133,20 @@ function corpus(): GoldenRepo[] {
   const only = process.env["TOKENS_ONLY"];
   return (only === undefined ? out : out.filter((r) => only.split(",").includes(r.label)))
     .sort((a, b) => (a.label < b.label ? -1 : 1));
+}
+
+/** Distinct token names `jsTokenDeclsFromContents` would contribute here. */
+async function jsReaderYield(root: string): Promise<number> {
+  const files = await filesWithExt(root, new Set([".js", ".ts", ".mjs", ".cjs", ".jsx", ".tsx"]));
+  const contents = new Map<string, string>();
+  for (const f of files) {
+    try {
+      contents.set(f, await readFile(f, "utf8"));
+    } catch {
+      continue;
+    }
+  }
+  return new Set(jsTokenDeclsFromContents(contents).map(([n]) => n)).size;
 }
 
 async function main(): Promise<void> {
@@ -145,6 +164,8 @@ async function main(): Promise<void> {
       declaredSass: await countIn(dir, [".scss", ".sass", ".less"], SASS_DECL),
       declaredCssVar: await countIn(dir, [".css", ".scss", ".sass"], CSS_VAR_DECL),
       declaredJs: await countIn(dir, [".js", ".ts", ".mjs", ".cjs"], JS_TOKEN_ENTRY),
+      jsReaderWouldAdd: await jsReaderYield(dir),
+      isDesignSystem: !NEGATIVE_CORPUS.some((n) => n.label === repo.label),
     });
   }
 
@@ -155,13 +176,14 @@ async function main(): Promise<void> {
 
   const pad = (s: string, n: number) => s.padEnd(n);
   process.stdout.write(
-    `${pad("repo", 22)}${pad("seen", 8)}${pad("srcs", 6)}${pad("sass $", 9)}${pad("--css", 9)}js-ish\n`,
+    `${pad("repo", 22)}${pad("seen", 8)}${pad("srcs", 6)}${pad("sass $", 9)}${pad("--css", 9)}${pad("js-ish", 9)}JS reader\n`,
   );
   for (const r of rows) {
     process.stdout.write(
       pad(r.repo, 22) + pad(r.seen < 0 ? "(failed)" : String(r.seen), 8) + pad(String(r.sources), 6) +
         pad(String(r.declaredSass), 9) + pad(String(r.declaredCssVar), 9) +
-        String(r.declaredJs) + "\n",
+        pad(String(r.declaredJs), 9) +
+        `${r.jsReaderWouldAdd}${r.isDesignSystem ? "" : "  <- NOT a design system"}` + "\n",
     );
   }
 
@@ -184,6 +206,20 @@ async function main(): Promise<void> {
       `mostly dedup, not blindness. The unambiguous cases are single-theme repos and JS:\n` +
       `chakra sees 0 of 995 JS-ish declarations, bootstrap 113 of 1299 Sass, element-plus\n` +
       `15 of 461. Read the ratio as a pointer, never as a score.\n`,
+  );
+
+  const ds = rows.filter((r) => r.isDesignSystem);
+  const neg = rows.filter((r) => !r.isDesignSystem);
+  const helped = ds.filter((r) => r.jsReaderWouldAdd > r.seen);
+  const misfired = neg.filter((r) => r.jsReaderWouldAdd > 0);
+  process.stdout.write(
+    `\nJS/TS reader at the current density gate:\n` +
+      `  would add more than the whole current extraction on ${helped.length} of ${ds.length} design systems\n` +
+      `  fires on ${misfired.length} of ${neg.length} repositories that are NOT design systems` +
+      `${misfired.length > 0 ? ` (${misfired.map((r) => `${r.repo}:${r.jsReaderWouldAdd}`).join(", ")})` : ""}\n` +
+      `  A token reader firing on a build tool is not automatically wrong — a repo can\n` +
+      `  hold token-shaped objects without being a design system — but it is the number\n` +
+      `  to look at before wiring this into extractTokens.\n`,
   );
 
   if (rows.length === 0) {
