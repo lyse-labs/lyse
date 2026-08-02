@@ -33,6 +33,8 @@ import { loadStories } from "../loaders/stories.js";
 import { ruleObjects } from "../rules/registry.js";
 import { loadGeneratedPack } from "../rules/pack-loader.js";
 import { buildDesignSystemGraph } from "../graph/builder.js";
+import { excludeZones } from "../graph/zones.js";
+import type { ZoneKind } from "../graph/types.js";
 import type { DesignSystemGraph } from "../graph/types.js";
 import { createResolver } from "../graph/resolve/index.js";
 import type { Resolver } from "../graph/resolve/types.js";
@@ -68,6 +70,13 @@ import type {
   TokenMap,
   ComponentInventoryEntry,
 } from "../types.js";
+
+/**
+ * Zones excluded from the audit. `test` only, for now: a mock is not a
+ * component. `story` is deliberately NOT here — a story is shipped
+ * documentation, and drift in the design system's own examples is real drift.
+ */
+const UNAUDITED_ZONES: ReadonlySet<ZoneKind> = new Set<ZoneKind>(["test"]);
 
 // Import for local use within this module (function signatures).
 import { RefuseToRunError, ScopeError, type AuditFlags } from "./audit-flags.js";
@@ -542,7 +551,14 @@ export async function auditDirectory(repoRoot: string, flags?: AuditFlags): Prom
   const activeRules = disabled.size > 0 ? allRules.filter((r) => !disabled.has(r.id)) : allRules;
 
   flags?.progress?.update(`Running ${activeRules.length} rules…`);
-  const runResult = await runRules(activeRules, ctx, parsed);
+  // A design system's test doubles are not its design system. The zone
+  // classifier already labels them; auditing them anyway put 19% of the
+  // findings on both held-out repos inside files nobody ships. Excluded here
+  // rather than after the fact, so a rule's opportunities disappear with its
+  // findings — `PerRuleOpportunity` has no file attribution, so dropping one
+  // side alone would inflate the clean rate.
+  const auditableParsed = excludeZones(parsed, graph.zones, UNAUDITED_ZONES);
+  const runResult = await runRules(activeRules, ctx, auditableParsed);
 
   // Apply inline suppression directives — `// lyse-disable-next-line <ruleId>`
   // and `/* lyse-disable <ruleId> */` — to drop findings the user has

@@ -142,3 +142,33 @@ describe("configuring Lyse never makes Lyse see less", () => {
     expect(after.graph.components.length).toBe(beforeCount);
   });
 });
+
+// 19% of findings on both held-out repos landed in files Lyse's own zone
+// classifier had already labelled `test` — 17 of 88 on primer-react, 61 of 322
+// on polaris. The largest score-contributing penalty group on primer,
+// components/svg-viewbox x17, was 15/17 inside test files, flagging things like
+// `vi.fn(() => <svg data-testid="icon" aria-hidden="true" />)` — a mock, not a
+// component. Penalising a design system for its own test doubles measures
+// nothing about the design system.
+describe("test files never move the score", () => {
+  it("reports no finding located inside a test file", async () => {
+    const dir = repo("test-zone", {
+      "package.json": JSON.stringify({ name: "test-zone", version: "1.0.0" }),
+      "src/components/Icon.tsx":
+        `export function Icon(){ return <svg viewBox="0 0 16 16" aria-hidden="true" />; }\n`,
+      // Same violation in both files; only the source one is a real defect.
+      "src/components/Broken.tsx":
+        `export function Broken(){ return <svg aria-hidden="true" />; }\n`,
+      "src/components/Icon.test.tsx":
+        `const Mock = () => <svg data-testid="icon" aria-hidden="true" />;\nexport default Mock;\n`,
+    });
+    const { result } = await audit(dir);
+    const inTests = result.findings.filter((f) => /\.(test|spec)\.[jt]sx?$/.test(f.location.file));
+    expect(inTests.map((f) => `${f.ruleId} @ ${f.location.file}`)).toEqual([]);
+  });
+
+  it("still reports the same violation when it is in real source", async () => {
+    const { result } = await audit(join(root, "test-zone"));
+    expect(result.findings.some((f) => f.location.file.includes("Broken.tsx"))).toBe(true);
+  });
+});
