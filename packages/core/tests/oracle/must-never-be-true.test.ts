@@ -172,3 +172,21 @@ describe("test files never move the score", () => {
     expect(result.findings.some((f) => f.location.file.includes("Broken.tsx"))).toBe(true);
   });
 });
+
+// `versioning/changelog-present` fired "No structured CHANGELOG found" on
+// element-plus, whose repo root holds CHANGELOG.en-US.md. It is a scored rule
+// claiming precisionMeasured: 1. A fixed list of filenames is deterministic —
+// it returns the same answer every run — but determinism is not correctness,
+// and the catalogue was reading the first as evidence of the second.
+describe("presence checks recognise the file when it is there", () => {
+  it("finds a localised CHANGELOG at the repo root", async () => {
+    const dir = repo("localised-changelog", {
+      "package.json": JSON.stringify({ name: "loc", version: "1.0.0" }),
+      "CHANGELOG.en-US.md": "# Changelog\n\n## [1.2.0]\n\n- something\n",
+      ...stubComponents(),
+    });
+    const { result } = await audit(dir);
+    const fired = result.findings.filter((f) => f.ruleId === "versioning/changelog-present");
+    expect(fired.map((f) => f.message)).toEqual([]);
+  });
+});
