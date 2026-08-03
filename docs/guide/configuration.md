@@ -105,6 +105,10 @@ designSystem:
 
 Files under `node_modules/`, `dist/`, `build/`, `coverage/` are excluded by default. You don't need to repeat them.
 
+Documentation and demo sites are excluded by default too — `apps/docs/`, `apps/www/`, `apps/<something>.dev/`, `apps/<something>.com/`, `docs/`, `website/`, `site/` and their in-monorepo variants — along with `examples/`, `test/`, `scripts/` and Storybook configuration.
+
+**Exception, for copy-paste registries.** If a `registry.json` inside one of the `apps/` directories above declares files that exist relative to it — the shadcn registry format — the directories it names are scanned, because that site is the distribution channel rather than a demo. Nothing else in the site is scanned. Your own `excludePaths` still win: adding `apps/www/**` yourself excludes it regardless of any registry.
+
 Globs use [fast-glob](https://github.com/mrmlnc/fast-glob) syntax.
 
 ### `includePaths`
