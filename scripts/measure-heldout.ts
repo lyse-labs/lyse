@@ -90,18 +90,18 @@ async function measurePositive(repo: (typeof HELDOUT_CORPUS)[number]): Promise<P
     }
     return {
       ...afterFetch,
-      extracted: { components: graph.components.length, tokens: graph.tokens.length },
-      fileCount,
-      score: result.finalScore,
       axes: result.axes.map((a) => ({
         abstentionReason: a.abstentionReason ?? null,
         axis: a.axis,
         opportunities: a.opportunities,
         score: a.score,
       })),
+      extracted: { components: graph.components.length, tokens: graph.tokens.length },
+      fileCount,
       findingsByRule: Object.fromEntries(
         Object.entries(findingsByRule).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
       ),
+      score: result.finalScore,
     };
   } catch (err) {
     return { ...afterFetch, error: errorMessage(err) };
