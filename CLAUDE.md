@@ -140,6 +140,30 @@ findings reproduce and are judged real, it earns write access on a narrow class
 — one fix per PR, measured on both corpora, never auto-merged. Below that, the
 harness is what needs work, not the permissions.
 
+## The labeling protocol
+
+`docs/measurement/labeling-protocol.md` is the pre-registered contract for deciding
+whether a finding is true, and `.claude/agents/label-*.md` are the five roles that run
+a round: three expert lenses (`ds-architect`, `framework-native`, `a11y`), an adversarial
+`skeptic` that may only emit `fp` or `survives`, and an `adjudicator` that computes
+inter-rater agreement and never labels anything itself.
+
+It exists because of a specific circularity: `reliability/measure/auto-label.ts` types its
+output as `source: "auto"` with no human path, and for several rules the labeler and the
+rule share a copy-pasted candidate list (`auto-label.ts:35` vs
+`rules/versioning-changelog-present.ts:10`). **A labeler that shares the rule's logic is not
+a measurement** — it cannot disagree with the thing it measures.
+
+This covers **precision** — is this finding, as worded, true at this location. It does not
+compete with the git-mined gold labels of ADR 0024 (`reliability/gold/*`), which are a
+**recall** source; ADR 0024 puts finding-level precision in the residual it does not cover.
+
+**Blocked, and it must stay blocked until fixed:** a round may only run on a held-out
+corpus. This repo has only `.bench-corpus`, which is the calibration set the protocol
+forbids labeling on, so nothing consumes these files yet and no round has been run. Do not
+"unblock" it by pointing a round at `.bench-corpus` — the adjudicator is written to refuse,
+and that refusal is the point. Building the held-out corpus is the next step.
+
 ## Operating principles
 
 - **Local-first by default.** New features should run on the user's machine unless they fundamentally cannot.

@@ -139,6 +139,8 @@ The critical jump is **Level 2 → 3**: from styling AI to governing how it *beh
 
 The Bench continuously verifies static-rule scores against LLM-expert grades, per dimension, using Cohen's κ. A static rule that doesn't track the expert is flagged — not surfaced as truth. Sub-axes only promote from `experimental` to `stable` when the Wilson 95 % lower bound ≥ 0.90 on the calibration corpus.
 
+**That threshold is in-sample, and we say so.** `.bench-corpus` is the set the rules were calibrated against, so a precision figure measured there reports how well a rule fits its own calibration data — not how it generalises to a repository it has never seen. It is a floor for shipping a rule, not evidence of field precision. The second limit is the labeler: those figures come from an automatic labeler that, for several rules, shares the rule's own detection code — so it cannot disagree with the thing it is measuring. [`docs/measurement/labeling-protocol.md`](./measurement/labeling-protocol.md) is the pre-registered contract that replaces both, on a held-out corpus with labelers independent of the rules. No round has run yet; until one does, read every promotion figure on this page as in-sample.
+
 This means Lyse can add new signals **without eroding trust**: every rule passes define → TDD → calibrate → validate → promote.
 
 > The Bench is itself the first implementation of **design-system observability** — one of Kavcic's twelve undocumented areas.
@@ -212,3 +214,4 @@ These are living inputs. Re-read them periodically — the rubrics evolve.
 | Date | Change |
 |------|--------|
 | 2026-06-10 | Initial doc — compiled and validated against primary sources |
+| 2026-08-03 | Disclosed that promotion figures are in-sample and auto-labelled; linked the pre-registered labeling protocol |
