@@ -1,6 +1,7 @@
 import fg from "fast-glob";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { registryDeclaredDirs } from "./detection/registry-evidence.js";
 
 /**
  * Exported so nothing has to keep a second copy. A hand-maintained duplicate of
@@ -44,7 +45,9 @@ const DEFAULT_IGNORES = [
  * config.designSystem.excludePaths — user paths EXTEND these defaults.
  */
 export const DEFAULT_EXCLUDE_PATHS = [
-  // Documentation and demo sites — never DS public API
+  // Documentation and demo sites — almost never DS public API. The exception is
+  // the copy-paste registry model, where the site IS the distribution channel:
+  // see REGISTRY_OVERRIDABLE_EXCLUDES below.
   "apps/docs/**",
   "apps/www/**",
   "apps/*.dev/**",
@@ -109,6 +112,22 @@ export const DEFAULT_EXCLUDE_PATHS = [
   "**/stories/**/*.cjs",
 ];
 
+/**
+ * The subset of DEFAULT_EXCLUDE_PATHS a `registry.json` may override, derived
+ * from the list rather than restated so the two cannot drift apart.
+ *
+ * Deliberately only the `apps/` doc-site group. Widening the override to the
+ * whole of DEFAULT_EXCLUDE_PATHS was measured across the same 58 checkouts: it
+ * admits the identical 244 files on the identical single repository, and costs
+ * 12.8s instead of 71ms because the recursively-anchored docs and fixtures
+ * patterns force a deep directory walk on every audit — the four `apps/` shapes
+ * touch one directory. Same benefit, 180x the price, and a wider blast
+ * radius on repositories nobody has looked at — so it is scoped to what the
+ * defect was measured on. #265 measured what widening a disqualifier costs when
+ * it is not: three labels broken for one repository fixed.
+ */
+const REGISTRY_OVERRIDABLE_EXCLUDES = DEFAULT_EXCLUDE_PATHS.filter((p) => p.startsWith("apps/"));
+
 function readGitignore(root: string): string[] {
   const path = join(root, ".gitignore");
   if (!existsSync(path)) return [];
@@ -126,14 +145,28 @@ export interface WalkOptions {
 export async function walk(root: string, opts: WalkOptions | string[] = {}): Promise<string[]> {
   // Backward-compat: legacy callers passed extraIgnores as a plain string[].
   const extraIgnores = Array.isArray(opts) ? opts : (opts.extraIgnores ?? []);
-  const ignores = [...DEFAULT_IGNORES, ...DEFAULT_EXCLUDE_PATHS, ...readGitignore(root), ...extraIgnores];
+  // Only DEFAULT_EXCLUDE_PATHS is evidence-overridable. The hardcoded ignores,
+  // .gitignore and the user's own excludePaths hold either way: a registry.json
+  // is inference, and inference does not outrank a file the user excluded on
+  // purpose or a directory that is build output.
+  const hardIgnores = [...DEFAULT_IGNORES, ...readGitignore(root), ...extraIgnores];
   const matches = await fg(SOURCE_GLOBS, {
     cwd: root,
     absolute: true,
-    ignore: ignores,
+    ignore: [...hardIgnores, ...DEFAULT_EXCLUDE_PATHS],
     dot: false,
     followSymbolicLinks: false,
   });
+
+  const published = await registryDeclaredDirs(root, REGISTRY_OVERRIDABLE_EXCLUDES);
+  if (published.length > 0) {
+    const admitted = await fg(
+      published.flatMap((dir) => SOURCE_GLOBS.map((glob) => `${dir}/${glob}`)),
+      { cwd: root, absolute: true, ignore: hardIgnores, dot: false, followSymbolicLinks: false },
+    );
+    const seen = new Set(matches);
+    for (const file of admitted) if (!seen.has(file)) matches.push(file);
+  }
   // fast-glob's directory traversal reads sibling directories concurrently
   // for performance; the SET of matches is correct but their ORDER depends
   // on filesystem I/O completion timing, which is not stable across runs

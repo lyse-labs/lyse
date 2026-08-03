@@ -247,3 +247,95 @@ describe("walker default excludes", () => {
     expect(rel).toContain("packages/website-ui/src/Card.tsx");
   });
 });
+
+/**
+ * magicuidesign/magicui ships its entire library from `apps/www/registry/`, so
+ * `apps/www/**` excluded all 373 of its source files and `lyse audit` scanned
+ * zero. The layout is not rare (7 of 58 local checkouts use it) but publishing
+ * from inside it is: 1 of 58, and a `registry.json` that resolves is the only
+ * signal measured to separate that one from the other six.
+ */
+describe("walker registry evidence", () => {
+  function seedRegistryRepo(): string {
+    const tmp = mkdtempSync(join(tmpdir(), "lyse-walker-registry-"));
+    mkdirSync(join(tmp, "apps", "www", "registry", "ui"), { recursive: true });
+    mkdirSync(join(tmp, "apps", "www", "app"), { recursive: true });
+    writeFileSync(join(tmp, "apps", "www", "registry", "ui", "button.tsx"), "export const Button = 1;");
+    writeFileSync(join(tmp, "apps", "www", "registry", "ui", "card.tsx"), "export const Card = 1;");
+    writeFileSync(join(tmp, "apps", "www", "app", "page.tsx"), "export default function Page() { return null; }");
+    writeFileSync(
+      join(tmp, "apps", "www", "registry.json"),
+      JSON.stringify({
+        items: [{ files: [{ path: "registry/ui/button.tsx", type: "registry:ui" }], name: "button", type: "registry:ui" }],
+        name: "example",
+      }),
+    );
+    return tmp;
+  }
+
+  it("scans the directories a resolving registry.json names inside an otherwise-excluded apps/ doc site", async () => {
+    const tmp = seedRegistryRepo();
+    const rel = (await walk(tmp)).map((f) => posixRelative(tmp, f));
+    expect(rel).toContain("apps/www/registry/ui/button.tsx");
+    // The rest of the doc site stays excluded — the evidence covers what the
+    // registry names, not the directory it lives in.
+    expect(rel).not.toContain("apps/www/app/page.tsx");
+  });
+
+  it("scans a sibling the registry does not list, because the evidence names the directory", async () => {
+    const tmp = seedRegistryRepo();
+    const rel = (await walk(tmp)).map((f) => posixRelative(tmp, f));
+    expect(rel).toContain("apps/www/registry/ui/card.tsx");
+  });
+
+  it("changes nothing when the registry's declared paths do not resolve from where it sits", async () => {
+    const tmp = seedRegistryRepo();
+    writeFileSync(
+      join(tmp, "apps", "www", "registry.json"),
+      JSON.stringify({ items: [{ files: [{ path: "nowhere/button.tsx", type: "registry:ui" }], name: "b" }], name: "x" }),
+    );
+    const rel = (await walk(tmp)).map((f) => posixRelative(tmp, f));
+    expect(rel).not.toContain("apps/www/registry/ui/button.tsx");
+  });
+
+  it("keeps the hardcoded ignores — a registry cannot resurrect node_modules or dist", async () => {
+    const tmp = seedRegistryRepo();
+    mkdirSync(join(tmp, "apps", "www", "registry", "ui", "dist"), { recursive: true });
+    writeFileSync(join(tmp, "apps", "www", "registry", "ui", "dist", "button.js"), "1;");
+    const rel = (await walk(tmp)).map((f) => posixRelative(tmp, f));
+    expect(rel).not.toContain("apps/www/registry/ui/dist/button.js");
+  });
+
+  it("keeps .gitignore — a registry cannot resurrect an ignored file", async () => {
+    const tmp = seedRegistryRepo();
+    writeFileSync(join(tmp, ".gitignore"), "apps/www/registry/ui/card.tsx\n");
+    const rel = (await walk(tmp)).map((f) => posixRelative(tmp, f));
+    expect(rel).toContain("apps/www/registry/ui/button.tsx");
+    expect(rel).not.toContain("apps/www/registry/ui/card.tsx");
+  });
+
+  it("keeps user excludePaths above the evidence — explicit configuration outranks inference", async () => {
+    const tmp = seedRegistryRepo();
+    const rel = (await walk(tmp, { extraIgnores: ["apps/www/**"] })).map((f) => posixRelative(tmp, f));
+    expect(rel).not.toContain("apps/www/registry/ui/button.tsx");
+  });
+
+  it("does not extend the escape hatch beyond the apps/ doc-site patterns it was measured on", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "lyse-walker-registry-"));
+    mkdirSync(join(tmp, "examples", "registry", "ui"), { recursive: true });
+    writeFileSync(join(tmp, "examples", "registry", "ui", "button.tsx"), "export const Button = 1;");
+    writeFileSync(
+      join(tmp, "examples", "registry.json"),
+      JSON.stringify({ items: [{ files: [{ path: "registry/ui/button.tsx", type: "registry:ui" }], name: "b" }], name: "x" }),
+    );
+    const rel = (await walk(tmp)).map((f) => posixRelative(tmp, f));
+    expect(rel).not.toContain("examples/registry/ui/button.tsx");
+  });
+
+  it("returns a sorted list with no duplicates once evidence files are merged in", async () => {
+    const tmp = seedRegistryRepo();
+    const rel = (await walk(tmp)).map((f) => posixRelative(tmp, f));
+    expect(rel).toEqual([...new Set(rel)]);
+    expect(rel).toEqual([...rel].sort());
+  });
+});
