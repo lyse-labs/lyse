@@ -44,6 +44,10 @@ interface PositiveRow {
    */
   extracted: { components: number; tokens: number } | null;
   fetched: boolean;
+  /** Files the audit walker scanned. Zero with a populated checkout means Lyse
+   * could not reach the source at all — magicui, whose entire library sits
+   * under `apps/www`, scans zero of its 955 files. */
+  fileCount: number | null;
   findingsByRule: Record<string, number>;
   framework: string;
   maturity: string;
@@ -70,16 +74,16 @@ function errorMessage(err: unknown): string {
 
 async function measurePositive(repo: (typeof HELDOUT_CORPUS)[number]): Promise<PositiveRow> {
   const base: PositiveRow = {
-    axes: [], error: null, extracted: null, fetched: false, findingsByRule: {},
-    framework: repo.framework, maturity: repo.maturity, repo: repo.label,
-    score: null, stack: repo.stack,
+    axes: [], error: null, extracted: null, fetched: false, fileCount: null,
+    findingsByRule: {}, framework: repo.framework, maturity: repo.maturity,
+    repo: repo.label, score: null, stack: repo.stack,
   };
   const dir = await fetchGoldenRepo(repo);
   if (dir === null) return base;
   const afterFetch: PositiveRow = { ...base, fetched: true };
   try {
     const audited = repo.auditSubpath === "." ? dir : join(dir, repo.auditSubpath);
-    const { result, graph } = await auditDirectory(audited, { staticOnly: true });
+    const { result, graph, fileCount } = await auditDirectory(audited, { staticOnly: true });
     const findingsByRule: Record<string, number> = {};
     for (const f of result.findings) {
       findingsByRule[f.ruleId] = (findingsByRule[f.ruleId] ?? 0) + 1;
@@ -87,6 +91,7 @@ async function measurePositive(repo: (typeof HELDOUT_CORPUS)[number]): Promise<P
     return {
       ...afterFetch,
       extracted: { components: graph.components.length, tokens: graph.tokens.length },
+      fileCount,
       score: result.finalScore,
       axes: result.axes.map((a) => ({
         abstentionReason: a.abstentionReason ?? null,
@@ -200,6 +205,17 @@ async function main(): Promise<void> {
     process.stderr.write(
       `${vacuous.length} of ${positives.length} positives extracted no tokens and no components: ` +
         `${vacuous.map((p) => p.repo).join(", ")}.\n`,
+    );
+  }
+
+  // Reported separately from `vacuous` because the causes are different and so
+  // are the fixes: extracting nothing from files Lyse read is an extractor gap,
+  // reading no files at all is a reach gap — the walker never saw the source.
+  const unreached = positives.filter((p) => p.fetched && p.error === null && p.fileCount === 0);
+  if (unreached.length > 0) {
+    process.stderr.write(
+      `${unreached.length} of ${positives.length} positives had ZERO files scanned — ` +
+        `Lyse never reached their source: ${unreached.map((p) => p.repo).join(", ")}.\n`,
     );
   }
 
