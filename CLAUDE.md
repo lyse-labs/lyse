@@ -158,11 +158,14 @@ This covers **precision** — is this finding, as worded, true at this location.
 compete with the git-mined gold labels of ADR 0024 (`reliability/gold/*`), which are a
 **recall** source; ADR 0024 puts finding-level precision in the residual it does not cover.
 
-**Blocked, and it must stay blocked until fixed:** a round may only run on a held-out
-corpus. This repo has only `.bench-corpus`, which is the calibration set the protocol
-forbids labeling on, so nothing consumes these files yet and no round has been run. Do not
-"unblock" it by pointing a round at `.bench-corpus` — the adjudicator is written to refuse,
-and that refusal is the point. Building the held-out corpus is the next step.
+**The corpus exists; the round does not.** `packages/core/tests/heldout/corpus.ts` pins
+fifteen repositories no rule was calibrated against — ten design systems, five
+applications — with `tests/heldout/disjoint.test.ts` failing on any overlap with tier1,
+`.bench-corpus`, or the golden/generalization/negative corpora. Do not point a round at
+`.bench-corpus`: the adjudicator is written to refuse it, and that refusal is the point.
+Numbers come from `pnpm measure:heldout`, never from CI — the health lane
+(`heldout-health.yml`) proves the pins work and publishes nothing, so the corpus does not
+become something we tune against by reading it every day.
 
 ## Operating principles
 
