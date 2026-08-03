@@ -261,12 +261,18 @@ async function main(): Promise<void> {
   // exists to surface, and a permanently red command is one nobody reads —
   // the rule `measure:ds-precision` already states. Failing on ALL of them is
   // different: that is the harness broken, and it is indistinguishable from a
-  // clean run by every other signal.
-  if (failed > 0 || vacuous.length === positives.length) {
+  // clean run by every other signal. `negativesDetectionRan` mirrors this on the
+  // negative half: coolify alone declaring no workspace is a result and must stay
+  // green, but NONE of the five ever reaching detection means that half was never
+  // measured — `measuredNegatives` cannot tell the two apart, since it counts
+  // `fetched`, which an empty directory satisfies too.
+  if (failed > 0 || vacuous.length === positives.length || negativesDetectionRan.length === 0) {
     const why =
       failed > 0
         ? `${failed} repositor${failed === 1 ? "y" : "ies"} failed with an unexpected error`
-        : "not one positive extracted anything, so nothing was measured";
+        : vacuous.length === positives.length
+          ? "not one positive extracted anything, so nothing was measured"
+          : "not one negative had detection run, so nothing was measured";
     process.stderr.write(`FAIL: ${why} — do not publish a number from this report.\n`);
     process.exitCode = 1;
   }

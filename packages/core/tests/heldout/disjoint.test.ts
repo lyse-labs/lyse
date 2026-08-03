@@ -45,6 +45,28 @@ describe("the held-out corpus is held out", () => {
   });
 });
 
+// `expect(overlap).toEqual([])` above passes trivially when the source list is
+// itself empty — the same vacuous shape `findings.length > 0` had before this
+// branch fixed it. These pin that each SEEN list still has something in it to
+// guard against, so emptying one cannot silently defang the disjointness check.
+describe("the disjointness guard cannot be satisfied by emptying its inputs", () => {
+  it("CALIBRATION_SLUGS holds exactly the 20 lyse-bench tier1 repositories", () => {
+    expect(CALIBRATION_SLUGS.length).toBe(20);
+  });
+
+  it("GOLDEN_CORPUS is non-empty", () => {
+    expect(GOLDEN_CORPUS.length).toBeGreaterThan(0);
+  });
+
+  it("GENERALIZATION_CORPUS is non-empty", () => {
+    expect(GENERALIZATION_CORPUS.length).toBeGreaterThan(0);
+  });
+
+  it("NEGATIVE_CORPUS is non-empty", () => {
+    expect(NEGATIVE_CORPUS.length).toBeGreaterThan(0);
+  });
+});
+
 // Local convenience only: .bench-corpus is gitignored and absent in CI, so this
 // arm cannot be the guard. CALIBRATION_SLUGS is.
 describe.runIf(existsSync(benchCorpus))("does not overlap the local .bench-corpus", () => {

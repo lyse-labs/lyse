@@ -160,12 +160,19 @@ compete with the git-mined gold labels of ADR 0024 (`reliability/gold/*`), which
 
 **The corpus exists; the round does not.** `packages/core/tests/heldout/corpus.ts` pins
 fifteen repositories no rule was calibrated against — ten design systems, five
-applications — with `tests/heldout/disjoint.test.ts` failing on any overlap with tier1,
-`.bench-corpus`, or the golden/generalization/negative corpora. Do not point a round at
-`.bench-corpus`: the adjudicator is written to refuse it, and that refusal is the point.
-Numbers come from `pnpm measure:heldout`, never from CI — the health lane
-(`heldout-health.yml`) proves the pins work and publishes nothing, so the corpus does not
-become something we tune against by reading it every day.
+applications — with `tests/heldout/disjoint.test.ts` failing, on every run including CI,
+on any overlap with tier1 or the golden/generalization/negative corpora. The same test
+also checks the fifteen against the local `.bench-corpus` working directory, but only
+when that directory exists on disk — it is gitignored and absent in CI, so that arm is a
+local convenience, not something CI enforces. Do not point a round at `.bench-corpus`:
+the adjudicator is written to refuse it, and that refusal is the point.
+
+Held out means absent from every list this repository can check — it is not proof that
+nobody ever ran Lyse against one of these repositories by hand while developing a rule,
+and any number this corpus produces carries that caveat. Numbers come from `pnpm
+measure:heldout`, never from CI — the health lane (`heldout-health.yml`) proves the pins
+work and publishes nothing, so the corpus does not become something we tune against by
+reading it every day.
 
 ## Operating principles
 
