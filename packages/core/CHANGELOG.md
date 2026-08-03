@@ -1,5 +1,249 @@
 # @lyse-labs/lyse
 
+## 0.2.0-alpha.7
+
+### Minor Changes
+
+- b1d6f94: Component inventory accuracy, round 2: canonical-preference dedup + two more walker exclusion gaps, with the further Health Score movement disclosed.
+  1. **Canonical-preference dedup for same-named components.** `componentSources` deduped same-named components by name only, first-file-wins — on Twilio Paste this attributed two flagship components, `Menu` and `Form`, to `@twilio-paste/token-contrast-checker` (a `"private": true` internal QA tool whose `Menu.tsx`/`Form.tsx` don't even export a component by that name — they shadow the real one with a local `PlainMenu`), with zero props. `graph/build-io.ts` (manifest) and `commands/audit-pipeline.ts` (audit) now resolve collisions through one shared function (`detection/components-resolution.ts#resolveComponentSources`) with a deterministic, total preference order: strong (PascalCase filename) beats weak (directory-derived); non-private package (nearest-ancestor `package.json` lacks `"private": true`) beats private; `src/`-rooted path beats not; first-encountered-in-walk-order wins any remaining tie. Measured: `Menu` → `@twilio-paste/menu` (1 prop), `Form` → `@twilio-paste/form` (1 prop) — both correct. Honest caveat: this does not resolve genuine collisions between two equally public, equally canonical packages — 8 such cases remain (`OverflowButton`, `Td`/`Th`/`Tr`, `CustomStyleProps`, `PseudoPropStyles`, `SafelySpreadProps`, `StyleFunctions`), still deduped to whichever file the walker reaches first (deterministic, not principled).
+  2. **Two more walker exclusion gaps.** `DEFAULT_EXCLUDE_PATHS` excluded `__tests__/**` and `fixtures/**` but missed `__mocks__/**`, `__fixtures__/**` (the Jest double-underscore convention), and Storybook demo/composition components living inside a `stories/` subfolder (as opposed to co-located `*.stories.tsx` files, already excluded elsewhere). Measured on Paste: `tools/github/__mocks__/AiHandler.ts` had fabricated a component named `AiHandler` (a name that exists nowhere else in the repo); `data-grid/stories/components/**` (13 files) and `sidebar/stories/full-composition/components/**` (18 files, 3 already shadowed by a real component) were counted as design-system components. Manifest components: **828 → 792** (36 names removed, 0 added). A negative test pins that `packages/mock-utils/**`, `packages/fixture-generator/**`, and a `stores/` directory (state management, not Storybook) are not over-excluded. Known and deliberately not fixed here: `packages/paste-theme-designer/**` (24 entries), a `"private": true` internal playground — excluding by `private: true` package is a larger change than this fix's scope. The `stories/` exclusion is scoped to code extensions (`.ts`/`.tsx`/`.js`/`.jsx`/`.mjs`/`.cjs`), not a blanket `**/stories/**`: a blanket pattern also hides stylesheets, which are a real token source on some repos — radix-ui/primitives keeps its CSS custom properties in `apps/storybook/stories/*.stories.module.css`, and the blanket pattern zeroed its manifest token count (8 → 0), caught by the `generalization` CI lane before release. `.css`/`.scss` under `stories/` stay visible; the 36-name Paste removal above is unaffected (all removed names were `.tsx`).
+
+  **Health Score, `lyse audit --static-only`, further movement on `.bench-corpus/paste`:** **73 → 64**. `components` findings are unchanged (239) but its opportunity count nearly halves (2270 → 1111 — the excluded demo/composition files were disproportionately rich in the patterns those rules check), moving its score 94 → 89. `a11y` loses enough opportunities (62 → 20) to drop below the `scoring-v3` minimum-sample threshold of 30 and go from a scored **97** to **N/A** — losing a high-scoring axis from the blend accounts for most of the drop. `stories`, `tokens`, `ai-surface`, `ai-governance` are materially unchanged. `vuetify` (79), `shadcn-svelte` (98), `chakra-ui` (84) are byte-for-byte unaffected by this round.
+
+  Gates verified: full suite green (see CHANGELOG); `packages/core/rules-manifest.json` byte-identical to `main`.
+
+- e6a6a38: Add the DS Machine Manifest: `lyse manifest` (CLI) and `get_ds_manifest` (MCP) publish a stable, versioned, graph-derived contract describing the design system (tokens, component contracts, zone summary, extraction status). Deterministic, zero-network, built without running an audit — no score change. Schema + versioning policy in `docs/architecture/manifest.md`.
+- 02d95af: Evidence-based design-system detection: a repo's design system is now a _family_ of workspace packages identified by component-file evidence and shape-based disqualifiers, not a single package matched by a regex against its name — and the Health Score moves on real design systems as a direct, disclosed consequence.
+  1. **Evidence-based family detection, not a name regex.** `detectWorkspaceDsPackage` used to test every workspace package name against `DS_EXPORT_RE` (`@scope/ui`, `@scope/components`, `*-design-system`, …). A monorepo whose packages are named anything else (`@radix-ui/react-tabs`, `@kobalte/core`'s siblings) was invisible, and the regex could also pick a wrong, real-but-irrelevant package purely because its name matched (`@calcom/web` — a Next.js app — over `@calcom/ui`; `@mantine-tests/core` — a test package — over `@mantine/core`). `identifyDsFamily` (new `detection/ds-packages.ts`) now classifies every workspace package on component-file evidence (≥1 real `.tsx`/`.jsx`/`.vue`/`.svelte` file — `.ts`/`.js` utilities don't count) after a shape-based disqualifier pass rules out workspace roots, app/docs/site/playground directories, and test/tooling packages — never on what the package is called. Workspace directories are measured against an absolute repo root, so detection gives the same answer for a relative path as for an absolute one — a relative root previously left `relDir` absolute (`posixRelative` returns its input unchanged when the root is not a prefix of it), so it matched no evidence and detection abstained on a repo that plainly has a design system. Fixed detections, re-verified through the CLI on disk: cal.com `@calcom/web`→`@calcom/ui` (family of 47), mantine `@mantine-tests/core`→`@mantine/core` (family of 18), corvu `@corvu/web`→`@corvu/popover` (family of 12 — corvu has no single "the" DS package, correctly), documenso `@documenso/ee`→`@documenso/ui` (family of 5), paste `@twilio-paste/icons`→`@twilio-paste/core` (family of 116). Measured (`.bench-corpus`, manifest components, `main`→this branch): kobalte 0→59, element-plus 0→98, ariakit 0→29, documenso 0→17, shadcn-svelte 0→10, skeleton 0→51, primitives 0→49, vuetify 0→211, paste 792→842, chakra-ui 82→122 — full 26-repo table below.
+  2. **`usage` now counts the whole family, not one arbitrarily-chosen member.** `computeUsage` matched imports against a single `componentsModule` string — on a monorepo DS split across many packages (Twilio Paste ships 116), that measured one arbitrarily-chosen package's imports and called it "design-system usage." It now counts imports of any family member. Measured (manifest `usage[]`, `main`→this branch): `mantine` `{count:1415,files:1415}`→`{count:2146,files:1974}`; `paste` `[]` (empty — main's regex-based primary happened to resolve to a package nothing imports)→`{count:1467,files:818}`; `salt-ds` `{count:719,files:718}`→`{count:1267,files:902}`; `primitives` `{count:34,files:34}`→`{count:352,files:53}`. `lyse manifest`'s `usage` was not merely low before this change on a real monorepo — **it was non-deterministic**: which package `detectWorkspaceDsPackage` picked depended on an unordered `fast-glob` workspace walk feeding a first-match regex scan, so two runs of the same tree could resolve a different `componentsModule` and therefore report a different usage count. `enumerateWorkspacePackages` now sorts and dedupes the workspace list before any decision is made from it, and `identifyDsFamily`/`choosePrimary` apply a total, order-independent order — so the same repo state now produces byte-identical output every run (verified: 5 fresh runs on mantine, 3 on three more repos, all byte-identical hashes).
+  3. **Component-file recognition covers Vue/Svelte and the `<component>/src/<component>` layout.** `componentNameFromPath` only matched `.tsx`/`.jsx`/`.ts`/`.js` and read only the immediate parent directory, so `packages/react/tabs/src/tabs.tsx` (the real name is on the grandparent `tabs`, past a `src/` container — radix's own layout) resolved to nothing (neither `stem === "index"` nor a filename/parent-dir match held against the immediate parent, `src`), and any `.vue`/`.svelte` file resolved to nothing regardless of layout. It now walks up past `src`/`lib`/`source`/`sources` to the nearest real directory name and recognizes `.vue`/`.svelte`, while rejecting generic container names (`Utils`, `Core`, `Composables`, `Directives`, …), `use-*`/`create-*` hook-factory directories, names nested under a non-component category ancestor at any depth, and dotted fabricated names (`Accordion.demo.chevron.tsx` — a real mantine docs-demo file whose stem starts with an uppercase letter and was previously admitted as a "strong" PascalCase signal with no dot check).
+  4. **Directory-derived (weak) names are corroborated by design-system family membership, not only a Storybook title.** A name like `button/index.tsx` is ambiguous (`utils/index.ts` would resolve to `Utils`) and was previously admitted only when a Storybook title matched it — but 8 of the 9 repos this blocked in this corpus ship no Storybook at all. `resolveComponentSources` now also admits a weak name when its file lives inside a package the evidence-based detector identified as a family member.
+
+  **Health Score, `lyse audit --static-only`, before (`main` @ `b1d6f94`) → after (this branch), full 26-repo bench corpus:**
+
+  | repo                   | components before | components after | tokens before | tokens after | finalScore before | finalScore after   |
+  | ---------------------- | ----------------: | ---------------: | ------------: | -----------: | ----------------- | ------------------ |
+  | ariakit                |                 0 |               29 |            24 |           24 | 90                | 90                 |
+  | blueprint              |               127 |              161 |           190 |          190 | 90                | 90                 |
+  | cal.com                |               964 |             1002 |           302 |          302 | 90                | 90                 |
+  | chakra-ui              |                82 |              122 |             0 |            0 | 84                | 84                 |
+  | commerce               |                 0 |                0 |             0 |            0 | 88                | 88                 |
+  | corvu                  |                29 |               38 |            30 |           30 | 84                | 84                 |
+  | documenso              |                 0 |               17 |            47 |           47 | 93                | 93                 |
+  | element-plus           |                 0 |               98 |            15 |           15 | 99                | 99                 |
+  | eui                    |               247 |              269 |           232 |          232 | 86                | 91                 |
+  | kobalte                |                 0 |               59 |             0 |            0 | 95                | 95                 |
+  | mantine                |              2130 |              573 |           272 |          272 | 97                | 97                 |
+  | material-ui            |                80 |               80 |             0 |            0 | 87                | 87                 |
+  | nextui                 |                65 |               86 |            19 |           19 | 98                | 98                 |
+  | packets                |                 0 |                0 |             0 |            0 | N/A               | N/A                |
+  | paste                  |               792 |              842 |             0 |            0 | 64                | 64                 |
+  | plane                  |                33 |              107 |            58 |           58 | 95                | 95                 |
+  | primitives             |                 0 |               49 |             8 |            8 | 94                | 94                 |
+  | salt-ds                |              1497 |             1515 |           507 |          507 | 93                | 93                 |
+  | semi-design            |               825 |             1037 |          1691 |         1691 | ERROR (OOM)       | ERROR (unresolved) |
+  | shadcn-svelte          |                 0 |               10 |           130 |          130 | 98                | N/A                |
+  | skeleton               |                 0 |               51 |            89 |           89 | 98                | 99                 |
+  | tailwindcss-typography |                 0 |                0 |             0 |            0 | N/A               | N/A                |
+  | tremor                 |                42 |               42 |             0 |            0 | 91                | 91                 |
+  | ui (shadcn/ui)         |                 0 |                0 |           214 |          214 | 86                | 86                 |
+  | vibe                   |               676 |              612 |           345 |          345 | 73                | 73                 |
+  | vuetify                |                 0 |              211 |           583 |          583 | 79                | 85                 |
+
+  Notes on reading this table:
+  - **Tokens are byte-identical on every repo.** This branch is scoped to component/usage detection; it does not touch token extraction.
+  - **`mantine` (2130→573) and `vibe` (676→612) go _down_.** Both are net removals of fabricated dotted-name "components" (`Button.types.tsx`, `Accordion.demo.chevron.tsx` — real files whose PascalCase-starting stem was previously admitted whole, dot and all) exceeding the smaller number of new, real, family-corroborated names added. Fewer, more correct entries, not a regression.
+  - **`ui` (shadcn/ui) stays 0→0.** This specific bench-corpus checkout's only DS-shaped candidate package is disqualified as a test-fixture host on both sides — a pre-existing, correct abstention this branch doesn't change.
+  - **`eui`, `shadcn-svelte`, `skeleton`, `vuetify` are the only finalScore movers**, and all four move for the _same_ reason, unrelated to their component-count delta: `dsSelfMode` flips `false → true` (this branch is what makes the family resolve at all for these four). Once a repo is correctly recognized as _being_ the design system, files that used to be scanned as generic app code are zoned as `ds-source`, and the `tokens` axis's opportunity count collapses accordingly (e.g. shadcn-svelte 89→3, skeleton 3599→2, eui 894→4, vuetify 41→2) — below `scoring-v3`'s minimum-sample threshold of 30, so the axis goes from scored to `N/A`. For `shadcn-svelte`, `tokens` was its _only_ scored axis, so `finalScore` itself goes 98→N/A: not a worse repo, a repo Lyse now correctly declines to score on too little in-scope data, the same honesty tradeoff already shipped for Paste's `stories` axis. `eui`/`skeleton`/`vuetify` had other scored axes to fall back on, so their blended score moves instead of disappearing. Every repo whose `dsSelfMode` was already `true` on `main` (kobalte, ariakit, documenso, element-plus, primitives, chakra-ui, mantine, paste, plane, salt-ds, corvu, blueprint, cal.com, nextui, vibe) keeps a byte-identical `finalScore` despite large component-count deltas — the score mover is the `dsSelfMode` flip, not the component count.
+  - **`semi-design`'s `finalScore` could not be measured, on either side.** On `main`, `lyse audit --static-only` on `.bench-corpus/semi-design` reproducibly exhausts the JS heap (`FATAL ERROR: ... JavaScript heap out of memory`) — confirmed twice: once under sweep contention at the default heap, once alone at `--max-old-space-size=6144` (6GB), dying after ~390s at ~6.1GB. On this branch, the same command with the same 6GB ceiling did not crash the same way — it ran over 16 minutes without completing or erroring and was terminated to reclaim resources. `lyse manifest` (components/tokens above) completes fine on both — only `lyse audit` is affected, on both branches, differently but equally unusably. Pre-existing on `main`, not introduced by this branch, out of scope to fix here; flagged separately (`task_820cec7c`) for follow-up.
+
+  Gates verified: `packages/core/rules-manifest.json` byte-identical to `main` (66 rules), `validate:autonomous` → `ENGINE GATE PASS`, `pnpm lint` and `tsc --noEmit` clean. The full suite could not be observed fully green in this session: three attempts (including one with reduced parallelism) each produced a handful of bare `Test timed out` failures on a _different_ subset of files each time, never an assertion failure, and the process table directly showed why — a concurrent, unrelated Claude Code session running its own `vitest` suite in a different worktree on this same shared 8-core host, alongside another unrelated process pinned near 100% CPU (`Load Avg` peaked at 70). Isolated re-runs of the first attempt's exact failing files passed cleanly (`3 passed`, `22 tests passed`). None of the repeatedly-failing files touch anything this change modifies. Full detail in `task-7-report.md`.
+
+  **What is still wrong — this is a reduction in error, not a claim of correctness:**
+  - `.vue`/`.svelte` components carry **no props** — the prop extractor (`extractComponentProps`) is Babel-based and fails closed on single-file-component source; a `.vue`/`.svelte` file has no Babel-parseable top-level function/class for it to inspect.
+  - One component name is still resolved per _file_, never per _export_ — a file with multiple named exports still yields a single component.
+  - Cross-package name collisions still dedup to whichever file `resolveComponentSources`'s deterministic preference order reaches first, not to a judgment that the two are the same component.
+  - YAML token sources are still unsupported.
+  - `storyCount` still counts story _files_, not story exports.
+  - **`primary` can name an icons package rather than the flagship one.** On salt-ds it resolves `@salt-ds/icons` (549 component files, real `main`) over `@salt-ds/core` (221); on vibe, `@vibe/icons` over `@vibe/core`. Both are legitimate published packages, and SVG-to-component codegen simply produces more files than a hand-authored core package — no evidence-based tier separates "586 icon components" from "586 button components" without reintroducing a name heuristic. `finalScore` is unchanged on both (93→93, 73→73) and `ai-surface/ds-index-exported` produces no findings there, so the impact today is nil — but the label is not the package a human would name.
+  - **Residual over-admission**, disclosed rather than hidden: family corroboration widens the gate honestly, not surgically, because path shape alone cannot separate a UI file from a business-logic file inside the same package. `documenso` surfaces backend/business-logic packages among its 17 (`DetectFields`, `Trpc`, `Stripe`); `paste` surfaces theme names and comparison-library references among its added components (`Evergreen`, `Reakit`); `vuetify` surfaces 6 top-level category words (`Blueprints`, `Labs`, `Modes`, `Rules`, `Templates`, `Test`) out of 211. Fixing this needs file-content inspection or finer-grained per-subdirectory family classification — both larger than this change.
+
+- 913df5c: Resolve design tokens from an installed external DS package. Set
+  `designSystem.tokenPackages` in `.lyse.yaml` (e.g. `["@primer/primitives"]`) and
+  Lyse reads that package's shipped colour tokens from `node_modules` (CSS
+  custom-property + JSON, colours only in v1, local-first / zero-network). A
+  hardcoded colour that matches an external token is now reported as high-confidence
+  drift with a suggested fix instead of an unknown value. **Opt-in:** with no
+  `tokenPackages` configured, audit output is unchanged. **Score note:** enabling it
+  re-classifies matching colours (novel→exact) and can move the colour-axis score.
+- d643a4e: `lyse agents` now generates AGENTS.md from the graph-derived DS Machine Manifest instead of a static template: real token ids and values grouped by axis, component contracts with props and variants, extraction-degradation warnings, and a `token_set_hash` staleness marker. Same command and flags; materially richer generated content. Each component contract's `file` field is always `null` for now — no extractor yet resolves a real source path at this layer.
+- b1d6f94: Component inventory accuracy: three root causes fixed, and the Health Score moves on real design systems as a direct, disclosed consequence.
+  1. **Per-component module attribution.** Every component in a monorepo was labelled with a single package name — on Twilio Paste, all 1109 components claimed `@twilio-paste/icons`, 770 (69%) wrongly. Each component now resolves to its own workspace package via a bounded nearest-ancestor `package.json` walk. Measured: **1 → 98 distinct modules** (`Button` → `@twilio-paste/button`). `chakra-ui`, a genuinely single-package DS, correctly stays at 2.
+  2. **Nested doc/demo-site excludes.** `DEFAULT_EXCLUDE_PATHS` was root-anchored, so `packages/paste-website/**` was scanned as design-system source — 281 marketing/docs files counted as components. Measured: **1109 → 828 components**, website-ish sample → 0, real components (`Button`, `Modal`, `Table`) still present; a test pins that `packages/website-ui/**` is not over-excluded.
+  3. **`forwardRef`/`memo` prop extraction.** `extractComponentProps` matched only plain and arrow functions, so any component wrapped in `React.forwardRef` — the standard pattern for a component library — yielded zero props. Measured: **~46 → 664 of 828 components** now report ≥1 prop (828 at measurement time; a later fix further reduced the total to 792 without changing which 664 report a prop — see `dedup-and-exclusion-gaps.md`). That count overstates what it sounds like it means: of the **886 prop entries** behind it, **0 carry a `type`, 0 carry `variants`**, and **551 (83%) belong to a component with exactly one prop** — a bare destructuring default, not a documented interface. `AcceptIcon` reports 1 prop where its source declares 7; even `Button` (8 props) is all untyped destructuring defaults, missing its real required props.
+
+  **Health Score, `lyse audit --static-only`, before (`main`) → after (this branch):**
+
+  | repo          | score       | findings  |
+  | ------------- | ----------- | --------- |
+  | paste         | **96 → 73** | 269 → 298 |
+  | vuetify       | **84 → 79** | 78 → 63   |
+  | shadcn-svelte | 98 → 98     | 21 → 21   |
+  | chakra-ui     | 84 → 84     | 106 → 106 |
+
+  `paste` drops 23 points because the `stories` axis went from `N/A` (2 opportunities, below the min-sample threshold) to a real **2/100** on 48 opportunities — Lyse now correctly identifies 48 DS components instead of ~2. The 47 findings (`stories/props-documented`, "has a story that documents no props") are verifiably true: of Paste's 204 `.stories.tsx` files, only 3 contain `argTypes` and 0 contain `args:`. `a11y` improved over the same run (95 → 97) — this is Lyse measuring an axis it was previously blind to, not a regression.
+
+  Gates verified: full suite 3897 passed / 0 failed; `packages/core/rules-manifest.json` byte-identical (no rule added or removed); `validate:autonomous` → `ENGINE GATE PASS` (52 rules, all J=1).
+
+  **Known defects that remain open** — this is a reduction in error, not a claim of correctness:
+  - One component name per _file_, never per _export_ (`ModalDialogOverlay`, `ModalDialogContent` still missing).
+  - Cross-package name collisions (26 observed in Paste) now resolve via a deterministic canonical-preference order rather than arbitrary walk order — fixes the highest-severity cases (`Menu`, `Form`); 8 genuine collisions between two equally canonical packages still dedup to whichever file the walker reaches first (see `dedup-and-exclusion-gaps.md`).
+  - YAML token sources unsupported — Paste's 135 `.yml` token files remain invisible; its `tokenSetHash` is still the hash of an empty token set.
+  - `forwardRef` generic type arguments are not read, so props are mostly recovered from destructuring defaults — `AcceptIcon` gets 1 prop, not its real 7.
+  - `storyCount` counts story _files_, not story exports.
+
+- c1e9705: The LLM precision filter is now deterministic under a committed `.lyse/verdicts.json` verdict cache: `lyse audit --llm` with a warm cache is byte-identical across runs and makes zero connector calls. Two new flags — `--llm-frozen` (CI replay: fail with a non-zero exit on any cache miss instead of calling out) and `--llm-refresh` (re-judge every target finding and rewrite the cache). The cache stores hashes and verdict labels only (a content hash + axis-scoped token-context hash, the verdict enum, a confidence number, and the producing model name) — never source text or the cleartext literal value — so it's commit-safe like a lockfile. Default `lyse audit` (no `--llm`) is unchanged: static-only, zero network calls, cache untouched. No score change. Honest caveat: determinism holds given a committed warm cache — a lockfile guarantee analogous to `npm ci`, not a claim that the LLM itself is deterministic; a first-time judging pass (cache miss) is still a live, non-deterministic call.
+
+### Patch Changes
+
+- 2870518: An abstaining axis now says why.
+
+  `tokens N/A n=1` is true and useless — it does not distinguish "nothing to measure" from "could not read it" from "the checks that count never ran", and those need three different responses. `AxisScore.abstentionReason` carries a sentence, and the degraded extractor is named only on the axes whose rules it actually blocked.
+
+  Surfaced while investigating #264: the tokens axis abstains on every design system in the corpus because its only volume-producing scored rules read DTCG `*.tokens.json` files, and essentially no shipped design system publishes one. No user could infer that from `N/A`.
+
+- 16d693b: `ai-governance` no longer scores 100 on repos with no AI. `ai-governance/product-analytics` counted one opportunity per component file unconditionally, while its two sibling rules already returned zero without an AI surface. Because its findings can only fire on AI-marked files, every opportunity on a non-AI repo was clean by construction and the axis published near-perfect adoption — element-plus n=965, mantine n=3138, primer-react n=666. All three rules now agree, and the axis abstains instead.
+- 16d693b: Every axis now shows how much was measured. The score card renders `n=<opportunities>` beside each axis, scored or abstaining. On one polaris checkout the components axis reads 92 under one build and 16 under another while its denominator goes 1494 → 134 — the number did not fall, the measured surface did, and a bare 16 misleads exactly as much as a vacuous 100. An abstaining axis now also explains itself: `tokens N/A n=3` says it was not scored because almost nothing was measurable, not because the repo has no tokens.
+- 16d693b: An axis no longer prints a bare perfect score next to its own findings. `AxisScore` gains `unscoredFindings` — findings reported on that axis that the score deliberately ignores (experimental sub-axes, rules silenced by degraded extraction) — and the score card renders it as `+N` after the bar, so `a11y 100` can no longer appear above a list of fifteen accessibility findings without qualification.
+- 16d693b: CI gate integrity: `lyse audit` no longer passes on a missing path, a typo'd flag, an unscoreable run, or a deleted design system.
+
+  Four ways the gate failed open, each reproduced end-to-end:
+  - `audit /path/that/does/not/exist` exited 0 and reported nine findings about the absent directory. Now exit 64.
+  - Undeclared flags were accepted silently: `--treshold=99` exited 0 where `--threshold=99` exits 1. Unknown options on `audit` now exit 64; kebab/camel aliases and `--no-*` negations still work.
+  - `--threshold` passed whenever the score was `N/A`, so losing detection flipped a gate green. A threshold gate now fails closed on an unscoreable run.
+  - `baseline write` → `rm -rf src/components` → `audit --scope new` reported 0 new findings and exit 0. The graph hash covered only tokens, so deleting every component left it unchanged; it now covers component identity, and a stale baseline fails the gate rather than printing a warning beside a green build.
+
+- 957339a: `no-hardcoded-color` no longer flags design-universal trivial colours (pure white / black / transparent); the colour `exact` precision bucket was re-measured.
+- 16d693b: `lyse audit` inside a design system's own package directory now finds its components.
+
+  Detection's DS-self branch requires `private: true` **and** a `workspaces` field, both of which live on the monorepo root. Running Lyse from a package directory — `cd packages/ui && lyse audit`, the most ordinary thing a design-system maintainer does — reached that branch with neither, returned `componentsModule: null`, and `buildInventoryForMode` returned `[]`. The component inventory came back **empty on a design system's own source**, and the audit scored a components axis over an inventory that did not exist.
+
+  Measured on the golden corpus, where carbon is audited at `packages/react` and polaris at `polaris-react`: both reported `components: 0, extraction degraded` while publishing a components score of 88 and 92. The inventory was seeded from the stories instead, which is why story linkage read "103 of 103" — the two sides were the same list.
+
+  Detection now walks up to the nearest workspace root, resolves the family there, and expresses the answer in the audited directory's terms: `value` is the member that owns the directory, and `family[].relDir` is rebased onto the audit root. The walk stops at a `.git` boundary so an audit never adopts an unrelated monorepo above it. It fires only when the audited directory **is** a family member's own root, never when it merely sits underneath one.
+
+  Measured: carbon components `0 → 281` (axis 29 → 77, score 78 → 90), polaris `0 → 191` (axis 16 → 90, score 62 → 86).
+
+- dd77b8a: A negative corpus for design-system detection, and the first precision measurement it has ever had.
+
+  Every corpus in this repo is made of design systems, so precision on them was computed with no way to be wrong — a detector answering "yes" for every repository on earth would score perfectly. `pnpm measure:ds-precision` runs detection against four repositories where the correct answer is **no**, chosen for the shape that fools it: a private workspace monorepo whose packages hold real `.tsx`.
+
+  Three of the four are false positives today. `usebruno/bruno` (an API client) → `@usebruno/sqlite`, on one file. `vitejs/vite` (a build tool) → `create-vite`, on 24 project _templates_. `nrwl/nx` (a build system) → `@nx/nx-dev-ui-icons`, its docs site's icons. Reported, not gated: a check red on every run is a check nobody reads.
+
+  No behaviour change — this measures what already shipped.
+
+- a02495a: `pnpm ecosystem:diff` — build the CLI from a baseline ref and from the working tree, run both over the same 13 pinned third-party repositories, and report every behavioural difference.
+
+  No ground truth is needed and none is claimed: it says what _changed_, and a human decides whether the change is an improvement. It complements `bench-golden` rather than replacing it — a committed snapshot is an artefact that goes stale, and whoever's PR turns it red is the person who regenerates it. Reviewable at four repos; a rubber stamp at thirteen. A main-vs-candidate diff has no artefact to regenerate: the only way to make it empty is to not change behaviour.
+
+  Also fixes a check that never ran: the workspace-root vitest config covered `tests/**` only, and `pnpm test` is `pnpm -r test`, which skips the workspace root entirely. `scripts/oracle-verdict.test.ts` — which pins "not measured is not a pass" for the real-repo oracle — had therefore never executed anywhere, nor had `tests/tools/**`. The root config now includes `scripts/**` and `pnpm test` runs it: 6 test files and 30 tests that previously ran nowhere, all passing.
+
+- 162bfc8: `--format=eslint` told users that the findings driving their score did not count.
+
+  Under a score of 59, vibe's footer read "1 stable findings · 107 experimental (not counted)". 76 of those 108 findings are what produced the 59.
+
+  The line partitioned on `Finding.confidence` — a codemod-safety classification ("is there a safe automatic fix?") assigned after the score is computed, and read by neither scorer. The same field drove the per-line `EXP` tag, so score-driving errors were displayed as experimental.
+
+  Both now use the scorer's own partition: the rule must be score-contributing and unblocked, and its axis must have escaped the min-N floor. vibe reads `76 findings counted in score · 32 not counted`, matching its axes. A new generalization invariant (H4) pins the per-finding count and the per-axis sum against each other on every pinned repo.
+
+  Closes #277.
+
+- 16d693b: Test files no longer move the Health Score. 19% of findings on both held-out repositories landed in files Lyse's own zone classifier had already labelled `test` — and on primer-react the largest score-contributing penalty group, `components/svg-viewbox ×17`, was 15/17 inside test files, flagging `vi.fn(() => <svg aria-hidden="true" />)` mocks. The `test` zone is now excluded before the rules engine runs, so a rule's opportunities disappear together with its findings. Story files are deliberately still audited: a story is shipped documentation, and drift in a design system's own examples is real drift.
+- 0e8f24a: New `mine:recall` git-history harness measures conditional recall from developer tokenization
+  commits (an independent gold-label source per ADR 0022) — measurement only, non-gating, no
+  score change.
+- d78b269: Add an OKLCH-aware external-package JS token-snapshot resolver to the git-mined recall harness (measurement-layer only, `recallSource: "git-mined"`, non-gating per ADR 0022 §8). No score change; `lyse audit` is unaffected. Git-mined N is unchanged at 3 — the resolver correctly resolves canvas-kit's `base.*` refs to their exact values, but the sampled JS corpus contains no genuine value-preserving migration (canvas-kit's tokens are comment-documented authorship, not migrated hardcoded values), so all its candidates correctly fail closed.
+- b1d6f94: Fix `lyse manifest` and MCP `get_ds_manifest` returning zero components on a design-system repo while `lyse audit` found them: the manifest path (`graph/build-io.ts`) ignored a configured `designSystem.componentsModule` and never used the `ds-self` inventory strategy for a repo that _is_ the design system. Both paths now resolve components through one shared unit (`detection/components-resolution.ts`). Measured on `.bench-corpus/paste`: manifest components 0 → 1109, now matching `lyse audit`. `.bench-corpus/vuetify` and `.bench-corpus/shadcn-svelte` still report 0 — a separate, pre-existing gap where their package names don't match the DS-export detection heuristic, not addressed by this change. `lyse audit` output is unchanged (verified byte-identical before/after, excluding volatile fields).
+- 2a4d78d: `lyse handoff --isolate`: run the agent against a throwaway `git worktree` at HEAD instead of your working tree, removed on timeout — the rollback the timeout alone could not give.
+
+  Off by default: `handoff` exists so you can review the work with `git diff` where you are sitting. This is for the unattended case, which wants a blast radius it can delete.
+
+  Refused on a dirty tree, loudly, with the handoff continuing without it: an isolated tree is checked out from HEAD, so with uncommitted work the agent would fix a version of the repository you cannot see. The tree state is read before Lyse writes its own `.lyse/handoff/*.json`, or Lyse would dirty the tree and then refuse on its own artefacts. The transcript stays in the real repository, since the isolated tree is deleted exactly when the log matters.
+
+  Also `LYSE_HANDOFF_ISOLATE=1` and `.lyse.yaml` `handoff.isolate`.
+
+- 57d6aaf: `lyse handoff` now bounds how long the agent it spawns may run.
+
+  `spawnAgentLauncher` resolved only when the child closed, and nothing else bounded it — so an agent that hangs (a prompt nobody answers, a network call with no deadline, a runaway loop) held the handoff open forever. Interactively that is visible and a human hits Ctrl-C. Unattended it is a silent stall on a process started with its permission prompts disabled, which is the one failure an overnight run cannot recover from on its own.
+
+  Default limit 30 minutes, overridable with `LYSE_HANDOFF_TIMEOUT_MS` (`0` waits indefinitely). Anything unparseable falls back to the default rather than to no timeout — a typo must not silently remove the only thing bounding an unattended run. A timeout sends `SIGTERM`, then `SIGKILL` after five seconds, records the reason in `.lyse/handoff/agent-transcript.log`, and exits `124` (the conventional `timeout(1)` status).
+
+  Edits the agent had already written to the working tree are deliberately left in place: this bounds the run, it does not roll it back, and the notice says so.
+
+  Only the timeout changes `lyse handoff`'s exit status; an ordinary non-zero agent exit keeps today's behaviour.
+
+- 16d693b: `lyse init` no longer breaks the audit it just configured. A `designSystem.componentsModule` in `.lyse.yaml` was read as evidence that the repo merely consumes that module, discarding the `dsSelf` flag and the DS family detection had established — so a design system auditing itself lost its entire component inventory (element-plus: 98 components before `init`, 0 after). A configured module that names the detected design system, or any member of its family, now keeps ds-self mode.
+- ed2f73c: Token definitions written as a JavaScript or TypeScript object are now extracted — how Chakra, Carbon and Mantine define their themes.
+
+  A file must hold at least 8 token-shaped entries before it is believed. Without that gate a styled component with one `color: '#fff'` becomes a token definition, and every component inflates the denominator the tokens axis divides by.
+
+  Measured on the pinned corpus: chakra `0 → 13` token nodes (extraction `degraded → ok`), daisyui `38 → 87` and six fewer `tokens/no-hardcoded-spacing` findings, mantine `299 → 306`, polaris `78 → 79`, shadcn `214 → 222`. Eight repositories unchanged; no finding count rose anywhere.
+
+  This does **not** fix the abstaining tokens axis: chakra still scores N/A with one opportunity, so the axis is not starved of tokens.
+
+  Also fixes the ecosystem diff, which compared extractor status but not evidence numbers, and per-rule counts but not finding identity — it called polaris and shadcn "unchanged" while their golden snapshots recorded a change. On this very change the report went from 2 of 13 repositories moved to 5 of 13.
+
+- b60784e: A file inside a nested package is no longer counted as its parent package's source.
+
+  `vitejs/vite` was reported as a design system because `create-vite` holds 24 component-shaped files — every one a project template it copies into new repositories. Each template carries its own `package.json`, so those files belong to a package that is not a workspace member and should count for nobody.
+
+  A `package.json` strictly between the owning package's directory and the file now ends the attribution. Structural, not a name match: it rules out scaffolding templates, vendored copies and example projects at once.
+
+  Measured on both corpora: the 26-repo positive corpus is unchanged, every verdict identical; the negative corpus goes from 3 false positives of 4 to 2.
+
+- 16d693b: Three checks that reported success without having checked anything.
+  - **The CI gate treated an axis that stopped being scored as an axis that held.** `evaluateGate` compared scores behind `typeof cur === "number"`, and `cli.ts` builds the current map by dropping every non-numeric score — so an axis that abstained arrived as `undefined` and was skipped in silence. Push an axis under the minimum-sample guard and the gate exits 0 while the headline score _rises_, because the mean then runs over fewer axes: cruip 80 → 92, shadcn 86 → 93. A baselined axis that is no longer scored now fails by name, and no `scoreTolerance` excuses it.
+  - **A missing golden snapshot wrote itself and then asserted against it.** `if (UPDATE || !existsSync(snapPath)) writeFileSync(...)` turned a deleted snapshot into `x === x`. Only `UPDATE_GOLDEN=1` writes now; an absent reference is an error naming the repo and the regeneration command.
+  - **`lyse handoff` kept no record of the agent it spawned.** The default handoff disables the agent's permission prompts and lets it edit the working tree; `stdio: "inherit"` sent that output to the terminal and nowhere else. stdout and stderr are now teed to `.lyse/handoff/agent-transcript.log`, truncated per run, best-effort so an unwritable log never fails the handoff.
+
+- e8c0c6f: Class-aware measurement machinery + `rules-precision` ledger (P5a). This is measurement **infrastructure only** — no Health Score change, no `contributesToScore` or rule-status change, audit numbers are unchanged, and there is no new CLI/MCP surface. The 66-rule set, the frozen scorer, `sub-axes.ts`, `coverage.ts`, and `rules-manifest.json` are byte-identical, and the synthetic engine gate still passes.
+
+  What lands: an independent, deterministic `exact`-class verifier that re-derives ground truth from the repo's own token graph without trusting the rule or its confidence; per-`(ruleId, class, zone)` bucketing; a `rules-precision` ledger builder/serializer with a computed `gateEligible` flag (`auto`-provenance ∧ N ≥ 35 ∧ Wilson-95% LB ≥ 0.90, never hand-set); and honest report / per-rule-doc rendering (`measured` / `candidate` / `not measured`, where a candidate line never claims a measured or gate-eligible number). Only the deterministic `exact` bucket is gate-eligible — that is **necessary but not sufficient** for a future score promotion, which also requires a recall gate not measured here.
+
+  Deferred (a separate follow-up, run where the drift-rich corpus + measurement orchestration live): the real corpus measurement run, the committed root ledger artifact, and the generated per-rule doc sections. The example ledger shipped here is a clearly-labelled test fixture — no real precision numbers are published in this change.
+
+- 77ab292: Real class-aware precision measurement (P5a run). `packages/core/rules-precision.json` is now generated from a real corpus (lyse-bench tier1 web-apps at pinned SHAs: cal.com, documenso, plane, vercel/commerce) instead of the illustrative fixture, and each of the ten `tokens/no-hardcoded-*` docs gains an auto-generated per-class Reliability section.
+
+  Headline result: the deterministic `exact` bucket — the only gate-eligible class — does **not** clear the 0.90 promotion gate, and not for lack of data. `tokens/no-hardcoded-color` exact/app is N=84 (≥ the 35 minimum) at **50.0% precision** (Wilson lower bound 0.395): all 42 false positives are trivial `#fff`/`#000` literals that exactly match a white/black token. Exact is a drift class for colour only — the nine numeric/scale axes treat `exact` as on-scale = compliant and never emit an exact finding, so their exact bucket is empty by design. Real-world drift is overwhelmingly `near` (1031 spacing) and `novel` (290 colour), never exact.
+
+  Measurement only: no rule, scorer, sub-axis catalogue, coverage map, or Health Score behaviour changed; 66 rules; `validate:autonomous` still passes. Adds `measure:ledger` and `docs:reliability:rules` scripts.
+
+- 16d693b: Two scored rules with demonstrated false positives no longer claim perfect precision. `versioning/changelog-present` reported "No structured CHANGELOG found" on element-plus, whose root holds `CHANGELOG.en-US.md` — it now scans the repo root for `CHANGELOG*` variants instead of matching a fixed list. `tokens/css-custom-property-export` reports that element-plus "exports no CSS custom properties" when `--el-*` is the most consumed CSS variable set in the Vue ecosystem; their names are assembled at Sass compile time, so a text scan structurally cannot see them, and the rule is demoted to experimental until it can. Both had `precisionMeasured: 1` read off the `deterministicValidator` flag, which means "same answer every run", not "cannot be wrong".
+- 16d693b: `lyse audit --format=sarif` now emits valid SARIF 2.1.0. A finding's prose `suggestion` was serialised as a `fixes[]` entry carrying only a description, but the schema requires `artifactChanges` on every fix — 13 of 182 results on a real repository failed validation against the schema Lyse itself names in `$schema`, across ten rules. The suggestion moves to `properties.suggestion`, which is free-form and makes no false claim about being an applicable change.
+- 16d693b: Health Score integrity: the scorer now honours the reliability catalogue, abstains on axes whose extractor degraded, and refuses to publish a headline score computed from fewer than three axes.
+
+  Three defects, all in how the published number was derived:
+  - `scoreV3` was handed every finding, so rules marked `contributesToScore: false` moved the score — while `lyse explain --score` listed those same rules as "not counted" in the same run. Both sides of the adoption ratio are now filtered to score-contributing rules.
+  - An axis published a score even when `meta.extraction` reported its extractor as `degraded` (tokens read 99/100 on a repo with 0 token sources). Such an axis now returns `N/A`.
+  - The final score was a mean over however many axes happened to activate, with no floor — one repo published `100 / grade A` from a single axis. Three scored axes are now required; below that the run abstains and only per-axis numbers are published.
+
+  Scores move on real repositories. Repos that cannot be measured now say so instead of guessing.
+
+- 55dd160: New `measure:recall` seeded-drift harness measures per-`(rule, class)` recall on committed
+  fixtures as a CI regression net + candidate estimate (`recallSource: "seeded"`) — never
+  gate-eligible, no score change.
+- 16d693b: `lyse share` now writes its markdown to stdout when stdout is redirected. The summary only reached stdout in the clipboard-failure branch, so `lyse share > summary.md` produced an empty file and a CI run wrote zero bytes and exited 0. On a TTY the clipboard is still the payload and the terminal stays clean.
+- 16d693b: The Storybook index now finds the stories real design systems ship. It was keyed by the story title's last path segment, so `Components/RadioGroup/Features` and `Components/SubNav/Features` collided on "Features", and a file with no `title:` at all — CSF3 auto-titling, the modern default — was skipped outright. The glob also matched only `*.stories.*`, missing the singular `*.story.*`. Measured: Polaris 9 → 87 indexed (of 87 story files), Mantine 0 → 269, Primer keyed by component instead of by title category. Entries now merge when several files document the same component instead of the last one winning.
+- 821c122: A `--scope` typo silently turned the CI gate off and exited 0.
+
+  `--scope new` on a repository with new drift exits 1. `--scope New`, same tree, same build, exits 0 — the value is compared with `===` against the lowercase literal at two separate sites, so anything else widened the audit to the whole tree and never reached `evaluateGate`. The gate was not passed; it was never run. A workflow that has stopped gating looks green.
+
+  `--format` had the same hole: an unrecognised value fell through to the JSON branch, so `--format=Sarif --output d` wrote `d/lyse.json` and exited 0.
+
+  Both now exit `64` and print the accepted values, matching what `--limit` and `--score-model` already did. `--scope New` adds _did you mean `new`?_. `lyse explain --format` is validated the same way.
+
+  Closes #276.
+
 ## 0.2.0-alpha.6
 
 ### Minor Changes
