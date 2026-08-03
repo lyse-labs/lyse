@@ -1,0 +1,36 @@
+# Held-out corpus health. NOT a required check and never will be.
+#
+# It asserts that the fifteen pins still resolve and still audit — nothing more.
+# It prints no score, no axis value and no precision figure, because a held-out
+# corpus whose numbers appear on every pull request is one the team will tune
+# against by osmosis, which is exactly how .bench-corpus became in-sample.
+#
+# The numbers come from `pnpm measure:heldout`, on demand, outside CI.
+name: Held-out corpus health
+on:
+  pull_request:
+    paths:
+      - "packages/core/tests/heldout/**"
+      - ".github/workflows/heldout-health.yml"
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  heldout-health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with: { version: 9.12.0 }
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F lyse build
+      - name: Check the pins still resolve and still audit
+        run: LYSE_HELDOUT=1 pnpm -F lyse exec vitest run --no-file-parallelism tests/heldout/health.test.ts
