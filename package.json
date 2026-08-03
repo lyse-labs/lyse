@@ -22,6 +22,7 @@
     "measure:recall": "tsx scripts/measure-recall.ts",
     "measure:ds-detection": "tsx scripts/measure-ds-detection.ts",
     "measure:ds-precision": "tsx scripts/measure-ds-precision.ts",
+    "measure:heldout": "tsx scripts/measure-heldout.ts",
     "measure:tokens": "tsx scripts/measure-token-extraction.ts",
     "ecosystem:diff": "tsx scripts/ecosystem-diff/run.ts",
     "mine:recall": "tsx scripts/mine-gold-recall.ts",

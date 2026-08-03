@@ -158,11 +158,21 @@ This covers **precision** — is this finding, as worded, true at this location.
 compete with the git-mined gold labels of ADR 0024 (`reliability/gold/*`), which are a
 **recall** source; ADR 0024 puts finding-level precision in the residual it does not cover.
 
-**Blocked, and it must stay blocked until fixed:** a round may only run on a held-out
-corpus. This repo has only `.bench-corpus`, which is the calibration set the protocol
-forbids labeling on, so nothing consumes these files yet and no round has been run. Do not
-"unblock" it by pointing a round at `.bench-corpus` — the adjudicator is written to refuse,
-and that refusal is the point. Building the held-out corpus is the next step.
+**The corpus exists; the round does not.** `packages/core/tests/heldout/corpus.ts` pins
+fifteen repositories no rule was calibrated against — ten design systems, five
+applications — with `tests/heldout/disjoint.test.ts` failing, on every run including CI,
+on any overlap with tier1 or the golden/generalization/negative corpora. The same test
+also checks the fifteen against the local `.bench-corpus` working directory, but only
+when that directory exists on disk — it is gitignored and absent in CI, so that arm is a
+local convenience, not something CI enforces. Do not point a round at `.bench-corpus`:
+the adjudicator is written to refuse it, and that refusal is the point.
+
+Held out means absent from every list this repository can check — it is not proof that
+nobody ever ran Lyse against one of these repositories by hand while developing a rule,
+and any number this corpus produces carries that caveat. Numbers come from `pnpm
+measure:heldout`, never from CI — the health lane (`heldout-health.yml`) proves the pins
+work and publishes nothing, so the corpus does not become something we tune against by
+reading it every day.
 
 ## Operating principles
 

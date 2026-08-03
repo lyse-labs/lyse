@@ -4,15 +4,27 @@ The contract every labeler — human or agent — must follow when deciding whet
 finding is true. **Pre-registered:** this file is frozen before a labeling round starts and
 may not be edited during one. Changing it starts a new round with a new version number.
 
-> **Status: pre-registered, not yet runnable. No round has been run.**
+> **Status: pre-registered. The corpus exists; no round has been run.**
 >
-> The [corpus rule](#corpus-rule) requires a held-out corpus. This repository has only
-> `.bench-corpus`, which is the calibration set the protocol forbids labeling on, so no
-> round can start today. Nothing in the codebase consumes this file or the `label-*`
-> agents yet.
+> The [corpus rule](#corpus-rule) requires a held-out corpus, and
+> `packages/core/tests/heldout/corpus.ts` now pins one: fifteen repositories absent
+> from lyse-bench tier1 and from every corpus in this repository, enforced by
+> `tests/heldout/disjoint.test.ts` on every run, including CI. The same file also
+> checks the fifteen against the local `.bench-corpus` working directory, but only
+> when that directory exists — it is gitignored and absent in CI, so that arm is a
+> local convenience, not something CI enforces.
 >
-> It is committed *before* a round exists on purpose: a protocol written after seeing the
-> numbers is not a pre-registration. Building the held-out corpus is the blocking next step.
+> Held out means absent from every list this repository can check. It does not
+> mean, and cannot mean, that nobody ever ran Lyse against one of these
+> repositories by hand while developing a rule — nothing in this repository can
+> establish that, and any number this corpus produces carries that limit.
+>
+> What remains is the round itself — sampling the findings, dispatching the five
+> `label-*` roles, and recording the output described under [Round output](#round-output).
+> Nothing in the codebase runs one yet.
+>
+> This file was committed *before* a round existed on purpose: a protocol written
+> after seeing the numbers is not a pre-registration.
 
 ## Why this exists
 

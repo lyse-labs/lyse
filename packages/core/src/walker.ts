@@ -2,7 +2,13 @@ import fg from "fast-glob";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
-const SOURCE_GLOBS = [
+/**
+ * Exported so nothing has to keep a second copy. A hand-maintained duplicate of
+ * this list drifts — the reason `docs/measurement/labeling-protocol.md` exists
+ * is a copy-pasted candidate list that let a labeler inherit its rule's blind
+ * spot.
+ */
+export const SOURCE_GLOBS = [
   "**/*.ts",
   "**/*.tsx",
   "**/*.js",
