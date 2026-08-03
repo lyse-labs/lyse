@@ -31,9 +31,10 @@ import { enumerateWorkspacePackages } from "../packages/core/src/detection/from-
 const TO_STDOUT = process.argv.includes("--stdout");
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-interface AxisRow { axis: string; opportunities: number; score: number | "N/A" }
+interface AxisRow { abstentionReason: string | null; axis: string; opportunities: number; score: number | "N/A" }
 interface PositiveRow {
   axes: AxisRow[];
+  error: string | null;
   fetched: boolean;
   findingsByRule: Record<string, number>;
   framework: string;
@@ -44,6 +45,7 @@ interface PositiveRow {
 }
 interface NegativeRow {
   correct: boolean | null;
+  error: string | null;
   fetched: boolean;
   framework: string;
   primary: string | null;
@@ -51,58 +53,89 @@ interface NegativeRow {
   reason: string;
   repo: string;
   saidDesignSystem: boolean;
+  undeterminedReason: string | null;
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
 
 async function measurePositive(repo: (typeof HELDOUT_CORPUS)[number]): Promise<PositiveRow> {
   const base: PositiveRow = {
-    axes: [], fetched: false, findingsByRule: {}, framework: repo.framework,
+    axes: [], error: null, fetched: false, findingsByRule: {}, framework: repo.framework,
     maturity: repo.maturity, repo: repo.label, score: null, stack: repo.stack,
   };
   const dir = await fetchGoldenRepo(repo);
   if (dir === null) return base;
-  const { result } = await auditDirectory(dir, { staticOnly: true });
-  const findingsByRule: Record<string, number> = {};
-  for (const f of result.findings) {
-    findingsByRule[f.ruleId] = (findingsByRule[f.ruleId] ?? 0) + 1;
+  const afterFetch: PositiveRow = { ...base, fetched: true };
+  try {
+    const audited = repo.auditSubpath === "." ? dir : join(dir, repo.auditSubpath);
+    const { result } = await auditDirectory(audited, { staticOnly: true });
+    const findingsByRule: Record<string, number> = {};
+    for (const f of result.findings) {
+      findingsByRule[f.ruleId] = (findingsByRule[f.ruleId] ?? 0) + 1;
+    }
+    return {
+      ...afterFetch,
+      score: result.finalScore,
+      axes: result.axes.map((a) => ({
+        abstentionReason: a.abstentionReason ?? null,
+        axis: a.axis,
+        opportunities: a.opportunities,
+        score: a.score,
+      })),
+      findingsByRule: Object.fromEntries(
+        Object.entries(findingsByRule).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+      ),
+    };
+  } catch (err) {
+    return { ...afterFetch, error: errorMessage(err) };
   }
-  return {
-    ...base,
-    fetched: true,
-    score: result.finalScore,
-    axes: result.axes.map((a) => ({ axis: a.axis, opportunities: a.opportunities, score: a.score })),
-    findingsByRule: Object.fromEntries(Object.entries(findingsByRule).sort(([a], [b]) => a.localeCompare(b))),
-  };
 }
 
 async function measureNegative(repo: (typeof HELDOUT_NEGATIVES)[number]): Promise<NegativeRow> {
   const base: NegativeRow = {
-    correct: null, fetched: false, framework: repo.framework, primary: null,
+    correct: null, error: null, fetched: false, framework: repo.framework, primary: null,
     primaryComponentFiles: 0, reason: repo.reason, repo: repo.label, saidDesignSystem: false,
+    undeterminedReason: "fetch failed",
   };
   const dir = await fetchGoldenRepo(repo);
   if (dir === null) return base;
-  let pkg: unknown = null;
+  const audited = repo.auditSubpath === "." ? dir : join(dir, repo.auditSubpath);
+  const afterFetch: NegativeRow = { ...base, fetched: true, undeterminedReason: null };
   try {
-    pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8"));
-  } catch {
-    return { ...base, fetched: true };
+    let pkg: unknown;
+    try {
+      pkg = JSON.parse(await readFile(join(audited, "package.json"), "utf8"));
+    } catch {
+      return { ...afterFetch, undeterminedReason: "no package.json at the audit root" };
+    }
+    if (pkg === null || typeof pkg !== "object") {
+      return { ...afterFetch, undeterminedReason: "no package.json at the audit root" };
+    }
+    const packages = await enumerateWorkspacePackages(
+      pkg as Parameters<typeof enumerateWorkspacePackages>[0],
+      audited,
+    );
+    if (packages.length === 0) {
+      return { ...afterFetch, undeterminedReason: "declares no workspace, so family detection never ran" };
+    }
+    const counts = await countComponentFilesByPackage(audited, packages);
+    const family = identifyDsFamily(packages, counts);
+    return {
+      ...afterFetch,
+      saidDesignSystem: family.isDesignSystem,
+      correct: !family.isDesignSystem,
+      primary: family.primary,
+      primaryComponentFiles: family.primary === null ? 0 : (counts.get(family.primary) ?? 0),
+    };
+  } catch (err) {
+    return {
+      ...afterFetch,
+      error: errorMessage(err),
+      undeterminedReason: "detection threw before producing a verdict",
+    };
   }
-  if (pkg === null || typeof pkg !== "object") return { ...base, fetched: true };
-  const packages = await enumerateWorkspacePackages(
-    pkg as Parameters<typeof enumerateWorkspacePackages>[0],
-    dir,
-  );
-  if (packages.length === 0) return { ...base, correct: true, fetched: true };
-  const counts = await countComponentFilesByPackage(dir, packages);
-  const family = identifyDsFamily(packages, counts);
-  return {
-    ...base,
-    fetched: true,
-    saidDesignSystem: family.isDesignSystem,
-    correct: !family.isDesignSystem,
-    primary: family.primary,
-    primaryComponentFiles: family.primary === null ? 0 : (counts.get(family.primary) ?? 0),
-  };
 }
 
 function headSha(): string {
@@ -140,13 +173,29 @@ async function main(): Promise<void> {
     `\n${measuredPositives}/${positives.length} positives and ` +
       `${measuredNegatives}/${negatives.length} negatives measured.\n`,
   );
-  const falsePositives = negatives.filter((n) => n.saidDesignSystem);
+
+  const failed = [...positives, ...negatives].filter((r) => r.error !== null).length;
   process.stderr.write(
-    `${falsePositives.length} of ${measuredNegatives} applications were called design systems.\n`,
+    `${failed} of ${positives.length + negatives.length} repositories failed with an unexpected error.\n`,
   );
 
-  if (measuredPositives === 0 && measuredNegatives === 0) {
-    process.stderr.write("FAIL: nothing was measured — an unfetchable corpus is not a pass.\n");
+  const negativesDetectionRan = negatives.filter((n) => n.undeterminedReason === null);
+  const falsePositives = negativesDetectionRan.filter((n) => n.saidDesignSystem);
+  const undetermined = negatives.filter((n) => n.undeterminedReason !== null);
+  process.stderr.write(
+    `${negativesDetectionRan.length} of ${negatives.length} negatives had detection run; ` +
+      `${falsePositives.length} of those ${negativesDetectionRan.length} were called design systems; ` +
+      `${undetermined.length} of ${negatives.length} were undetermined.\n`,
+  );
+
+  if (measuredPositives === 0 || measuredNegatives === 0) {
+    const empty = [
+      measuredPositives === 0 ? "positives" : null,
+      measuredNegatives === 0 ? "negatives" : null,
+    ].filter((half): half is string => half !== null);
+    process.stderr.write(
+      `FAIL: nothing was measured for ${empty.join(" and ")} — an unfetchable corpus is not a pass.\n`,
+    );
     process.exitCode = 1;
     return;
   }

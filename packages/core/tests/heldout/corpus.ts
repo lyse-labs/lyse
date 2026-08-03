@@ -48,9 +48,9 @@ const negative = (
   label: string,
   framework: Framework,
   reason: string,
+  auditSubpath = ".",
 ): HeldoutNegative => ({
-  slug, sha, label, framework, reason,
-  auditSubpath: ".",
+  slug, sha, label, framework, reason, auditSubpath,
   url: `https://codeload.github.com/${slug}/tar.gz/${sha}`,
 });
 
@@ -80,9 +80,12 @@ export const HELDOUT_NEGATIVES: HeldoutNegative[] = [
     "excalidraw/excalidraw", "f6d85bc80fe328e8f472636eb0d541f7bb891aa0", "excalidraw", "react",
     "A whiteboard application. It has components because every application does; it publishes no component library and its packages are the editor's own internals.",
   ),
+  // The repo root has no package.json at all — the app lives under webapp/,
+  // whose own package.json is the workspace declaration this negative tests.
   negative(
     "mattermost/mattermost", "7e75035cb6766afc8424c7ee299ef4184a249e92", "mattermost", "react",
     "A team-chat application in a workspace monorepo — the exact shape that produced the false positives in issue #269 — whose packages are server, client and plugin code, not a published design system.",
+    "webapp",
   ),
   negative(
     "coollabsio/coolify", "49656aa1edbe8aa6f7f7077dbf689cb1a08f05ee", "coolify", "svelte",
