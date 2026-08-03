@@ -35,6 +35,14 @@ interface AxisRow { abstentionReason: string | null; axis: string; opportunities
 interface PositiveRow {
   axes: AxisRow[];
   error: string | null;
+  /**
+   * Tokens and components the graph actually extracted. An empty directory
+   * audits cleanly and still reports nine findings — the repo-level structural
+   * rules fire on the absence of a CHANGELOG, an llms.txt and so on — so a
+   * finding count cannot distinguish a measured repository from an empty one.
+   * This can.
+   */
+  extracted: { components: number; tokens: number } | null;
   fetched: boolean;
   findingsByRule: Record<string, number>;
   framework: string;
@@ -62,21 +70,23 @@ function errorMessage(err: unknown): string {
 
 async function measurePositive(repo: (typeof HELDOUT_CORPUS)[number]): Promise<PositiveRow> {
   const base: PositiveRow = {
-    axes: [], error: null, fetched: false, findingsByRule: {}, framework: repo.framework,
-    maturity: repo.maturity, repo: repo.label, score: null, stack: repo.stack,
+    axes: [], error: null, extracted: null, fetched: false, findingsByRule: {},
+    framework: repo.framework, maturity: repo.maturity, repo: repo.label,
+    score: null, stack: repo.stack,
   };
   const dir = await fetchGoldenRepo(repo);
   if (dir === null) return base;
   const afterFetch: PositiveRow = { ...base, fetched: true };
   try {
     const audited = repo.auditSubpath === "." ? dir : join(dir, repo.auditSubpath);
-    const { result } = await auditDirectory(audited, { staticOnly: true });
+    const { result, graph } = await auditDirectory(audited, { staticOnly: true });
     const findingsByRule: Record<string, number> = {};
     for (const f of result.findings) {
       findingsByRule[f.ruleId] = (findingsByRule[f.ruleId] ?? 0) + 1;
     }
     return {
       ...afterFetch,
+      extracted: { components: graph.components.length, tokens: graph.tokens.length },
       score: result.finalScore,
       axes: result.axes.map((a) => ({
         abstentionReason: a.abstentionReason ?? null,
@@ -179,6 +189,20 @@ async function main(): Promise<void> {
     `${failed} of ${positives.length + negatives.length} repositories failed with an unexpected error.\n`,
   );
 
+  // An empty directory audits cleanly and still reports nine findings — the
+  // repo-level structural rules fire on the absence of a CHANGELOG, an llms.txt
+  // and so on — so neither `fetched` nor `error` nor a finding count separates a
+  // measured repository from an empty one. Extraction evidence does.
+  const vacuous = positives.filter(
+    (p) => p.fetched && p.error === null && (p.extracted?.components ?? 0) + (p.extracted?.tokens ?? 0) === 0,
+  );
+  if (vacuous.length > 0) {
+    process.stderr.write(
+      `${vacuous.length} of ${positives.length} positives extracted no tokens and no components: ` +
+        `${vacuous.map((p) => p.repo).join(", ")}.\n`,
+    );
+  }
+
   const negativesDetectionRan = negatives.filter((n) => n.undeterminedReason === null);
   const falsePositives = negativesDetectionRan.filter((n) => n.saidDesignSystem);
   const undetermined = negatives.filter((n) => n.undeterminedReason !== null);
@@ -201,15 +225,35 @@ async function main(): Promise<void> {
   }
 
   const json = `${JSON.stringify(report, null, 2)}\n`;
+  // Written before the failure check below: per-repository containment exists so
+  // one bad repo does not discard the other fourteen, and discarding the report
+  // here would undo that. The exit code carries the incompleteness instead — an
+  // audit that threw on every repository still fetches, so `fetched` alone
+  // cannot distinguish a complete run from a totally broken one.
   if (TO_STDOUT) {
     process.stdout.write(json);
-    return;
+  } else {
+    const outDir = join(repoRoot, ".superpowers", "measurements");
+    mkdirSync(outDir, { recursive: true });
+    const outPath = join(outDir, `heldout-${sha}.json`);
+    writeFileSync(outPath, json);
+    process.stderr.write(`\nWrote ${outPath}\n`);
   }
-  const outDir = join(repoRoot, ".superpowers", "measurements");
-  mkdirSync(outDir, { recursive: true });
-  const outPath = join(outDir, `heldout-${sha}.json`);
-  writeFileSync(outPath, json);
-  process.stderr.write(`\nWrote ${outPath}\n`);
+
+  // Failing on SOME positive extracting nothing would gate on a result, not on
+  // the harness: Lyse reading nothing out of ant-design is a finding this corpus
+  // exists to surface, and a permanently red command is one nobody reads —
+  // the rule `measure:ds-precision` already states. Failing on ALL of them is
+  // different: that is the harness broken, and it is indistinguishable from a
+  // clean run by every other signal.
+  if (failed > 0 || vacuous.length === positives.length) {
+    const why =
+      failed > 0
+        ? `${failed} repositor${failed === 1 ? "y" : "ies"} failed with an unexpected error`
+        : "not one positive extracted anything, so nothing was measured";
+    process.stderr.write(`FAIL: ${why} — do not publish a number from this report.\n`);
+    process.exitCode = 1;
+  }
 }
 
 await main();
